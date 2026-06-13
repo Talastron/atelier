@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Playfair Display', serif;
+  --font-sans: 'Jost', sans-serif;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background-color: #F7F5F2;
+}
+
+/* Tailwind v4 doesn't ship the animate-in utilities by default. Tiny inline impl
+   so the existing component classes (animate-in fade-in slide-in-from-bottom-4) keep working. */
+@keyframes wardrobe-fade-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: wardrobe-fade-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.fade-in, .slide-in-from-bottom-4, .slide-in-from-bottom-10, .zoom-in-95, .duration-300, .duration-700 {
+  /* Composed by .animate-in; left as no-ops so classnames don't error. */
+}
+
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }

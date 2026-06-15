@@ -3526,7 +3526,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         <div className="relative">
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, brand, description…"
-            className="w-full pl-12 pr-4 py-3 bg-white border border-stone-200 rounded-2xl text-sm focus:border-stone-900 outline-none transition-colors"
+            className="w-full h-12 pl-12 pr-4 bg-white border border-stone-200 rounded-2xl text-sm focus:border-stone-900 outline-none transition-colors"
           />
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 text-lg pointer-events-none">⌕</span>
           {searchQuery && (
@@ -3801,25 +3801,24 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so daily actions stay one tap away without burying search/filters
           or stacking under the grid. The top offset (lg:top-36) sits the
           aside just below the sticky page header. */}
-      {/* Sticky aside — truly fixed once stuck. No internal overflow scroller
-          (was capturing mouse-wheel scroll when the cursor hovered over the
-          aside, preventing the main grid from scrolling). Sizes naturally to
-          its content; on very short viewports the last card may extend below
-          the fold. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:pr-1 lg:pt-4 lg:pb-6">
-        {/* Always-visible primary CTA + Select toggle. Replaces the header
-            buttons that scrolled away as the grid grew. */}
+      {/* Sticky aside — truly fixed once stuck. No internal overflow scroller.
+          Top padding intentionally omitted so the Add/Select command row's
+          top edge aligns horizontally with the search bar in the main column. */}
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:pr-1 lg:pb-6">
+        {/* Always-visible primary CTA + Select toggle. All controls share
+            h-12 with the search bar in the main column so they sit on the
+            same horizontal baseline. */}
         <div className="flex items-stretch gap-2">
           <button
             onClick={openAddModal}
-            className="flex-1 bg-stone-900 text-white px-5 py-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"
+            className="flex-1 h-12 bg-stone-900 text-white px-5 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"
           >
             <Plus size={18} strokeWidth={1.5} /> Add to Collection
           </button>
           {items.length > 0 && (
             <button
               onClick={selectMode ? exitSelectMode : () => enterSelectMode()}
-              className={`shrink-0 px-4 rounded-2xl text-[10px] tracking-widest uppercase border transition-colors ${
+              className={`shrink-0 h-12 px-4 rounded-2xl text-[10px] tracking-widest uppercase border transition-colors ${
                 selectMode
                   ? 'bg-stone-900 text-white border-stone-900'
                   : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'

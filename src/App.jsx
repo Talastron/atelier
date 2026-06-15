@@ -2190,12 +2190,16 @@ function DigitalWardrobe() {
         <div className="flex font-sans text-stone-900 overflow-hidden bg-[#F7F5F2] w-full"
              style={{ height: 'var(--app-vh, 100dvh)' }}>
           <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
-            <div className="flex items-center gap-3 mb-14">
+            {/* Logo block height + this margin is tuned so the first nav pill
+                (Wardrobe) sits at the same Y as the search bar in the main
+                column — both share a clean horizontal baseline below the
+                sticky page header. */}
+            <div className="flex items-center gap-3 mb-[7rem]">
               <AtelierMark size={42} />
               <h1 className="text-3xl font-display font-medium tracking-wide">Atelier.</h1>
             </div>
 
-            <nav className="space-y-3 flex-1">
+            <nav className="space-y-2 flex-1">
               <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
@@ -2916,7 +2920,7 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
   return (
     <button
       onClick={() => setTab(id)}
-      className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-300 ${
+      className={`w-full h-12 flex items-center justify-between px-5 rounded-2xl transition-all duration-300 ${
         isActive ? 'bg-white smooth-shadow text-stone-900' : 'text-stone-500 hover:bg-stone-200/50 hover:text-stone-800'
       }`}
     >
@@ -3037,15 +3041,15 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
   const suggestedPieces = suggestion?.itemIds?.map((id) => items.find((i) => i.id === id)).filter(Boolean) || [];
 
   return (
-    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
+    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 shadow-2xl relative overflow-hidden">
       <div className="absolute -right-12 -top-12 opacity-[0.06] rotate-12 pointer-events-none">
         <Sparkles size={220} strokeWidth={0.8} />
       </div>
 
-      <div className="relative z-10 flex items-start justify-between gap-4 mb-4 flex-wrap">
+      <div className="relative z-10 flex items-start justify-between gap-4 mb-3 flex-wrap">
         <div className="min-w-0">
           <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-bold">Today</p>
-          <p className="font-display text-xl sm:text-2xl text-white mt-1">
+          <p className="font-display text-lg sm:text-xl text-white mt-0.5">
             {weather ? `${weather.temp}°C · ${weatherLabel(weather.code)}` : 'How are you styling today?'}
           </p>
         </div>
@@ -3193,18 +3197,18 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
   if (cards.length === 0) return null;
 
   return (
-    <div className="bg-white border border-stone-200/60 rounded-[2rem] p-5 sm:p-6 smooth-shadow">
-      <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
-        <h3 className="font-display text-lg sm:text-xl text-stone-900">Needs attention</h3>
+    <div className="bg-white border border-stone-200/60 rounded-3xl p-4 sm:p-5 smooth-shadow">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <h3 className="font-display text-base sm:text-lg text-stone-900">Needs attention</h3>
         <span className="text-[10px] tracking-widest uppercase text-stone-500">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
       </div>
-      <ul className="space-y-2">
+      <ul className="space-y-1">
         {cards.map((c, i) => {
           const Row = ({ icon, accent, title, sub, onClick }) => (
             <li>
               <button onClick={onClick}
-                className="w-full flex items-center gap-3 text-left py-2.5 px-3 -mx-3 rounded-xl hover:bg-stone-50 transition-colors">
-                <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
+                className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-50 transition-colors">
+                <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-stone-900 truncate">{title}</p>
                   <p className="text-[11px] text-stone-500 truncate">{sub}</p>

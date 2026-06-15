@@ -10,7 +10,7 @@ import {
   useSensor, useSensors, DragOverlay, closestCenter,
 } from '@dnd-kit/core';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, signOutUser } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -358,11 +358,10 @@ function resolveOutfitItems(outfit, allItems) {
   return [];
 }
 
-// Gemini AI outfit generation — optional, free tier covers personal use.
-// To enable: get a key at https://aistudio.google.com/app/apikey
-// then add VITE_GEMINI_API_KEY=... to .env.local and redeploy.
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-const isAIEnabled = () => !!GEMINI_API_KEY;
+// Gemini AI is wired via Firebase AI Logic — calls go through the firebase
+// SDK with App Check verification, no API key in the client bundle. The
+// `geminiText` / `geminiTextVision` helpers live in src/firebase.js. The
+// `isAIEnabled()` import below gates UI on whether reCAPTCHA is configured.
 
 // Compact one-paragraph style profile summary for prompt injection. Returns
 // empty string when no fields are set so prompts stay clean.
@@ -382,7 +381,7 @@ function summariseStyleProfile(measurements) {
 
 async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '' }) {
   if (!isAIEnabled()) {
-    throw new Error('AI is not configured. Add VITE_GEMINI_API_KEY to .env.local to enable Gemini outfit suggestions.');
+    throw new Error('AI is not configured. Add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local to enable Gemini outfit suggestions.');
   }
   if (!items.length) throw new Error('Add some items first.');
 
@@ -424,24 +423,7 @@ Respond ONLY with valid JSON in this exact shape:
 
 Confidence reflects how strongly the available wardrobe matches the intent (100 = perfect fit, 50 = workable but not ideal, low = thin matches).`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature, responseMimeType: 'application/json' },
-      }),
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini error (${resp.status}): ${err.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini returned no response');
+  const text = await geminiText(prompt, { temperature, jsonMode: true });
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
   if (!parsed.itemIds?.length) throw new Error('Gemini could not compose a look from this wardrobe');
@@ -458,11 +440,6 @@ Confidence reflects how strongly the available wardrobe matches the intent (100 
 // highest-leverage import path — one tap, one photo, form ready.
 async function identifyItemWithGemini({ imageDataUrl, knownBrands = [] }) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
-  const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error('Image format not recognised.');
-  const mimeType = match[1];
-  const base64 = match[2];
-
   const knownMaterials = MATERIALS.filter((m) => m !== 'Other').join(', ');
   const knownColors = (typeof COLOR_FAMILIES !== 'undefined' ? COLOR_FAMILIES : []).join(', ');
   const knownStyles = (typeof STYLES !== 'undefined' ? STYLES : []).join(', ');
@@ -496,23 +473,7 @@ Respond ONLY with valid JSON in this exact shape:
   "confidence": 0
 }`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }],
-        generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
-      }),
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini error (${resp.status}): ${err.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true });
   if (!text) throw new Error('Gemini returned no response');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
@@ -521,11 +482,6 @@ Respond ONLY with valid JSON in this exact shape:
 
 async function analyzeLabelWithGemini({ imageDataUrl }) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
-  const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error('Image format not recognised.');
-  const mimeType = match[1];
-  const base64 = match[2];
-
   const knownMaterials = MATERIALS.filter((m) => m !== 'Other').join(', ');
   const knownColors = (typeof COLOR_FAMILIES !== 'undefined' ? COLOR_FAMILIES : []).join(', ');
 
@@ -554,23 +510,7 @@ Respond ONLY with valid JSON in this exact shape:
   "notes": "anything else worth keeping, or empty"
 }`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }],
-        generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
-      }),
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini error (${resp.status}): ${err.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.1, jsonMode: true });
   if (!text) throw new Error('Gemini returned no response');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
@@ -582,11 +522,6 @@ Respond ONLY with valid JSON in this exact shape:
 // shape as the text-based parseReceiptText, so the modal flow stays unified.
 async function analyzeReceiptImageWithGemini({ imageDataUrl }) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
-  const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error('Image format not recognised.');
-  const mimeType = match[1];
-  const base64 = match[2];
-
   const prompt = `You are reading a clothing-purchase receipt or order confirmation screenshot.
 
 Extract:
@@ -606,23 +541,7 @@ Respond ONLY with valid JSON in this exact shape:
   ]
 }`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64 } }] }],
-        generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
-      }),
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini error (${resp.status}): ${err.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true });
   if (!text) throw new Error('Gemini returned no response');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
@@ -692,24 +611,7 @@ Respond ONLY with valid JSON in this exact shape:
   "recommendations": [{"piece": "string", "why": "string"}]
 }`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.5, responseMimeType: 'application/json' },
-      }),
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini error (${resp.status}): ${err.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini returned no response');
+  const text = await geminiText(prompt, { temperature: 0.5, jsonMode: true });
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
   return parsed;
@@ -720,12 +622,6 @@ Respond ONLY with valid JSON in this exact shape:
 async function analyzeInspirationWithGemini({ imageDataUrl, items }) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
   if (!imageDataUrl) throw new Error('No image to analyze.');
-
-  // Extract base64 data + mime from data URL
-  const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error('Image format not recognised.');
-  const mimeType = match[1];
-  const base64 = match[2];
 
   const wardrobeSummary = items.slice(0, 100).map((i) =>
     `${i.id}|${i.name}|${i.brand || '?'}|${i.category}${i.subCategory ? '/' + i.subCategory : ''}|colors=${itemColors(i).join(',') || '-'}`
@@ -751,28 +647,7 @@ Respond ONLY with valid JSON in this exact shape:
   "summary": "one elegant sentence describing the overall look"
 }`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: mimeType, data: base64 } },
-          ],
-        }],
-        generationConfig: { temperature: 0.4, responseMimeType: 'application/json' },
-      }),
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini Vision error (${resp.status}): ${err.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.4, jsonMode: true });
   if (!text) throw new Error('Gemini returned no analysis');
   return JSON.parse(text);
 }
@@ -952,19 +827,7 @@ UK English. Warm, observational, specific. No platitudes. No bullet points.
 Data:
 ${lines.join('\n')}`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7 },
-      }),
-    }
-  );
-  if (!resp.ok) throw new Error(`Gemini error (${resp.status})`);
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = await geminiText(prompt, { temperature: 0.7 });
   if (!text) throw new Error('Gemini returned no response');
   return text.trim();
 }
@@ -988,19 +851,8 @@ Recent wears: ${recent}
 Respond with the sentence only, no quotes.`;
 
   try {
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.8 },
-        }),
-      }
-    );
-    if (!resp.ok) return '';
-    const data = await resp.json();
-    return (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    const text = await geminiText(prompt, { temperature: 0.8 });
+    return (text || '').trim();
   } catch { return ''; }
 }
 
@@ -1112,24 +964,7 @@ Respond ONLY with valid JSON in this exact shape:
   "summary": "one short paragraph"
 }`;
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.6, responseMimeType: 'application/json' },
-      }),
-    }
-  );
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini error (${resp.status}): ${err.slice(0, 200)}`);
-  }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Gemini returned no response');
+  const text = await geminiText(prompt, { temperature: 0.6, jsonMode: true });
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
   if (!Array.isArray(parsed.days) || parsed.days.length === 0) throw new Error('Gemini could not compose a capsule.');
@@ -3896,7 +3731,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   const [scanSummary, setScanSummary] = useState(null);
   const handleScanLabel = async (file) => {
     if (!file) return;
-    if (!isAIEnabled()) { setError('Label scanning needs Gemini configured (VITE_GEMINI_API_KEY).'); return; }
+    if (!isAIEnabled()) { setError('Label scanning needs Gemini configured (VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic).'); return; }
     setIsLoading(true); setError(null); setScanSummary(null);
     try {
       const dataUrl = await compressImageToDataUrl(file, { maxWidth: 1400, maxBytes: 600_000, enhance: false });
@@ -3965,7 +3800,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   // seasons, description pre-filled. The single biggest import accelerator.
   const handleIdentifyItem = async (file) => {
     if (!file) return;
-    if (!isAIEnabled()) { setError('Identify needs Gemini configured (VITE_GEMINI_API_KEY).'); return; }
+    if (!isAIEnabled()) { setError('Identify needs Gemini configured (VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic).'); return; }
     setIsLoading(true); setError(null);
     try {
       const dataUrl = await compressImageToDataUrl(file, { maxWidth: 1200, maxBytes: 350_000, enhance: false });
@@ -6087,7 +5922,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
   const handleImageFile = async (file) => {
     if (!file) return;
     if (!isAIEnabled()) {
-      setError('Image receipts need Gemini configured — add VITE_GEMINI_API_KEY to .env.local.');
+      setError('Image receipts need Gemini configured — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local.');
       return;
     }
     setBusy(true); setError(null);
@@ -6980,7 +6815,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
 
           {!isAIEnabled() && (
             <p className="text-[10px] text-stone-400 tracking-wide italic">
-              AI styling uses Google's Gemini (free tier). Add <code>VITE_GEMINI_API_KEY</code> to <code>.env.local</code> from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">aistudio.google.com</a> to enable.
+              AI styling uses Google's Gemini (free tier). Add <code>VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic</code> to <code>.env.local</code> from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">aistudio.google.com</a> to enable.
             </p>
           )}
         </div>
@@ -9051,7 +8886,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
   const toast = useToast();
 
   const run = async () => {
-    if (!isAIEnabled()) { setState({ status: 'error', data: null, error: 'AI is not configured — add VITE_GEMINI_API_KEY.' }); return; }
+    if (!isAIEnabled()) { setState({ status: 'error', data: null, error: 'AI is not configured — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic.' }); return; }
     setState({ status: 'running', data: null, error: null });
     try {
       const data = await analyzeWardrobeGapsWithGemini({ items, inspirations });

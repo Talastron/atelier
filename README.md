@@ -94,11 +94,30 @@ Then edit all three:
 
 All three are gitignored so you can edit them freely without ever committing personal data.
 
-### 4. Get a Gemini key (optional but recommended)
+### 4. Enable AI features (Firebase AI Logic + App Check)
 
-Free, generous quota at https://aistudio.google.com/app/apikey → Create API key → paste into `VITE_GEMINI_API_KEY` in `.env.local`.
+The Gemini key is **not** in the client bundle. Instead the app calls Gemini via Firebase AI Logic, gated by App Check. Two Firebase Console steps:
 
-Without a key the app still works — AI features simply don't render.
+**a) Enable AI Logic**
+1. Firebase Console → **Build** → **AI Logic** → **Get started**
+2. Choose **Gemini Developer API** (free tier — no Blaze needed)
+3. Wait ~30 seconds for provisioning
+
+**b) Enable App Check with reCAPTCHA v3**
+1. Firebase Console → **Build** → **App Check** → **Get started**
+2. Select your web app → choose **reCAPTCHA v3** provider
+3. Either use Firebase's auto-generated reCAPTCHA site key, or create one at https://www.google.com/recaptcha/admin (v3, your domain)
+4. Copy the **site key** (public, starts with `6L...`) into `VITE_RECAPTCHA_SITE_KEY` in `.env.local`
+5. In App Check → **APIs** tab → enforce **Firebase AI Logic** (sets Gemini calls to require valid App Check tokens)
+
+**c) Local dev debug token (one-time)**
+For local development with `npm run dev`, App Check needs a debug token:
+1. Open http://localhost:5173 in a browser, open DevTools console
+2. Look for `[App Check] Debug Token: xxxxxxxx-xxxx-...` in the console
+3. Copy that token → Firebase Console → App Check → your web app → ⋮ menu → **Manage debug tokens** → **Add debug token** → paste
+4. Reload — AI features now work locally
+
+Without these steps the app still works — AI features simply throw a clear "AI is not configured" message.
 
 ### 5. Run locally
 

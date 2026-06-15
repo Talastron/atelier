@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, ChevronDown, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, Check, Copy, ArrowUpDown
+  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, Check, Copy, ArrowUpDown
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -1704,6 +1704,18 @@ function DigitalWardrobe() {
   const liveItems = items.filter(isLive);
   const deletedItems = items.filter(isDeleted);
   const mainScrollRef = React.useRef(null);
+  // Show a floating ↑ button once the user has scrolled past one screen.
+  // Universal fallback for the safe-area top-tap (which is 0-height in non-PWA
+  // browsers where env(safe-area-inset-top) reports 0).
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const el = mainScrollRef.current;
+    if (!el) return;
+    const onScroll = () => setShowScrollTop(el.scrollTop > 400);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+  const scrollMainToTop = () => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   useEffect(() => { mainScrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }); }, [activeTab]);
   const selectedItem = selectedItemId ? items.find((i) => i.id === selectedItemId) : null;
   const [openOutfitId, setOpenOutfitId] = useState(null);
@@ -2281,24 +2293,36 @@ function DigitalWardrobe() {
             </div>
           </main>
 
-          {/* iOS-style "tap the status bar to scroll to top". On iPhone/iPad PWA
-              the safe-area inset is the notch / dynamic-island strip — tapping
-              there scrolls the main scroller back to the top. On devices with
-              no inset, this element collapses to 0px and is inert. */}
+          {/* iOS-style "tap the status bar to scroll to top". The safe-area
+              inset is the notch / Dynamic-Island strip on iPhone PWA, where
+              this element gets its tap height. In normal mobile browsers the
+              inset is 0 — so we ALSO render a visible ↑ button below as a
+              universal fallback once the user has scrolled past a screen. */}
           <button
             type="button"
-            onClick={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={scrollMainToTop}
             className="lg:hidden fixed top-0 left-0 right-0 z-30"
             style={{ height: 'env(safe-area-inset-top, 0px)' }}
             aria-label="Scroll to top"
             tabIndex={-1}
           />
+          {showScrollTop && (
+            <button
+              type="button"
+              onClick={scrollMainToTop}
+              className="lg:hidden fixed right-4 z-30 w-11 h-11 rounded-full bg-stone-900 text-white shadow-2xl flex items-center justify-center active:scale-90 hover:bg-stone-800 transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
+              style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
+              aria-label="Scroll to top"
+            >
+              <ChevronUp size={20} strokeWidth={2} />
+            </button>
+          )}
 
           <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
             <div className="flex justify-between items-center max-w-md mx-auto py-1">
-              <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
-              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
+              <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
               <div className="relative -top-7">
                 <button onClick={() => setIsAddItemModalOpen(true)}
                   className="w-16 h-16 shrink-0 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all active:scale-90 hover:scale-105 ring-4 ring-[#F7F5F2]"
@@ -2308,8 +2332,8 @@ function DigitalWardrobe() {
                   <Plus size={26} strokeWidth={1.5} />
                 </button>
               </div>
-              <MobileNavItem id="outfits" icon={Camera} label="Styling" activeTab={activeTab} setTab={setActiveTab} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
-              <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
+              <MobileNavItem id="outfits" icon={Camera} label="Styling" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
             </div>
           </div>
 
@@ -3409,10 +3433,16 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
 
   return (
     <div className="space-y-6 md:space-y-10">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
+      {/* Page header. On lg+ sticks to the top of the main scroll container so
+          the title + count stay visible as the user scrolls deep into 100+
+          items. The translucent backdrop keeps the wardrobe grid faintly
+          visible behind it. The negative margins + matching px extend the
+          backdrop edge-to-edge across the padded container so the sticky bar
+          spans the full main column width, not just the content box. */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 lg:sticky lg:top-0 lg:z-30 lg:py-4 lg:-mx-12 lg:px-12 lg:bg-[#F7F5F2]/85 lg:backdrop-blur-md lg:border-b lg:border-stone-200/50">
         <div>
           {user && (
-            <div className="flex items-center gap-3 flex-wrap mb-3">
+            <div className="flex items-center gap-3 flex-wrap mb-2 lg:mb-1">
               <span className="brass-rule" aria-hidden="true"></span>
               <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
                 {getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ''}
@@ -3424,12 +3454,15 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
               )}
             </div>
           )}
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display text-stone-900 tracking-tight leading-[1.05]">Your Collection</h2>
-          <p className="text-stone-500 mt-2 md:mt-3 text-xs md:text-sm tracking-wide uppercase font-medium">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-3xl xl:text-4xl font-display text-stone-900 tracking-tight leading-[1.05]">Your Collection</h2>
+          <p className="text-stone-500 mt-2 md:mt-3 lg:mt-1 text-xs md:text-sm tracking-wide uppercase font-medium">
             {items.length} Pieces Curated
           </p>
         </div>
-        <div className="flex items-center gap-3 self-start md:self-auto">
+        {/* Select button kept in header on mobile (the bottom nav has no Select).
+            On desktop, Select has moved into the sticky aside next to Add — kept
+            here on mobile only via lg:hidden so the header stays clean on lg+. */}
+        <div className="flex items-center gap-3 self-start md:self-auto lg:hidden">
           {items.length > 0 && (
             selectMode ? (
               <button onClick={exitSelectMode} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-4 py-2 border border-stone-200 rounded-full hover:border-stone-400 transition-colors">
@@ -3441,8 +3474,6 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
               </button>
             )
           )}
-          {/* "+ Add to Collection" relocated to the sticky aside on desktop so
-              it stays visible while scrolling. Mobile has the bottom-nav FAB. */}
         </div>
       </header>
 
@@ -3763,16 +3794,32 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       {/* Hidden on mobile (`hidden lg:flex`) — mobile gets a compact
           TodayTile + DailyDigest at the TOP of the wardrobe view instead,
           so daily actions stay one tap away without burying search/filters
-          or stacking under the grid. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-28 flex-col gap-4 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-y-auto lg:pr-1 hide-scrollbar">
-        {/* Always-visible primary CTA — replaces the header button that
-            scrolled away as the grid grew. */}
-        <button
-          onClick={openAddModal}
-          className="w-full bg-stone-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"
-        >
-          <Plus size={18} strokeWidth={1.5} /> Add to Collection
-        </button>
+          or stacking under the grid. The top offset (lg:top-36) sits the
+          aside just below the sticky page header. */}
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-36 flex-col gap-3 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1 lg:pl-2 lg:border-l lg:border-stone-200/50 hide-scrollbar">
+        {/* Always-visible primary CTA + Select toggle. Replaces the header
+            buttons that scrolled away as the grid grew. */}
+        <div className="flex items-stretch gap-2">
+          <button
+            onClick={openAddModal}
+            className="flex-1 bg-stone-900 text-white px-5 py-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"
+          >
+            <Plus size={18} strokeWidth={1.5} /> Add to Collection
+          </button>
+          {items.length > 0 && (
+            <button
+              onClick={selectMode ? exitSelectMode : () => enterSelectMode()}
+              className={`shrink-0 px-4 rounded-2xl text-[10px] tracking-widest uppercase border transition-colors ${
+                selectMode
+                  ? 'bg-stone-900 text-white border-stone-900'
+                  : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+              }`}
+              title={selectMode ? 'Cancel selection' : 'Select multiple items'}
+            >
+              {selectMode ? 'Cancel' : 'Select'}
+            </button>
+          )}
+        </div>
 
         <TodayTile
           items={items}

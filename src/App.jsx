@@ -3340,88 +3340,15 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         </div>
       </header>
 
-      <TodayTile
-        items={items}
-        outfits={outfits}
-        schedules={schedules}
-        weather={weather}
-        weatherSeasons={weatherSeasons}
-        aiTemperature={aiTemperature}
-        measurements={measurements}
-        onOpenOutfit={onOpenOutfit}
-        onScheduleOutfit={onScheduleOutfit}
-        onSaveOutfit={onSaveOutfit}
-        onLogOutfitWear={onLogOutfitWear}
-      />
+      {/* Two-column dashboard on lg+: wardrobe LEFT (col-span-8), Today panel RIGHT
+          (col-span-4 sticky). DOM order = wardrobe first, today second — so on
+          mobile users hit search/filters/grid immediately and today cards drop
+          below. Explicit lg:row-start-1 on both children keeps them on the
+          same row on desktop despite the DOM ordering. */}
+      <div className="lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:items-start space-y-8 lg:space-y-0">
 
-      <DailyDigest
-        items={items}
-        outfits={outfits}
-        schedules={schedules}
-        inspirations={inspirations}
-        onOpenItem={onItemClick}
-        onOpenOutfit={onOpenOutfit}
-        onOpenInspiration={onOpenInspiration}
-        onOpenInspirationTab={onOpenInspirationTab}
-      />
-
-      {recommendation && (() => {
-        const reasons = [];
-        const seasons = itemSeasons(recommendation);
-        if (weather && weatherSeasons && seasons.some((s) => weatherSeasons.includes(s))) {
-          reasons.push(`fits today's ${weather.temp}°C`);
-        } else if (weather) {
-          reasons.push(`for today's ${weather.temp}°C · ${weatherLabel(weather.code)}`);
-        }
-        const days = daysSinceLastWorn(recommendation);
-        if (days === null) reasons.push("you haven't worn it yet");
-        else if (days >= 60) reasons.push(`unworn for ${days} days`);
-        else if (days >= 14) reasons.push(`not worn in ${days} days`);
-        return (
-          <button onClick={() => onItemClick?.(recommendation.id)}
-            className="text-left w-full bg-stone-900 text-white rounded-[2rem] p-5 sm:p-6 flex items-center gap-4 sm:gap-6 group hover:bg-stone-800 transition-all shadow-2xl active:scale-[0.98]">
-            <div className="w-20 h-24 sm:w-24 sm:h-32 rounded-2xl overflow-hidden bg-stone-800 shrink-0">
-              {itemImages(recommendation)[0] && <img src={itemImages(recommendation)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-2 flex items-center gap-3">
-                <span className="brass-rule" aria-hidden="true"></span> Today's pick
-              </p>
-              <p className="font-display text-xl sm:text-2xl text-white leading-tight truncate">{recommendation.name}</p>
-              <p className="text-xs sm:text-sm text-stone-400 mt-1.5 truncate">
-                {recommendation.brand}{seasons.length > 0 && ` · ${seasons.join(' · ')}`}
-              </p>
-              {reasons.length > 0 && (
-                <p className="text-[10px] sm:text-xs text-emerald-300/90 mt-3 tracking-wide italic">
-                  Suggested · {reasons.join(' · ')}
-                </p>
-              )}
-              <p className="text-[10px] sm:text-xs text-stone-500 mt-1.5 tracking-wide">
-                Tap to view or log a wear
-              </p>
-            </div>
-          </button>
-        );
-      })()}
-
-      {tomorrowOutfit && (
-        <button onClick={() => onOpenOutfit?.(tomorrowOutfit.id)}
-          className="text-left w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-center gap-4 hover:bg-amber-100/70 transition-all active:scale-[0.99]">
-          <div className="flex gap-1 shrink-0">
-            {tomorrowPieces.slice(0, 3).map((p) => (
-              <div key={p.id} className="w-12 h-16 rounded-lg overflow-hidden bg-white border border-amber-100">
-                {itemImages(p)[0] && <img src={itemImages(p)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
-              </div>
-            ))}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] tracking-[0.2em] uppercase text-brass-700 font-semibold">✦ Tomorrow's planned look</p>
-            <p className="font-display text-lg text-stone-900 truncate mt-1">{tomorrowOutfit.name}</p>
-            <p className="text-xs text-stone-500 mt-0.5">{tomorrowPieces.length} pieces · tap to view</p>
-          </div>
-          <ChevronRight size={20} className="text-brass-600 shrink-0" />
-        </button>
-      )}
+      {/* ─── MAIN COLUMN: search, filters, grid ─── */}
+      <div className="lg:col-span-8 lg:col-start-1 lg:row-start-1 space-y-6 md:space-y-8 min-w-0">
 
       <div className="flex flex-col gap-4 md:gap-6">
         <div className="relative">
@@ -3525,7 +3452,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         setColorFilter={setColorFilter}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-x-8 md:gap-y-12">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-10">
         {filteredItems.map(item => {
           const isSelected = selectedIds.has(item.id);
           return (
@@ -3652,6 +3579,96 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           </div>
         )}
       </div>
+
+      </div>
+      {/* ─── /MAIN COLUMN ─── */}
+
+      {/* ─── ASIDE: Today panel (right on desktop, after grid on mobile) ─── */}
+      <aside className="lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-28 space-y-4 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-y-auto lg:pr-1 hide-scrollbar">
+        <TodayTile
+          items={items}
+          outfits={outfits}
+          schedules={schedules}
+          weather={weather}
+          weatherSeasons={weatherSeasons}
+          aiTemperature={aiTemperature}
+          measurements={measurements}
+          onOpenOutfit={onOpenOutfit}
+          onScheduleOutfit={onScheduleOutfit}
+          onSaveOutfit={onSaveOutfit}
+          onLogOutfitWear={onLogOutfitWear}
+        />
+
+        <DailyDigest
+          items={items}
+          outfits={outfits}
+          schedules={schedules}
+          inspirations={inspirations}
+          onOpenItem={onItemClick}
+          onOpenOutfit={onOpenOutfit}
+          onOpenInspiration={onOpenInspiration}
+          onOpenInspirationTab={onOpenInspirationTab}
+        />
+
+        {recommendation && (() => {
+          const reasons = [];
+          const seasons = itemSeasons(recommendation);
+          if (weather && weatherSeasons && seasons.some((s) => weatherSeasons.includes(s))) {
+            reasons.push(`fits today's ${weather.temp}°C`);
+          } else if (weather) {
+            reasons.push(`for today's ${weather.temp}°C · ${weatherLabel(weather.code)}`);
+          }
+          const days = daysSinceLastWorn(recommendation);
+          if (days === null) reasons.push("you haven't worn it yet");
+          else if (days >= 60) reasons.push(`unworn for ${days} days`);
+          else if (days >= 14) reasons.push(`not worn in ${days} days`);
+          return (
+            <button onClick={() => onItemClick?.(recommendation.id)}
+              className="text-left w-full bg-stone-900 text-white rounded-2xl lg:rounded-3xl p-4 sm:p-5 flex items-center gap-4 group hover:bg-stone-800 transition-all shadow-2xl active:scale-[0.98]">
+              <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-stone-800 shrink-0">
+                {itemImages(recommendation)[0] && <img src={itemImages(recommendation)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-1.5 flex items-center gap-2">
+                  <span className="brass-rule" aria-hidden="true"></span> Today's pick
+                </p>
+                <p className="font-display text-base sm:text-lg text-white leading-tight truncate">{recommendation.name}</p>
+                <p className="text-[11px] text-stone-400 mt-1 truncate">
+                  {recommendation.brand}{seasons.length > 0 && ` · ${seasons.join(' · ')}`}
+                </p>
+                {reasons.length > 0 && (
+                  <p className="text-[10px] text-emerald-300/90 mt-2 tracking-wide italic truncate" title={reasons.join(' · ')}>
+                    Suggested · {reasons.join(' · ')}
+                  </p>
+                )}
+              </div>
+            </button>
+          );
+        })()}
+
+        {tomorrowOutfit && (
+          <button onClick={() => onOpenOutfit?.(tomorrowOutfit.id)}
+            className="text-left w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 hover:bg-amber-100/70 transition-all active:scale-[0.99]">
+            <div className="flex gap-1 shrink-0">
+              {tomorrowPieces.slice(0, 3).map((p) => (
+                <div key={p.id} className="w-10 h-12 rounded-md overflow-hidden bg-white border border-amber-100">
+                  {itemImages(p)[0] && <img src={itemImages(p)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                </div>
+              ))}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] tracking-[0.2em] uppercase text-brass-700 font-semibold">✦ Tomorrow</p>
+              <p className="font-display text-sm text-stone-900 truncate mt-0.5">{tomorrowOutfit.name}</p>
+              <p className="text-[11px] text-stone-500">{tomorrowPieces.length} pieces · tap to view</p>
+            </div>
+            <ChevronRight size={18} className="text-brass-600 shrink-0" />
+          </button>
+        )}
+      </aside>
+      {/* ─── /ASIDE ─── */}
+
+      </div>
+      {/* ─── /two-column grid ─── */}
 
       {selectMode && createPortal(
         <div className="fixed left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none"
@@ -4729,6 +4746,15 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
     el.addEventListener('touchend', onEnd, { passive: true });
     return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd); };
   }, [images.length]);
+
+  // Navigating to a different item (via Wear-with, Appears-in, prev/next) should
+  // land on that item from the top, not preserve the previous item's scroll.
+  // Also reset the photo carousel so we don't open the new item on photo #3.
+  useEffect(() => {
+    swipeRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    setActivePhoto(0);
+  }, [item.id]);
+
   const seasons = itemSeasons(item);
   const fit = computeFitAgainstChart({ item, shops, measurements });
   const wears = itemWearCount(item);

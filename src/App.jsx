@@ -3085,66 +3085,141 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
         </div>
       )}
 
-      {suggestion && suggestedPieces.length > 0 && (
-        <div className="relative z-10 bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4 mt-2">
-          <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
-            <p className="text-[10px] tracking-widest uppercase text-brass-300">Suggested · {suggestion.confidence ?? '–'}/100 confidence</p>
-            <div className="flex gap-2">
-              <button onClick={generate} disabled={busy || saving}
-                className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-40">
-                ↻ Regenerate
-              </button>
-              <button onClick={() => { setSuggestion(null); setPickDate(null); }} disabled={saving}
-                className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full text-stone-400 hover:text-white">
-                Dismiss
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-            {suggestedPieces.map((p) => (
-              <div key={p.id} className="flex-none w-16 sm:w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-700">
-                {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
-              </div>
-            ))}
-          </div>
-          {suggestion.reasoning && (
-            <p className="text-xs text-stone-300 italic mt-3 leading-relaxed">"{suggestion.reasoning}"</p>
-          )}
+      {/* Suggestion rendering moved to a portal modal below — the sidebar
+          TodayTile is too narrow to host a generated outfit + 3 action
+          buttons + a regenerate/dismiss row. Modal gives the result the
+          space it deserves, including progress feedback while AI composes. */}
 
-          {pickDate === null ? (
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <button onClick={wearToday} disabled={saving || !onLogOutfitWear}
-                className="text-[10px] tracking-widest uppercase px-3 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <Calendar size={12} strokeWidth={1.5} /> Wear today
-              </button>
-              <button onClick={saveAsLook} disabled={saving || !onSaveOutfit}
-                className="text-[10px] tracking-widest uppercase px-3 py-2.5 rounded-full bg-white text-stone-900 hover:bg-stone-100 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <Bookmark size={12} strokeWidth={1.5} /> Save look
-              </button>
-              <button onClick={() => setPickDate(todayISO())} disabled={saving || !onScheduleOutfit}
-                className="text-[10px] tracking-widest uppercase px-3 py-2.5 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 font-medium">
-                <Calendar size={12} strokeWidth={1.5} /> Schedule…
-              </button>
+      {(busy || (suggestion && suggestedPieces.length > 0)) && createPortal(
+        <div
+          className="fixed inset-0 z-[60] bg-stone-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={(e) => {
+            // Dismiss on backdrop click only — but not during AI work to
+            // avoid losing the in-flight call (Gemini still resolves, but
+            // user expects the result they're waiting for).
+            if (e.target === e.currentTarget && !busy && !saving) {
+              setSuggestion(null);
+              setPickDate(null);
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            {/* Decorative sparkles, same flavour as the TodayTile card */}
+            <div className="absolute -right-16 -top-16 opacity-[0.06] rotate-12 pointer-events-none">
+              <Sparkles size={280} strokeWidth={0.8} />
             </div>
-          ) : (
-            <div className="mt-4 bg-white/5 border border-white/10 rounded-xl p-3 flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] tracking-widest uppercase text-stone-300">Schedule for</span>
-              <input type="date" value={pickDate} min={todayISO()}
-                onChange={(e) => setPickDate(e.target.value)}
-                className="bg-stone-800 text-white text-xs px-3 py-2 rounded-lg border border-white/10 focus:border-amber-300 outline-none" />
-              <div className="flex gap-2 ml-auto">
-                <button onClick={() => setPickDate(null)} disabled={saving}
-                  className="text-[10px] tracking-wider uppercase px-3 py-2 rounded-full text-stone-400 hover:text-white">
-                  Cancel
-                </button>
-                <button onClick={() => scheduleFor(pickDate)} disabled={saving || !pickDate}
-                  className="text-[10px] tracking-wider uppercase px-4 py-2 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 font-medium">
-                  {saving ? 'Saving…' : 'Confirm'}
-                </button>
+
+            <div className="relative p-6 sm:p-8">
+              {/* Header — title + close. Close hidden while composing. */}
+              <div className="flex items-start justify-between gap-3 mb-5">
+                <div>
+                  <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
+                    {busy ? 'Composing' : `Suggested · ${suggestion?.confidence ?? '–'}/100 confidence`}
+                  </p>
+                  <h2 className="font-display text-2xl sm:text-3xl mt-1">
+                    {busy ? 'Atelier is styling you…' : "Today's proposal"}
+                  </h2>
+                </div>
+                {!busy && !saving && (
+                  <button
+                    onClick={() => { setSuggestion(null); setPickDate(null); }}
+                    aria-label="Close"
+                    className="shrink-0 -mt-1 -mr-1 p-2 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <X size={18} strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
+
+              {busy ? (
+                /* Progress state — animated bar + thumbnails fading in */
+                <div className="py-6">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-brass-300 rounded-full animate-pulse" style={{ width: '40%' }} />
+                    </div>
+                    <span className="text-xs text-stone-400 tracking-wide">Reading the room…</span>
+                  </div>
+                  <p className="text-sm text-stone-400 leading-relaxed">
+                    Pulling your owned pieces, weighing what fits today's {weather?.temp}°C and the season,
+                    leaning on your style profile.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* The proposed outfit */}
+                  <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-1 px-1">
+                    {suggestedPieces.map((p) => (
+                      <div key={p.id} className="flex-none w-24 sm:w-28">
+                        <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
+                          {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                        </div>
+                        <p className="text-[11px] text-stone-300 truncate">{p.name}</p>
+                        <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {suggestion?.reasoning && (
+                    <p className="text-sm text-stone-300 italic mt-5 leading-relaxed bg-white/5 border border-white/10 rounded-xl p-4">
+                      "{suggestion.reasoning}"
+                    </p>
+                  )}
+
+                  {/* Actions */}
+                  {pickDate === null ? (
+                    <>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-6">
+                        <button onClick={wearToday} disabled={saving || !onLogOutfitWear}
+                          className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
+                          <Calendar size={14} strokeWidth={1.5} /> Wear today
+                        </button>
+                        <button onClick={saveAsLook} disabled={saving || !onSaveOutfit}
+                          className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-white text-stone-900 hover:bg-stone-100 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
+                          <Bookmark size={14} strokeWidth={1.5} /> Save look
+                        </button>
+                        <button onClick={() => setPickDate(todayISO())} disabled={saving || !onScheduleOutfit}
+                          className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
+                          <Calendar size={14} strokeWidth={1.5} /> Schedule…
+                        </button>
+                      </div>
+                      <div className="flex justify-between items-center mt-5 pt-5 border-t border-white/10">
+                        <button onClick={generate} disabled={busy || saving}
+                          className="text-[11px] tracking-widest uppercase text-stone-400 hover:text-white disabled:opacity-40 transition-colors inline-flex items-center gap-1.5">
+                          ↻ Try a different look
+                        </button>
+                        <button onClick={() => { setSuggestion(null); setPickDate(null); }} disabled={saving}
+                          className="text-[11px] tracking-widest uppercase text-stone-400 hover:text-white transition-colors">
+                          Discard
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-4">
+                      <p className="text-[10px] tracking-widest uppercase text-stone-300 mb-3">Schedule for</p>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <input type="date" value={pickDate} min={todayISO()}
+                          onChange={(e) => setPickDate(e.target.value)}
+                          className="bg-stone-800 text-white text-sm px-4 py-2.5 rounded-xl border border-white/10 focus:border-brass-300 outline-none" />
+                        <div className="flex gap-2 ml-auto">
+                          <button onClick={() => setPickDate(null)} disabled={saving}
+                            className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full text-stone-400 hover:text-white">
+                            Cancel
+                          </button>
+                          <button onClick={() => scheduleFor(pickDate)} disabled={saving || !pickDate}
+                            className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 font-medium">
+                            {saving ? 'Saving…' : 'Confirm'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -5084,7 +5159,11 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          <div className="lg:col-span-6 lg:sticky lg:top-28 lg:self-start space-y-3">
+          {/* Image column stays sticky just below the page top bar. Top
+              offset matches the column's natural Y position (top-bar ~82px +
+              parent lg:py-16 = ~146px) so the image is already AT its sticky
+              position from initial render — no "scroll up then snap" effect. */}
+          <div className="lg:col-span-6 lg:sticky lg:top-[9rem] lg:self-start space-y-3">
             <button
               ref={photoRef}
               onClick={() => {

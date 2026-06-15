@@ -3037,7 +3037,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
   const suggestedPieces = suggestion?.itemIds?.map((id) => items.find((i) => i.id === id)).filter(Boolean) || [];
 
   return (
-    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-[2rem] p-5 sm:p-7 shadow-2xl relative overflow-hidden">
+    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 sm:p-6 shadow-2xl relative overflow-hidden">
       <div className="absolute -right-12 -top-12 opacity-[0.06] rotate-12 pointer-events-none">
         <Sparkles size={220} strokeWidth={0.8} />
       </div>
@@ -3069,13 +3069,13 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
       )}
 
       {!suggestion && (
-        <div className="relative z-10 flex items-center gap-3 flex-wrap">
+        <div className="relative z-10 flex flex-col gap-2">
           <button onClick={generate} disabled={busy || !isAIEnabled()}
-            className="text-xs tracking-widest uppercase px-5 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center gap-2 font-medium">
-            <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Composing…' : 'Suggest a look for now'}
+            className="w-full text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
+            <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Composing…' : 'Suggest a look'}
           </button>
-          {!isAIEnabled() && <span className="text-[10px] tracking-widest uppercase text-stone-400">AI needs a Gemini key</span>}
-          {error && <span className="text-[10px] text-brass-300">{error}</span>}
+          {!isAIEnabled() && <span className="text-[10px] tracking-widest uppercase text-stone-400 text-center">AI needs a Gemini key</span>}
+          {error && <span className="text-[10px] text-brass-300 text-center">{error}</span>}
         </div>
       )}
 

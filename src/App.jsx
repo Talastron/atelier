@@ -1704,17 +1704,20 @@ function DigitalWardrobe() {
   const liveItems = items.filter(isLive);
   const deletedItems = items.filter(isDeleted);
   const mainScrollRef = React.useRef(null);
-  // Show a floating ↑ button once the user has scrolled past one screen.
-  // Universal fallback for the safe-area top-tap (which is 0-height in non-PWA
-  // browsers where env(safe-area-inset-top) reports 0).
+  // Show a floating ↑ button once the user has scrolled. Universal fallback
+  // for the safe-area top-tap (which is 0-height in non-PWA browsers where
+  // env(safe-area-inset-top) reports 0). Deps include the auth state because
+  // <main> only mounts after auth completes — without these, the effect runs
+  // once at the auth-loading splash, finds no main element, and never
+  // re-attaches the listener.
   const [showScrollTop, setShowScrollTop] = useState(false);
   useEffect(() => {
     const el = mainScrollRef.current;
     if (!el) return;
-    const onScroll = () => setShowScrollTop(el.scrollTop > 400);
+    const onScroll = () => setShowScrollTop(el.scrollTop > 200);
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [authReady, user, accessDenied]);
   const scrollMainToTop = () => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   useEffect(() => { mainScrollRef.current?.scrollTo({ top: 0, behavior: 'instant' }); }, [activeTab]);
   const selectedItem = selectedItemId ? items.find((i) => i.id === selectedItemId) : null;
@@ -3438,19 +3441,9 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           starts AT the top of the scroll container from initial render —
           eliminating the "scroll up before sticking" effect users notice when
           the natural position differs from the sticky offset. lg:pt-12 puts
-          the padding back inside the header so content stays where it was.
-          The mobile header doubles as a tap-to-scroll-top affordance (iOS
-          status-bar pattern) since env(safe-area-inset-top) reports 0 in
-          non-PWA mobile browsers and the zero-height tap strip is inert. */}
+          the padding back inside the header so content stays where it was. */}
       <header
-        onClick={(e) => {
-          // Mobile only — desktop is sticky already, no need.
-          if (window.innerWidth >= 1024) return;
-          // Don't fire when the user clicks the Select button or any descendant control.
-          if (e.target.closest('button')) return;
-          onScrollTop?.();
-        }}
-        className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 lg:cursor-default cursor-pointer lg:sticky lg:top-0 lg:z-30 lg:-mt-12 lg:pt-12 lg:pb-3 lg:-mx-12 lg:px-12 lg:bg-[#F7F5F2]/90 lg:backdrop-blur-md lg:border-b lg:border-stone-200/50"
+        className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 lg:sticky lg:top-0 lg:z-30 lg:-mt-12 lg:pt-12 lg:pb-3 lg:-mx-12 lg:px-12 lg:bg-[#F7F5F2]/90 lg:backdrop-blur-md lg:border-b lg:border-stone-200/50"
       >
         <div>
           {user && (
@@ -3808,7 +3801,16 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so daily actions stay one tap away without burying search/filters
           or stacking under the grid. The top offset (lg:top-36) sits the
           aside just below the sticky page header. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1 lg:pl-3 lg:pt-4 lg:border-l lg:border-stone-200/50 hide-scrollbar">
+      <aside
+        className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1 lg:pt-4 lg:pb-6 hide-scrollbar"
+        style={{
+          // Soft mask at the bottom hints at scrollable content + softens the
+          // hard cut on the last card. Top is fully opaque, bottom 24px fades
+          // to transparent. Symmetric `mask-image` for cross-browser support.
+          WebkitMaskImage: 'linear-gradient(to bottom, #000 calc(100% - 24px), transparent)',
+          maskImage: 'linear-gradient(to bottom, #000 calc(100% - 24px), transparent)',
+        }}
+      >
         {/* Always-visible primary CTA + Select toggle. Replaces the header
             buttons that scrolled away as the grid grew. */}
         <div className="flex items-stretch gap-2">

@@ -3441,14 +3441,40 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
               </button>
             )
           )}
-          <button
-            onClick={openAddModal}
-            className="hidden lg:flex bg-stone-900 text-white px-8 py-3.5 rounded-full text-sm font-medium items-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"
-          >
-            <Plus size={18} strokeWidth={1.5} /> Add to Collection
-          </button>
+          {/* "+ Add to Collection" relocated to the sticky aside on desktop so
+              it stays visible while scrolling. Mobile has the bottom-nav FAB. */}
         </div>
       </header>
+
+      {/* Mobile-only Today strip: TodayTile + DailyDigest rendered at TOP of
+          the wardrobe view on small screens. The full sidebar is hidden on
+          mobile (was rendering at the bottom, which felt buried). Keeps the
+          most useful daily actions one tap away without burying search. */}
+      <div className="lg:hidden space-y-4">
+        <TodayTile
+          items={items}
+          outfits={outfits}
+          schedules={schedules}
+          weather={weather}
+          weatherSeasons={weatherSeasons}
+          aiTemperature={aiTemperature}
+          measurements={measurements}
+          onOpenOutfit={onOpenOutfit}
+          onScheduleOutfit={onScheduleOutfit}
+          onSaveOutfit={onSaveOutfit}
+          onLogOutfitWear={onLogOutfitWear}
+        />
+        <DailyDigest
+          items={items}
+          outfits={outfits}
+          schedules={schedules}
+          inspirations={inspirations}
+          onOpenItem={onItemClick}
+          onOpenOutfit={onOpenOutfit}
+          onOpenInspiration={onOpenInspiration}
+          onOpenInspirationTab={onOpenInspirationTab}
+        />
+      </div>
 
       {/* Two-column dashboard on lg+: wardrobe LEFT (col-span-8), Today panel RIGHT
           (col-span-4 sticky). DOM order = wardrobe first, today second — so on
@@ -3733,8 +3759,21 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       </div>
       {/* ─── /MAIN COLUMN ─── */}
 
-      {/* ─── ASIDE: Today panel (right on desktop, after grid on mobile) ─── */}
-      <aside className="lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-28 space-y-4 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-y-auto lg:pr-1 hide-scrollbar">
+      {/* ─── ASIDE: Today panel (desktop-only sticky right column) ─── */}
+      {/* Hidden on mobile (`hidden lg:flex`) — mobile gets a compact
+          TodayTile + DailyDigest at the TOP of the wardrobe view instead,
+          so daily actions stay one tap away without burying search/filters
+          or stacking under the grid. */}
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-28 flex-col gap-4 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-y-auto lg:pr-1 hide-scrollbar">
+        {/* Always-visible primary CTA — replaces the header button that
+            scrolled away as the grid grew. */}
+        <button
+          onClick={openAddModal}
+          className="w-full bg-stone-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"
+        >
+          <Plus size={18} strokeWidth={1.5} /> Add to Collection
+        </button>
+
         <TodayTile
           items={items}
           outfits={outfits}

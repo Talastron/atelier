@@ -3801,12 +3801,12 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so daily actions stay one tap away without burying search/filters
           or stacking under the grid. The top offset (lg:top-36) sits the
           aside just below the sticky page header. */}
-      {/* Sticky aside. `[&>*]:shrink-0` prevents the flex-col from shrinking
-          individual cards when total content exceeds max-h — without it, the
-          dark TodayTile (which has overflow-hidden for its sparkles
-          decoration) would clip its own content instead of letting the aside
-          scroll naturally. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1 lg:pt-4 lg:pb-6 hide-scrollbar [&>*]:shrink-0">
+      {/* Sticky aside — truly fixed once stuck. No internal overflow scroller
+          (was capturing mouse-wheel scroll when the cursor hovered over the
+          aside, preventing the main grid from scrolling). Sizes naturally to
+          its content; on very short viewports the last card may extend below
+          the fold. */}
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:pr-1 lg:pt-4 lg:pb-6">
         {/* Always-visible primary CTA + Select toggle. Replaces the header
             buttons that scrolled away as the grid grew. */}
         <div className="flex items-stretch gap-2">

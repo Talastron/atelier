@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, Check, Copy
+  Wand2, ChevronRight, ChevronDown, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, Check, Copy, ArrowUpDown
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -2281,11 +2281,24 @@ function DigitalWardrobe() {
             </div>
           </main>
 
+          {/* iOS-style "tap the status bar to scroll to top". On iPhone/iPad PWA
+              the safe-area inset is the notch / dynamic-island strip — tapping
+              there scrolls the main scroller back to the top. On devices with
+              no inset, this element collapses to 0px and is inert. */}
+          <button
+            type="button"
+            onClick={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="lg:hidden fixed top-0 left-0 right-0 z-30"
+            style={{ height: 'env(safe-area-inset-top, 0px)' }}
+            aria-label="Scroll to top"
+            tabIndex={-1}
+          />
+
           <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
             <div className="flex justify-between items-center max-w-md mx-auto py-1">
-              <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
-              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
+              <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
+              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
               <div className="relative -top-7">
                 <button onClick={() => setIsAddItemModalOpen(true)}
                   className="w-16 h-16 shrink-0 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all active:scale-90 hover:scale-105 ring-4 ring-[#F7F5F2]"
@@ -2295,8 +2308,8 @@ function DigitalWardrobe() {
                   <Plus size={26} strokeWidth={1.5} />
                 </button>
               </div>
-              <MobileNavItem id="outfits" icon={Camera} label="Styling" activeTab={activeTab} setTab={setActiveTab} />
-              <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} />
+              <MobileNavItem id="outfits" icon={Camera} label="Styling" activeTab={activeTab} setTab={setActiveTab} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
+              <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} onScrollTop={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} />
             </div>
           </div>
 
@@ -2889,10 +2902,15 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
   );
 }
 
-function MobileNavItem({ icon: Icon, label, id, activeTab, setTab }) {
+function MobileNavItem({ icon: Icon, label, id, activeTab, setTab, onScrollTop }) {
   const isActive = activeTab === id;
   return (
-    <button onClick={() => setTab(id)}
+    <button
+      onClick={() => {
+        // iOS pattern: tapping the active tab again scrolls that view to top.
+        if (isActive) onScrollTop?.();
+        else setTab(id);
+      }}
       className="flex flex-col items-center gap-1 px-3 py-2 w-[68px] min-h-[56px] transition-all active:scale-95 relative"
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
@@ -3204,6 +3222,83 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
   );
 }
 
+// Wardrobe sort options. Each defines a stable comparator over items.
+// Default "recent" surfaces newly-added pieces first — the psychological
+// reward of seeing your latest acquisitions when you open the app, also how
+// Indyx, Whering and Stylebook default. Other modes are chosen via a sort menu.
+// Favourites always float to the top within whichever mode is active — a small
+// curated touch that mirrors how most native gallery apps treat starred items.
+const WARDROBE_SORT_OPTIONS = [
+  { key: 'recent', label: 'Recently added', hint: 'Newest first' },
+  { key: 'oldest', label: 'Oldest first', hint: 'By date added' },
+  { key: 'worn-recent', label: 'Recently worn', hint: 'Last wear first' },
+  { key: 'most-worn', label: 'Most worn', hint: 'By wear count' },
+  { key: 'least-worn', label: 'Least worn', hint: 'Surfaces neglected pieces' },
+  { key: 'cpw-best', label: 'Best cost-per-wear', hint: 'Most-justified buys' },
+  { key: 'cpw-worst', label: 'Worst cost-per-wear', hint: 'Wear-them-more list' },
+  { key: 'price-desc', label: 'Highest value', hint: 'Priciest first' },
+  { key: 'name', label: 'A → Z', hint: 'Alphabetical' },
+  { key: 'color', label: 'By colour', hint: 'Grouped palette' },
+];
+const WARDROBE_SORT_KEY = 'atelier.wardrobeSort';
+
+function sortWardrobeItems(items, sortBy) {
+  const arr = [...items];
+  const cmpDate = (a, b) => (b.createdAt || '').localeCompare(a.createdAt || '');
+  // Favourites always pinned to top within the chosen sort.
+  const favBoost = (a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0);
+  const lastWornDate = (it) => {
+    const h = itemWearHistory(it);
+    return h.length > 0 ? h[h.length - 1] : '';
+  };
+  let comparator;
+  switch (sortBy) {
+    case 'oldest':
+      comparator = (a, b) => (a.createdAt || '').localeCompare(b.createdAt || '');
+      break;
+    case 'worn-recent':
+      comparator = (a, b) => lastWornDate(b).localeCompare(lastWornDate(a));
+      break;
+    case 'most-worn':
+      comparator = (a, b) => itemWearCount(b) - itemWearCount(a);
+      break;
+    case 'least-worn':
+      comparator = (a, b) => itemWearCount(a) - itemWearCount(b);
+      break;
+    case 'cpw-best': {
+      // Lowest CPW (best value) first; items never-worn sink to the end.
+      const score = (it) => itemCostPerWear(it) ?? Number.POSITIVE_INFINITY;
+      comparator = (a, b) => score(a) - score(b);
+      break;
+    }
+    case 'cpw-worst': {
+      // Highest CPW first; never-worn items pushed to the top because
+      // they're the "haven't justified the price yet" set you'd want to action.
+      const score = (it) => itemCostPerWear(it) ?? Number.POSITIVE_INFINITY;
+      comparator = (a, b) => score(b) - score(a);
+      break;
+    }
+    case 'price-desc':
+      comparator = (a, b) => Number(b.price || 0) - Number(a.price || 0);
+      break;
+    case 'name':
+      comparator = (a, b) => (a.name || '').localeCompare(b.name || '');
+      break;
+    case 'color': {
+      // Stable group by first colour, then alphabetical within group.
+      const first = (it) => (itemColors(it)[0] || 'zzz');
+      comparator = (a, b) => first(a).localeCompare(first(b)) || (a.name || '').localeCompare(b.name || '');
+      break;
+    }
+    case 'recent':
+    default:
+      comparator = cmpDate;
+  }
+  // Apply primary sort, then favourites pin. The favourites pin is applied
+  // second so it overrides the primary order, putting starred items on top.
+  return arr.sort((a, b) => favBoost(a, b) || comparator(a, b));
+}
+
 function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7 }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -3226,6 +3321,14 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   const [filter, setFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [seasonFilter, setSeasonFilter] = useState('All Seasons');
+  const [sortBy, setSortBy] = useState(() => {
+    try { return localStorage.getItem(WARDROBE_SORT_KEY) || 'recent'; }
+    catch { return 'recent'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(WARDROBE_SORT_KEY, sortBy); } catch { /* private mode — fine */ }
+  }, [sortBy]);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [weather, setWeather] = useState(null);
   useEffect(() => { fetchTodaysWeather().then(setWeather); }, []);
   const weatherSeasons = weatherToSeasons(weather);
@@ -3296,6 +3399,13 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
     const matchColor = colorFilter === 'All Colours' || itemColors(item).includes(colorFilter);
     return passesStatus && matchCategory && matchSeason && matchBrand && matchSubCategory && matchStyle && matchSearch && matchColor;
   });
+
+  const sortedItems = useMemo(
+    () => sortWardrobeItems(filteredItems, sortBy),
+    [filteredItems, sortBy]
+  );
+
+  const activeSort = WARDROBE_SORT_OPTIONS.find((o) => o.key === sortBy) || WARDROBE_SORT_OPTIONS[0];
 
   return (
     <div className="space-y-6 md:space-y-10">
@@ -3408,6 +3518,46 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                     <span className="bg-white/20 text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-full">{count}</span>
                   )}
                 </button>
+
+                {/* Sort menu — popover-style dropdown matching the filter aesthetic.
+                    Closes on selection, on outside click (via the backdrop), or Escape. */}
+                <div className="relative shrink-0">
+                  <button onClick={() => setSortMenuOpen((o) => !o)}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 sm:py-2 rounded-full text-xs sm:text-sm transition-all border bg-white border-stone-300 text-stone-700 hover:border-stone-500`}>
+                    <ArrowUpDown size={14} strokeWidth={1.5} />
+                    <span className="hidden sm:inline">{activeSort.label}</span>
+                    <span className="sm:hidden">Sort</span>
+                    <ChevronDown size={12} strokeWidth={2} className={`transition-transform ${sortMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {sortMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} aria-hidden="true" />
+                      <div className="absolute z-40 mt-2 left-0 sm:left-auto sm:right-0 min-w-[15rem] bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 animate-in fade-in slide-in-from-top-2 duration-150" role="menu">
+                        <p className="px-4 pt-1 pb-2 text-[10px] tracking-widest uppercase text-stone-400 font-medium">Sort by</p>
+                        {WARDROBE_SORT_OPTIONS.map((o) => {
+                          const isActive = o.key === sortBy;
+                          return (
+                            <button key={o.key} onClick={() => { setSortBy(o.key); setSortMenuOpen(false); }}
+                              className={`w-full text-left px-4 py-2.5 flex items-start justify-between gap-3 transition-colors ${
+                                isActive ? 'bg-stone-100' : 'hover:bg-stone-50'
+                              }`}
+                              role="menuitemradio" aria-checked={isActive}
+                            >
+                              <div className="min-w-0">
+                                <p className={`text-sm ${isActive ? 'text-stone-900 font-medium' : 'text-stone-800'}`}>{o.label}</p>
+                                <p className="text-[11px] text-stone-500 mt-0.5">{o.hint}</p>
+                              </div>
+                              {isActive && <Check size={16} strokeWidth={2} className="shrink-0 text-stone-900 mt-0.5" />}
+                            </button>
+                          );
+                        })}
+                        <div className="border-t border-stone-200 mt-2 pt-2 px-4 pb-1">
+                          <p className="text-[10px] text-stone-400 italic">★ Favourites always pin to the top</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
                 {activeBadges.map((b, i) => (
                   <button key={i} onClick={b.clear}
                     className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-white border border-stone-200 text-stone-700 hover:border-stone-400 hover:text-stone-900 transition-colors group">
@@ -3453,7 +3603,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-10">
-        {filteredItems.map(item => {
+        {sortedItems.map(item => {
           const isSelected = selectedIds.has(item.id);
           return (
           <div

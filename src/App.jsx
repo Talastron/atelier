@@ -2192,9 +2192,11 @@ function DigitalWardrobe() {
           <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
             {/* Logo block height + this margin is tuned so the first nav pill
                 (Wardrobe) sits at the same Y as the search bar in the main
-                column — both share a clean horizontal baseline below the
-                sticky page header. */}
-            <div className="flex items-center gap-3 mb-[7rem]">
+                column. Math: main scroll-container has the page header
+                (~144px tall) + 8px gap; sidebar has 48px top padding +
+                ~42px logo. So mb ≈ 144 + 8 - 48 - 42 ≈ 62px → mb-[3.875rem]
+                rounded to mb-16 (4rem) for the cleanest visual baseline. */}
+            <div className="flex items-center gap-3 mb-16">
               <AtelierMark size={42} />
               <h1 className="text-3xl font-display font-medium tracking-wide">Atelier.</h1>
             </div>

@@ -2234,7 +2234,7 @@ function DigitalWardrobe() {
                 <WardrobeSkeleton />
               ) : (
                 <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} />}
+                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
                       items={liveItems}
@@ -3323,7 +3323,7 @@ function sortWardrobeItems(items, sortBy) {
   return arr.sort((a, b) => favBoost(a, b) || comparator(a, b));
 }
 
-function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7 }) {
+function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const enterSelectMode = (firstId = null) => {
@@ -3432,14 +3432,26 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   const activeSort = WARDROBE_SORT_OPTIONS.find((o) => o.key === sortBy) || WARDROBE_SORT_OPTIONS[0];
 
   return (
-    <div className="space-y-6 md:space-y-10">
-      {/* Page header. On lg+ sticks to the top of the main scroll container so
-          the title + count stay visible as the user scrolls deep into 100+
-          items. The translucent backdrop keeps the wardrobe grid faintly
-          visible behind it. The negative margins + matching px extend the
-          backdrop edge-to-edge across the padded container so the sticky bar
-          spans the full main column width, not just the content box. */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 lg:sticky lg:top-0 lg:z-30 lg:py-4 lg:-mx-12 lg:px-12 lg:bg-[#F7F5F2]/85 lg:backdrop-blur-md lg:border-b lg:border-stone-200/50">
+    <div className="space-y-6 md:space-y-10 lg:space-y-2">
+      {/* Page header. On lg+ sticks at top: 0 of the main scroll container.
+          The lg:-mt-12 cancels the parent's lg:p-12 top padding so the header
+          starts AT the top of the scroll container from initial render —
+          eliminating the "scroll up before sticking" effect users notice when
+          the natural position differs from the sticky offset. lg:pt-12 puts
+          the padding back inside the header so content stays where it was.
+          The mobile header doubles as a tap-to-scroll-top affordance (iOS
+          status-bar pattern) since env(safe-area-inset-top) reports 0 in
+          non-PWA mobile browsers and the zero-height tap strip is inert. */}
+      <header
+        onClick={(e) => {
+          // Mobile only — desktop is sticky already, no need.
+          if (window.innerWidth >= 1024) return;
+          // Don't fire when the user clicks the Select button or any descendant control.
+          if (e.target.closest('button')) return;
+          onScrollTop?.();
+        }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 lg:cursor-default cursor-pointer lg:sticky lg:top-0 lg:z-30 lg:-mt-12 lg:pt-12 lg:pb-3 lg:-mx-12 lg:px-12 lg:bg-[#F7F5F2]/90 lg:backdrop-blur-md lg:border-b lg:border-stone-200/50"
+      >
         <div>
           {user && (
             <div className="flex items-center gap-3 flex-wrap mb-2 lg:mb-1">
@@ -3796,7 +3808,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so daily actions stay one tap away without burying search/filters
           or stacking under the grid. The top offset (lg:top-36) sits the
           aside just below the sticky page header. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-36 flex-col gap-3 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1 lg:pl-2 lg:border-l lg:border-stone-200/50 hide-scrollbar">
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:pr-1 lg:pl-3 lg:pt-4 lg:border-l lg:border-stone-200/50 hide-scrollbar">
         {/* Always-visible primary CTA + Select toggle. Replaces the header
             buttons that scrolled away as the grid grew. */}
         <div className="flex items-stretch gap-2">

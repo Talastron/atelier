@@ -2448,6 +2448,7 @@ function DigitalWardrobe() {
               onSaveOutfit={handleSaveOutfit}
               onShare={() => handleShareOutfit(openOutfit)}
               onLogWear={(verdict) => handleLogOutfitWear(openOutfit, todayISO(), verdict)}
+              onOpenItem={(id) => setSelectedItemId(id)}
               onDuplicate={async () => {
                 // If legacy outfit had embedded items, migrate to itemIds
                 const itemIds = Array.isArray(openOutfit.itemIds)
@@ -8609,7 +8610,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
   );
 }
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onLogWear }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onLogWear, onOpenItem }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
@@ -8802,25 +8803,33 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
         </div>
 
         {view === 'flatlay' ? (
-          <OutfitFlatLay pieces={pieces} />
+          <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {pieces.map((piece, i) => (
-              <div key={piece.id || i} className="flex flex-col gap-3">
-                <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 smooth-shadow">
-                  {itemImages(piece)[0] ? (
-                    <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={40} strokeWidth={1} /></div>
-                  )}
-                </div>
-                <div className="px-1">
-                  <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{piece.brand}</p>
-                  <p className="font-display text-base text-stone-800 leading-snug">{piece.name}</p>
-                  <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
-                </div>
-              </div>
-            ))}
+            {pieces.map((piece, i) => {
+              const openable = !!(onOpenItem && piece.id);
+              const Tag = openable ? 'button' : 'div';
+              return (
+                <Tag
+                  key={piece.id || i}
+                  {...(openable ? { type: 'button', onClick: () => onOpenItem(piece.id), 'aria-label': `Open ${piece.name}` } : {})}
+                  className={`flex flex-col gap-3 text-left ${openable ? 'group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900 rounded-2xl' : ''}`}
+                >
+                  <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 smooth-shadow ${openable ? 'transition-transform group-hover:scale-[1.02] group-active:scale-[0.98]' : ''}`}>
+                    {itemImages(piece)[0] ? (
+                      <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={40} strokeWidth={1} /></div>
+                    )}
+                  </div>
+                  <div className="px-1">
+                    <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{piece.brand}</p>
+                    <p className={`font-display text-base text-stone-800 leading-snug ${openable ? 'group-hover:text-brass-600 transition-colors' : ''}`}>{piece.name}</p>
+                    <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
+                  </div>
+                </Tag>
+              );
+            })}
           </div>
         )}
       </div>
@@ -8833,7 +8842,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 // look feels uniquely composed. Names render below in a clean list to keep the
 // canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
 // jewellery smaller — mimicking a real flat-lay arrangement.
-function OutfitFlatLay({ pieces }) {
+function OutfitFlatLay({ pieces, onOpenItem }) {
   // Cheap deterministic hash → pseudo-random number in [0, 1) per piece id.
   const seeded = (id, salt) => {
     let h = 5381;
@@ -8869,10 +8878,13 @@ function OutfitFlatLay({ pieces }) {
             const size = baseSize * weight;
             const left = `${col * 100}%`;
             const z = 10 + Math.floor(weight * 10); // outerwear in front
+            const openable = !!(onOpenItem && p.id);
+            const Tag = openable ? 'button' : 'div';
             return (
-              <div
+              <Tag
                 key={p.id || i}
-                className="absolute"
+                {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
+                className={`absolute ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 rounded-2xl' : ''}`}
                 style={{
                   left,
                   top: '50%',
@@ -8881,30 +8893,52 @@ function OutfitFlatLay({ pieces }) {
                   zIndex: z,
                 }}
               >
-                <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-white shadow-2xl ring-1 ring-black/5">
+                <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white shadow-2xl ring-1 ring-black/5 ${openable ? 'transition-transform hover:scale-[1.05] active:scale-[0.97]' : ''}`}>
                   {itemImages(p)[0] ? (
                     <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
                   )}
                 </div>
-              </div>
+              </Tag>
             );
           })}
         </div>
       </div>
 
       <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-        {sorted.map((p, i) => (
-          <li key={p.id || i} className="flex items-baseline gap-3 py-2 border-b border-stone-200/60 last:border-0">
-            <span className="text-[10px] tracking-widest uppercase text-stone-400 w-16 shrink-0">{p.category}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-stone-900 truncate">{p.name}</p>
-              <p className="text-[10px] tracking-wider uppercase text-stone-500 truncate">{p.brand}</p>
-            </div>
-            <span className="text-xs text-stone-500 shrink-0">£{Number(p.price || 0).toLocaleString()}</span>
-          </li>
-        ))}
+        {sorted.map((p, i) => {
+          const openable = !!(onOpenItem && p.id);
+          return (
+            <li key={p.id || i} className="border-b border-stone-200/60 last:border-0">
+              {openable ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenItem(p.id)}
+                  aria-label={`Open ${p.name}`}
+                  className="w-full flex items-baseline gap-3 py-2 text-left rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 hover:bg-stone-100/60 transition-colors group"
+                >
+                  <span className="text-[10px] tracking-widest uppercase text-stone-400 w-16 shrink-0">{p.category}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-stone-900 truncate group-hover:text-brass-700 transition-colors">{p.name}</p>
+                    <p className="text-[10px] tracking-wider uppercase text-stone-500 truncate">{p.brand}</p>
+                  </div>
+                  <span className="text-xs text-stone-500 shrink-0">£{Number(p.price || 0).toLocaleString()}</span>
+                  <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0 group-hover:text-brass-500 transition-colors" />
+                </button>
+              ) : (
+                <div className="flex items-baseline gap-3 py-2">
+                  <span className="text-[10px] tracking-widest uppercase text-stone-400 w-16 shrink-0">{p.category}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-stone-900 truncate">{p.name}</p>
+                    <p className="text-[10px] tracking-wider uppercase text-stone-500 truncate">{p.brand}</p>
+                  </div>
+                  <span className="text-xs text-stone-500 shrink-0">£{Number(p.price || 0).toLocaleString()}</span>
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

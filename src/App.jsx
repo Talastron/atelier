@@ -4816,13 +4816,13 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 if (images.length > 0) setLightboxOpen(true);
               }}
               disabled={images.length === 0}
-              className="aspect-[3/4] w-full rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow relative group disabled:cursor-default border border-brass-300"
+              className="aspect-[3/4] w-full max-h-[65vh] lg:max-h-[calc(100vh-13rem)] rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow relative group disabled:cursor-default border border-brass-300"
               style={{ touchAction: images.length > 1 ? 'pan-y' : undefined }}
               aria-label={images.length > 1 ? 'Swipe to flip photos, tap to view fullscreen' : 'View photo in fullscreen'}
             >
               {images.length > 0 ? (
                 <>
-                  <img src={images[Math.min(activePhoto, images.length - 1)]} alt={item.name} className="w-full h-full object-cover transition-transform duration-500 lg:group-hover:scale-[1.02]" />
+                  <img src={images[Math.min(activePhoto, images.length - 1)]} alt={item.name} className="w-full h-full object-contain transition-transform duration-500 lg:group-hover:scale-[1.02]" />
                   {item.imageMeta?.[Math.min(activePhoto, images.length - 1)]?.angle && (
                     <span className="absolute top-3 left-3 lg:top-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium">
                       {item.imageMeta[Math.min(activePhoto, images.length - 1)].angle}
@@ -5176,11 +5176,13 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
   const mySlot = slotForItem(item);
   const targetSlots = OUTFIT_SLOTS.filter((s) => s !== mySlot);
 
-  // If this is a Dress, don't suggest a Top or Bottoms (dresses replace both)
+  // Mutually-exclusive categories: a dress replaces tops+bottoms, so don't
+  // suggest them with a dress — and don't suggest a dress alongside a top or
+  // bottom either (you wear separates OR a dress, never both).
   const isDress = myCategory === 'Dresses';
-  const filteredSlots = isDress
-    ? targetSlots.filter((s) => !['Tops', 'Bottoms'].includes(s))
-    : targetSlots;
+  const isTopOrBottom = myCategory === 'Tops' || myCategory === 'Bottoms';
+  const blockedSlots = isDress ? ['Tops', 'Bottoms'] : (isTopOrBottom ? ['Dresses'] : []);
+  const filteredSlots = targetSlots.filter((s) => !blockedSlots.includes(s));
 
   const myStyles = itemStyles(item);
   const mySeasons = itemSeasons(item);

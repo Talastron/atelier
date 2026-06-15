@@ -1,5 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="14" fill="#1c1917"/>
-  <path d="M24 22 L20 26 L16 24 L20 38 H44 L48 24 L44 26 L40 22 Z" fill="#F7F5F2"/>
-  <path d="M28 22 Q32 26 36 22" stroke="#F7F5F2" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Stone-900 ground, iOS-style rounded corners. -->
+  <rect width="256" height="256" fill="#1c1917" rx="56"/>
+
+  <!-- Wire-hanger silhouette — cream, single-weight stroke, rounded
+       terminals. Universal wardrobe-app vocabulary. -->
+  <g fill="none" stroke="#F7F5F2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hook (curl + descending stem to triangle apex). -->
+    <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110"/>
+    <!-- Triangular frame. -->
+    <path d="M 128 110 L 62 184 L 194 184 Z"/>
+  </g>
+
+  <!-- Brass charm — the atelier finishing detail. A thin thread descending
+       from centre of the bar, terminating in a small brass droplet. -->
+  <line x1="128" y1="184" x2="128" y2="206" stroke="#D4B378" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="128" cy="212" r="5" fill="#D4B378"/>
 </svg>

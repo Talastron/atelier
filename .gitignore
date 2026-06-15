@@ -1,9 +1,16 @@
 node_modules/
 dist/
 dist-ssr/
+
+# Local config — kept out of git so forks aren't tied to one Firebase project
+# or one personal account. See *.example files for the templates.
 .env
 .env.local
 .env.*.local
+.firebaserc
+.firebase/
+firestore.rules
+
 .DS_Store
 *.log
 .vite/

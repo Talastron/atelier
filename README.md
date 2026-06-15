@@ -1,201 +1,178 @@
-# Atelier · Digital Wardrobe
+# Atelier — A Digital Wardrobe
 
-A private digital wardrobe — your collection, wishlist, outfit builder, and measurements, synced across phone and laptop.
+A private, AI-styled digital wardrobe. Build your collection, compose outfits with Gemini, plan a week (or a trip) on a calendar, share lookbooks read-only, and let an AI write a private style brief from what you actually wear.
 
-**Stack:** React + Vite + Tailwind v4 · Firebase (Auth + Firestore + Hosting) · PWA installable on iOS / Android.
+Built solo, on the Firebase Spark (free) tier, with React + Vite + Tailwind v4 + Google Gemini 2.5 Flash.
 
-Images are compressed to ~50–150 KB and stored as base64 inside each Firestore item document, so the whole app runs entirely on the **Firebase Spark (free) plan** with no credit card. If you later want Firebase Storage for higher-resolution images, see the "Upgrading later" section at the end.
+> _Add 3–5 screenshots here once published — the Today tile, Identify-with-AI, Calendar in range mode, Style Manifesto card, and a shared lookbook are the strongest._
 
 ---
 
-## 1. Run it locally
+## What it does
 
-```powershell
+**Capture** — six ways to add an item, ordered by speed:
+- **Identify with AI** (fastest) — snap one photo, Gemini Vision fills category, brand, name, colours, materials, styles, seasons, description.
+- **Closet sweep** — rapid multi-photo capture, each becomes a draft, save all in one batch.
+- **Scan Label** — care/brand tag photo → brand, size, materials, care instructions.
+- **Paste Receipt** — order email text or screenshot → line-items extracted.
+- **Search & Bulk Import** — paste up to 25 product URLs, parallel-fetch all metadata.
+- Plus traditional Add Photos / Manual Entry.
+
+**Style** — drag-and-drop outfit builder (desktop) / tap-to-add (mobile) with strict slot validation; multi-pick jewellery for layered looks. AI styling with Gemini, mood presets, A/B compare, confidence scores, refinement loop.
+
+**Plan** — schedule outfits to specific dates. Range mode for trips → generates a deduped packing list. AI Travel Planner: type a destination, get a per-day capsule based on the actual forecast.
+
+**Track** — wear log with quick verdicts ("felt great", "too warm"), per-item wear count, cost-per-wear, "stale" detection, care reminders triggered by material thresholds, lent-to tracking with overdue alerts.
+
+**Insights** — total value, wear timeline, colour profile, best/worst cost-per-wear leaderboards, Gemini-written gap analysis, Gemini-written style manifesto (a 3-paragraph aesthetic brief from your actual wear history).
+
+**Inspiration** — save outfit photos, AI cross-references against your wardrobe to find matches + missing pieces, "Recreate this look" builds an outfit instantly, missing pieces convert to wishlist items.
+
+**Share** — read-only public links for single outfits or curated lookbooks. WhatsApp / email / native share sheet / clipboard.
+
+**Polish** — wax-seal monogram, hand-drawn brass-rule editorial header pattern, Playfair Display + Jost type pairing, iOS PWA support with safe-area handling, swipe-between-products on mobile, reduced-motion respect, screen-reader-friendly toasts, opt-in photo cutouts (@imgly background removal).
+
+---
+
+## Engineering highlights
+
+Worth pointing out:
+
+- **Single-file React (intentionally).** `src/App.jsx` is ~8,500 lines. Built as a solo iteration tool, each section commented like a tiny module. Splitting is on the roadmap — not before.
+- **Single Firestore subtree per user.** `/users/{uid}/...` with rules enforcing `request.auth.uid == uid` cross-user isolation. Allowlist managed via `/allowlist/{email}` docs so owners can invite friends from inside the app without redeploying rules.
+- **Soft-delete with 30-day auto-purge.** Items with `deletedAt` are hidden from every read site but stay in Firestore for 30 days. Auto-purge runs silently on app load.
+- **Embedded base64 images in Firestore docs.** No Firebase Storage (Spark plan). The 1 MiB per-doc cap shapes the data model — outfits store `itemIds: string[]`, not embedded items.
+- **Public share docs are self-contained.** `/public/{shareId}` embeds full item snapshots — no cross-doc reads from unauthenticated traffic, no auth/storage rules involved.
+- **AI grammar across 9 distinct prompts** — style generation, refinement, gap analysis, identify-item, scan-label, scan-receipt, inspiration-analysis, manifesto, travel-capsule, post-wear narration. Each maps Gemini's free text to the app's controlled vocabularies (materials, colours, styles, seasons) via fuzzy matching so chips light up correctly.
+- **iOS-PWA quirks handled.** Auto-zoom-out prevented via `minimum-scale=1.0` + locked `width: 100vw` on root. Auto-zoom-in on inputs prevented via `font-size: 16px` floor on touch devices. `safe-area-inset-top` on every sticky header.
+- **Photo cutouts via `@imgly/background-removal`.** Lazy-imported (~5MB model), composited onto white + JPEG-recompressed for ~5× storage savings vs raw PNG-alpha. Per-thumb toggle to revert.
+- **Two-layer swipe grammar on mobile.** Page-level swipe between products; image-level swipe between photos of one product. Each gesture on its own surface, never conflicts.
+
+---
+
+## Stack
+
+- **React 18** + **Vite 6** + **Tailwind CSS v4**
+- **Firebase** — Auth (Google) + Firestore + Hosting, runs entirely on the Spark (free) tier
+- **Google Gemini 2.5 Flash** — free tier, generous quota
+- **@dnd-kit/core** — drag-and-drop outfit builder
+- **lucide-react** — icon system
+- **vite-plugin-pwa** — installable PWA + service worker
+- **@imgly/background-removal** — opt-in photo cutouts (lazy-loaded)
+
+---
+
+## Setup (self-host)
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/<your-username>/digital-wardrobe.git
+cd digital-wardrobe
 npm install
-copy .env.example .env.local
-# fill in .env.local with your Firebase config (instructions in section 2)
+```
+
+### 2. Create a Firebase project (free)
+
+1. Go to https://console.firebase.google.com → **Add project**. No credit card required.
+2. **Authentication** → **Sign-in method** → enable **Google**.
+3. **Firestore Database** → **Create database** → Native mode → start in production.
+4. **Project settings** → **General** → **Your apps** → **Add web app** → copy the config.
+
+### 3. Configure locally
+
+```bash
+cp .env.example .env.local
+cp .firebaserc.example .firebaserc
+cp firestore.rules.example firestore.rules
+```
+
+Then edit all three:
+- `.env.local` — paste your Firebase config, your owner email(s), and (optional) your Gemini API key.
+- `.firebaserc` — set the `default` project ID to your Firebase project ID.
+- `firestore.rules` — replace `replace-with-your-email@example.com` near the top with your Google account email. Must match `VITE_OWNER_EMAILS` in `.env.local`.
+
+All three are gitignored so you can edit them freely without ever committing personal data.
+
+### 4. Get a Gemini key (optional but recommended)
+
+Free, generous quota at https://aistudio.google.com/app/apikey → Create API key → paste into `VITE_GEMINI_API_KEY` in `.env.local`.
+
+Without a key the app still works — AI features simply don't render.
+
+### 5. Run locally
+
+```bash
 npm run dev
 ```
 
-Then open http://localhost:5173.
+Open http://localhost:5173 and sign in with the Google account you added as owner.
 
-You will see the sign-in screen. Sign in with Google → your wardrobe is created automatically in Firestore + Storage.
+### 6. Deploy
+
+```bash
+firebase login          # one-time
+firebase deploy --only firestore:rules
+npm run deploy          # builds + deploys hosting
+```
+
+Your app is live at `https://<your-project-id>.web.app`.
+
+### 7. Install on phone (optional)
+
+Open the URL in mobile Safari (iOS) or Chrome (Android) → Share / menu → **Add to Home Screen**. It runs as a standalone PWA with a wax-seal monogram icon.
 
 ---
 
-## 2. One-time Firebase setup
+## Inviting friends
 
-You will do this in a browser on a Google account. **It is free and does not require a credit card.**
+Once deployed and signed in as owner:
+- **Profile** tab → scroll to the **Invite a friend** panel → add a Google email.
+- They sign in with Google on the same URL using that email and get full personal-wardrobe access.
+- Each user lives in their own `/users/{uid}/...` Firestore subtree — no cross-user reads.
 
-### 2.1 Create the project
-
-1. Go to **<https://console.firebase.google.com/>** → click **"Add project"**.
-2. Project name: anything you like (e.g. *atelier-wardrobe*). Disable Google Analytics (not needed for a personal app).
-3. Wait ~30 seconds for the project to be provisioned.
-
-### 2.2 Register your web app
-
-1. From the project dashboard, click the **`</>` (Web)** icon under *"Get started by adding Firebase to your app"*.
-2. App nickname: *Atelier Web*. You may tick "Also set up Firebase Hosting" or skip it — we configure Hosting separately in section 4.
-3. Firebase will show you a config object that looks like:
-   ```js
-   const firebaseConfig = {
-     apiKey: "AIza...",
-     authDomain: "atelier-wardrobe.firebaseapp.com",
-     projectId: "atelier-wardrobe",
-     storageBucket: "atelier-wardrobe.firebasestorage.app",
-     messagingSenderId: "123456789",
-     appId: "1:123456789:web:abc..."
-   };
-   ```
-4. **Copy each value into `.env.local`** in this project, matching the `VITE_FIREBASE_*` names. These are not secrets — they are public identifiers. Security comes from the rules in section 2.5.
-
-### 2.3 Enable Google sign-in
-
-1. Left sidebar → **Build → Authentication** → **Get started**.
-2. **Sign-in method** tab → click **Google** → toggle on → set a project support email (your own) → **Save**.
-
-### 2.4 Create Firestore
-
-1. Left sidebar → **Databases and storage → Firestore Database** → **Create database** → **Production mode** → pick a location close to you (e.g. `eur3` for Europe) → Enable.
-
-**Do NOT create Storage** — it now requires upgrading to the Blaze (pay-as-you-go) plan with a credit card. This project stores compressed images directly inside Firestore item documents instead.
-
-### 2.5 Apply security rules
-
-This locks your data to your account only. **Do not skip this.**
-
-You can either paste them into the console UI, or deploy them from the CLI after section 4.
-
-**Option A — Console UI (one-time setup):**
-- Firestore Database → **Rules** tab → paste the contents of [`firestore.rules`](./firestore.rules) → **Publish**.
-
-**Option B — CLI (recommended once Firebase CLI is set up in section 4):**
-```powershell
-npm run deploy:rules
-```
-This reads `firestore.rules` from this repo and publishes it. Edit and re-run any time.
+You stay in control: owners can revoke an invite at any time from the same panel.
 
 ---
 
-## 3. Push to GitHub
+## Free-tier limits
 
-```powershell
-git init
-git add .
-git commit -m "Initial commit"
-# Create a new repo at https://github.com/new (private)
-git remote add origin https://github.com/<your-username>/digital-wardrobe.git
-git branch -M main
-git push -u origin main
-```
-
-`.env.local` is in `.gitignore` and will not be committed.
-
----
-
-## 4. Deploy to Firebase Hosting
-
-The Firebase CLI is already installed as a dev dependency, and `firebase.json` is pre-configured. You just need to log in once and point it at your project.
-
-### 4.1 Tell the CLI which project to use
-
-Open `.firebaserc` and replace `REPLACE_WITH_YOUR_PROJECT_ID` with your Firebase project ID (the `projectId` value from `.env.local` — e.g. `my-digital-wardrobe-abc12`).
-
-Or, do it interactively:
-```powershell
-npx firebase login
-npx firebase use --add
-```
-(pick your project, alias it as `default`).
-
-### 4.2 Deploy
-
-```powershell
-npm run deploy
-```
-
-This runs `vite build` (configured as a `predeploy` hook in `firebase.json`) and uploads `dist/` to Firebase Hosting. Takes ~30 seconds.
-
-You'll get two URLs:
-- `https://<project-id>.web.app`
-- `https://<project-id>.firebaseapp.com`
-
-Both work. Both are auto-added to Firebase Auth's authorized domains — **Google sign-in just works**, no extra step.
-
-### 4.3 Deploy security rules (if you skipped section 2.5 option A)
-
-```powershell
-npm run deploy:rules
-```
-
-### 4.4 Updating later
-
-Every time you change code:
-```powershell
-npm run deploy
-```
-Every time you change `firestore.rules` or `storage.rules`:
-```powershell
-npm run deploy:rules
-```
-
-If you want push-to-deploy via GitHub later, run `npx firebase init hosting:github` — it generates a GitHub Action so `git push` to `main` redeploys.
-
----
-
-## 5. Install on your phone
-
-1. Open your `*.web.app` URL in **Safari (iOS)** or **Chrome (Android)**.
-2. Sign in with Google.
-3. **iOS:** Share → *Add to Home Screen*. **Android:** menu → *Install app*.
-4. The icon launches in full-screen mode, no browser chrome.
-
----
-
-## 6. Project layout
-
-```
-src/
-  App.jsx       — all UI components
-  firebase.js   — config, auth helpers, image upload/delete
-  main.jsx      — entry
-  index.css     — Tailwind + a few utilities
-firestore.rules — Firestore security rules (paste into console)
-storage.rules   — Storage security rules (paste into console)
-vite.config.js  — Vite + Tailwind v4 plugin + PWA plugin
-.env.example    — template for your Firebase config
-```
-
-Data model in Firestore:
-- `users/{uid}/items/{itemId}` — wardrobe item documents
-- `users/{uid}/outfits/{outfitId}` — saved outfit documents
-- `users/{uid}/profile/measurements` — single doc with your measurements
-
-Images live in Storage at `users/{uid}/items/{itemId}.jpg`.
-
----
-
-## 7. Free-tier limits at a glance
-
-| Service | Free tier | What you would use |
+| Service | Free tier | Realistic use for a personal wardrobe |
 |---|---|---|
-| Firebase Firestore | 1 GiB storage, 50k reads/day, 20k writes/day | ~7,000 items max (each ~150 KB) |
-| Firebase Auth | Unlimited | 1 user |
+| Firestore | 1 GiB storage, 50k reads/day, 20k writes/day | ~7,000 items at ~150 KB each |
+| Firebase Auth | Unlimited | ✓ |
 | Firebase Hosting | 10 GB storage, 360 MB/day egress | A few MB/day |
+| Gemini 2.5 Flash | 1500 requests/day (free tier) | Plenty for personal styling |
 
-You will not see a bill, and no credit card is required.
+No credit card required. The app is designed to never push you off the free tier.
 
 ---
 
-## 8. Upgrading later (optional)
+## Roadmap
 
-**If you ever want higher-resolution images** (currently capped at 800px to fit Firestore docs), upgrade the project to the **Blaze (pay-as-you-go) plan** in the Firebase Console. The 5 GiB Storage free tier becomes accessible, and you can set a budget alert at $0.01/month — for a private app you will never trigger it.
+Things to do next if you (or I) keep iterating:
 
-Then re-enable Storage in code:
-1. In `src/firebase.js`, re-add the Storage imports and the `uploadWardrobeImage` / `deleteWardrobeImage` helpers.
-2. In `src/App.jsx`, switch `resizeImageToDataUrl` back to returning a Blob, call `uploadWardrobeImage` in the modal submit, and restore the Storage cleanup in `handleDeleteItem`.
-3. Add `"storage": { "rules": "storage.rules" }` back to `firebase.json`.
-4. Run `npm run deploy:rules` then `npm run deploy`.
+- **Split `App.jsx` into modules.** Currently monolithic by design (rapid solo iteration). Natural breaks: `lib/ai/`, `lib/firebase/`, `components/wardrobe/`, `components/outfits/`, `components/modals/`, `screens/`.
+- **Move the Gemini key server-side.** Currently in the client bundle (`import.meta.env.VITE_GEMINI_API_KEY`). For any public deploy, proxy via a Cloud Function so the key isn't extractable and you can rate-limit per user.
+- **True background push notifications.** Requires Firebase Cloud Messaging (Blaze plan). Current implementation is "notify on app open".
+- **Sale-watcher cron** for wishlist items. Needs scheduled Cloud Function (Blaze plan).
+- **Co-edit shared wardrobes.** Current rules give each user an isolated subtree; sharing requires rules redesign + a separate `/wardrobes/{id}` collection.
+- **Tests.** Particularly for the prompt-mapping helpers (`matchCareTag`, `matchColorFamily`, `parseReceiptText`, slot filters).
+- **App Store / Play Store wrapping** via PWABuilder.
 
-The git history of this repo shows the exact diff if you ever want to revisit.
+---
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). Use it, fork it, learn from it, ship your own.
+
+---
+
+## Acknowledgements
+
+- **Playfair Display** + **Jost** — Google Fonts.
+- **lucide.dev** — icon system.
+- **@imgly/background-removal** — the cutout magic.
+- **Open-Meteo** — free weather forecast API used by the travel planner.
+- **Microlink** — URL metadata fetcher used by link import.
+- Competitors I learned from by watching: **Whering**, **Stylebook**, **Acloset**, **Indyx**, **Save Your Wardrobe**. Each made deliberate choices worth studying.

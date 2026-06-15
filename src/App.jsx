@@ -1380,17 +1380,66 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   ]);
 }
 
+// Domain-level circuit breaker for the proxy chain. Scraper-hostile sites
+// (e.g. Holland Cooper) block all 5 public proxies; without this, the wishlist
+// watcher and bulk URL importer re-attack the same dead hosts every session
+// and flood DevTools with CORS errors. After a full-chain failure we record
+// the host with exponential backoff (1d → 2d → 4d → … capped at 30d) and
+// short-circuit further attempts. Success clears the entry.
+const BLOCKED_HOSTS_KEY = 'atelier.blockedHosts';
+const HOST_BACKOFF_BASE_MS = 24 * 3600_000;
+const HOST_BACKOFF_MAX_MS = 30 * 86_400_000;
+
+function readBlockedHosts() {
+  try {
+    const raw = localStorage.getItem(BLOCKED_HOSTS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+function writeBlockedHosts(map) {
+  try { localStorage.setItem(BLOCKED_HOSTS_KEY, JSON.stringify(map)); }
+  catch { /* quota / private mode — fail open */ }
+}
+function isHostBlocked(host) {
+  if (!host) return false;
+  const entry = readBlockedHosts()[host];
+  return !!entry && entry.nextRetryAt > Date.now();
+}
+function markHostFailed(host) {
+  if (!host) return;
+  const map = readBlockedHosts();
+  const failCount = (map[host]?.failCount || 0) + 1;
+  const wait = Math.min(HOST_BACKOFF_BASE_MS * 2 ** (failCount - 1), HOST_BACKOFF_MAX_MS);
+  map[host] = { failCount, nextRetryAt: Date.now() + wait };
+  writeBlockedHosts(map);
+}
+function clearHostBlock(host) {
+  if (!host) return;
+  const map = readBlockedHosts();
+  if (!map[host]) return;
+  delete map[host];
+  writeBlockedHosts(map);
+}
+
 async function fetchViaProxy(url, options = {}) {
+  const host = hostOf(url);
+  if (isHostBlocked(host)) {
+    throw new Error(`Skipped — ${host} is in cooldown after repeated proxy failures`);
+  }
   const errors = [];
   for (const buildUrl of CORS_PROXIES) {
     try {
       const resp = await fetchWithTimeout(buildUrl(url), options);
-      if (resp.ok) return resp;
+      if (resp.ok) {
+        clearHostBlock(host);
+        return resp;
+      }
       errors.push(`HTTP ${resp.status}`);
     } catch (err) {
       errors.push(err?.message || 'fetch failed');
     }
   }
+  markHostFailed(host);
   throw new Error(`All ${CORS_PROXIES.length} proxies failed (${errors.slice(0, 3).join(' · ')})`);
 }
 
@@ -1851,7 +1900,14 @@ function DigitalWardrobe() {
             const drop = Math.round((1 - newPrice / oldPrice) * 100);
             toast.show(`${it.name}: ${drop}% off · now £${newPrice}`, { kind: 'success', duration: 6000 });
           }
-        } catch { /* network/parse failure — try again tomorrow */ }
+        } catch {
+          // Persist the attempt timestamp so a permanently failing URL doesn't
+          // get re-scanned on every app load. Without this, the 24h gate above
+          // never engages for failing items and the proxy chain runs forever.
+          try {
+            await setDoc(doc(userItemsRef(user.uid), it.id), { ...it, priceCheckedAt: new Date().toISOString() });
+          } catch { /* offline / firestore down — accept the retry next time */ }
+        }
       }
     })();
   }, [user, items.length]);

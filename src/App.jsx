@@ -2048,7 +2048,10 @@ function DigitalWardrobe() {
       seasons: itemSeasons(item),
       description: item.description || '',
       wishlistReason: item.wishlistReason || '',
-      images: (Array.isArray(item.images) ? item.images : (item.image ? [item.image] : [])).slice(0, 3),
+      // Use the shared itemImages helper so we pick up both `images` (array,
+      // base64 data URLs) and `imageUrl` (single URL) — the snapshot was
+      // missing images for items stored in the URL-only form.
+      images: itemImages(item).slice(0, 3),
       sourceUrl: item.sourceUrl || '',
       sharedAt: new Date().toISOString(),
       sharedByName: user.displayName || 'Atelier',
@@ -3958,7 +3961,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       {/* Sticky aside — truly fixed once stuck. No internal overflow scroller.
           Top padding intentionally omitted so the Add/Select command row's
           top edge aligns horizontally with the search bar in the main column. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9rem] flex-col gap-3 lg:pr-1 lg:pb-6">
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9.5rem] flex-col gap-3 lg:pr-1 lg:pb-6">
         {/* Always-visible primary CTA + Select toggle. All controls share
             h-12 with the search bar in the main column so they sit on the
             same horizontal baseline. */}
@@ -10663,6 +10666,32 @@ function WearVerdictInput({ initial, onSave }) {
 //   - iOS Safari: no event exists. We sniff (iPhone/iPad + Safari + not in
 //     standalone mode) and show the manual Share → Add to Home Screen guide.
 // Dismissal persists in localStorage so the user never sees it twice.
+// Footer rendered on every public share page. Optionally credits the
+// publisher of this deployment (VITE_PUBLISHER_NAME / VITE_PUBLISHER_URL).
+// Falls back to a plain "Made with Atelier" if no publisher set.
+function PublicShareFooter() {
+  const publisher = import.meta.env.VITE_PUBLISHER_NAME?.trim();
+  const publisherUrl = import.meta.env.VITE_PUBLISHER_URL?.trim();
+  return (
+    <footer className="mt-20 pt-8 border-t border-stone-200 text-center text-xs tracking-wider uppercase text-stone-400 space-y-1">
+      <p>Read-only view · made with Atelier</p>
+      {publisher && (
+        <p>
+          Personal project by{' '}
+          {publisherUrl ? (
+            <a href={publisherUrl} target="_blank" rel="noopener noreferrer"
+              className="text-stone-600 hover:text-stone-900 underline decoration-stone-300 underline-offset-2 transition-colors">
+              {publisher}
+            </a>
+          ) : (
+            <span className="text-stone-600">{publisher}</span>
+          )}
+        </p>
+      )}
+    </footer>
+  );
+}
+
 // Public read-only viewer for a shared outfit. Reads /public/{shareId}; no auth
 // required. Self-contained — uses only the embedded snapshot, no further reads.
 function PublicShareView({ shareId }) {
@@ -10792,9 +10821,7 @@ function PublicShareView({ shareId }) {
               )}
             </div>
           </div>
-          <footer className="mt-20 pt-8 border-t border-stone-200 text-center text-xs tracking-wider uppercase text-stone-400">
-            Read-only view · made with Atelier
-          </footer>
+          <PublicShareFooter />
         </main>
       </div>
     );

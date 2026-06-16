@@ -3958,14 +3958,17 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so daily actions stay one tap away without burying search/filters
           or stacking under the grid. The top offset (lg:top-36) sits the
           aside just below the sticky page header. */}
-      {/* Sticky aside — truly fixed once stuck. No internal overflow scroller.
-          Top padding intentionally omitted so the Add/Select command row's
-          top edge aligns horizontally with the search bar in the main column. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:sticky lg:top-[9.5rem] flex-col gap-3 lg:pr-1 lg:pb-6">
-        {/* Always-visible primary CTA + Select toggle. All controls share
-            h-12 with the search bar in the main column so they sit on the
-            same horizontal baseline. */}
-        <div className="flex items-stretch gap-2">
+      {/* Right column. The column itself is NOT sticky — only the Add/Select
+          row at the top is. Cards below (TodayTile, DailyDigest, Today's
+          Pick, Tomorrow) flow naturally and scroll with the page so all
+          content remains reachable even on shorter viewports. */}
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 flex-col gap-3 lg:pr-1 lg:pb-6">
+        {/* Sticky command bar — Add/Select stay locked at top of the column
+            while the user scrolls the grid + the rest of this column. The
+            translucent backdrop + bottom border separate it from cards
+            scrolling underneath. Negative margins + matching padding extend
+            the bg edge-to-edge across the column gutters. */}
+        <div className="lg:sticky lg:top-[9.5rem] z-20 flex items-stretch gap-2 lg:bg-[#F7F5F2]/90 lg:backdrop-blur-md lg:-mx-2 lg:px-2 lg:py-2 lg:border-b lg:border-stone-200/50">
           <button
             onClick={openAddModal}
             className="flex-1 h-12 bg-stone-900 text-white px-5 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"

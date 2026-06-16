@@ -5216,7 +5216,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               </button>
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <button onClick={onToggleFavorite}
               className={`p-2.5 rounded-full transition-all active:scale-90 ${
                 item.favorite
@@ -5231,17 +5231,28 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               <span className="hidden sm:inline">Edit</span>
               <span className="sm:hidden text-xs font-medium px-1">Edit</span>
             </button>
-            {onShare && (
-              <button
-                onClick={onShare}
-                className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all inline-flex items-center gap-2"
-                title={item.status === 'wishlist' ? 'Share this wishlist item for second opinions' : 'Share this piece'}
-                aria-label="Share item"
-              >
-                <Share2 size={16} strokeWidth={1.5} />
-                <span className="hidden sm:inline">Share</span>
-              </button>
-            )}
+            {onShare && (() => {
+              // Wishlist items use share as a primary action (asking friends
+              // for opinions), so we make it a labelled brass pill that's
+              // immediately discoverable — not just another icon in the row.
+              // Owned items keep the lighter icon-only treatment.
+              const isWish = item.status === 'wishlist';
+              return (
+                <button
+                  onClick={onShare}
+                  className={`p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm transition-all inline-flex items-center gap-2 border ${
+                    isWish
+                      ? 'bg-brass-200 text-stone-900 border-brass-300 hover:bg-brass-300 font-medium'
+                      : 'bg-white border-stone-200 text-stone-700 hover:border-stone-900'
+                  }`}
+                  title={isWish ? 'Share this wishlist item for second opinions' : 'Share this piece'}
+                  aria-label="Share item"
+                >
+                  <Share2 size={16} strokeWidth={1.5} />
+                  <span className={isWish ? 'text-xs sm:text-sm font-medium' : 'hidden sm:inline'}>Share</span>
+                </button>
+              );
+            })()}
             <button
               onClick={onDuplicate}
               className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all inline-flex items-center gap-2"

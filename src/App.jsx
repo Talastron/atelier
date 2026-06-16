@@ -2072,7 +2072,7 @@ function DigitalWardrobe() {
       return null;
     }
     const url = `${window.location.origin}/?share=${shareId}`;
-    setShareTarget({ url, title, kind: 'item' });
+    setShareTarget({ url, title, kind: 'item', sharedByName: snapshot.sharedByName, status: snapshot.status });
     return url;
   };
 
@@ -2397,7 +2397,7 @@ function DigitalWardrobe() {
             <button
               type="button"
               onClick={scrollMainToTop}
-              className="lg:hidden fixed right-4 z-30 w-11 h-11 rounded-full bg-stone-900 text-white shadow-2xl flex items-center justify-center active:scale-90 hover:bg-stone-800 transition-all animate-in fade-in slide-in-from-bottom-2 duration-200"
+              className="fixed right-4 lg:right-6 z-30 w-11 h-11 lg:w-12 lg:h-12 rounded-full bg-stone-900 text-white shadow-2xl flex items-center justify-center active:scale-90 hover:bg-stone-800 transition-all animate-in fade-in slide-in-from-bottom-2 duration-200 lg:!bottom-6"
               style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
               aria-label="Scroll to top"
             >
@@ -2433,6 +2433,8 @@ function DigitalWardrobe() {
               url={shareTarget.url}
               title={shareTarget.title}
               kind={shareTarget.kind}
+              sharedByName={shareTarget.sharedByName || user?.displayName || ''}
+              status={shareTarget.status}
               onClose={() => setShareTarget(null)}
             />
           )}
@@ -8827,12 +8829,35 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 // explicit Copy button. The inline URL field is selectable so even when
 // clipboard.writeText is blocked (Safari outside user-gesture, some PWAs),
 // the user can long-press → copy manually.
-function ShareLinkModal({ url, title, kind, onClose }) {
+function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onClose }) {
   useEscapeKey(onClose);
   const [copied, setCopied] = useState(false);
   const inputRef = React.useRef(null);
-  const label = kind === 'lookbook' ? 'lookbook' : 'look';
-  const shareText = `Have a look at "${title}" on Atelier`;
+  const label = kind === 'lookbook' ? 'lookbook' : kind === 'item' ? 'item' : 'look';
+  // Contextual share copy — what gets pasted into WhatsApp, email subject, or
+  // the OS share sheet. Item shares mention the sharer's name + wishlist
+  // context so recipients understand why they're being asked to look.
+  const shareText = (() => {
+    const who = sharedByName ? sharedByName.split(' ')[0] : '';
+    if (kind === 'item') {
+      if (status === 'wishlist') {
+        return who
+          ? `This piece is on ${who}'s wishlist on Atelier — what do you think?`
+          : `This piece is on someone's wishlist on Atelier — what do you think?`;
+      }
+      return who
+        ? `${who} shared this piece with you on Atelier`
+        : `Take a look at this piece on Atelier`;
+    }
+    if (kind === 'lookbook') {
+      return who
+        ? `${who} shared a lookbook with you on Atelier · "${title}"`
+        : `Take a look at this lookbook on Atelier · "${title}"`;
+    }
+    return who
+      ? `${who} shared an outfit with you on Atelier · "${title}"`
+      : `Have a look at "${title}" on Atelier`;
+  })();
 
   const tryCopy = async () => {
     try {

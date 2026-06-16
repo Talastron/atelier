@@ -85,37 +85,162 @@ function getAiSafe() {
 
 export const isAIEnabled = () => !!import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
+// ─── Client-side rate limiter ────────────────────────────────────────────
+// Per-browser cap on Gemini calls to protect the project's budget from
+// runaway loops (e.g. a bug retriggering geminiText on every render) and
+// from heavy bursts. Two windows enforced together:
+//   - MAX_PER_MINUTE: short burst limit (10 calls/min)
+//   - MAX_PER_DAY:    daily ceiling (200 calls/day)
+//
+// At Gemini 2.5 Flash blended pricing (~$0.005/call), 200/day caps the
+// absolute worst-case cost around $1/day even with a runaway loop —
+// before Firebase's per-project budget alert ever fires.
+//
+// Call timestamps live in localStorage so the limit survives reloads.
+// Multiple browser tabs share the same log (same origin). Each invited
+// user has their own browser, so this is per-browser, not per-project —
+// the project-level budget alert is the global ceiling.
+const RATE_LIMIT_KEY = 'atelier.aiCallLog';
+const MAX_PER_MINUTE = 10;
+const MAX_PER_DAY = 200;
+const MINUTE_MS = 60_000;
+const DAY_MS = 24 * 3600_000;
+
+function readCallLog() {
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function writeCallLog(timestamps) {
+  try { localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(timestamps)); }
+  catch { /* quota / private mode — fail open */ }
+}
+function pruneCallLog(timestamps, now) {
+  // Only keep entries within the past 24h — that's all we need for the
+  // daily count, and prevents the log growing unbounded.
+  const dayAgo = now - DAY_MS;
+  return timestamps.filter((t) => t > dayAgo);
+}
+function formatWait(ms) {
+  const sec = Math.max(1, Math.ceil(ms / 1000));
+  if (sec < 60) return `${sec}s`;
+  const min = Math.ceil(sec / 60);
+  if (min < 60) return `${min} min`;
+  return `${Math.ceil(min / 60)}h`;
+}
+function checkRateLimit() {
+  const now = Date.now();
+  const log = pruneCallLog(readCallLog(), now);
+  if (log.length >= MAX_PER_DAY) {
+    const retryAt = log[0] + DAY_MS;
+    throw new Error(`You've reached today's AI limit (${MAX_PER_DAY} calls). It resets in ${formatWait(retryAt - now)}.`);
+  }
+  const minuteAgo = now - MINUTE_MS;
+  const inWindow = log.filter((t) => t > minuteAgo);
+  if (inWindow.length >= MAX_PER_MINUTE) {
+    const retryAt = inWindow[0] + MINUTE_MS;
+    throw new Error(`Slow down — Atelier paces AI calls to keep costs low. Try again in ${formatWait(retryAt - now)}.`);
+  }
+}
+function recordCall() {
+  const now = Date.now();
+  const log = pruneCallLog(readCallLog(), now);
+  log.push(now);
+  writeCallLog(log);
+}
+
+// ─── Friendly error mapping ──────────────────────────────────────────────
+// Gemini SDK errors are dumped as raw HTTP/JSON strings — not what we want
+// to put in a toast. This maps the common failure modes to one-sentence
+// user-facing messages. Anything unrecognised passes through unchanged so
+// we don't accidentally swallow useful info.
+function mapGeminiError(err) {
+  const msg = String(err?.message || err || '');
+  const lower = msg.toLowerCase();
+
+  // Try to pull out Google's retryDelay (e.g. "Please retry in 37.5s." or "retryDelay":"37s")
+  const retryMatch = msg.match(/retry in ([\d.]+)\s*s/i)
+    || msg.match(/retryDelay["\s:]+["']?(\d+)\s*s/i);
+  const retrySec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
+  const retryHint = retrySec ? ` Try again in ${retrySec}s.` : '';
+
+  if (lower.includes('429') || lower.includes('rate_limit') || lower.includes('quota')) {
+    if (lower.includes('per day') || lower.includes('perday')) {
+      return new Error(`AI hit today's project-wide request limit. It resets at midnight UTC.${retryHint}`);
+    }
+    return new Error(`AI is at its rate limit right now.${retryHint || ' Try again in a moment.'}`);
+  }
+  if (lower.includes('503') || lower.includes('unavailable')) {
+    return new Error('AI is briefly offline. Try again in a moment.');
+  }
+  if (lower.includes('app check') || lower.includes('app-check')) {
+    return new Error('Could not verify the app with Firebase. Try refreshing the page.');
+  }
+  if (lower.includes('not configured') || lower.includes('ai logic') || lower.includes('not enabled')) {
+    return new Error('AI is not enabled for this Firebase project. Owner needs to enable Firebase AI Logic.');
+  }
+  if (lower.includes('permission') || lower.includes('403') || lower.includes('forbidden')) {
+    return new Error('AI access denied. Check Firebase App Check and AI Logic configuration.');
+  }
+  if (lower.includes('model') && (lower.includes('not found') || lower.includes('404') || lower.includes('deprecated'))) {
+    return new Error('The AI model is unavailable — it may have been deprecated. Update may be needed.');
+  }
+  if (lower.includes('network') || lower.includes('failed to fetch') || lower.includes('fetch failed') || lower.includes('offline')) {
+    return new Error('Network error reaching AI. Check your connection and try again.');
+  }
+  if (lower.includes('safety') || lower.includes('blocked')) {
+    return new Error("Gemini's safety filter rejected this request. Try rephrasing or a different image.");
+  }
+  // Fallback — pass through but prefix so the user knows it's an AI error.
+  if (msg && msg.length < 200) return new Error(`AI error: ${msg}`);
+  return new Error('AI failed unexpectedly. Try again, or refresh the page.');
+}
+
 // Plain text generation. Returns the model's response string.
 // `opts`: { temperature, jsonMode, model }
 export async function geminiText(prompt, opts = {}) {
-  const ai = getAiSafe();
-  const model = getGenerativeModel(ai, {
-    model: opts.model || 'gemini-2.5-flash',
-    generationConfig: {
-      temperature: opts.temperature ?? 0.7,
-      ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
-    },
-  });
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  checkRateLimit();  // throws with friendly message if exceeded
+  recordCall();      // record BEFORE the call so failed attempts also count
+                     // (prevents a runaway loop of failures from looking "free")
+  try {
+    const ai = getAiSafe();
+    const model = getGenerativeModel(ai, {
+      model: opts.model || 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: opts.temperature ?? 0.7,
+        ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
+      },
+    });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (err) {
+    throw mapGeminiError(err);
+  }
 }
 
 // Multimodal: prompt + a single image (data URL). Same options as geminiText.
 export async function geminiTextVision(prompt, imageDataUrl, opts = {}) {
-  const ai = getAiSafe();
-  const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error('Image format not recognised.');
-  const [, mimeType, data] = match;
-  const model = getGenerativeModel(ai, {
-    model: opts.model || 'gemini-2.5-flash',
-    generationConfig: {
-      temperature: opts.temperature ?? 0.4,
-      ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
-    },
-  });
-  const result = await model.generateContent([
-    prompt,
-    { inlineData: { mimeType, data } },
-  ]);
-  return result.response.text();
+  checkRateLimit();
+  recordCall();
+  try {
+    const ai = getAiSafe();
+    const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Image format not recognised.');
+    const [, mimeType, data] = match;
+    const model = getGenerativeModel(ai, {
+      model: opts.model || 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: opts.temperature ?? 0.4,
+        ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
+      },
+    });
+    const result = await model.generateContent([
+      prompt,
+      { inlineData: { mimeType, data } },
+    ]);
+    return result.response.text();
+  } catch (err) {
+    throw mapGeminiError(err);
+  }
 }

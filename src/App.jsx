@@ -1708,6 +1708,15 @@ function DigitalWardrobe() {
   const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   const [isSweepModalOpen, setIsSweepModalOpen] = useState(false);
   const [inspirationDefaultFilter, setInspirationDefaultFilter] = useState('all');
+  // When jumping to the Wardrobe tab from Insights (or anywhere else), seed
+  // the filter/category so the user lands on a pre-filtered view instead of
+  // having to drill down a second time. {nonce} forces re-application when
+  // the same filter is re-requested.
+  const [wardrobeJump, setWardrobeJump] = useState({ filter: null, category: null, nonce: 0 });
+  const jumpToWardrobe = ({ filter = null, category = null } = {}) => {
+    setWardrobeJump((p) => ({ filter, category, nonce: p.nonce + 1 }));
+    setActiveTab('wardrobe');
+  };
   const [shareTarget, setShareTarget] = useState(null); // { url, title, kind }
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -2222,23 +2231,28 @@ function DigitalWardrobe() {
 
             <div className="border-t border-stone-200/60 pt-5 mt-6">
               <button onClick={() => setActiveTab('profile')}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl hover:bg-white hover:smooth-shadow transition-all group"
+                className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-white hover:smooth-shadow transition-all group"
               >
                 {user.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-9 h-9 rounded-full ring-2 ring-stone-100" referrerPolicy="no-referrer" />
+                  <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full ring-2 ring-stone-100 shrink-0" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-sm">
+                  <div className="w-12 h-12 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-base shrink-0">
                     {(user.displayName || user.email || '?').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-xs font-medium text-stone-900 truncate">{user.displayName || 'Account'}</p>
-                  <p className="text-[10px] text-stone-500 truncate">{user.email}</p>
+                  <p className="text-sm font-medium text-stone-900 truncate">{user.displayName || 'Account'}</p>
+                  <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
                 </div>
-                <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500 transition-colors" strokeWidth={1.5} />
+                <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500 transition-colors shrink-0" strokeWidth={1.5} />
               </button>
-              <button onClick={signOutUser} className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-200/50 hover:text-stone-700 transition-colors">
-                <LogOut size={12} strokeWidth={1.5} /> Sign out
+              {/* Sign out — left-aligned with profile-row content above (matches
+                  the 12px avatar + 14px gap so the icon lines up under the name). */}
+              <button onClick={signOutUser} className="w-full flex items-center gap-2 mt-2 px-2 py-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-200/50 hover:text-stone-700 transition-colors">
+                <span className="w-12 flex items-center justify-center shrink-0">
+                  <LogOut size={12} strokeWidth={1.5} />
+                </span>
+                <span>Sign out</span>
               </button>
             </div>
           </aside>
@@ -2253,7 +2267,7 @@ function DigitalWardrobe() {
                 <WardrobeSkeleton />
               ) : (
                 <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} />}
+                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
                       items={liveItems}
@@ -2272,7 +2286,7 @@ function DigitalWardrobe() {
                       onCreateLookbook={handleShareLookbook}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} />}
+                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}
@@ -3419,7 +3433,7 @@ function sortWardrobeItems(items, sortBy) {
   return arr.sort((a, b) => favBoost(a, b) || comparator(a, b));
 }
 
-function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop }) {
+function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0 }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const enterSelectMode = (firstId = null) => {
@@ -3441,6 +3455,15 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   const [filter, setFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [seasonFilter, setSeasonFilter] = useState('All Seasons');
+  // Apply any pending jump from Insights (or another tab). nonce changes on
+  // every jump request so identical { filter, category } combinations also
+  // re-fire. We scroll to top so the user lands on the filtered grid head.
+  useEffect(() => {
+    if (!jumpNonce) return;
+    if (jumpFilter !== null) setFilter(jumpFilter);
+    if (jumpCategory !== null) setCategoryFilter(jumpCategory);
+    onScrollTop?.();
+  }, [jumpNonce, jumpFilter, jumpCategory]);
   const [sortBy, setSortBy] = useState(() => {
     try { return localStorage.getItem(WARDROBE_SORT_KEY) || 'recent'; }
     catch { return 'recent'; }
@@ -9429,7 +9452,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
   );
 }
 
-function FinanceView({ items, inspirations = [] }) {
+function FinanceView({ items, inspirations = [], onJumpToWardrobe }) {
   const ownedItems = items.filter(i => i.status === 'owned');
   const wishlistItems = items.filter(i => i.status === 'wishlist');
   const ownedTotal = ownedItems.reduce((sum, i) => sum + i.price, 0);
@@ -9513,31 +9536,57 @@ function FinanceView({ items, inspirations = [] }) {
           </p>
         </div>
 
-        <div className="bg-white border border-stone-200/60 p-10 rounded-[2rem] smooth-shadow">
-          <p className="text-stone-500 text-xs font-semibold tracking-[0.2em] uppercase mb-4">Wishlist Target</p>
+        {/* Wishlist Target — clickable. Jumps to Wardrobe filtered to wishlist. */}
+        <button
+          onClick={() => onJumpToWardrobe?.({ filter: 'wishlist' })}
+          disabled={!onJumpToWardrobe || wishlistItems.length === 0}
+          className="text-left bg-white border border-stone-200/60 p-10 rounded-[2rem] smooth-shadow transition-all enabled:hover:border-stone-900 enabled:hover:-translate-y-0.5 enabled:active:scale-[0.99] disabled:cursor-default group"
+        >
+          <div className="flex items-baseline justify-between gap-3 mb-4">
+            <p className="text-stone-500 text-xs font-semibold tracking-[0.2em] uppercase">Wishlist Target</p>
+            {wishlistItems.length > 0 && (
+              <span className="text-[10px] tracking-widest uppercase text-stone-400 group-hover:text-stone-900 transition-colors inline-flex items-center gap-1">
+                View <ChevronRight size={12} strokeWidth={1.5} />
+              </span>
+            )}
+          </div>
           <h3 className="text-5xl font-display text-stone-900">£{wishlistTotal.toLocaleString()}</h3>
           <p className="text-sm text-stone-500 mt-8 flex items-center gap-2">
             <Heart size={14} className="text-stone-400" />
             {wishlistItems.length} items desired
           </p>
-        </div>
+        </button>
       </div>
 
       <div className="bg-white border border-stone-200/60 rounded-[2rem] p-10 smooth-shadow">
-        <h3 className="font-display text-2xl text-stone-900 mb-8">Investment by Category</h3>
-        <div className="space-y-6">
+        <div className="flex items-baseline justify-between gap-3 mb-8 flex-wrap">
+          <h3 className="font-display text-2xl text-stone-900">Investment by Category</h3>
+          {Object.keys(categoryBreakdown).length > 0 && onJumpToWardrobe && (
+            <span className="text-[10px] tracking-widest uppercase text-stone-400">Tap a row to view in your wardrobe</span>
+          )}
+        </div>
+        <div className="space-y-4">
           {Object.entries(categoryBreakdown).map(([category, value]) => {
             const percentage = ownedTotal > 0 ? (value / ownedTotal) * 100 : 0;
+            const clickable = !!onJumpToWardrobe;
+            const RowTag = clickable ? 'button' : 'div';
             return (
-              <div key={category} className="group">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-medium text-stone-800 tracking-wide uppercase text-xs">{category}</span>
-                  <span className="text-stone-500">£{value.toLocaleString()} <span className="text-stone-300 ml-2">({percentage.toFixed(0)}%)</span></span>
+              <RowTag
+                key={category}
+                {...(clickable ? { type: 'button', onClick: () => onJumpToWardrobe({ filter: 'all', category }), 'aria-label': `View ${category} in wardrobe` } : {})}
+                className={`group block w-full text-left rounded-xl p-3 -mx-3 transition-colors ${clickable ? 'hover:bg-stone-50 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900' : ''}`}
+              >
+                <div className="flex justify-between items-baseline text-sm mb-2 gap-3">
+                  <span className={`font-medium tracking-wide uppercase text-xs transition-colors ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-800'}`}>{category}</span>
+                  <span className="text-stone-500 shrink-0">
+                    £{value.toLocaleString()} <span className="text-stone-300 ml-2">({percentage.toFixed(0)}%)</span>
+                    {clickable && <ChevronRight size={12} strokeWidth={1.5} className="inline-block ml-1.5 -mt-0.5 text-stone-300 group-hover:text-stone-700 transition-colors" />}
+                  </span>
                 </div>
                 <div className="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
                   <div className="bg-stone-900 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${percentage}%` }}></div>
                 </div>
-              </div>
+              </RowTag>
             );
           })}
           {Object.keys(categoryBreakdown).length === 0 && <p className="text-stone-400 italic">No items owned yet.</p>}

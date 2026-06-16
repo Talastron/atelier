@@ -3961,8 +3961,14 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       {/* Right column. The column itself is NOT sticky — only the Add/Select
           row at the top is. Cards below (TodayTile, DailyDigest, Today's
           Pick, Tomorrow) flow naturally and scroll with the page so all
-          content remains reachable even on shorter viewports. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 flex-col gap-3 lg:pr-1 lg:pb-6">
+          content remains reachable even on shorter viewports.
+          lg:self-stretch makes the aside fill the grid row's full height
+          (matching the tall left column) — necessary because CSS sticky
+          only sticks while its containing block is on screen. Without
+          this, the sticky Add/Select bar would scroll away once the
+          ~600px aside content scrolls past, because the aside's own
+          bottom edge would also be past the viewport. */}
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:self-stretch flex-col gap-3 lg:pr-1 lg:pb-6">
         {/* Sticky command bar — Add/Select stay locked at top of the column
             while the user scrolls the grid + the rest of this column. The
             translucent backdrop + bottom border separate it from cards

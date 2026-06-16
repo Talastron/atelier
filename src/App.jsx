@@ -2029,10 +2029,14 @@ function DigitalWardrobe() {
   // Mirrors handleShareOutfit: snapshots image + key metadata into
   // /public/{shareId} so the page is viewable by anyone with the link,
   // unauthenticated. Useful for "should I buy this?" texts to friends.
+  // Only the primary image is included — Firestore caps docs at 1 MiB and
+  // base64 photos can be 150-300 KB each, so multiple would risk overflow.
   const handleShareItem = async (item) => {
     if (!user) return null;
     const shareId = newShareId();
     const title = item.name || 'A piece';
+    const allImages = itemImages(item);
+    const primaryImage = allImages[0];
     const snapshot = {
       v: 1,
       kind: 'item',
@@ -2048,15 +2052,25 @@ function DigitalWardrobe() {
       seasons: itemSeasons(item),
       description: item.description || '',
       wishlistReason: item.wishlistReason || '',
-      // Use the shared itemImages helper so we pick up both `images` (array,
-      // base64 data URLs) and `imageUrl` (single URL) — the snapshot was
-      // missing images for items stored in the URL-only form.
-      images: itemImages(item).slice(0, 3),
+      images: primaryImage ? [primaryImage] : [],
       sourceUrl: item.sourceUrl || '',
       sharedAt: new Date().toISOString(),
       sharedByName: user.displayName || 'Atelier',
     };
-    await setDoc(publicShareDoc(shareId), snapshot);
+    try {
+      const docSizeKB = Math.round(JSON.stringify(snapshot).length / 1024);
+      console.log(`[share] item snapshot ${docSizeKB} KB · kind=item · image=${primaryImage ? 'yes' : 'no'}`);
+      if (docSizeKB > 900) {
+        // 1 MiB Firestore cap with ~10% buffer. The photo is the likely culprit.
+        toast.show('Photo is too large to share. Try a different item or re-add the photo at lower quality.', { kind: 'error', duration: 6000 });
+        return null;
+      }
+      await setDoc(publicShareDoc(shareId), snapshot);
+    } catch (err) {
+      console.error('[share] failed to save item share doc', err);
+      toast.show(`Could not create share link: ${err?.message || 'unknown error'}`, { kind: 'error', duration: 6000 });
+      return null;
+    }
     const url = `${window.location.origin}/?share=${shareId}`;
     setShareTarget({ url, title, kind: 'item' });
     return url;

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, Check, Copy, ArrowUpDown
+  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, Check, Copy, ArrowUpDown, Search, Share2
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -2024,6 +2024,41 @@ function DigitalWardrobe() {
     setShareTarget({ url, title, kind: 'outfit' });
     return url;
   };
+
+  // Single wishlist/owned item shared as a self-contained public page.
+  // Mirrors handleShareOutfit: snapshots image + key metadata into
+  // /public/{shareId} so the page is viewable by anyone with the link,
+  // unauthenticated. Useful for "should I buy this?" texts to friends.
+  const handleShareItem = async (item) => {
+    if (!user) return null;
+    const shareId = newShareId();
+    const title = item.name || 'A piece';
+    const snapshot = {
+      v: 1,
+      kind: 'item',
+      name: title,
+      brand: item.brand || '',
+      category: item.category || '',
+      subCategory: item.subCategory || '',
+      price: Number(item.price) || 0,
+      status: item.status || 'owned',
+      colors: itemColors(item),
+      materials: itemMaterials(item),
+      styles: itemStyles(item),
+      seasons: itemSeasons(item),
+      description: item.description || '',
+      wishlistReason: item.wishlistReason || '',
+      images: (Array.isArray(item.images) ? item.images : (item.image ? [item.image] : [])).slice(0, 3),
+      sourceUrl: item.sourceUrl || '',
+      sharedAt: new Date().toISOString(),
+      sharedByName: user.displayName || 'Atelier',
+    };
+    await setDoc(publicShareDoc(shareId), snapshot);
+    const url = `${window.location.origin}/?share=${shareId}`;
+    setShareTarget({ url, title, kind: 'item' });
+    return url;
+  };
+
   const handleSaveProfile = async (newMeasurements) => {
     if (!user) return;
     await setDoc(userProfileDoc(user.uid), newMeasurements);
@@ -2319,6 +2354,8 @@ function DigitalWardrobe() {
                       onOpenInspiration={setSelectedInspirationId}
                       onAddInspiration={() => setIsInspirationModalOpen(true)}
                       defaultFilter={inspirationDefaultFilter}
+                      wishlistCount={liveItems.filter((i) => i.status === 'wishlist').length}
+                      onJumpToWishlist={() => jumpToWardrobe({ filter: 'wishlist' })}
                     />
                   )}
                 </div>
@@ -2560,6 +2597,7 @@ function DigitalWardrobe() {
               onMarkCared={() => handleMarkCared(selectedItem)}
               onToggleFavorite={() => handleToggleFavorite(selectedItem)}
               onDuplicate={() => handleDuplicateItem(selectedItem)}
+              onShare={() => handleShareItem(selectedItem)}
               onOpenItem={(id) => setSelectedItemId(id)}
               onClose={() => setSelectedItemId(null)}
               onEdit={() => { setEditingItem(selectedItem); setIsAddItemModalOpen(true); setSelectedItemId(null); }}
@@ -5046,7 +5084,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   );
 }
 
-function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onMarkCared, onToggleFavorite, onDuplicate, onOpenItem, onPrev, onNext, positionLabel }) {
+function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onMarkCared, onToggleFavorite, onDuplicate, onShare, onOpenItem, onPrev, onNext, positionLabel }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -5165,6 +5203,17 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               <span className="hidden sm:inline">Edit</span>
               <span className="sm:hidden text-xs font-medium px-1">Edit</span>
             </button>
+            {onShare && (
+              <button
+                onClick={onShare}
+                className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all inline-flex items-center gap-2"
+                title={item.status === 'wishlist' ? 'Share this wishlist item for second opinions' : 'Share this piece'}
+                aria-label="Share item"
+              >
+                <Share2 size={16} strokeWidth={1.5} />
+                <span className="hidden sm:inline">Share</span>
+              </button>
+            )}
             <button
               onClick={onDuplicate}
               className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all inline-flex items-center gap-2"
@@ -5540,6 +5589,36 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 </a>
               </div>
             )}
+
+            {/* Shop-around shortcuts — open the item on price-comparison
+                surfaces in a new tab. No backend, no API costs; just a
+                one-tap path to compare prices yourself. Especially useful
+                for wishlist items (find a better deal) and owned items
+                (check resale value or replacement cost). */}
+            {(item.name || item.brand) && (() => {
+              const query = encodeURIComponent(`${item.brand || ''} ${item.name || ''}`.trim());
+              const shops = [
+                { label: 'Google Shopping', url: `https://www.google.com/search?tbm=shop&q=${query}`, hint: 'Compare new prices' },
+                { label: 'eBay', url: `https://www.ebay.co.uk/sch/?_nkw=${query}`, hint: 'New + pre-loved' },
+                { label: 'Vinted', url: `https://www.vinted.co.uk/catalog?search_text=${query}`, hint: 'Second-hand' },
+                { label: 'Vestiaire', url: `https://www.vestiairecollective.com/search/?q=${query}`, hint: 'Luxury resale' },
+              ];
+              return (
+                <div className="pt-6 border-t border-stone-200">
+                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-3">Shop around</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {shops.map((s) => (
+                      <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer"
+                        title={s.hint}
+                        className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors">
+                        <Search size={12} strokeWidth={1.5} /> {s.label}
+                      </a>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-stone-400 italic mt-2">Searches open in a new tab — Atelier doesn't track or compare prices itself.</p>
+                </div>
+              );
+            })()}
 
             <AppearsInSection item={item} outfits={outfits} allItems={allItems} onOpenOutfit={onOpenOutfit} />
             <WearWithSection item={item} allItems={allItems} outfits={outfits} onOpenItem={onOpenItem} />
@@ -7581,7 +7660,7 @@ function AIProgressModal({ open, stage, title = 'Putting together your outfit' }
   );
 }
 
-function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, defaultFilter = 'all' }) {
+function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, defaultFilter = 'all', wishlistCount = 0, onJumpToWishlist }) {
   // Filter: 'all' or 'unanalysed'. Initialised from defaultFilter so the
   // digest can target the user straight to unanalysed inspirations.
   const [filter, setFilter] = useState(defaultFilter);
@@ -7613,19 +7692,27 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
         </div>
       ) : (
         <>
-          {unanalysed.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              {[['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
-                <button key={f} onClick={() => setFilter(f)}
-                  className={`text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-all border ${
-                    filter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
-                  }`}>{label}</button>
-              ))}
-              {filter === 'unanalysed' && unanalysed.length > 0 && (
-                <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2">Tap any to analyse with AI</span>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-all border ${
+                  filter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
+                }`}>{label}</button>
+            ))}
+            {/* Cross-link to wishlist — inspirations often feed wishlist items;
+                surfacing the count here gives the user a one-tap path to action
+                what they've earmarked from their saved looks. */}
+            {wishlistCount > 0 && onJumpToWishlist && (
+              <button onClick={onJumpToWishlist}
+                className="text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-all border bg-white border-stone-200 text-stone-600 hover:border-stone-900 hover:text-stone-900 inline-flex items-center gap-2 ml-auto">
+                <Heart size={12} strokeWidth={1.5} /> Wishlist · {wishlistCount}
+                <ChevronRight size={12} strokeWidth={1.5} className="-mr-1" />
+              </button>
+            )}
+            {filter === 'unanalysed' && unanalysed.length > 0 && (
+              <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2 w-full sm:w-auto">Tap any to analyse with AI</span>
+            )}
+          </div>
 
           {visible.length === 0 ? (
             <div className="py-16 text-center text-stone-500 text-sm italic">
@@ -10620,6 +10707,98 @@ function PublicShareView({ shareId }) {
   const { kind, name, reasoning, sharedByName, sharedAt, pieces = [], looks = [] } = state.data;
   const sharedDate = sharedAt ? new Date(sharedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const isLookbook = kind === 'lookbook';
+  const isItem = kind === 'item';
+
+  // Dedicated single-item view — when a wishlist piece is shared for opinions.
+  if (isItem) {
+    const data = state.data;
+    const itemImages = Array.isArray(data.images) ? data.images : [];
+    return (
+      <div className="min-h-screen bg-[#F7F5F2] font-sans text-stone-900">
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+          .font-display { font-family: 'Playfair Display', serif; }
+          .font-sans { font-family: 'Jost', sans-serif; }
+          .smooth-shadow { box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08); }
+        `}</style>
+        <header className="border-b border-stone-200/60 bg-white">
+          <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AtelierMark size={36} />
+              <span className="font-display text-2xl">Atelier.</span>
+            </div>
+            <a href="/" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900">Visit</a>
+          </div>
+        </header>
+        <main className="max-w-4xl mx-auto px-6 py-10 sm:py-16">
+          <p className="text-[10px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-3">
+            {data.status === 'wishlist' ? 'Wishlist · ' : ''}Shared by {sharedByName || 'a friend'}{sharedDate ? ` · ${sharedDate}` : ''}
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 mt-6">
+            <div className="space-y-3">
+              <div className="aspect-[3/4] rounded-3xl bg-stone-100 overflow-hidden smooth-shadow border border-brass-300">
+                {itemImages[0] ? (
+                  <img src={itemImages[0]} alt={name} className="w-full h-full object-contain" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={64} strokeWidth={1} /></div>
+                )}
+              </div>
+              {itemImages.length > 1 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {itemImages.slice(1).map((img, i) => (
+                    <div key={i} className="aspect-square rounded-xl overflow-hidden bg-stone-100">
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              {data.brand && <p className="text-xs font-semibold text-stone-500 tracking-[0.25em] uppercase mb-3">{data.brand}</p>}
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display text-stone-900 leading-tight">{name}</h1>
+              <div className="flex items-center gap-3 mt-5 flex-wrap">
+                {data.price > 0 && <p className="text-2xl font-display font-medium">£{Number(data.price).toLocaleString()}</p>}
+                {data.status === 'wishlist' && (
+                  <span className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium bg-stone-100 text-stone-900 inline-flex items-center gap-1.5">
+                    <Heart size={12} className="fill-stone-900" strokeWidth={0} /> Wishlist
+                  </span>
+                )}
+              </div>
+
+              {data.wishlistReason && (
+                <p className="mt-6 text-stone-700 italic leading-relaxed bg-white border border-stone-200/60 rounded-2xl p-4">"{data.wishlistReason}"</p>
+              )}
+
+              <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
+                {data.category && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Category</p><p>{data.category}{data.subCategory ? ` · ${data.subCategory}` : ''}</p></div>}
+                {Array.isArray(data.colors) && data.colors.length > 0 && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Colours</p><p>{data.colors.join(' · ')}</p></div>}
+                {Array.isArray(data.materials) && data.materials.length > 0 && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Materials</p><p>{data.materials.join(' · ')}</p></div>}
+                {Array.isArray(data.seasons) && data.seasons.length > 0 && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Seasons</p><p>{data.seasons.join(' · ')}</p></div>}
+              </div>
+
+              {data.description && (
+                <div className="mt-8">
+                  <p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-2">About</p>
+                  <p className="text-stone-700 leading-relaxed text-sm whitespace-pre-wrap">{data.description}</p>
+                </div>
+              )}
+
+              {data.sourceUrl && (
+                <a href={data.sourceUrl} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 mt-8 text-sm text-stone-900 underline decoration-stone-300 underline-offset-4 hover:decoration-stone-900 transition-colors break-all">
+                  <LinkIcon size={14} strokeWidth={1.5} />
+                  View at source
+                </a>
+              )}
+            </div>
+          </div>
+          <footer className="mt-20 pt-8 border-t border-stone-200 text-center text-xs tracking-wider uppercase text-stone-400">
+            Read-only view · made with Atelier
+          </footer>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F7F5F2] font-sans text-stone-900">

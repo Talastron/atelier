@@ -387,13 +387,14 @@ async function generateOutfitWithGemini({ items, intent, weather, season, previo
 
   const summarize = (i) =>
     `${i.id}|${i.name}|${i.brand || '?'}|${i.category}${i.subCategory ? '/' + i.subCategory : ''}` +
+    `${i.favorite ? '|★FAVOURITE' : ''}` +
     `|styles=${itemStyles(i).join(',') || '-'}` +
     `|colors=${itemColors(i).join(',') || '-'}` +
     `|seasons=${itemSeasons(i).join(',') || 'any'}` +
     `|materials=${itemMaterials(i).join(',') || '-'}`;
 
   const refinementBlock = previousOutfit && previousOutfit.length > 0
-    ? `\n\nThe user currently has this outfit assembled:\n${previousOutfit.map((i) => `- ${i.category}: ${i.name} by ${i.brand || '?'}`).join('\n')}\n\nThey want a REFINEMENT: "${intent}". Build a NEW outfit that addresses their refinement request — keep elements that aren't being changed, swap elements that are. The reasoning should explain what changed and why.\n`
+    ? `\n\nThe user currently has this outfit assembled:\n${previousOutfit.map((i) => `- ${i.category}: ${i.name} by ${i.brand || '?'}`).join('\n')}\n\nThey want a REFINEMENT: "${intent}". Build a NEW outfit that addresses their refinement request — keep elements that aren't being changed, swap elements that are.\n`
     : '';
 
   const prompt = `You are an expert personal stylist. From the user's wardrobe below, build ONE coherent outfit that genuinely works together visually.${refinementBlock}
@@ -414,6 +415,10 @@ Stylist rules:
 - Style cohesion: a smart blazer doesn't go with sports leggings.
 - Skip Outerwear unless the weather/season warrants it.
 - Skip optional slots (Bags, Accessories, Jewellery) if nothing genuinely complements the look — better empty than wrong.
+- ★FAVOURITE items are pieces the user loves — give them meaningful preference when they fit the intent and palette. Don't force a favourite that clashes; do prefer one over an equally-suitable non-favourite.
+
+Reasoning rules:
+- The reasoning is saved with the look long-term — write it as a STANDALONE description of the final outfit. Describe why this combination works as a complete look (palette, silhouette, occasion). Do NOT reference the user's previous outfit, what was swapped, replaced, or kept — that context is meaningless when the user opens the saved look weeks later.
 
 Available items (id|name|brand|category|attributes):
 ${items.map(summarize).join('\n')}
@@ -932,6 +937,7 @@ async function generateTravelCapsuleWithGemini({ items, destination, daily, styl
 
   const summarize = (i) =>
     `${i.id}|${i.name}|${i.brand || '?'}|${i.category}${i.subCategory ? '/' + i.subCategory : ''}` +
+    `${i.favorite ? '|★FAVOURITE' : ''}` +
     `|styles=${itemStyles(i).join(',') || '-'}` +
     `|colors=${itemColors(i).join(',') || '-'}` +
     `|seasons=${itemSeasons(i).join(',') || 'any'}` +
@@ -1160,7 +1166,11 @@ function pickTodaysRecommendation(items) {
     const days = daysSinceLastWorn(item);
     const seasonFit = itemSeasons(item).length === 0 ? 0.4 : itemSeasons(item).includes(season) ? 1 : 0;
     const recency = days === null ? 1 : Math.min(days / 60, 1);
-    const score = seasonFit * 0.6 + recency * 0.4;
+    // Favourites get a meaningful boost — pieces the user has explicitly
+    // starred should surface more often as Today's Pick than equally-suitable
+    // unstarred items.
+    const favouriteBoost = item.favorite ? 0.25 : 0;
+    const score = seasonFit * 0.55 + recency * 0.2 + favouriteBoost;
     return { item, score };
   });
   scored.sort((a, b) => b.score - a.score);
@@ -3103,7 +3113,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
             }
           }}
         >
-          <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
             {/* Decorative sparkles, same flavour as the TodayTile card */}
             <div className="absolute -right-16 -top-16 opacity-[0.06] rotate-12 pointer-events-none">
               <Sparkles size={280} strokeWidth={0.8} />
@@ -3147,10 +3157,12 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
                 </div>
               ) : (
                 <>
-                  {/* The proposed outfit */}
-                  <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2 -mx-1 px-1">
+                  {/* The proposed outfit — wraps to a grid so the modal never
+                      scrolls sideways. 3 cols on mobile, 4 on small/medium,
+                      5 on larger screens. Most outfits are 5-7 pieces. */}
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     {suggestedPieces.map((p) => (
-                      <div key={p.id} className="flex-none w-24 sm:w-28">
+                      <div key={p.id} className="min-w-0">
                         <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
                           {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
                         </div>

@@ -5550,11 +5550,14 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          {/* Image column stays sticky just below the page top bar. Top
-              offset matches the column's natural Y position (top-bar ~82px +
-              parent lg:py-16 = ~146px) so the image is already AT its sticky
-              position from initial render — no "scroll up then snap" effect. */}
-          <div className="lg:col-span-6 lg:sticky lg:top-[9rem] lg:self-start space-y-3">
+          {/* Image column — truly locked once stuck. The natural top sits at
+              ~148px (top-bar ~84px + parent lg:py-16 64px); setting sticky
+              to 152px (lg:top-[9.5rem]) means natural < sticky so the column
+              is pinned at 152 from initial render. Result: zero scroll-snap
+              motion. The 4px gap from the right column's first text element
+              (the brand eyebrow) is imperceptible against the image's
+              rounded-[2rem] corner. */}
+          <div className="lg:col-span-6 lg:sticky lg:top-[9.5rem] lg:self-start space-y-3">
             <button
               ref={photoRef}
               onClick={() => {
@@ -5563,7 +5566,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 if (images.length > 0) setLightboxOpen(true);
               }}
               disabled={images.length === 0}
-              className="aspect-[3/4] w-full max-h-[65vh] lg:max-h-[calc(100vh-13rem)] rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow relative group disabled:cursor-default border border-brass-300"
+              className="aspect-[3/4] w-full max-h-[65vh] lg:max-h-[60vh] rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow relative group disabled:cursor-default border border-brass-300"
               style={{ touchAction: images.length > 1 ? 'pan-y' : undefined }}
               aria-label={images.length > 1 ? 'Swipe to flip photos, tap to view fullscreen' : 'View photo in fullscreen'}
             >

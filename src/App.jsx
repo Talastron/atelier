@@ -5550,14 +5550,16 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          {/* Image column — pinned for the entire page scroll. lg:self-start
-              keeps the column content-height for layout purposes (so brand
-              alignment with the right column stays right). lg:min-h-[200vh]
-              gives sticky enough runway (~2 viewport heights) to keep the
-              image pinned even on the longest content tails — without
-              triggering the stretch-to-row-height behaviour that broke
-              alignment before. */}
-          <div className="lg:col-span-6 lg:sticky lg:top-[12rem] lg:self-start lg:min-h-[200vh] space-y-3">
+          {/* Image column — proper sticky-in-grid pattern:
+              - The OUTER div is the grid cell. No sticky on this one.
+              - The INNER div is sticky. Its containing block = the outer
+                grid cell, which stretches to row height by default
+                (lg:items-stretch on the grid). So the inner sticky has
+                runway for the entire page scroll.
+              - This avoids the conflict between 'self-start for layout'
+                vs 'stretch for sticky runway' that broke things before. */}
+          <div className="lg:col-span-6">
+            <div className="lg:sticky lg:top-[12rem] space-y-3">
             <button
               ref={photoRef}
               onClick={() => {
@@ -5611,6 +5613,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 ))}
               </div>
             )}
+            </div>
           </div>
 
           <div className="lg:col-span-6 space-y-8 lg:space-y-6 lg:pt-11">

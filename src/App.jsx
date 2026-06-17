@@ -2203,14 +2203,17 @@ function DigitalWardrobe() {
     if (!user) return;
     await setDoc(doc(userAIHistoryRef(user.uid), entry.id), { ...entry, favorite: !entry.favorite });
   };
-  const handleScheduleOutfit = async (dateISO, outfitId) => {
+  const handleScheduleOutfit = async (dateISO, outfitId, eventName = '') => {
     if (!user) return;
     if (!outfitId) {
       await deleteDoc(userScheduleDoc(user.uid, dateISO));
       toast.show('Removed from schedule', { kind: 'default' });
     } else {
-      await setDoc(userScheduleDoc(user.uid, dateISO), { outfitId, scheduledAt: new Date().toISOString() });
-      toast.show('Scheduled', { kind: 'success' });
+      const trimmed = (eventName || '').trim();
+      const doc = { outfitId, scheduledAt: new Date().toISOString() };
+      if (trimmed) doc.eventName = trimmed;
+      await setDoc(userScheduleDoc(user.uid, dateISO), doc);
+      toast.show(trimmed ? `Scheduled · ${trimmed}` : 'Scheduled', { kind: 'success' });
     }
   };
 
@@ -3145,6 +3148,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [pickDate, setPickDate] = useState(null); // ISO string when scheduling
+  const [pickEventName, setPickEventName] = useState(''); // optional event tag (wedding, etc.)
 
   const buildOutfitFromSuggestion = () => {
     if (!suggestion?.itemIds?.length) return null;
@@ -3186,10 +3190,11 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
     setSaving(true);
     try {
       await onSaveOutfit(outfit);
-      await onScheduleOutfit(dateISO, outfit.id);
+      await onScheduleOutfit(dateISO, outfit.id, pickEventName);
       toast.show(`Scheduled for ${new Date(dateISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}`, { kind: 'success' });
       setSuggestion(null);
       setPickDate(null);
+      setPickEventName('');
     } finally { setSaving(false); }
   };
 
@@ -3244,7 +3249,10 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
             ))}
           </div>
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-[10px] tracking-widest uppercase text-stone-400">{tomorrowLabel} · planned</p>
+            <p className="text-[10px] tracking-widest uppercase text-stone-400">
+              {tomorrowLabel} · planned
+              {tomorrowSched?.eventName && <span className="ml-2 text-brass-300">· {tomorrowSched.eventName}</span>}
+            </p>
             <p className="text-sm font-medium truncate mt-0.5">{tomorrowOutfit.name}</p>
             <p className="text-[10px] text-stone-400 mt-0.5">{tomorrowPieces.length} pieces · ready to wear</p>
           </div>
@@ -3375,22 +3383,30 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
                       </div>
                     </>
                   ) : (
-                    <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-4">
-                      <p className="text-[10px] tracking-widest uppercase text-stone-300 mb-3">Schedule for</p>
-                      <div className="flex items-center gap-3 flex-wrap">
+                    <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                      <div>
+                        <p className="text-[10px] tracking-widest uppercase text-stone-300 mb-2">Schedule for</p>
                         <input type="date" value={pickDate} min={todayISO()}
                           onChange={(e) => setPickDate(e.target.value)}
-                          className="bg-stone-800 text-white text-sm px-4 py-2.5 rounded-xl border border-white/10 focus:border-brass-300 outline-none" />
-                        <div className="flex gap-2 ml-auto">
-                          <button onClick={() => setPickDate(null)} disabled={saving}
-                            className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full text-stone-400 hover:text-white">
-                            Cancel
-                          </button>
-                          <button onClick={() => scheduleFor(pickDate)} disabled={saving || !pickDate}
-                            className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 font-medium">
-                            {saving ? 'Saving…' : 'Confirm'}
-                          </button>
-                        </div>
+                          className="w-full sm:w-auto bg-stone-800 text-white text-sm px-4 py-2.5 rounded-xl border border-white/10 focus:border-brass-300 outline-none" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] tracking-widest uppercase text-stone-300 mb-2">Event <span className="text-stone-500 normal-case tracking-wide font-normal">— optional</span></p>
+                        <input type="text" value={pickEventName} maxLength={60}
+                          onChange={(e) => setPickEventName(e.target.value)}
+                          placeholder="e.g. Anna's wedding, Monday meeting…"
+                          className="w-full bg-stone-800 text-white text-sm px-4 py-2.5 rounded-xl border border-white/10 focus:border-brass-300 outline-none placeholder-stone-500" />
+                        <p className="text-[10px] text-stone-500 mt-1.5">Surfaces as a tag on the Today card and the countdown.</p>
+                      </div>
+                      <div className="flex gap-2 justify-end pt-1">
+                        <button onClick={() => { setPickDate(null); setPickEventName(''); }} disabled={saving}
+                          className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full text-stone-400 hover:text-white">
+                          Cancel
+                        </button>
+                        <button onClick={() => scheduleFor(pickDate)} disabled={saving || !pickDate}
+                          className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 font-medium">
+                          {saving ? 'Saving…' : 'Confirm'}
+                        </button>
                       </div>
                     </div>
                   )}
@@ -3443,8 +3459,8 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
   const showInspoNudge = unanalysedInspos.length >= 3;
 
   const cards = [];
-  if (todayOutfit) cards.push({ kind: 'planned-today', outfit: todayOutfit, label: "Today's plan" });
-  if (tomorrowOutfit) cards.push({ kind: 'planned-tomorrow', outfit: tomorrowOutfit, label: 'Planned tomorrow' });
+  if (todayOutfit) cards.push({ kind: 'planned-today', outfit: todayOutfit, label: todaySched?.eventName ? `Today · ${todaySched.eventName}` : "Today's plan", eventName: todaySched?.eventName });
+  if (tomorrowOutfit) cards.push({ kind: 'planned-tomorrow', outfit: tomorrowOutfit, label: tomorrowSched?.eventName ? `Tomorrow · ${tomorrowSched.eventName}` : 'Planned tomorrow', eventName: tomorrowSched?.eventName });
   for (const { i, r } of careDue) cards.push({ kind: 'care', item: i, reminder: r });
   if (staleFav) cards.push({ kind: 'stale-fav', item: staleFav });
   for (const i of drops) cards.push({ kind: 'price-drop', item: i });

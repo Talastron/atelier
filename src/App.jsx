@@ -429,7 +429,16 @@ Stylist rules:
 - Jewellery is layered — you MAY pick MULTIPLE items per jewellery slot (Earrings, Necklaces, Wrist). A complete look can carry two stacked necklaces, layered bracelets, or both pearl studs and a small drop earring. Compose jewellery as a curated stack, not a single piece — but only when the items genuinely work together.
 - A Dress REPLACES Tops + Bottoms — never include all three.
 - Pick ONLY items whose category matches the slot — never put a bag in the shoes slot.
-- All chosen items must be season-appropriate.
+
+WEATHER-DRIVEN RULES (this is NON-NEGOTIABLE — temperature is the strongest filter):
+- Below 5°C: REQUIRE heavy outerwear (winter coat). REQUIRE long sleeves. Prefer wool, cashmere, knits. NO bare legs, NO open shoes, NO linen.
+- 5-12°C: REQUIRE outerwear (coat or heavy jacket). Long sleeves. Mid-weight materials. Closed shoes. Tights/trousers, not bare legs.
+- 12-18°C: Light outerwear (blazer, light jacket, cardigan). Long sleeves or layerable. Avoid heavy wool. Closed or low-cut shoes OK.
+- 18-24°C: Optional light layer. T-shirt-weight tops, light trousers, dresses. Avoid heavy outerwear or thick knits.
+- Above 24°C: NO outerwear. Linen, cotton, lightweight pieces only. Sleeveless, shorts, dresses preferred. Sandals welcome.
+- Rain/Snow weather code: choose darker tones (visibility/stain), prefer water-resistant outerwear if owned, closed shoes.
+- The reasoning sentence MUST mention the temperature and weather conditions explicitly so the user can see the call was made deliberately.
+
 - Colour palette must be cohesive: neutrals + 1-2 accent colours, avoid clashes (red+pink, red+orange, etc.).
 - Style cohesion: a smart blazer doesn't go with sports leggings.
 - Skip Outerwear unless the weather/season warrants it.
@@ -973,10 +982,19 @@ ${forecastLines}
 ${styleProfile ? `${styleProfile}\n\n` : ''}Packing rules:
 - Compose ONE outfit per forecast day (every date above).
 - Reuse pieces across days where it makes sense — that's the point of a capsule. Aim to keep TOTAL distinct pieces under 1.5× the number of days.
-- Each outfit follows the standard slot rules: at most one item per category, dresses replace tops+bottoms, season/weather-appropriate.
+- Each outfit follows the standard slot rules: at most one item per category, dresses replace tops+bottoms.
 - Skip a slot rather than force a wrong item.
-- A short reasoning line per day (max 12 words).
-- One summary line about the overall capsule choices.
+- A short reasoning line per day (max 12 words) that mentions the day's temperature range so the user can see the call was made deliberately.
+- One summary line about the overall capsule choices that mentions the destination's overall climate.
+
+WEATHER-DRIVEN RULES (use the DAILY MAX temperature for each outfit, this is NON-NEGOTIABLE):
+- Below 5°C max: REQUIRE heavy outerwear, long sleeves, wool/knit, closed shoes, NO bare legs.
+- 5-12°C max: REQUIRE outerwear (coat/jacket), long sleeves, mid-weight, closed shoes.
+- 12-18°C max: light outerwear (blazer/cardigan), long sleeves or layerable.
+- 18-24°C max: optional light layer, t-shirt weight, dresses welcome.
+- Above 24°C max: NO outerwear, linen/cotton only, sleeveless/shorts/dresses preferred, sandals OK.
+- Rain/snow forecast code: pick darker pieces, prefer water-resistant outerwear if owned, closed shoes.
+- A day's min temperature near 0 with warm max needs versatile layering — include a transportable outer layer even if not worn all day.
 
 Available items (id|name|brand|category|attributes):
 ${items.map(summarize).join('\n')}
@@ -2257,6 +2275,17 @@ function DigitalWardrobe() {
     setVaryError(null);
   };
 
+  // Edit an existing saved outfit. Setting this loads the outfit into the
+  // OutfitBuilder (Styling Studio) and switches to that tab. Save updates
+  // the original doc instead of creating a new one.
+  const [editingOutfit, setEditingOutfit] = useState(null);
+  const handleEditOutfit = (outfit) => {
+    if (!outfit) return;
+    setEditingOutfit(outfit);
+    setOpenOutfitId(null); // close OutfitDetailView so the user lands in Studio
+    setActiveTab('outfits');
+  };
+
   const handleSaveProfile = async (newMeasurements) => {
     if (!user) return;
     await setDoc(userProfileDoc(user.uid), newMeasurements);
@@ -2527,6 +2556,8 @@ function DigitalWardrobe() {
                       aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
                       styleProfile={summariseStyleProfile(measurements)}
                       onCreateLookbook={handleShareLookbook}
+                      editOutfit={editingOutfit}
+                      onEditDone={() => setEditingOutfit(null)}
                     />
                   )}
                   {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} />}
@@ -2793,6 +2824,7 @@ function DigitalWardrobe() {
               onSaveOutfit={handleSaveOutfit}
               onShare={() => handleShareOutfit(openOutfit)}
               onVary={() => handleVaryOutfit(openOutfit, 'fresh')}
+              onEdit={() => handleEditOutfit(openOutfit)}
               onLogWear={(verdict) => handleLogOutfitWear(openOutfit, todayISO(), verdict)}
               onOpenItem={(id) => setSelectedItemId(id)}
               onDuplicate={async () => {
@@ -7153,10 +7185,36 @@ const SLOT_CATEGORIES = {
 };
 const emptyOutfit = () => Object.fromEntries(OUTFIT_SLOTS.map((s) => [s.toLowerCase(), null]));
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook }) {
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone }) {
   const [tab, setTab] = useState('create');
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
+  // When editing an existing outfit, hold its id so handleSave updates the
+  // same doc instead of creating a new one. Reset to null after save/exit.
+  const [editingId, setEditingId] = useState(null);
+  useEffect(() => {
+    if (!editOutfit) return;
+    // Resolve itemIds → items and place each into its proper slot, mirroring
+    // the AI-styled load path in handleAIStyle.
+    const next = emptyOutfit();
+    const ids = Array.isArray(editOutfit.itemIds) ? editOutfit.itemIds : [];
+    for (const id of ids) {
+      const it = items.find((i) => i.id === id);
+      if (!it) continue;
+      const slot = slotForItem(it);
+      if (!slot) continue;
+      const key = slot.toLowerCase();
+      if (isMultiSlot(slot)) {
+        next[key] = Array.isArray(next[key]) ? [...next[key], it] : [it];
+      } else if (!next[key]) {
+        next[key] = it;
+      }
+    }
+    setCurrentOutfit(next);
+    setOutfitName(editOutfit.name || '');
+    setEditingId(editOutfit.id);
+    setTab('create');
+  }, [editOutfit?.id]);
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState(null);
   const [styleIntent, setStyleIntent] = useState('Any');
@@ -7212,16 +7270,22 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const handleSave = () => {
     const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(currentOutfit[s.toLowerCase()]));
     if (!outfitName.trim() || picked.length === 0) return;
+    // When editing, preserve the original id, createdAt, and any existing
+    // wornPhotos/favorite/reasoning that we shouldn't blow away.
+    const orig = editingId ? outfits.find((o) => o.id === editingId) : null;
     saveOutfit({
-      id: newId(),
+      ...(orig || {}),
+      id: editingId || newId(),
       name: outfitName,
       itemIds: picked.map((p) => p.id),
-      createdAt: new Date().toISOString(),
-      ...(aiNote ? { reasoning: aiNote } : {}),
+      createdAt: orig?.createdAt || new Date().toISOString(),
+      ...(aiNote ? { reasoning: aiNote } : (orig?.reasoning ? { reasoning: orig.reasoning } : {})),
       ...(customIntent.trim() || styleIntent !== 'Any' ? { intent: customIntent.trim() || styleIntent } : {}),
     });
     setOutfitName(''); setCurrentOutfit(emptyOutfit());
     setAiNote(null);
+    setEditingId(null);
+    if (onEditDone) onEditDone();
     setTab('saved');
   };
 
@@ -9819,7 +9883,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
   );
 }
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onVary, onLogWear, onOpenItem }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onVary, onEdit, onLogWear, onOpenItem }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
@@ -9883,6 +9947,13 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   title="Create a read-only link to share this look">
                   <Download size={16} strokeWidth={1.5} className="sm:hidden rotate-180" />
                   <span className="hidden sm:inline">Share</span>
+                </button>
+              )}
+              {onEdit && (
+                <button onClick={onEdit}
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-900 transition-all whitespace-nowrap"
+                  title="Edit this look in Styling Studio — change pieces, rename, save back to the same outfit">
+                  Edit
                 </button>
               )}
               {onVary && isAIEnabled() && (

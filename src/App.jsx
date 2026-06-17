@@ -5550,15 +5550,15 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          {/* Image column — truly pinned across the entire scroll range.
-              No lg:self-start, so the column stretches to the grid row's
-              full height (matching the tall right column). Without this,
-              sticky stops once the column's own ~700px content height has
-              scrolled past, and the image scrolls up with the page —
-              exactly the behaviour the user spotted at the bottom of the
-              right column. Stretching gives sticky room to keep working
-              for the entire page-scroll length. */}
-          <div className="lg:col-span-6 lg:sticky lg:top-[12rem] space-y-3">
+          {/* Image column — pinned for the entire page scroll. lg:self-start
+              keeps the column content-height (so layout maths stay simple
+              and alignment with the right column is correct). To stop
+              sticky 'releasing' at the column's own bottom edge (which
+              caused the image to scroll away once the user reached the
+              end of the right column), the column gets lg:h-full so it
+              fills the grid row height — giving sticky runway for the
+              whole page scroll without breaking the layout. */}
+          <div className="lg:col-span-6 lg:sticky lg:top-[12rem] lg:self-start lg:h-full space-y-3">
             <button
               ref={photoRef}
               onClick={() => {

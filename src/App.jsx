@@ -10715,8 +10715,11 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
                       <img src={day.photo} alt="" loading="lazy" className="w-full h-full object-cover" />
                     </div>
                   )}
+                  {/* No cap — flex-wrap uses available width. A wardrobe-full
+                      day naturally takes a second row rather than getting
+                      truncated with a '+N' badge. */}
                   <div className="flex gap-2 flex-wrap">
-                    {day.items.slice(0, 6).map((it) => (
+                    {day.items.map((it) => (
                       <button key={it.id} onClick={() => onOpenItem?.(it.id)}
                         className="w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 border border-stone-200/60 hover:border-stone-900 transition-colors"
                         title={`${it.name} · ${it.brand || ''}`}
@@ -10728,9 +10731,6 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
                         )}
                       </button>
                     ))}
-                    {day.items.length > 6 && (
-                      <span className="self-center text-[10px] tracking-widest uppercase text-stone-400">+{day.items.length - 6}</span>
-                    )}
                   </div>
                   {day.outfit && onOpenOutfit && (
                     <button onClick={() => onOpenOutfit(day.outfit.id)}

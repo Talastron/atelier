@@ -5613,11 +5613,11 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             )}
           </div>
 
-          <div className="lg:col-span-6 space-y-8 lg:space-y-10 lg:pt-5">
+          <div className="lg:col-span-6 space-y-8 lg:space-y-6 lg:pt-5">
             <div>
-              <p className="text-[11px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-3">{item.brand}</p>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display text-stone-900 leading-tight">{item.name}</h1>
-              <div className="flex items-center gap-4 mt-6 flex-wrap">
+              <p className="text-[11px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-2">{item.brand}</p>
+              <h1 className="text-3xl sm:text-4xl lg:text-4xl font-display text-stone-900 leading-tight">{item.name}</h1>
+              <div className="flex items-center gap-4 mt-4 flex-wrap">
                 <p className="text-3xl font-display font-medium">£{Number(item.price || 0).toLocaleString()}</p>
                 {item.status === 'wishlist' && (
                   <span className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 bg-stone-100 text-stone-900">
@@ -5628,7 +5628,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   <span className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium bg-stone-900 text-white">In Collection</span>
                 )}
               </div>
-              <div className="mt-5">
+              <div className="mt-4">
                 {item.status === 'wishlist' ? (
                   <button onClick={onMarkOwned} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm bg-stone-900 text-white hover:bg-stone-800 transition-all">
                     <CheckCircle2 size={16} strokeWidth={1.5} /> I bought this — move to wardrobe

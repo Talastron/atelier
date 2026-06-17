@@ -1730,6 +1730,13 @@ function DigitalWardrobe() {
   const [styleBusy, setStyleBusy] = useState(false);
   const [styleError, setStyleError] = useState(null);
   const [styleSaving, setStyleSaving] = useState(false);
+  // Outfit variation modal — same shape, but the source is an existing
+  // saved outfit and the AI is asked to spin a variation of it.
+  const [varySourceOutfit, setVarySourceOutfit] = useState(null);
+  const [varySuggestion, setVarySuggestion] = useState(null);
+  const [varyBusy, setVaryBusy] = useState(false);
+  const [varyError, setVaryError] = useState(null);
+  const [varySaving, setVarySaving] = useState(false);
   const [shareTarget, setShareTarget] = useState(null); // { url, title, kind }
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -2158,6 +2165,78 @@ function DigitalWardrobe() {
     setStyleError(null);
   };
 
+  // Spin a variation of an existing saved outfit. Reuses the
+  // generateOutfitWithGemini refinement path (previousOutfit + intent) so the
+  // AI is anchored on the original rather than starting from scratch.
+  // Intent presets map to prompt phrasing; users can re-trigger with a
+  // different preset from inside the modal.
+  const VARIATION_INTENTS = {
+    fresh: 'a fresh variation of this outfit — keep the overall spirit, swap one or two pieces for new combinations',
+    casual: 'a more casual version of this outfit — relax the formality',
+    polished: 'a more polished version of this outfit — elevate the formality',
+    palette: 'this outfit reimagined in a different colour palette',
+    season: 'the same vibe but reimagined for the opposite mood (sleek vs softer, neutral vs colour-led)',
+  };
+  const handleVaryOutfit = async (outfit, intentKey = 'fresh') => {
+    if (!outfit) return;
+    setVarySourceOutfit(outfit);
+    setVarySuggestion(null);
+    setVaryError(null);
+    setVaryBusy(true);
+    try {
+      const owned = liveItems.filter((i) => i.status === 'owned' && !i.deletedAt);
+      if (owned.length < 3) throw new Error('Add a few more owned pieces first — variations need at least 3 items to work with.');
+      const previousPieces = resolveOutfitItems(outfit, liveItems);
+      const month = new Date().getMonth();
+      const season = month >= 2 && month <= 4 ? 'Spring'
+        : month >= 5 && month <= 7 ? 'Summer'
+        : month >= 8 && month <= 10 ? 'Autumn'
+        : 'Winter';
+      const result = await generateOutfitWithGemini({
+        items: owned,
+        intent: VARIATION_INTENTS[intentKey] || VARIATION_INTENTS.fresh,
+        season,
+        previousOutfit: previousPieces,
+        styleProfile: summariseStyleProfile(measurements),
+        temperature: AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7,
+      });
+      setVarySuggestion(result);
+    } catch (err) {
+      setVaryError(err?.message || 'AI styling failed.');
+    } finally {
+      setVaryBusy(false);
+    }
+  };
+  const handleSaveVariation = async () => {
+    if (!varySuggestion?.itemIds || !varySourceOutfit) return;
+    setVarySaving(true);
+    try {
+      const baseName = varySourceOutfit.name || 'Look';
+      const newOutfit = {
+        id: newId(),
+        name: `${baseName} · variation`,
+        itemIds: varySuggestion.itemIds,
+        reasoning: varySuggestion.reasoning || '',
+        ...(typeof varySuggestion.confidence === 'number' ? { confidence: varySuggestion.confidence } : {}),
+        createdAt: new Date().toISOString(),
+      };
+      await handleSaveOutfit(newOutfit);
+      toast.show('Variation saved · opening it now', { kind: 'success' });
+      setVarySuggestion(null);
+      setVarySourceOutfit(null);
+      setOpenOutfitId(newOutfit.id);
+    } catch (err) {
+      toast.show(`Could not save: ${err?.message || 'unknown error'}`, { kind: 'error' });
+    } finally {
+      setVarySaving(false);
+    }
+  };
+  const dismissVariation = () => {
+    setVarySuggestion(null);
+    setVarySourceOutfit(null);
+    setVaryError(null);
+  };
+
   const handleSaveProfile = async (newMeasurements) => {
     if (!user) return;
     await setDoc(userProfileDoc(user.uid), newMeasurements);
@@ -2538,6 +2617,20 @@ function DigitalWardrobe() {
             />
           )}
 
+          {(varyBusy || varySuggestion || varyError) && varySourceOutfit && (
+            <OutfitVariationModal
+              sourceOutfit={varySourceOutfit}
+              suggestion={varySuggestion}
+              busy={varyBusy}
+              error={varyError}
+              saving={varySaving}
+              allItems={liveItems}
+              onRegenerate={(intentKey) => handleVaryOutfit(varySourceOutfit, intentKey)}
+              onSave={handleSaveVariation}
+              onClose={dismissVariation}
+            />
+          )}
+
           {isAddItemModalOpen && (
             <AddItemModal
               user={user}
@@ -2672,6 +2765,7 @@ function DigitalWardrobe() {
               onDelete={async () => { await handleDeleteOutfit(openOutfit.id); setOpenOutfitId(null); }}
               onSaveOutfit={handleSaveOutfit}
               onShare={() => handleShareOutfit(openOutfit)}
+              onVary={() => handleVaryOutfit(openOutfit, 'fresh')}
               onLogWear={(verdict) => handleLogOutfitWear(openOutfit, todayISO(), verdict)}
               onOpenItem={(id) => setSelectedItemId(id)}
               onDuplicate={async () => {
@@ -9107,6 +9201,130 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
   );
 }
 
+// Portal modal — triggered from OutfitDetailView's "Vary look" button.
+// Same shape as StyleAroundItemModal but the source is an existing saved
+// outfit and the AI is asked to spin a variation of it. Five intent
+// presets ('fresh', 'casual', 'polished', 'palette', 'season') are
+// surfaced as chips so the user can re-roll without leaving the modal.
+function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, allItems = [], onRegenerate, onSave, onClose }) {
+  useEscapeKey(busy || saving ? () => {} : onClose);
+  const pieces = (suggestion?.itemIds || [])
+    .map((id) => allItems.find((i) => i.id === id))
+    .filter(Boolean);
+  const intentChips = [
+    { key: 'fresh', label: 'Fresh take' },
+    { key: 'casual', label: 'More casual' },
+    { key: 'polished', label: 'More polished' },
+    { key: 'palette', label: 'Different palette' },
+    { key: 'season', label: 'Different mood' },
+  ];
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] bg-stone-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      onClick={(e) => { if (e.target === e.currentTarget && !busy && !saving) onClose(); }}
+    >
+      <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <div className="absolute -right-16 -top-16 opacity-[0.06] rotate-12 pointer-events-none">
+          <Sparkles size={280} strokeWidth={0.8} />
+        </div>
+        <div className="relative p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div className="min-w-0">
+              <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
+                {busy ? 'Composing' : error ? 'Couldn’t spin a variation' : `Variation of · ${suggestion?.confidence ?? '–'}/100 confidence`}
+              </p>
+              <h2 className="font-display text-2xl sm:text-3xl mt-1 truncate">
+                {busy ? `Reimagining "${sourceOutfit.name}"…` : sourceOutfit.name}
+              </h2>
+            </div>
+            {!busy && !saving && (
+              <button onClick={onClose} aria-label="Close"
+                className="shrink-0 -mt-1 -mr-1 p-2 rounded-full hover:bg-white/10 transition-colors">
+                <X size={18} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+
+          {busy ? (
+            <div className="py-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-brass-300 rounded-full animate-pulse" style={{ width: '40%' }} />
+                </div>
+                <span className="text-xs text-stone-400 tracking-wide">Spinning a fresh combination…</span>
+              </div>
+              <p className="text-sm text-stone-400 leading-relaxed">
+                Anchoring on the original look, then swapping pieces from your wardrobe to find a different combination.
+              </p>
+            </div>
+          ) : error ? (
+            <div className="py-4">
+              <p className="text-sm text-stone-300 leading-relaxed mb-5">{error}</p>
+              <div className="flex gap-3">
+                <button onClick={() => onRegenerate('fresh')} disabled={saving}
+                  className="text-xs tracking-widest uppercase px-5 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 font-medium">
+                  Try again
+                </button>
+                <button onClick={onClose} className="text-xs tracking-widest uppercase px-5 py-3 rounded-full text-stone-400 hover:text-white">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                {pieces.map((p) => (
+                  <div key={p.id} className="min-w-0">
+                    <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
+                      {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                    </div>
+                    <p className="text-[11px] text-stone-300 truncate">{p.name}</p>
+                    <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
+                  </div>
+                ))}
+              </div>
+
+              {suggestion?.reasoning && (
+                <p className="text-sm text-stone-300 italic mt-5 leading-relaxed bg-white/5 border border-white/10 rounded-xl p-4">
+                  "{suggestion.reasoning}"
+                </p>
+              )}
+
+              {/* Intent chips — re-roll the variation with a different angle
+                  without closing the modal. */}
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="text-[10px] tracking-widest uppercase text-stone-500 self-center mr-1">Try:</span>
+                {intentChips.map((c) => (
+                  <button key={c.key} onClick={() => onRegenerate(c.key)} disabled={saving}
+                    className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-40">
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6">
+                <button onClick={onSave} disabled={saving}
+                  className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
+                  <Bookmark size={14} strokeWidth={1.5} /> {saving ? 'Saving…' : 'Save as new look'}
+                </button>
+                <button onClick={() => onRegenerate('fresh')} disabled={saving}
+                  className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
+                  ↻ Try again
+                </button>
+              </div>
+              <button onClick={onClose} disabled={saving}
+                className="block mx-auto mt-5 text-[11px] tracking-widest uppercase text-stone-400 hover:text-white transition-colors">
+                Discard
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onClose }) {
   useEscapeKey(onClose);
   const [copied, setCopied] = useState(false);
@@ -9419,7 +9637,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
   );
 }
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onLogWear, onOpenItem }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onVary, onLogWear, onOpenItem }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
@@ -9483,6 +9701,14 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   title="Create a read-only link to share this look">
                   <Download size={16} strokeWidth={1.5} className="sm:hidden rotate-180" />
                   <span className="hidden sm:inline">Share</span>
+                </button>
+              )}
+              {onVary && isAIEnabled() && (
+                <button onClick={onVary}
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-brass-200 text-stone-900 border border-brass-300 hover:bg-brass-300 transition-all inline-flex items-center gap-2 whitespace-nowrap font-medium"
+                  title="Spin a variation of this look with AI">
+                  <Wand2 size={16} strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Vary look</span>
                 </button>
               )}
               <button onClick={async () => { await onDuplicate?.(); toast.show('Duplicated · edit anytime', { kind: 'success' }); }}

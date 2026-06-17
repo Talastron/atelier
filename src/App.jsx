@@ -4004,8 +4004,14 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           ))}
         </div>
 
-        {/* Filter button + active filter badges */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Filter button + Sort menu + active filter badges. Sticky on mobile
+            so the user can re-filter/re-sort without scrolling all the way
+            back to the top of a 100+ item grid. The translucent backdrop +
+            border keeps it readable as items scroll underneath. On lg+ it
+            reverts to natural flow because the page-level sticky header
+            already covers the always-visible toolbar role. */}
+        <div className="flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-stone-100/95 backdrop-blur-md border-b border-stone-200/60 lg:static lg:mx-0 lg:px-0 lg:py-0 lg:bg-transparent lg:backdrop-blur-none lg:border-0"
+             style={{ top: 'env(safe-area-inset-top, 0px)' }}>
           {(() => {
             const activeBadges = [];
             if (subCategoryFilter !== 'All Types') activeBadges.push({ label: subCategoryFilter, clear: () => setSubCategoryFilter('All Types') });

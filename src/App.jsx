@@ -379,7 +379,7 @@ function summariseStyleProfile(measurements) {
   return `Style profile: ${bits.join('; ')}.`;
 }
 
-async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '' }) {
+async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null }) {
   if (!isAIEnabled()) {
     throw new Error('AI is not configured. Add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local to enable Gemini outfit suggestions.');
   }
@@ -397,7 +397,13 @@ async function generateOutfitWithGemini({ items, intent, weather, season, previo
     ? `\n\nThe user currently has this outfit assembled:\n${previousOutfit.map((i) => `- ${i.category}: ${i.name} by ${i.brand || '?'}`).join('\n')}\n\nThey want a REFINEMENT: "${intent}". Build a NEW outfit that addresses their refinement request — keep elements that aren't being changed, swap elements that are.\n`
     : '';
 
-  const prompt = `You are an expert personal stylist. From the user's wardrobe below, build ONE coherent outfit that genuinely works together visually.${refinementBlock}
+  // When the user opens an item and asks "style around this", the focal piece
+  // is non-negotiable — every other piece must complement it.
+  const mustIncludeBlock = mustIncludeItem
+    ? `\n\nFOCAL PIECE — the outfit MUST be built around this exact item (do not omit it, do not substitute):\n- id=${mustIncludeItem.id} · ${mustIncludeItem.name} by ${mustIncludeItem.brand || '?'} · ${mustIncludeItem.category}${mustIncludeItem.subCategory ? '/' + mustIncludeItem.subCategory : ''}\nInclude '${mustIncludeItem.id}' in itemIds. Build complementary pieces from the rest of the wardrobe that work with its colour, style and category.\n`
+    : '';
+
+  const prompt = `You are an expert personal stylist. From the user's wardrobe below, build ONE coherent outfit that genuinely works together visually.${refinementBlock}${mustIncludeBlock}
 
 User context:
 - Intent: ${intent || 'an everyday look'}
@@ -1717,6 +1723,13 @@ function DigitalWardrobe() {
     setWardrobeJump((p) => ({ filter, category, nonce: p.nonce + 1 }));
     setActiveTab('wardrobe');
   };
+  // AI styling around a focal item (triggered from ItemDetailView).
+  // The styling modal opens whenever styleSourceItem is set.
+  const [styleSourceItem, setStyleSourceItem] = useState(null);
+  const [styleSuggestion, setStyleSuggestion] = useState(null);
+  const [styleBusy, setStyleBusy] = useState(false);
+  const [styleError, setStyleError] = useState(null);
+  const [styleSaving, setStyleSaving] = useState(false);
   const [shareTarget, setShareTarget] = useState(null); // { url, title, kind }
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -2074,6 +2087,75 @@ function DigitalWardrobe() {
     const url = `${window.location.origin}/?share=${shareId}`;
     setShareTarget({ url, title, kind: 'item', sharedByName: snapshot.sharedByName, status: snapshot.status });
     return url;
+  };
+
+  // Style around a focal item. Triggered from ItemDetailView's "Style with
+  // this" button (owned) or "Style this — see how it works" card (wishlist).
+  // For wishlist items we include the focal piece in the source list even
+  // though it's not owned — that way the AI can include it in the outfit.
+  const handleStyleWithItem = async (item) => {
+    if (!item) return;
+    setStyleSourceItem(item);
+    setStyleSuggestion(null);
+    setStyleError(null);
+    setStyleBusy(true);
+    try {
+      const owned = liveItems.filter((i) => i.status === 'owned' && !i.deletedAt);
+      const sourceItems = item.status === 'wishlist' && !owned.find((i) => i.id === item.id)
+        ? [item, ...owned]
+        : owned;
+      if (sourceItems.length < 3) throw new Error('Add a few more owned pieces first — AI styling needs at least 3 items to work with.');
+      const month = new Date().getMonth();
+      const season = month >= 2 && month <= 4 ? 'Spring'
+        : month >= 5 && month <= 7 ? 'Summer'
+        : month >= 8 && month <= 10 ? 'Autumn'
+        : 'Winter';
+      const result = await generateOutfitWithGemini({
+        items: sourceItems,
+        intent: `an outfit built around ${item.name}${item.status === 'wishlist' ? ' (checking how it would fit my wardrobe)' : ''}`,
+        season,
+        styleProfile: summariseStyleProfile(measurements),
+        temperature: AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7,
+        mustIncludeItem: item,
+      });
+      setStyleSuggestion(result);
+    } catch (err) {
+      setStyleError(err?.message || 'AI styling failed.');
+    } finally {
+      setStyleBusy(false);
+    }
+  };
+
+  // Save the AI-suggested outfit as a real saved look, close the modal +
+  // ItemDetailView, and open the new outfit so the user lands on it.
+  const handleSaveStyledOutfit = async () => {
+    if (!styleSuggestion?.itemIds || !styleSourceItem) return;
+    setStyleSaving(true);
+    try {
+      const outfit = {
+        id: newId(),
+        name: `Styled with ${styleSourceItem.name}`,
+        itemIds: styleSuggestion.itemIds,
+        reasoning: styleSuggestion.reasoning || '',
+        ...(typeof styleSuggestion.confidence === 'number' ? { confidence: styleSuggestion.confidence } : {}),
+        createdAt: new Date().toISOString(),
+      };
+      await handleSaveOutfit(outfit);
+      toast.show('Look saved · opening it now', { kind: 'success' });
+      setStyleSuggestion(null);
+      setStyleSourceItem(null);
+      setSelectedItemId(null);
+      setOpenOutfitId(outfit.id);
+    } catch (err) {
+      toast.show(`Could not save: ${err?.message || 'unknown error'}`, { kind: 'error' });
+    } finally {
+      setStyleSaving(false);
+    }
+  };
+  const dismissStyleSuggestion = () => {
+    setStyleSuggestion(null);
+    setStyleSourceItem(null);
+    setStyleError(null);
   };
 
   const handleSaveProfile = async (newMeasurements) => {
@@ -2439,6 +2521,20 @@ function DigitalWardrobe() {
             />
           )}
 
+          {(styleBusy || styleSuggestion || styleError) && styleSourceItem && (
+            <StyleAroundItemModal
+              sourceItem={styleSourceItem}
+              suggestion={styleSuggestion}
+              busy={styleBusy}
+              error={styleError}
+              saving={styleSaving}
+              allItems={liveItems}
+              onRegenerate={() => handleStyleWithItem(styleSourceItem)}
+              onSave={handleSaveStyledOutfit}
+              onClose={dismissStyleSuggestion}
+            />
+          )}
+
           {isAddItemModalOpen && (
             <AddItemModal
               user={user}
@@ -2617,6 +2713,7 @@ function DigitalWardrobe() {
               onToggleFavorite={() => handleToggleFavorite(selectedItem)}
               onDuplicate={() => handleDuplicateItem(selectedItem)}
               onShare={() => handleShareItem(selectedItem)}
+              onStyleWithItem={() => handleStyleWithItem(selectedItem)}
               onOpenItem={(id) => setSelectedItemId(id)}
               onClose={() => setSelectedItemId(null)}
               onEdit={() => { setEditingItem(selectedItem); setIsAddItemModalOpen(true); setSelectedItemId(null); }}
@@ -5112,7 +5209,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   );
 }
 
-function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onMarkCared, onToggleFavorite, onDuplicate, onShare, onOpenItem, onPrev, onNext, positionLabel }) {
+function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onMarkCared, onToggleFavorite, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -5253,6 +5350,20 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 </button>
               );
             })()}
+            {/* "Style with this" — owned-item treatment: brass pill in the
+                action row. For wishlist items the same action is presented as
+                a discoverable card below, so we skip this button there. */}
+            {onStyleWithItem && item.status !== 'wishlist' && isAIEnabled() && (
+              <button
+                onClick={onStyleWithItem}
+                className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm transition-all inline-flex items-center gap-2 bg-brass-200 text-stone-900 border border-brass-300 hover:bg-brass-300 font-medium"
+                title="Build an AI outfit around this piece"
+                aria-label="Style an outfit with this item"
+              >
+                <Wand2 size={16} strokeWidth={1.5} />
+                <span className="text-xs sm:text-sm font-medium">Style with this</span>
+              </button>
+            )}
             <button
               onClick={onDuplicate}
               className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all inline-flex items-center gap-2"
@@ -5658,6 +5769,37 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 </div>
               );
             })()}
+
+            {/* "Style this — see how it works with your wardrobe" — wishlist
+                treatment. Shown as a discoverable card rather than just a
+                button in the action row, because for a piece you're
+                considering buying, knowing whether it fits your wardrobe is
+                a primary decision-driver. */}
+            {onStyleWithItem && item.status === 'wishlist' && isAIEnabled() && (
+              <button
+                onClick={onStyleWithItem}
+                className="w-full pt-6 border-t border-stone-200 group text-left"
+              >
+                <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 sm:p-6 relative overflow-hidden hover:from-stone-800 hover:to-stone-700 transition-all shadow-2xl active:scale-[0.99]">
+                  <div className="absolute -right-12 -top-12 opacity-[0.08] rotate-12 pointer-events-none">
+                    <Sparkles size={180} strokeWidth={0.8} />
+                  </div>
+                  <div className="relative z-10 flex items-start gap-4">
+                    <span className="shrink-0 w-12 h-12 rounded-2xl bg-brass-300 text-stone-900 flex items-center justify-center">
+                      <Wand2 size={22} strokeWidth={1.5} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold mb-1">Before you buy</p>
+                      <h3 className="font-display text-xl sm:text-2xl text-white leading-tight">Style this with your wardrobe</h3>
+                      <p className="text-xs sm:text-sm text-stone-400 mt-2 leading-relaxed">
+                        Atelier will build an outfit around this piece using what you already own — so you can see if it actually fits your style.
+                      </p>
+                    </div>
+                    <ChevronRight size={18} strokeWidth={1.5} className="text-stone-500 shrink-0 group-hover:text-brass-300 transition-colors mt-2" />
+                  </div>
+                </div>
+              </button>
+            )}
 
             <AppearsInSection item={item} outfits={outfits} allItems={allItems} onOpenOutfit={onOpenOutfit} />
             <WearWithSection item={item} allItems={allItems} outfits={outfits} onOpenItem={onOpenItem} />
@@ -8840,6 +8982,115 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 // explicit Copy button. The inline URL field is selectable so even when
 // clipboard.writeText is blocked (Safari outside user-gesture, some PWAs),
 // the user can long-press → copy manually.
+// Portal modal — used when the user clicks "Style with this" on an item
+// detail page. Mirrors the TodayTile Suggest-a-Look modal but constrained
+// to one focal item. Three states: busy (composing), result (with Save +
+// regenerate + discard), error.
+function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, allItems = [], onRegenerate, onSave, onClose }) {
+  useEscapeKey(busy || saving ? () => {} : onClose);
+  const pieces = (suggestion?.itemIds || [])
+    .map((id) => allItems.find((i) => i.id === id) || (sourceItem.id === id ? sourceItem : null))
+    .filter(Boolean);
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[60] bg-stone-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+      onClick={(e) => { if (e.target === e.currentTarget && !busy && !saving) onClose(); }}
+    >
+      <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <div className="absolute -right-16 -top-16 opacity-[0.06] rotate-12 pointer-events-none">
+          <Sparkles size={280} strokeWidth={0.8} />
+        </div>
+        <div className="relative p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <div className="min-w-0">
+              <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
+                {busy ? 'Composing' : error ? 'Couldn’t style this' : `Styled with · ${suggestion?.confidence ?? '–'}/100 confidence`}
+              </p>
+              <h2 className="font-display text-2xl sm:text-3xl mt-1 truncate">
+                {busy ? 'Building a look around it…' : sourceItem.name}
+              </h2>
+            </div>
+            {!busy && !saving && (
+              <button onClick={onClose} aria-label="Close"
+                className="shrink-0 -mt-1 -mr-1 p-2 rounded-full hover:bg-white/10 transition-colors">
+                <X size={18} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+
+          {busy ? (
+            <div className="py-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-brass-300 rounded-full animate-pulse" style={{ width: '40%' }} />
+                </div>
+                <span className="text-xs text-stone-400 tracking-wide">Pairing your wardrobe…</span>
+              </div>
+              <p className="text-sm text-stone-400 leading-relaxed">
+                Gemini is looking for pieces in your wardrobe that complement {sourceItem.brand ? `the ${sourceItem.brand} ` : 'this '}{sourceItem.category?.toLowerCase() || 'piece'} — colour, style, season.
+              </p>
+            </div>
+          ) : error ? (
+            <div className="py-4">
+              <p className="text-sm text-stone-300 leading-relaxed mb-5">{error}</p>
+              <div className="flex gap-3">
+                <button onClick={onRegenerate} disabled={saving}
+                  className="text-xs tracking-widest uppercase px-5 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 font-medium">
+                  Try again
+                </button>
+                <button onClick={onClose} className="text-xs tracking-widest uppercase px-5 py-3 rounded-full text-stone-400 hover:text-white">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                {pieces.map((p) => {
+                  const isFocal = p.id === sourceItem.id;
+                  return (
+                    <div key={p.id} className="min-w-0">
+                      <div className={`aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2 ${isFocal ? 'ring-2 ring-brass-300' : ''}`}>
+                        {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                      </div>
+                      <p className={`text-[11px] truncate ${isFocal ? 'text-brass-300 font-medium' : 'text-stone-300'}`}>
+                        {isFocal ? '★ ' : ''}{p.name}
+                      </p>
+                      <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {suggestion?.reasoning && (
+                <p className="text-sm text-stone-300 italic mt-5 leading-relaxed bg-white/5 border border-white/10 rounded-xl p-4">
+                  "{suggestion.reasoning}"
+                </p>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6">
+                <button onClick={onSave} disabled={saving}
+                  className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
+                  <Bookmark size={14} strokeWidth={1.5} /> {saving ? 'Saving…' : 'Save this look'}
+                </button>
+                <button onClick={onRegenerate} disabled={saving}
+                  className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
+                  ↻ Try a different look
+                </button>
+              </div>
+              <button onClick={onClose} disabled={saving}
+                className="block mx-auto mt-5 text-[11px] tracking-widest uppercase text-stone-400 hover:text-white transition-colors">
+                Discard
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onClose }) {
   useEscapeKey(onClose);
   const [copied, setCopied] = useState(false);

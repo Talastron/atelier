@@ -93,6 +93,19 @@ const SHOP_SEEDS = [
 ];
 const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
 
+// Condition / cleaning state for an owned item. Default is `available` —
+// the piece is wearable right now. Other states block it from being
+// auto-recommended by Gemini suggestions and surface a badge on the
+// wardrobe card so 'what can I wear today?' is a glance, not a hunt.
+const ITEM_CONDITIONS = [
+  { key: 'available',     label: 'Available',     short: 'Ready',     color: 'emerald', shortcut: 'Mark available' },
+  { key: 'in_wash',       label: 'In the wash',   short: 'In wash',   color: 'blue',    shortcut: 'Send to wash' },
+  { key: 'needs_ironing', label: 'Needs ironing', short: 'To iron',   color: 'amber',   shortcut: 'Needs ironing' },
+  { key: 'damaged',       label: 'Damaged',       short: 'Damaged',   color: 'red',     shortcut: 'Mark damaged' },
+];
+const itemCondition = (item) => item?.condition || 'available';
+const isItemAvailable = (item) => itemCondition(item) === 'available';
+
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 11));
 
 // Items historically used `season` (string). New items use `seasons` (array).
@@ -2107,7 +2120,10 @@ function DigitalWardrobe() {
     setStyleError(null);
     setStyleBusy(true);
     try {
-      const owned = liveItems.filter((i) => i.status === 'owned' && !i.deletedAt);
+      // Skip items in the wash / damaged so AI doesn't suggest pieces you
+      // can't actually wear right now. The focal item itself bypasses this
+      // check — if you're explicitly styling around it, you want it included.
+      const owned = liveItems.filter((i) => i.status === 'owned' && !i.deletedAt && (isItemAvailable(i) || i.id === item.id));
       const sourceItems = item.status === 'wishlist' && !owned.find((i) => i.id === item.id)
         ? [item, ...owned]
         : owned;
@@ -2184,7 +2200,11 @@ function DigitalWardrobe() {
     setVaryError(null);
     setVaryBusy(true);
     try {
-      const owned = liveItems.filter((i) => i.status === 'owned' && !i.deletedAt);
+      // Skip items in the wash / damaged so variations only use pieces
+      // available right now. Items in the original outfit that are
+      // currently unavailable are still passed so the AI knows what to
+      // swap away from.
+      const owned = liveItems.filter((i) => i.status === 'owned' && !i.deletedAt && isItemAvailable(i));
       if (owned.length < 3) throw new Error('Add a few more owned pieces first — variations need at least 3 items to work with.');
       const previousPieces = resolveOutfitItems(outfit, liveItems);
       const month = new Date().getMonth();
@@ -2334,6 +2354,13 @@ function DigitalWardrobe() {
     haptic('tap');
     await handleAddItem({ ...item, favorite: !item.favorite });
     toast.show(item.favorite ? 'Removed from favourites' : 'Added to favourites', { kind: 'success', duration: 1400 });
+  };
+  const handleSetItemCondition = async (item, condition) => {
+    if (!user) return;
+    const next = condition === 'available' ? null : condition;
+    await handleAddItem({ ...item, condition: next });
+    const meta = ITEM_CONDITIONS.find((c) => c.key === condition);
+    toast.show(meta ? `${item.name} · ${meta.shortcut}` : 'Updated', { kind: 'success', duration: 1800 });
   };
   const handleLogWear = async (item, dateISO = todayISO()) => {
     if (!user) return;
@@ -2808,6 +2835,7 @@ function DigitalWardrobe() {
               onSetWearNote={(dateISO, note) => handleSetWearNote(selectedItem, dateISO, note)}
               onMarkCared={() => handleMarkCared(selectedItem)}
               onToggleFavorite={() => handleToggleFavorite(selectedItem)}
+              onSetCondition={(c) => handleSetItemCondition(selectedItem, c)}
               onDuplicate={() => handleDuplicateItem(selectedItem)}
               onShare={() => handleShareItem(selectedItem)}
               onStyleWithItem={() => handleStyleWithItem(selectedItem)}
@@ -3305,8 +3333,11 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
     setBusy(true); setError(null);
     try {
       const season = (weatherSeasons && weatherSeasons[0]) || 'Spring';
+      // Skip items in the wash / damaged so suggestions are wearable right now.
+      const available = owned.filter(isItemAvailable);
       const result = await generateOutfitWithGemini({
-        items: owned, intent: 'a balanced everyday look for now', weather, season, temperature: aiTemperature,
+        items: available.length >= 3 ? available : owned,
+        intent: 'a balanced everyday look for now', weather, season, temperature: aiTemperature,
         styleProfile: summariseStyleProfile(measurements),
       });
       setSuggestion(result);
@@ -3781,13 +3812,16 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   };
 
   const filteredItems = items.filter(item => {
-    // Status pills are 'all' | 'owned' | 'wishlist' | 'stale' | 'favorites' | 'lent'.
+    // Status pills are 'all' | 'owned' | 'wishlist' | 'stale' | 'favorites'
+    // | 'lent' | 'unavailable'.
     // Stale = owned + never worn OR last worn 90+ days ago.
+    // Unavailable = owned + condition !== 'available' (in wash, ironing, damaged).
     const passesStatus =
       filter === 'all' ? true
       : filter === 'stale' ? (item.status === 'owned' && (daysSinceLastWorn(item) === null || daysSinceLastWorn(item) >= 90))
       : filter === 'favorites' ? !!item.favorite
       : filter === 'lent' ? !!item.lentTo
+      : filter === 'unavailable' ? (item.status === 'owned' && !isItemAvailable(item))
       : item.status === filter;
     const matchCategory = categoryFilter === 'All' || item.category === categoryFilter;
     const itemS = itemSeasons(item);
@@ -3916,7 +3950,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           )}
         </div>
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
-          {[['all', 'All'], ['favorites', '★ Favourites'], ['owned', 'Owned'], ['wishlist', 'Wishlist'], ['lent', 'Lent out'], ['stale', 'Stale 90+d']].map(([f, label]) => (
+          {[['all', 'All'], ['favorites', '★ Favourites'], ['owned', 'Owned'], ['wishlist', 'Wishlist'], ['unavailable', 'In wash / etc'], ['lent', 'Lent out'], ['stale', 'Stale 90+d']].map(([f, label]) => (
             <button key={f} onClick={() => setFilter(f)}
               className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-all duration-300 ${
                 filter === f ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-800'
@@ -4068,6 +4102,19 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                       overdue ? 'bg-red-600 text-white' : 'glass-panel text-stone-900'
                     }`}>
                       {overdue ? 'Overdue' : `Lent · ${item.lentTo}`}
+                    </span>
+                  );
+                })()}
+                {!isItemAvailable(item) && (() => {
+                  const meta = ITEM_CONDITIONS.find((c) => c.key === itemCondition(item));
+                  const tones = {
+                    blue: 'bg-blue-600 text-white',
+                    amber: 'bg-amber-500 text-white',
+                    red: 'bg-red-600 text-white',
+                  };
+                  return (
+                    <span className={`text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium ${tones[meta?.color] || 'bg-stone-700 text-white'}`}>
+                      {meta?.short || itemCondition(item)}
                     </span>
                   );
                 })()}
@@ -5319,7 +5366,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   );
 }
 
-function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onMarkCared, onToggleFavorite, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel }) {
+function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onMarkCared, onToggleFavorite, onSetCondition, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -5801,6 +5848,39 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 </div>
               </div>
             )}
+
+            {/* Condition / cleaning state — only meaningful for owned items.
+                Wishlist items are pre-purchase; condition doesn't apply. */}
+            {item.status === 'owned' && onSetCondition && (() => {
+              const current = itemCondition(item);
+              return (
+                <div>
+                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-3">Right now</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {ITEM_CONDITIONS.map((c) => {
+                      const active = current === c.key;
+                      const ringByColor = {
+                        emerald: 'bg-emerald-100 border-emerald-300 text-emerald-800',
+                        blue: 'bg-blue-100 border-blue-300 text-blue-800',
+                        amber: 'bg-amber-100 border-amber-300 text-amber-800',
+                        red: 'bg-red-100 border-red-300 text-red-800',
+                      };
+                      return (
+                        <button key={c.key} onClick={() => onSetCondition(c.key)}
+                          className={`text-xs px-3.5 py-2 rounded-full border transition-all ${
+                            active ? `${ringByColor[c.color]} font-medium` : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
+                          }`}>
+                          {c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {current !== 'available' && (
+                    <p className="text-[11px] text-stone-500 mt-2 italic">AI styling will skip this piece until it's available again.</p>
+                  )}
+                </div>
+              );
+            })()}
 
             {item.description && (
               <div>

@@ -2420,7 +2420,7 @@ function DigitalWardrobe() {
                       onCreateLookbook={handleShareLookbook}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} />}
+                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}
@@ -9852,12 +9852,28 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
   );
 }
 
-function FinanceView({ items, inspirations = [], onJumpToWardrobe }) {
+function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, onOpenProfile }) {
   const ownedItems = items.filter(i => i.status === 'owned');
   const wishlistItems = items.filter(i => i.status === 'wishlist');
   const ownedTotal = ownedItems.reduce((sum, i) => sum + i.price, 0);
   const wishlistTotal = wishlistItems.reduce((sum, i) => sum + i.price, 0);
   const categoryBreakdown = ownedItems.reduce((acc, item) => { acc[item.category] = (acc[item.category] || 0) + item.price; return acc; }, {});
+
+  // Spending this month — counts owned items added (purchasedDate || createdAt)
+  // in the current calendar month. The "spend date" preference: explicit
+  // purchasedDate wins because it reflects when money actually left the user;
+  // createdAt is the fallback for items entered without a purchase date.
+  const now = new Date();
+  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthName = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  const monthSpendItems = ownedItems.filter((i) => {
+    const dateStr = i.purchasedDate || i.createdAt || '';
+    return typeof dateStr === 'string' && dateStr.slice(0, 7) === currentYM;
+  });
+  const monthSpend = monthSpendItems.reduce((s, i) => s + (Number(i.price) || 0), 0);
+  const monthlyBudget = Number(measurements?.monthlyBudget) || 0;
+  const budgetPct = monthlyBudget > 0 ? (monthSpend / monthlyBudget) * 100 : 0;
+  const budgetTone = budgetPct <= 70 ? 'green' : budgetPct <= 100 ? 'amber' : 'red';
 
   // Cost-per-wear leaderboard: best value (lowest CPW), only items actually worn
   const bestCpw = ownedItems
@@ -9895,8 +9911,8 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe }) {
   const wornPieces = ownedItems.filter((i) => itemWearCount(i) > 0).length;
   const gaps = computeWardrobeGaps(ownedItems);
 
-  // Wear timeline: counts per month for the last 12 months
-  const now = new Date();
+  // Wear timeline: counts per month for the last 12 months. Reuses the `now`
+  // already declared above for the spending-meter window.
   const timeline = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -9957,6 +9973,71 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe }) {
           </p>
         </button>
       </div>
+
+      {/* Spending meter — shows month-to-date spend against the user's
+          monthly budget. Hidden entirely if no budget set; a soft prompt
+          card with a link to Profile if there's no budget but they have
+          purchases this month. */}
+      {monthlyBudget > 0 ? (
+        <div className={`rounded-[2rem] p-8 md:p-10 smooth-shadow relative overflow-hidden border ${
+          budgetTone === 'green' ? 'bg-white border-stone-200/60'
+          : budgetTone === 'amber' ? 'bg-amber-50 border-amber-200'
+          : 'bg-red-50 border-red-200'
+        }`}>
+          <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
+            <div>
+              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-1">Spending · {monthName}</p>
+              <h3 className="font-display text-3xl sm:text-4xl text-stone-900">
+                £{monthSpend.toLocaleString()}
+                <span className="text-base sm:text-lg text-stone-400 font-normal ml-2">of £{monthlyBudget.toLocaleString()}</span>
+              </h3>
+            </div>
+            <div className="text-right">
+              <p className={`text-xl sm:text-2xl font-display ${
+                budgetTone === 'green' ? 'text-stone-900'
+                : budgetTone === 'amber' ? 'text-amber-700'
+                : 'text-red-700'
+              }`}>{budgetPct.toFixed(0)}%</p>
+              <p className="text-[10px] tracking-widest uppercase text-stone-500">{monthSpendItems.length} item{monthSpendItems.length === 1 ? '' : 's'}</p>
+            </div>
+          </div>
+          <div className="w-full bg-white/60 rounded-full h-2 overflow-hidden border border-stone-200/60">
+            <div className={`h-full rounded-full transition-all duration-1000 ease-out ${
+              budgetTone === 'green' ? 'bg-emerald-500'
+              : budgetTone === 'amber' ? 'bg-amber-500'
+              : 'bg-red-500'
+            }`} style={{ width: `${Math.min(budgetPct, 100)}%` }}></div>
+          </div>
+          <p className="text-xs text-stone-500 mt-4 leading-relaxed">
+            {budgetTone === 'green' && monthSpend === 0 && `No purchases this month yet — you have £${monthlyBudget.toLocaleString()} of headroom.`}
+            {budgetTone === 'green' && monthSpend > 0 && `£${(monthlyBudget - monthSpend).toLocaleString()} left until you hit your budget for ${monthName.split(' ')[0]}.`}
+            {budgetTone === 'amber' && `Approaching your budget — £${(monthlyBudget - monthSpend).toLocaleString()} of headroom before you tip over.`}
+            {budgetTone === 'red' && `Over budget by £${(monthSpend - monthlyBudget).toLocaleString()}. Worth checking what you've added this month.`}
+          </p>
+          {monthSpendItems.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-5">
+              {monthSpendItems.slice(0, 8).map((i) => (
+                <span key={i.id} className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600">
+                  {i.name}{i.price ? ` · £${Number(i.price).toLocaleString()}` : ''}
+                </span>
+              ))}
+              {monthSpendItems.length > 8 && (
+                <span className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full text-stone-500">+ {monthSpendItems.length - 8} more</span>
+              )}
+            </div>
+          )}
+        </div>
+      ) : monthSpendItems.length > 0 && onOpenProfile ? (
+        <button onClick={onOpenProfile}
+          className="w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-900 transition-colors group">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-2">Spending · {monthName}</p>
+          <h3 className="font-display text-2xl text-stone-900">£{monthSpend.toLocaleString()} added this month</h3>
+          <p className="text-sm text-stone-500 mt-3 leading-relaxed">
+            Set a monthly budget in Profile → Settings to track headroom and get alerts when you approach the limit.
+            <span className="block mt-2 text-stone-900 group-hover:underline text-xs tracking-widest uppercase">Open Profile →</span>
+          </p>
+        </button>
+      ) : null}
 
       <div className="bg-white border border-stone-200/60 rounded-[2rem] p-10 smooth-shadow">
         <div className="flex items-baseline justify-between gap-3 mb-8 flex-wrap">
@@ -10531,6 +10612,15 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
   const aiTempPreset = measurements?.aiTemperaturePreset || 'balanced';
   const setCurrency = (v) => saveMeasurements({ ...measurements, currency: v });
   const setAITempPreset = (v) => saveMeasurements({ ...measurements, aiTemperaturePreset: v });
+  // Local input value for the monthly budget — persisted on blur so the user
+  // can edit freely without each keystroke writing to Firestore.
+  const [budgetInput, setBudgetInput] = useState(measurements?.monthlyBudget ?? '');
+  useEffect(() => { setBudgetInput(measurements?.monthlyBudget ?? ''); }, [measurements?.monthlyBudget]);
+  const saveBudget = () => {
+    const v = budgetInput === '' ? null : Number(budgetInput);
+    if (v !== null && (Number.isNaN(v) || v < 0)) return;
+    saveMeasurements({ ...measurements, monthlyBudget: v });
+  };
   const [localMeasurements, setLocalMeasurements] = useState(measurements || INITIAL_MEASUREMENTS);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
@@ -10661,6 +10751,32 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="monthly-budget" className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Monthly shopping budget</label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 max-w-xs">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm">{CURRENCY_SYMBOLS[currency] || '£'}</span>
+                <input
+                  id="monthly-budget"
+                  type="number" inputMode="numeric" min="0" step="10"
+                  value={budgetInput}
+                  onChange={(e) => setBudgetInput(e.target.value)}
+                  onBlur={saveBudget}
+                  onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  placeholder="e.g. 200"
+                  className="w-full h-11 pl-9 pr-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors"
+                />
+              </div>
+              {measurements?.monthlyBudget > 0 && (
+                <button onClick={() => { setBudgetInput(''); saveMeasurements({ ...measurements, monthlyBudget: null }); }}
+                  className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline underline-offset-2">
+                  Clear
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-stone-400 mt-2">Powers the spending meter on Insights. Counts owned items added this month (by purchase date if set, otherwise added date). Leave blank to hide the meter.</p>
           </div>
         </div>
       </div>

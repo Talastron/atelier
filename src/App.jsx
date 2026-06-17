@@ -5551,14 +5551,13 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
           {/* Image column — pinned for the entire page scroll. lg:self-start
-              keeps the column content-height (so layout maths stay simple
-              and alignment with the right column is correct). To stop
-              sticky 'releasing' at the column's own bottom edge (which
-              caused the image to scroll away once the user reached the
-              end of the right column), the column gets lg:h-full so it
-              fills the grid row height — giving sticky runway for the
-              whole page scroll without breaking the layout. */}
-          <div className="lg:col-span-6 lg:sticky lg:top-[12rem] lg:self-start lg:h-full space-y-3">
+              keeps the column content-height for layout purposes (so brand
+              alignment with the right column stays right). lg:min-h-[200vh]
+              gives sticky enough runway (~2 viewport heights) to keep the
+              image pinned even on the longest content tails — without
+              triggering the stretch-to-row-height behaviour that broke
+              alignment before. */}
+          <div className="lg:col-span-6 lg:sticky lg:top-[12rem] lg:self-start lg:min-h-[200vh] space-y-3">
             <button
               ref={photoRef}
               onClick={() => {

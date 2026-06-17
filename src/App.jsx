@@ -2423,7 +2423,7 @@ function DigitalWardrobe() {
                       onCreateLookbook={handleShareLookbook}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} />}
+                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}
@@ -9868,7 +9868,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
   );
 }
 
-function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, onOpenProfile }) {
+function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, onOpenProfile, onOpenItem }) {
   const ownedItems = items.filter(i => i.status === 'owned');
   const wishlistItems = items.filter(i => i.status === 'wishlist');
   const ownedTotal = ownedItems.reduce((sum, i) => sum + i.price, 0);
@@ -9926,6 +9926,46 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
   const totalWears = ownedItems.reduce((sum, i) => sum + itemWearCount(i), 0);
   const wornPieces = ownedItems.filter((i) => itemWearCount(i) > 0).length;
   const gaps = computeWardrobeGaps(ownedItems);
+
+  // Season coverage — % of in-season owned pieces worn at least once in
+  // the current season window. Behavioural nudge to actually wear what
+  // you own; surfaces forgotten pieces in the right time of year.
+  const seasonName = now.getMonth() >= 2 && now.getMonth() <= 4 ? 'Spring'
+    : now.getMonth() >= 5 && now.getMonth() <= 7 ? 'Summer'
+    : now.getMonth() >= 8 && now.getMonth() <= 10 ? 'Autumn'
+    : 'Winter';
+  const seasonStart = (() => {
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    if (m >= 2 && m <= 4) return `${y}-03-01`;
+    if (m >= 5 && m <= 7) return `${y}-06-01`;
+    if (m >= 8 && m <= 10) return `${y}-09-01`;
+    // Winter spans the year boundary — Dec last year, Jan/Feb this year.
+    return m === 11 ? `${y}-12-01` : `${y - 1}-12-01`;
+  })();
+  const inSeasonItems = ownedItems.filter((i) => {
+    const s = itemSeasons(i);
+    return s.length === 0 || s.includes(seasonName);
+  });
+  const wornThisSeason = inSeasonItems.filter((i) => {
+    const hist = itemWearHistory(i);
+    return hist.some((d) => d >= seasonStart);
+  });
+  const seasonCoveragePct = inSeasonItems.length > 0 ? (wornThisSeason.length / inSeasonItems.length) * 100 : 0;
+  const seasonUnworn = inSeasonItems
+    .filter((i) => !wornThisSeason.find((w) => w.id === i.id))
+    .sort((a, b) => {
+      // Surface items unworn for the longest first.
+      const da = daysSinceLastWorn(a); const db = daysSinceLastWorn(b);
+      return (db === null ? Infinity : db) - (da === null ? Infinity : da);
+    })
+    .slice(0, 6);
+  const coverageTone = seasonCoveragePct >= 60 ? 'high' : seasonCoveragePct >= 30 ? 'mid' : 'low';
+  const coverageMessage = coverageTone === 'high'
+    ? `You're wearing your ${seasonName.toLowerCase()} wardrobe well — ${wornThisSeason.length} of ${inSeasonItems.length} pieces seen so far.`
+    : coverageTone === 'mid'
+    ? `${wornThisSeason.length} of ${inSeasonItems.length} ${seasonName.toLowerCase()} pieces worn this season — plenty of rotation room.`
+    : `Plenty of ${seasonName.toLowerCase()} pieces are gathering dust — ${inSeasonItems.length - wornThisSeason.length} unworn this season.`;
 
   // Wear timeline: counts per month for the last 12 months. Reuses the `now`
   // already declared above for the spending-meter window.
@@ -10054,6 +10094,76 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
           </p>
         </button>
       ) : null}
+
+      {/* Season coverage — % of in-season pieces actually worn this season,
+          plus a curated row of unworn-but-in-season items as a nudge to
+          surface them. The anti-overconsumption companion to the spending
+          meter: 'before you buy, wear what you already own'. */}
+      {inSeasonItems.length >= 3 && (
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-8 md:p-10 smooth-shadow">
+          <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
+            <div>
+              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-1">Season coverage · {seasonName} {now.getFullYear()}</p>
+              <h3 className="font-display text-3xl sm:text-4xl text-stone-900">
+                {seasonCoveragePct.toFixed(0)}%
+                <span className="text-base sm:text-lg text-stone-400 font-normal ml-2">of your {seasonName.toLowerCase()} wardrobe</span>
+              </h3>
+            </div>
+            <div className="text-right">
+              <p className={`text-xl sm:text-2xl font-display ${
+                coverageTone === 'high' ? 'text-emerald-700'
+                : coverageTone === 'mid' ? 'text-stone-900'
+                : 'text-brass-700'
+              }`}>{wornThisSeason.length}/{inSeasonItems.length}</p>
+              <p className="text-[10px] tracking-widest uppercase text-stone-500">pieces worn</p>
+            </div>
+          </div>
+          <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
+            <div className={`h-full rounded-full transition-all duration-1000 ease-out ${
+              coverageTone === 'high' ? 'bg-emerald-500'
+              : coverageTone === 'mid' ? 'bg-stone-900'
+              : 'bg-brass-400'
+            }`} style={{ width: `${Math.min(seasonCoveragePct, 100)}%` }}></div>
+          </div>
+          <p className="text-xs text-stone-500 mt-4 leading-relaxed">{coverageMessage}</p>
+
+          {seasonUnworn.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-stone-100">
+              <div className="flex items-baseline justify-between mb-3 gap-2 flex-wrap">
+                <p className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold">Unworn this {seasonName.toLowerCase()} · try one</p>
+                {inSeasonItems.length - wornThisSeason.length > seasonUnworn.length && onJumpToWardrobe && (
+                  <button onClick={() => onJumpToWardrobe({ filter: 'stale' })} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 inline-flex items-center gap-1">
+                    See all → <ChevronRight size={11} strokeWidth={1.5} />
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {seasonUnworn.map((it) => {
+                  const clickable = !!onOpenItem;
+                  const Wrap = clickable ? 'button' : 'div';
+                  return (
+                    <Wrap
+                      key={it.id}
+                      {...(clickable ? { type: 'button', onClick: () => onOpenItem(it.id), 'aria-label': `Open ${it.name}` } : {})}
+                      className={`text-left ${clickable ? 'group transition-transform active:scale-[0.97] hover:-translate-y-0.5' : ''}`}
+                    >
+                      <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 mb-2 border border-stone-200/60">
+                        {itemImages(it)[0] ? (
+                          <img src={itemImages(it)[0]} alt={it.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
+                        )}
+                      </div>
+                      <p className={`text-[11px] truncate ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-700'}`}>{it.name}</p>
+                      <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{it.brand}</p>
+                    </Wrap>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-white border border-stone-200/60 rounded-[2rem] p-10 smooth-shadow">
         <div className="flex items-baseline justify-between gap-3 mb-8 flex-wrap">

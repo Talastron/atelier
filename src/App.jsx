@@ -5550,14 +5550,14 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          {/* Image column — truly pinned once stuck. The natural top sits at
-              ~148px (top-bar ~84px + parent lg:py-16 64px); setting sticky
-              to 168px (lg:top-[10.5rem]) gives a 20px buffer so natural is
-              comfortably less than sticky — sub-pixel snap disappears, the
-              column is rock-solid from initial render. The matching lg:pt-5
-              on the right column below offsets its content the same 20px
-              so the brand eyebrow aligns with the image's top edge. */}
-          <div className="lg:col-span-6 lg:sticky lg:top-[10.5rem] lg:self-start space-y-3">
+          {/* Image column — truly pinned once stuck. The natural top depends
+              on the top-bar height, which itself can vary with content (the
+              action-row buttons wrap on some viewports, making the bar
+              taller). A generous 44px buffer over the worst-case natural
+              position guarantees no scroll-snap motion on any viewport.
+              The matching lg:pt-11 on the right column keeps the brand
+              eyebrow aligned with the image's top edge. */}
+          <div className="lg:col-span-6 lg:sticky lg:top-[12rem] lg:self-start space-y-3">
             <button
               ref={photoRef}
               onClick={() => {
@@ -5613,7 +5613,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             )}
           </div>
 
-          <div className="lg:col-span-6 space-y-8 lg:space-y-6 lg:pt-5">
+          <div className="lg:col-span-6 space-y-8 lg:space-y-6 lg:pt-11">
             <div>
               <p className="text-[11px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-2">{item.brand}</p>
               <h1 className="text-3xl sm:text-4xl lg:text-4xl font-display text-stone-900 leading-tight">{item.name}</h1>

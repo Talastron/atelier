@@ -3281,7 +3281,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
             }
           }}
         >
-          <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
             {/* Decorative sparkles, same flavour as the TodayTile card */}
             <div className="absolute -right-16 -top-16 opacity-[0.06] rotate-12 pointer-events-none">
               <Sparkles size={280} strokeWidth={0.8} />
@@ -3328,7 +3328,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
                   {/* The proposed outfit — wraps to a grid so the modal never
                       scrolls sideways. 3 cols on mobile, 4 on small/medium,
                       5 on larger screens. Most outfits are 5-7 pieces. */}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
                     {suggestedPieces.map((p) => (
                       <div key={p.id} className="min-w-0">
                         <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
@@ -8996,7 +8996,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
       className="fixed inset-0 z-[60] bg-stone-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={(e) => { if (e.target === e.currentTarget && !busy && !saving) onClose(); }}
     >
-      <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+      <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         <div className="absolute -right-16 -top-16 opacity-[0.06] rotate-12 pointer-events-none">
           <Sparkles size={280} strokeWidth={0.8} />
         </div>

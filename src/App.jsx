@@ -4309,12 +4309,14 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           ~600px aside content scrolls past, because the aside's own
           bottom edge would also be past the viewport. */}
       <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:self-stretch flex-col gap-3 lg:pr-1 lg:pb-6">
-        {/* Sticky command bar — Add/Select stay locked at top of the column
-            while the user scrolls the grid + the rest of this column. The
-            translucent backdrop + bottom border separate it from cards
-            scrolling underneath. Negative margins + matching padding extend
-            the bg edge-to-edge across the column gutters. */}
-        <div className="lg:sticky lg:top-[9.5rem] z-20 flex items-stretch gap-2 lg:bg-[#F7F5F2]/90 lg:backdrop-blur-md lg:-mx-2 lg:px-2 lg:py-2 lg:border-b lg:border-stone-200/50">
+        {/* Sticky command bar — Add/Select pin to the top of the scroll
+            container, aligned with the Filters / Sort toolbar in the left
+            column. Both use lg:top-0 + matching bg/border so the two stuck
+            bars read as a single continuous toolbar strip spanning the page
+            width.
+            py-3 (mobile: py-2) and bg match the filter row exactly so the
+            top edges land on the same y-coordinate. */}
+        <div className="lg:sticky lg:top-0 z-20 flex items-stretch gap-2 lg:bg-[#F7F5F2]/95 lg:backdrop-blur-md lg:-mx-2 lg:px-2 lg:py-3 lg:border-b lg:border-stone-200/60">
           <button
             onClick={openAddModal}
             className="flex-1 h-12 bg-stone-900 text-white px-5 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"

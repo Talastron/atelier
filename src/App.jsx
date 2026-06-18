@@ -2960,6 +2960,7 @@ function DigitalWardrobe() {
               <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
+              <DesktopNavItem id="diary" icon={Calendar} label="Diary" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
               <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} />
@@ -3056,7 +3057,19 @@ function DigitalWardrobe() {
                       onReorderOutfits={handleReorderOutfits}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} />}
+                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('diary')} />}
+                  {activeTab === 'diary' && (
+                    <DiaryView
+                      items={liveItems}
+                      outfits={outfits}
+                      schedules={schedules}
+                      onScheduleOutfit={handleScheduleOutfit}
+                      onOpenOutfit={setOpenOutfitId}
+                      onSaveOutfit={handleSaveOutfit}
+                      onOpenItem={setSelectedItemId}
+                      styleProfile={measurements?.styleProfile || ''}
+                    />
+                  )}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}
@@ -3123,14 +3136,23 @@ function DigitalWardrobe() {
             </button>
           )}
 
-          {/* MOBILE PROFILE BUTTON — floating top-right pill. Profile
-              moved off the bottom nav so the central + FAB sits at a
-              true geometric centre. The pill hides on scroll so it
-              doesn't collide with the sticky filter / sort bars that
-              every view pins to the top. Fades back in when the user
-              scrolls back to the top. pointer-events-none + opacity-0
-              during hidden state keeps it from intercepting taps on
-              the sticky bar beneath. */}
+          {/* MOBILE FLOATING NAV PILLS — Diary at top-left, Profile at
+              top-right. Both fade out on scroll to avoid colliding with
+              sticky filter bars; pointer-events-none + aria-hidden +
+              tabIndex=-1 while hidden keep them inert. Mirror of the
+              scroll-to-top button pattern, just always-visible-at-top
+              rather than appearing-on-scroll. */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('diary')}
+            className={`lg:hidden fixed top-0 left-3 z-40 mt-3 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${activeTab === 'diary' ? 'ring-2 ring-brass-300' : ''} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+            aria-label="Open diary"
+            aria-hidden={!atTop}
+            tabIndex={atTop ? 0 : -1}
+          >
+            <Calendar size={16} strokeWidth={1.75} />
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab('profile')}
@@ -8747,15 +8769,15 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           Studio:    Compose · AI History  (history belongs with creation —
                      it's a record of past suggestions to reload into the
                      canvas, not a curated archive)
-          Lookbook:  Lookbook · Calendar   (saved looks + their schedule —
-                     the curatorial side) */}
+          Lookbook:  no tabs — the Lookbook is now the whole view. Calendar
+                     moved out into the dedicated Diary destination where it
+                     sits alongside the wear journal as ONE keepsake. */}
       <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
           {(isLookbook
             ? [
                 ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
-                ['calendar', 'Calendar'],
               ]
             : [
                 ['create', 'Compose'],
@@ -10780,15 +10802,370 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
   );
 }
 
-// THE DIARY — gold-standard wear journal.
+// THE DIARY — top-level destination that merges the wear journal AND
+// the planning calendar into one coherent product.
 //
-// Editorial typography is the protagonist: giant serif date numerals
-// per day, italic pull-quote notes, small-caps month covers, brass-rule
-// dividers. Photos are given reverence (hero size + lightbox). Stats
-// layer makes the data feel like a personal record rather than a log.
+// Two tabs share a single editorial header + stats panel:
+//   JOURNAL  — editorial scroll of what's been worn (past)
+//   CALENDAR — month grid for planning + at-a-glance review (future + past)
 //
-// Interactive surfaces: filter chips, photo lightbox, sticky-per-day
-// date numeral, taps on every piece / outfit, fade-in on hover.
+// Same visual vocabulary across both: brass-rule eyebrows, display-serif
+// numerals, polaroid item thumbnails, italic pull-quote notes, photo
+// lightbox. The diary is now a SINGLE keepsake destination, not a feature
+// fractured across Studio + Insights.
+function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, onOpenItem, styleProfile = '' }) {
+  const [tab, setTab] = useState('journal');
+  const [filter, setFilter] = useState('all');
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
+
+  // Compute wearDiary entries — every day with a logged wear, newest
+  // first. Joins schedule context (event name, worn photo) so the diary
+  // reads as a real record of what was worn day-to-day. Logic extracted
+  // from FinanceView's inline preview and consolidated here.
+  const wearDiary = useMemo(() => {
+    const byDate = {};
+    for (const it of items) {
+      const hist = itemWearHistory(it);
+      const notes = itemWearNotes(it);
+      for (const d of hist) {
+        if (!byDate[d]) byDate[d] = { date: d, items: [], notes: [] };
+        byDate[d].items.push(it);
+        if (notes[d]) byDate[d].notes.push({ itemId: it.id, itemName: it.name, note: notes[d] });
+      }
+    }
+    for (const group of Object.values(byDate)) {
+      const sched = schedules?.[group.date];
+      if (sched?.outfitId) {
+        const out = outfits.find((o) => o.id === sched.outfitId);
+        if (out) {
+          group.outfit = out;
+          if (sched.eventName) group.eventName = sched.eventName;
+          const photo = (out.wornPhotos || []).find((p) => p.date === group.date);
+          if (photo) group.photo = photo.image;
+        }
+      }
+    }
+    return Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date));
+  }, [items, outfits, schedules]);
+
+  const stats = useMemo(() => {
+    const wears = wearDiary.reduce((s, e) => s + e.items.length, 0);
+    const itemCounts = {};
+    for (const e of wearDiary) {
+      for (const it of e.items) {
+        if (!itemCounts[it.id]) itemCounts[it.id] = { item: it, count: 0 };
+        itemCounts[it.id].count++;
+      }
+    }
+    const mostWorn = Object.values(itemCounts).sort((a, b) => b.count - a.count)[0] || null;
+    let streak = 0;
+    if (wearDiary.length > 0) {
+      const dateSet = new Set(wearDiary.map((e) => e.date));
+      const cursorISO = (c) => c.toISOString().slice(0, 10);
+      const cursor = new Date(todayISO() + 'T00:00:00');
+      if (!dateSet.has(cursorISO(cursor))) cursor.setDate(cursor.getDate() - 1);
+      if (dateSet.has(cursorISO(cursor))) {
+        while (dateSet.has(cursorISO(cursor))) {
+          streak++;
+          cursor.setDate(cursor.getDate() - 1);
+        }
+      }
+    }
+    return { wears, mostWorn, streak };
+  }, [wearDiary]);
+
+  const filtered = useMemo(() => {
+    if (filter === 'all') return wearDiary;
+    return wearDiary.filter((e) => {
+      if (filter === 'photos') return !!e.photo;
+      if (filter === 'notes') return e.notes && e.notes.length > 0;
+      if (filter === 'outfits') return !!e.outfit;
+      if (filter === 'events') return !!e.eventName;
+      return true;
+    });
+  }, [wearDiary, filter]);
+
+  const byMonth = useMemo(() => {
+    const groups = {};
+    for (const e of filtered) {
+      const ym = e.date.slice(0, 7);
+      if (!groups[ym]) groups[ym] = { ym, days: [], wears: 0, itemCounts: {} };
+      groups[ym].days.push(e);
+      groups[ym].wears += e.items.length;
+      for (const it of e.items) {
+        if (!groups[ym].itemCounts[it.id]) groups[ym].itemCounts[it.id] = { item: it, count: 0 };
+        groups[ym].itemCounts[it.id].count++;
+      }
+    }
+    for (const g of Object.values(groups)) {
+      g.days.sort((a, b) => b.date.localeCompare(a.date));
+      g.mostWorn = Object.values(g.itemCounts).sort((a, b) => b.count - a.count)[0] || null;
+    }
+    return Object.values(groups).sort((a, b) => b.ym.localeCompare(a.ym));
+  }, [filtered]);
+
+  const FILTERS = [
+    { id: 'all', label: 'All' },
+    { id: 'photos', label: 'With photos' },
+    { id: 'notes', label: 'With notes' },
+    { id: 'outfits', label: 'Saved outfits' },
+    { id: 'events', label: 'Events' },
+  ];
+
+  return (
+    <div>
+      {/* EDITORIAL HEADER — the cover of the destination */}
+      <header className="mb-8 sm:mb-12">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="brass-rule" aria-hidden="true" />
+          <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500 font-medium">The Diary</span>
+        </div>
+        <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-stone-900 tracking-tight leading-[0.95]">
+          Every wear, every plan
+        </h1>
+        <p className="font-display italic text-stone-500 text-lg sm:text-xl mt-5 max-w-xl leading-relaxed">
+          Your calendar and your journal — one keepsake of how you actually dress.
+        </p>
+      </header>
+
+      {/* STATS PANEL — shared by both tabs */}
+      {wearDiary.length > 0 && (
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 sm:p-8 mb-8 smooth-shadow">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+            <div>
+              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Days logged</p>
+              <p className="font-display text-3xl sm:text-4xl text-stone-900 leading-none">{wearDiary.length}</p>
+            </div>
+            <div>
+              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Total wears</p>
+              <p className="font-display text-3xl sm:text-4xl text-stone-900 leading-none">{stats.wears}</p>
+            </div>
+            <div>
+              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Current streak</p>
+              <p className={`font-display text-3xl sm:text-4xl leading-none ${stats.streak > 0 ? 'text-brass-600' : 'text-stone-300'}`}>
+                {stats.streak}
+                <span className="text-xs text-stone-500 font-sans ml-1.5 align-middle">day{stats.streak === 1 ? '' : 's'}</span>
+              </p>
+            </div>
+            {stats.mostWorn && (
+              <div className="col-span-2 md:col-span-1">
+                <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Most worn</p>
+                <button onClick={() => onOpenItem?.(stats.mostWorn.item.id)}
+                  className="text-left group">
+                  <p className="font-display text-base sm:text-lg text-stone-900 leading-tight group-hover:text-brass-700 transition-colors truncate">{stats.mostWorn.item.name}</p>
+                  <p className="text-[10px] tracking-wider uppercase text-stone-500 mt-1">× {stats.mostWorn.count} wear{stats.mostWorn.count === 1 ? '' : 's'}</p>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB TOGGLE — segmented control matching the app's tab convention */}
+      <div className="flex justify-center mb-8 sm:mb-10">
+        <div className="flex bg-stone-200/50 p-1.5 rounded-full">
+          {[
+            { id: 'journal', label: 'Journal' },
+            { id: 'calendar', label: 'Calendar' },
+          ].map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+                tab === t.id ? 'bg-white text-stone-900 font-medium shadow-sm' : 'text-stone-500 hover:text-stone-900'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* TAB CONTENT */}
+      {tab === 'calendar' ? (
+        <div>
+          {/* CALENDAR — wrapped in the same visual vocabulary so it
+              feels like the diary's second face, not a different product. */}
+          <WearCalendar
+            items={items}
+            outfits={outfits}
+            schedules={schedules}
+            onScheduleOutfit={onScheduleOutfit}
+            onOpenOutfit={onOpenOutfit}
+            onSaveOutfit={onSaveOutfit}
+            styleProfile={styleProfile}
+          />
+        </div>
+      ) : (
+        <div>
+          {/* FILTER CHIPS — only shown in Journal tab */}
+          {wearDiary.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-10">
+              {FILTERS.map((f) => (
+                <button key={f.id} onClick={() => setFilter(f.id)}
+                  className={`px-4 py-2 text-[11px] tracking-widest uppercase rounded-full transition-colors duration-200 ${
+                    filter === f.id
+                      ? 'bg-stone-900 text-white'
+                      : 'bg-white text-stone-600 border border-stone-300 hover:border-stone-500 hover:text-stone-900'
+                  }`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* EMPTY STATES */}
+          {wearDiary.length === 0 ? (
+            <div className="bg-white border border-stone-200/60 rounded-[2rem] p-12 sm:p-16 text-center smooth-shadow">
+              <p className="font-display italic text-stone-400 text-xl sm:text-2xl mb-3">No wears logged yet.</p>
+              <p className="text-sm text-stone-500 max-w-sm mx-auto leading-relaxed">Log a wear from any item or outfit and it will begin to appear here — the start of your style record.</p>
+              <button onClick={() => setTab('calendar')}
+                className="mt-6 inline-flex items-center gap-2 text-[11px] tracking-widest uppercase text-stone-700 hover:text-brass-700 transition-colors">
+                <Calendar size={14} strokeWidth={1.5} />
+                Open the calendar
+              </button>
+            </div>
+          ) : byMonth.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="font-display italic text-stone-400 text-lg mb-3">No entries match this filter.</p>
+              <button onClick={() => setFilter('all')}
+                className="text-[11px] tracking-widest uppercase text-brass-600 hover:text-brass-700 transition-colors">
+                Show all
+              </button>
+            </div>
+          ) : (
+            <>
+              {byMonth.map((month) => {
+                const monthDate = new Date(month.ym + '-01');
+                const monthName = monthDate.toLocaleDateString('en-GB', { month: 'long' });
+                const monthYear = monthDate.toLocaleDateString('en-GB', { year: 'numeric' });
+                return (
+                  <section key={month.ym} className="mb-16 sm:mb-20">
+                    <div className="mb-10 pb-6 border-b border-stone-200">
+                      <div className="flex items-baseline gap-3 mb-2">
+                        <span className="inline-block w-6 h-px bg-brass-400" aria-hidden="true" />
+                        <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500">{monthYear}</span>
+                      </div>
+                      <h2 className="font-display text-3xl sm:text-4xl text-stone-900 mb-3 tracking-tight">{monthName}</h2>
+                      <div className="flex items-baseline gap-5 text-sm text-stone-500 flex-wrap">
+                        <span><strong className="text-stone-900 font-display text-base">{month.days.length}</strong> day{month.days.length === 1 ? '' : 's'}</span>
+                        <span><strong className="text-stone-900 font-display text-base">{month.wears}</strong> wear{month.wears === 1 ? '' : 's'}</span>
+                        {month.mostWorn && (
+                          <span className="text-stone-500">
+                            Most worn:{' '}
+                            <button onClick={() => onOpenItem?.(month.mostWorn.item.id)}
+                              className="text-stone-900 font-medium hover:text-brass-700 transition-colors">
+                              {month.mostWorn.item.name}
+                            </button>{' '}
+                            <span className="text-stone-400">× {month.mostWorn.count}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <ul className="space-y-10 sm:space-y-14">
+                      {month.days.map((day) => {
+                        const d = new Date(day.date + 'T00:00:00');
+                        const dayNum = d.getDate();
+                        const dayWeek = d.toLocaleDateString('en-GB', { weekday: 'short' });
+                        const today = todayISO();
+                        const isToday = day.date === today;
+                        const yest = new Date(); yest.setDate(yest.getDate() - 1);
+                        const isYesterday = day.date === yest.toISOString().slice(0, 10);
+                        const relativeLabel = isToday ? 'Today' : isYesterday ? 'Yesterday' : null;
+                        return (
+                          <li key={day.date} className="grid grid-cols-[auto_1fr] gap-5 sm:gap-8 items-start">
+                            <div className="shrink-0 w-16 sm:w-24 text-right" style={{ position: 'sticky', top: '6rem' }}>
+                              <p className={`font-display text-4xl sm:text-6xl leading-none ${isToday ? 'text-brass-600' : 'text-stone-900'}`}>{dayNum}</p>
+                              <p className="text-[9px] tracking-[0.25em] uppercase text-stone-500 mt-2">{dayWeek}</p>
+                              {relativeLabel && (
+                                <p className="font-display italic text-xs text-brass-600 mt-1.5">{relativeLabel}</p>
+                              )}
+                              {day.eventName && (
+                                <p className="font-display italic text-[11px] text-stone-500 mt-2 leading-tight">{day.eventName}</p>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 space-y-3 pt-2">
+                              {day.photo && (
+                                <button
+                                  type="button"
+                                  onClick={() => setLightboxPhoto({ src: day.photo, date: day.date })}
+                                  className="block w-full max-w-2xl group"
+                                  aria-label="View larger"
+                                >
+                                  <div className="aspect-[4/5] sm:aspect-[3/2] rounded-2xl overflow-hidden bg-stone-100 ring-1 ring-stone-200/60 shadow-[0_2px_8px_rgba(28,25,23,0.06),0_12px_32px_-12px_rgba(28,25,23,0.18)] group-hover:shadow-[0_4px_12px_rgba(28,25,23,0.08),0_20px_44px_-12px_rgba(28,25,23,0.24)] transition-shadow duration-300">
+                                    <img src={day.photo} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                  </div>
+                                </button>
+                              )}
+
+                              <div className="flex gap-2 sm:gap-2.5 flex-wrap">
+                                {day.items.map((it) => (
+                                  <button key={it.id} onClick={() => onOpenItem?.(it.id)}
+                                    className="w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden bg-white ring-1 ring-stone-200/70 shadow-sm hover:ring-brass-400 hover:shadow-md transition-all"
+                                    title={`${it.name}${it.brand ? ' · ' + it.brand : ''}`}
+                                  >
+                                    {itemImages(it)[0] ? (
+                                      <img src={itemImages(it)[0]} alt={it.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={20} strokeWidth={1} /></div>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {day.outfit && onOpenOutfit && (
+                                <button onClick={() => onOpenOutfit(day.outfit.id)}
+                                  className="inline-flex items-center gap-1.5 text-xs tracking-wide text-stone-700 hover:text-brass-700 mt-1 group transition-colors">
+                                  <span className="border-b border-stone-300 group-hover:border-brass-500 pb-0.5 transition-colors">{day.outfit.name}</span>
+                                  <ChevronRight size={12} strokeWidth={1.5} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                              )}
+
+                              {day.notes.length > 0 && (
+                                <div className="mt-3 space-y-3 max-w-2xl">
+                                  {day.notes.map((n, i) => (
+                                    <blockquote key={i} className="relative pl-5 border-l-2 border-brass-300">
+                                      <span className="absolute -left-1 -top-2 font-display text-2xl text-brass-400 leading-none select-none" aria-hidden="true">&ldquo;</span>
+                                      <p className="font-display italic text-stone-700 leading-relaxed text-sm sm:text-base">{n.note}</p>
+                                    </blockquote>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                );
+              })}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* PHOTO LIGHTBOX */}
+      {lightboxPhoto && (
+        <div className="fixed inset-0 z-[80] bg-stone-950/95 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200"
+          onClick={() => setLightboxPhoto(null)}>
+          <button onClick={(e) => { e.stopPropagation(); setLightboxPhoto(null); }}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors backdrop-blur"
+            aria-label="Close photo">
+            <X size={20} strokeWidth={1.5} />
+          </button>
+          <img src={lightboxPhoto.src} alt="" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()} />
+          <p className="absolute bottom-4 left-0 right-0 text-center text-[10px] tracking-[0.3em] uppercase text-white/60">
+            {new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Legacy wear-diary modal — kept as a thin shell while we transition
+// callers to the top-level DiaryView. The Insights page used to open this;
+// it now links to the Diary destination instead.
 function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
   useEscapeKey(onClose);
 
@@ -12031,7 +12408,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
   );
 }
 
-function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit }) {
+function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit, onOpenDiary }) {
   const [diaryOpen, setDiaryOpen] = useState(false);
   const ownedItems = items.filter(i => i.status === 'owned');
   const wishlistItems = items.filter(i => i.status === 'wishlist');
@@ -12414,83 +12791,48 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
         </div>
       )}
 
-      {/* Wear diary — newest-first record of what was actually worn each day.
-          Inline shows the last 5 days; 'Open full diary' opens a portal
-          modal with the entire history. Joins worn photos + event names
-          from the schedule for a real keepsake feel rather than a flat log. */}
-      {wearDiary.length > 0 && (
-        <div id="insights-diary" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <div className="flex items-baseline justify-between gap-3 mb-6 flex-wrap">
-            <div>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-1">Wear diary</p>
-              <h3 className="font-display text-2xl text-stone-900">What you've actually worn</h3>
-            </div>
-            {wearDiary.length > recentDiary.length && (
-              <button onClick={() => setDiaryOpen(true)}
-                className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 inline-flex items-center gap-1">
-                Open full diary <ChevronRight size={11} strokeWidth={1.5} />
-              </button>
+      {/* DIARY HAND-OFF CARD — the full wear journal + calendar lives in
+          its own Diary destination now. This card is a portal: shows the
+          stats at a glance + the most recent day's photo (if any), and
+          hands the user off to the dedicated destination. Insights keeps
+          its analytical role; the journal/keepsake lives in The Diary. */}
+      {wearDiary.length > 0 && onOpenDiary && (
+        <button
+          type="button"
+          onClick={onOpenDiary}
+          id="insights-diary"
+          className="scroll-mt-24 block w-full text-left bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow hover:border-brass-300/70 transition-colors group"
+        >
+          <div className="flex items-start gap-6 flex-wrap sm:flex-nowrap">
+            {recentDiary[0]?.photo && (
+              <div className="shrink-0 w-full sm:w-44 aspect-[4/5] rounded-2xl overflow-hidden bg-stone-100 ring-1 ring-stone-200/60">
+                <img src={recentDiary[0].photo} alt="" loading="lazy" className="w-full h-full object-cover" />
+              </div>
             )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="brass-rule" aria-hidden="true" />
+                <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">The Diary</span>
+              </div>
+              <h3 className="font-display text-2xl sm:text-3xl text-stone-900 leading-tight group-hover:text-brass-700 transition-colors">
+                What you've actually worn
+              </h3>
+              <p className="text-sm text-stone-500 mt-2 font-display italic leading-relaxed">
+                Every wear, every plan — your keepsake of how you actually dress.
+              </p>
+              <div className="flex items-baseline gap-6 mt-5 text-sm text-stone-600 flex-wrap">
+                <span><strong className="text-stone-900 font-display text-lg">{wearDiary.length}</strong> day{wearDiary.length === 1 ? '' : 's'}</span>
+                <span><strong className="text-stone-900 font-display text-lg">{wearDiary.reduce((s, e) => s + e.items.length, 0)}</strong> wears</span>
+                {recentDiary[0] && (
+                  <span className="text-stone-500">last logged <strong className="text-stone-900 font-medium">{friendlyDay(recentDiary[0].date).toLowerCase()}</strong></span>
+                )}
+              </div>
+              <span className="inline-flex items-center gap-1.5 mt-5 text-[11px] tracking-widest uppercase text-stone-700 group-hover:text-brass-700 transition-colors">
+                Open the Diary <ChevronRight size={12} strokeWidth={1.5} className="opacity-60 group-hover:translate-x-0.5 group-hover:opacity-100 transition-all" />
+              </span>
+            </div>
           </div>
-          <ul className="space-y-5">
-            {recentDiary.map((day) => (
-              <li key={day.date} className="flex gap-4 items-start">
-                <div className="shrink-0 w-20 sm:w-24 text-right pt-1">
-                  <p className="text-xs font-medium text-stone-900">{friendlyDay(day.date)}</p>
-                  {day.eventName && <p className="text-[10px] text-brass-600 mt-0.5 italic">{day.eventName}</p>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  {day.photo && (
-                    <div className="aspect-[4/3] sm:aspect-[16/9] rounded-2xl overflow-hidden bg-stone-100 mb-3 max-w-md">
-                      <img src={day.photo} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  {/* No cap — flex-wrap uses available width. A wardrobe-full
-                      day naturally takes a second row rather than getting
-                      truncated with a '+N' badge. */}
-                  <div className="flex gap-2 flex-wrap">
-                    {day.items.map((it) => (
-                      <button key={it.id} onClick={() => onOpenItem?.(it.id)}
-                        className="w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 border border-stone-200/60 hover:border-stone-500 transition-colors"
-                        title={`${it.name} · ${it.brand || ''}`}
-                      >
-                        {itemImages(it)[0] ? (
-                          <img src={itemImages(it)[0]} alt={it.name} loading="lazy" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={20} strokeWidth={1} /></div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  {day.outfit && onOpenOutfit && (
-                    <button onClick={() => onOpenOutfit(day.outfit.id)}
-                      className="text-[11px] tracking-wide text-stone-500 hover:text-stone-900 underline decoration-stone-300 underline-offset-2 mt-2 transition-colors">
-                      {day.outfit.name} →
-                    </button>
-                  )}
-                  {day.notes.length > 0 && (
-                    <p className="text-xs text-stone-500 italic mt-2 leading-relaxed">"{day.notes[0].note}"</p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-          {wearDiary.length > recentDiary.length && (
-            <button onClick={() => setDiaryOpen(true)}
-              className="block mt-6 mx-auto text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-5 py-2.5 rounded-full border border-stone-200 hover:border-stone-500 transition-colors">
-              Open full diary · {wearDiary.length} day{wearDiary.length === 1 ? '' : 's'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {diaryOpen && (
-        <WearDiaryModal
-          entries={wearDiary}
-          onOpenItem={onOpenItem}
-          onOpenOutfit={onOpenOutfit}
-          onClose={() => setDiaryOpen(false)}
-        />
+        </button>
       )}
 
       <div id="insights-composition" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">

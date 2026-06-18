@@ -1,0 +1,21 @@
+{
+  "name": "@atelier/ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Atelier shared React components",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "dependencies": {
+    "@atelier/design-tokens": "workspace:*",
+    "lucide-react": "^0.460.0"
+  },
+  "files": [
+    "src"
+  ]
+}

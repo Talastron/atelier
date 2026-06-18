@@ -3113,25 +3113,37 @@ function DigitalWardrobe() {
             </button>
           )}
 
+          {/* MOBILE PROFILE BUTTON — floating top-right pill. Profile
+              moved off the bottom nav so the central + FAB sits at a
+              true geometric centre (5-slot layout: 2 left + FAB + 2
+              right). Profile is still one-tap accessible from any view,
+              just lives in the corner now instead of the bar. Mirrors
+              the existing scroll-to-top pattern on the left. */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`lg:hidden fixed top-0 right-3 z-40 mt-3 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all ${activeTab === 'profile' ? 'ring-2 ring-brass-300' : ''}`}
+            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+            aria-label="Open profile"
+          >
+            <Ruler size={16} strokeWidth={1.75} />
+          </button>
+
           <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
-            {/* MOBILE BOTTOM NAV — five destinations + raised central FAB.
-                The FAB sits BETWEEN two flex-1 groups (3 left, 2 right)
-                so it is TRULY horizontally centred regardless of item
-                widths — the position-4-of-6 layout was 60% from left,
-                visibly off-centre. Each side group uses justify-around
-                to distribute its items evenly within its half. Slight
-                density asymmetry (3 vs 2) is the trade-off Instagram /
-                TikTok / Twitter all accept when keeping all destinations
-                accessible — the user notices a centred FAB, not the
-                item-density delta. */}
-            <div className="flex items-center max-w-lg mx-auto py-1">
-              <div className="flex-1 flex justify-around items-center">
-                <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-                <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-                <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              </div>
-              <div className="relative -top-7 shrink-0 px-1">
+            {/* MOBILE BOTTOM NAV — four destinations + central + FAB,
+                arranged as a 5-column grid with the FAB in column 3.
+                With grid-cols-5 + equal-width cells, the FAB sits at
+                EXACT geometric centre — no flex / justify quirks, no
+                visual asymmetry. Profile moved to a floating button at
+                top-right (above) so all destinations stay one tap away.
+                Asymmetric flex-group layouts (3-left+FAB+2-right) read
+                as off-centre because the eye weights item density, not
+                pixel position. Symmetric grid is the only true fix. */}
+            <div className="grid grid-cols-5 max-w-lg mx-auto py-1 items-center">
+              <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <div className="flex justify-center -mt-7">
                 <button onClick={() => setIsAddItemModalOpen(true)}
                   className="w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all active:scale-90 hover:scale-105 ring-4 ring-[#F7F5F2]"
                   style={{ boxShadow: '0 10px 30px -8px rgba(28, 25, 23, 0.45)' }}
@@ -3140,10 +3152,8 @@ function DigitalWardrobe() {
                   <Plus size={26} strokeWidth={1.5} />
                 </button>
               </div>
-              <div className="flex-1 flex justify-around items-center">
-                <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
-                <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              </div>
+              <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
             </div>
           </div>
 

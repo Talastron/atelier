@@ -11462,14 +11462,35 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 // canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
 // jewellery smaller — mimicking a real flat-lay arrangement.
 function OutfitFlatLay({ pieces, onOpenItem }) {
-  // Redesign: clean editorial composition. No rotation, no jitter, no
-  // brass-bordered gradient container — that scrapbook treatment was the
-  // anti-pattern the user repeatedly called out on the Lookbook cards.
-  // Items now arrange in a category-weighted horizontal row on a cream
-  // surface — anchor pieces (outerwear/dresses) larger, accessories
-  // smaller, all aligned to a common baseline. Same vocabulary as a
-  // luxury catalogue flat-lay.
-  const CATEGORY_WEIGHT = { Outerwear: 1.25, Dresses: 1.25, Tops: 1.0, Bottoms: 1.0, Shoes: 0.85, Bags: 0.85, Accessories: 0.7, Jewellery: 0.6, Swimwear: 0.95 };
+  // EDITORIAL FLAT-LAY — luxury catalogue composition vocabulary.
+  //
+  // Three things make this read as a stylist's composition, not a product
+  // grid:
+  //   (1) DRAMATIC size weighting — hero pieces (outerwear/dress) tower
+  //       over accessories. ~5× range, not the previous timid ~2×.
+  //   (2) NO white card behind each item — pieces sit directly on the
+  //       cream surface so silhouettes breathe (assumes either bg-removed
+  //       cutouts OR product shots that already have white backgrounds
+  //       which blend with the cream).
+  //   (3) Items align to a common baseline (items-end) so they "stand"
+  //       together like garments on a bed/floor in a flat-lay shoot —
+  //       jewellery clusters at the same baseline as the loafer, the
+  //       jacket looms taller behind them.
+  //
+  // No rotation, no jitter, no z-stacking — the user has repeatedly
+  // called out scrapbook chaos as anti-luxury. Drama comes from SCALE,
+  // not motion.
+  const CATEGORY_WEIGHT = {
+    Outerwear: 2.2,   // hero — coats / jackets dominate the composition
+    Dresses: 2.0,     // hero — when worn, the whole look
+    Tops: 1.4,
+    Bottoms: 1.5,
+    Shoes: 1.0,
+    Bags: 1.1,
+    Swimwear: 1.4,
+    Accessories: 0.7,
+    Jewellery: 0.5,   // smallest — earrings / necklaces / bracelets cluster
+  };
   const ORDER = ['Outerwear', 'Dresses', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery', 'Swimwear'];
   const sorted = [...pieces].sort((a, b) => {
     const ai = ORDER.indexOf(a.category); const bi = ORDER.indexOf(b.category);
@@ -11478,41 +11499,42 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
 
   return (
     <div>
-      <div className="relative bg-stone-100/60 rounded-[2rem] border border-stone-200/60 px-6 sm:px-8 md:px-10 py-8 sm:py-10">
+      <div className="relative bg-stone-100/60 rounded-[2rem] border border-stone-200/60 px-6 sm:px-10 md:px-14 py-10 sm:py-14 md:py-16">
         {sorted.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-stone-300">
             <Shirt size={64} strokeWidth={1} />
           </div>
         ) : (
-          // Wrapping flex row. Items size DOWN as the outfit gets bigger so
-          // every piece fits without cropping or horizontal scrolling. A
-          // luxury catalogue never crops product shots; wrapping to a
-          // second/third row reads as editorial composition, scrolling
-          // reads as broken layout. Tier sizing:
-          //   ≤4 pieces  →  140px base, 80×135 footprint (large, breathing)
-          //   5-7 pieces →  110px base
-          //   8-10 pieces→  92px base
-          //   11+ pieces →  78px base (most compact, still legible)
+          // Tier sizing scales DOWN as the outfit grows so every piece
+          // still fits without horizontal scroll. The CATEGORY_WEIGHT
+          // multiplier then introduces the editorial size drama within
+          // each tier — outerwear ≈3× the width of jewellery.
           (() => {
-            const baseSize = sorted.length <= 4 ? 140 : sorted.length <= 7 ? 110 : sorted.length <= 10 ? 92 : 78;
+            const baseSize = sorted.length <= 4 ? 200 : sorted.length <= 7 ? 150 : sorted.length <= 10 ? 120 : 100;
             return (
-              <div className="flex flex-wrap items-end justify-center gap-y-6 gap-x-5 sm:gap-x-7">
+              <div className="flex flex-wrap items-end justify-center gap-x-3 sm:gap-x-5 md:gap-x-7 gap-y-6">
                 {sorted.map((p, i) => {
                   const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
                   const openable = !!(onOpenItem && p.id);
                   const Tag = openable ? 'button' : 'div';
+                  const width = Math.round(weight * baseSize);
                   return (
                     <Tag
                       key={p.id || i}
                       {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
-                      className={`shrink-0 ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 rounded-xl group' : ''}`}
-                      style={{ width: `${Math.round(weight * baseSize)}px` }}
+                      className={`shrink-0 ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-md group' : ''}`}
+                      style={{ width: `${width}px` }}
                     >
-                      <div className="aspect-[3/4] rounded-xl overflow-hidden bg-white">
+                      {/* NO white card — image sits directly on the cream.
+                          aspect-[3/4] with object-contain lets the
+                          silhouette breathe; the bounding box only exists
+                          to reserve layout space. */}
+                      <div className="aspect-[3/4] flex items-end justify-center">
                         {itemImages(p)[0] ? (
-                          <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-contain" />
+                          <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async"
+                            className="max-w-full max-h-full object-contain" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
+                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={Math.min(width * 0.4, 48)} strokeWidth={1} /></div>
                         )}
                       </div>
                     </Tag>

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, Check, Copy, ArrowUpDown, Search, Share2
+  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -2697,6 +2697,10 @@ function DigitalWardrobe() {
   // OutfitBuilder (Styling Studio) and switches to that tab. Save updates
   // the original doc instead of creating a new one.
   const [editingOutfit, setEditingOutfit] = useState(null);
+  // Seed handoff from Lookbook (AI History "Apply") → Studio. Holds the
+  // entry the user wants pre-loaded into the canvas. OutfitBuilder picks
+  // it up via the seedOutfit prop and clears via onSeedConsumed.
+  const [studioSeed, setStudioSeed] = useState(null);
   const handleEditOutfit = (outfit) => {
     if (!outfit) return;
     setEditingOutfit(outfit);
@@ -2923,6 +2927,7 @@ function DigitalWardrobe() {
             <nav className="space-y-2 flex-1">
               <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
+              <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
               <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} />
@@ -2977,6 +2982,7 @@ function DigitalWardrobe() {
                   {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
+                      mode="studio"
                       items={liveItems}
                       outfits={outfits}
                       saveOutfit={handleSaveOutfit}
@@ -2993,6 +2999,36 @@ function DigitalWardrobe() {
                       onCreateLookbook={handleShareLookbook}
                       editOutfit={editingOutfit}
                       onEditDone={() => setEditingOutfit(null)}
+                      seedOutfit={studioSeed}
+                      onSeedConsumed={() => setStudioSeed(null)}
+                      onAfterSave={() => setActiveTab('lookbook')}
+                    />
+                  )}
+                  {activeTab === 'lookbook' && (
+                    <OutfitBuilder
+                      mode="lookbook"
+                      items={liveItems}
+                      outfits={outfits}
+                      saveOutfit={handleSaveOutfit}
+                      deleteOutfit={handleDeleteOutfit}
+                      onOpenOutfit={setOpenOutfitId}
+                      aiHistory={aiHistory}
+                      saveAIHistory={handleSaveAIHistory}
+                      deleteAIHistory={handleDeleteAIHistory}
+                      toggleAIHistoryFavorite={handleToggleAIHistoryFavorite}
+                      schedules={schedules}
+                      scheduleOutfit={handleScheduleOutfit}
+                      aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
+                      styleProfile={summariseStyleProfile(measurements)}
+                      onCreateLookbook={handleShareLookbook}
+                      // When the user "Applies" an AI history entry from
+                      // Lookbook, seed Studio and navigate there. The seed
+                      // hydrates the canvas WITHOUT setting editingId, so
+                      // the next Save creates a NEW outfit doc.
+                      onApplyHistory={(entry) => {
+                        setStudioSeed({ id: 'history-' + entry.id, itemIds: entry.itemIds || [], reasoning: entry.reasoning });
+                        setActiveTab('outfits');
+                      }}
                     />
                   )}
                   {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} />}
@@ -3064,9 +3100,15 @@ function DigitalWardrobe() {
 
           <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
-            <div className="flex justify-between items-center max-w-md mx-auto py-1">
+            {/* Mobile bottom nav. Six destinations (Wardrobe / Studio /
+                Lookbook / + / Inspire / Profile) — the central FAB stays
+                visually centred because it sits at position 4 of 7. Labels
+                shortened to fit (Studio not 'Styling', Inspire not
+                'Inspiration'). max-w-lg accommodates the wider row. */}
+            <div className="flex justify-between items-center max-w-lg mx-auto py-1">
               <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
               <div className="relative -top-7">
                 <button onClick={() => setIsAddItemModalOpen(true)}
                   className="w-16 h-16 shrink-0 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all active:scale-90 hover:scale-105 ring-4 ring-[#F7F5F2]"
@@ -3076,7 +3118,7 @@ function DigitalWardrobe() {
                   <Plus size={26} strokeWidth={1.5} />
                 </button>
               </div>
-              <MobileNavItem id="outfits" icon={Camera} label="Styling" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
               <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
             </div>
           </div>
@@ -7830,8 +7872,15 @@ const SLOT_CATEGORIES = {
 };
 const emptyOutfit = () => Object.fromEntries(OUTFIT_SLOTS.map((s) => [s.toLowerCase(), null]));
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone }) {
-  const [tab, setTab] = useState('create');
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory }) {
+  // mode === 'studio'   → Create flow only (intent panel + composition)
+  // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
+  // This split lets one component power two sidebar destinations: Studio is
+  // for MAKING looks, Lookbook is for BROWSING/managing them. Both share the
+  // same underlying handlers (saveOutfit, scheduleOutfit, etc.) so the data
+  // layer doesn't fork.
+  const isLookbook = mode === 'lookbook';
+  const [tab, setTab] = useState(isLookbook ? 'saved' : 'create');
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
   // Slots the user has manually re-expanded after auto-collapse, so we
@@ -7882,6 +7931,28 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     }
     setManuallyExpanded(expandedOnEdit);
   }, [editOutfit?.id]);
+  // Seed loader — when Lookbook hands off an AI history entry via
+  // navigation, hydrate the canvas without setting editingId. The save
+  // that follows creates a NEW outfit (AI history entries aren't outfits).
+  useEffect(() => {
+    if (!seedOutfit) return;
+    const next = emptyOutfit();
+    for (const id of seedOutfit.itemIds || []) {
+      const it = items.find((i) => i.id === id);
+      if (!it) continue;
+      const slot = slotForItem(it);
+      if (!slot) continue;
+      const key = slot.toLowerCase();
+      if (isMultiSlot(slot)) next[key] = Array.isArray(next[key]) ? [...next[key], it] : [it];
+      else if (!next[key]) next[key] = it;
+    }
+    setCurrentOutfit(next);
+    if (seedOutfit.reasoning) setAiNote(seedOutfit.reasoning);
+    setEditingId(null); // not editing; this is a seed for a NEW save
+    setTab('create');
+    if (onSeedConsumed) onSeedConsumed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedOutfit?.id]);
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState(null);
   const [styleIntent, setStyleIntent] = useState('Any');
@@ -8032,7 +8103,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     setAiNote(null);
     setEditingId(null);
     if (onEditDone) onEditDone();
-    setTab('saved');
+    // Studio mode: notify parent so it can navigate to Lookbook (user
+    // sees their newly-saved look in context). Lookbook mode: switch
+    // to the Lookbook tab so the new outfit is visible inline.
+    if (onAfterSave) onAfterSave();
+    else setTab('saved');
   };
 
   // Gold-standard generator: strict 1:1 category/slot, hard filters BEFORE
@@ -8419,31 +8494,45 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
 
   return (
     <div className="space-y-6 md:space-y-10">
-      <EditorialHeader eyebrow="Studio" title="Styling Studio" subtitle="Compose, save, and revisit editorial looks." />
+      {isLookbook ? (
+        <EditorialHeader
+          eyebrow="Curated archive"
+          title="Lookbook"
+          subtitle={`Your saved looks${outfits.length ? ` · ${outfits.length}` : ''}, scheduled wears, and AI history.`}
+        />
+      ) : (
+        <EditorialHeader
+          eyebrow="Studio"
+          title="Styling Studio"
+          subtitle="Compose new looks from your wardrobe."
+        />
+      )}
 
-      {/* Tabs — moved to top of view (was BELOW the intent card, which read
-          as 'chrome floating above primary navigation'). Sticky so they
-          stay reachable while scrolling a long Saved grid or Wardrobe
-          Archives. Same bg + bleed pattern as the wardrobe sticky toolbar. */}
-      <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
-           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-        {/* Segmented-track tabs — canonical size matches the Wardrobe status
-            pills (px-4 sm:px-5 py-3 sm:py-2 text-[10px] sm:text-xs). Both
-            controls now read as the same UI primitive. */}
-        <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
-          {[['create', 'Create'], ['saved', `Saved${outfits.length ? ` · ${outfits.length}` : ''}`], ['calendar', 'Calendar'], ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`]].map(([id, label]) => (
-            <button key={id} onClick={() => setTab(id)}
-              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
-                tab === id ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+      {/* Tabs render ONLY in lookbook mode. Studio is single-purpose now —
+          the tab switcher would be chrome above a single option. Removed
+          entirely for Studio per the IA restructure. */}
+      {isLookbook && (
+        <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+             style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+          <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
+            {[
+              ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
+              ['calendar', 'Calendar'],
+              ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`],
+            ].map(([id, label]) => (
+              <button key={id} onClick={() => setTab(id)}
+                className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+                  tab === id ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {tab === 'create' && (
+      {!isLookbook && tab === 'create' && (
         <div className="bg-white border border-stone-200/60 rounded-[2rem] p-4 sm:p-6 smooth-shadow space-y-4">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
             {/* Editorial eyebrow + brass-rule pattern — same language as the
@@ -8615,6 +8704,14 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           history={aiHistory}
           items={items}
           onApply={(entry) => {
+            // Lookbook mode hands the entry off to Studio via the parent
+            // (sets seedOutfit + switches activeTab). Studio mode loads
+            // it locally as before.
+            if (isLookbook && onApplyHistory) {
+              onApplyHistory(entry);
+              toast.show('Loaded into Studio', { kind: 'success' });
+              return;
+            }
             const next = emptyOutfit();
             for (const id of entry.itemIds || []) {
               const item = items.find((i) => i.id === id);

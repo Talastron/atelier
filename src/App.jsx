@@ -9,6 +9,10 @@ import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
   useSensor, useSensors, DragOverlay, closestCenter,
 } from '@dnd-kit/core';
+import {
+  SortableContext, useSortable, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
 import { auth, db, onAuthStateChanged, signInWithGoogle, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
 
@@ -2415,6 +2419,24 @@ function DigitalWardrobe() {
     if (!user) return;
     await deleteDoc(doc(userOutfitsRef(user.uid), id));
   };
+  // Persist the user's Lookbook order. Receives the outfits in their NEW
+  // sequence; assigns sequential `order` values and writes them back in
+  // parallel. We write ALL affected docs (not just the moved one) because
+  // sortable arrays shift indices in a range — anyone between the source
+  // and destination needs their order updated too. Trade-off: N writes per
+  // drag, but N is usually small (≤30 lookbook entries for most users).
+  const handleReorderOutfits = async (orderedIds) => {
+    if (!user || !Array.isArray(orderedIds)) return;
+    try {
+      await Promise.all(orderedIds.map((id, idx) => {
+        const o = outfits.find((x) => x.id === id);
+        if (!o || o.order === idx) return null;
+        return setDoc(doc(userOutfitsRef(user.uid), id), { ...o, order: idx });
+      }).filter(Boolean));
+    } catch (err) {
+      toast.show('Could not save the new order', { kind: 'error' });
+    }
+  };
   // Snapshot a collection of outfits as a lookbook. Same /public/{shareId}
   // shape as single shares; the public viewer renders kind === 'lookbook'
   // as a vertical list of outfits with a sticky contents nav.
@@ -3021,6 +3043,7 @@ function DigitalWardrobe() {
                       aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
                       styleProfile={summariseStyleProfile(measurements)}
                       onCreateLookbook={handleShareLookbook}
+                      onReorderOutfits={handleReorderOutfits}
                     />
                   )}
                   {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} />}
@@ -7864,7 +7887,155 @@ const SLOT_CATEGORIES = {
 };
 const emptyOutfit = () => Object.fromEntries(OUTFIT_SLOTS.map((s) => [s.toLowerCase(), null]));
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory }) {
+// Sortable lookbook card. Extracted as a standalone component because
+// useSortable is a hook — can't be called inside a .map() callback. Each
+// card instance gets its own sortable handle + transform.
+// HERO TREATMENT: the first card (index 0 of the user's arranged order)
+// renders at md:col-span-2 with a wider landscape aspect — the
+// magazine-cover position. As the user reorders, the cover changes; their
+// arrangement IS the curation. The drag handle only appears on hover so
+// the card body stays calmly clickable for the open-detail flow.
+function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, indexLabel, onClick, onContextMenu }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: outfit.id });
+  const style = {
+    transform: DndCSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.55 : 1,
+    zIndex: isDragging ? 60 : undefined,
+  };
+  const resolvedItems = resolveOutfitItems(outfit, items);
+  const wornPhoto = Array.isArray(outfit.wornPhotos) && outfit.wornPhotos.length > 0
+    ? outfit.wornPhotos[outfit.wornPhotos.length - 1]?.image
+    : null;
+  const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+  const orderedPieces = [...resolvedItems].sort((a, b) => {
+    const ai = SLOT_PRIORITY.indexOf(a.category);
+    const bi = SLOT_PRIORITY.indexOf(b.category);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+  });
+  const gridPieces = orderedPieces.slice(0, isHero ? 6 : 4);
+  const extraCount = Math.max(0, resolvedItems.length - gridPieces.length);
+  // Hero gets landscape 16:10 (magazine-cover proportions); secondary
+  // cards stay portrait 4:5 (editorial grid proportions).
+  const aspect = isHero ? 'aspect-[16/10]' : 'aspect-[4/5]';
+  const gridCols = isHero ? 'grid-cols-3 grid-rows-2' : 'grid-cols-2 grid-rows-2';
+  return (
+    <div ref={setNodeRef} style={style}
+         className={isHero ? 'md:col-span-2' : ''}>
+      <div onClick={onClick} onContextMenu={onContextMenu}
+           role="button" tabIndex={0}
+           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
+           className="text-left group cursor-pointer relative">
+        {selectMode && (
+          <span className={`absolute top-3 left-3 z-30 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all backdrop-blur ${
+            isSelected ? 'bg-stone-900 border-stone-900' : 'bg-white/90 border-stone-300'
+          }`}>
+            {isSelected && <CheckCircle2 size={16} strokeWidth={2.5} className="text-white" />}
+          </span>
+        )}
+
+        <div className={`relative ${aspect} rounded-[1.5rem] overflow-hidden transition-all duration-300 ${
+          isSelected
+            ? 'ring-4 ring-stone-900 scale-[0.98]'
+            : 'border border-stone-200/60 lg:group-hover:border-brass-300/70 lg:group-hover:shadow-lg'
+        } ${wornPhoto ? 'bg-stone-900' : 'bg-stone-100/70'}`}>
+
+          {wornPhoto && (
+            <>
+              <img src={wornPhoto} alt={outfit.name} loading="lazy" decoding="async"
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 lg:group-hover:scale-105" />
+              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none"></div>
+              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
+            </>
+          )}
+
+          {!wornPhoto && gridPieces.length > 0 && (
+            <div className={`absolute inset-0 ${isHero ? 'p-9 md:p-12' : 'p-7 sm:p-9'} grid ${gridCols} gap-4 sm:gap-5`}>
+              {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
+                const piece = gridPieces[slotIdx];
+                if (!piece) return <div key={slotIdx} aria-hidden="true" />;
+                const img = itemImages(piece)[0];
+                const lastSlot = isHero ? 5 : 3;
+                const showExtra = slotIdx === lastSlot && extraCount > 0;
+                return (
+                  <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5 transition-transform duration-700 lg:group-hover:scale-[1.02]">
+                    {img ? (
+                      <img src={img} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={24} strokeWidth={1} /></div>
+                    )}
+                    {showExtra && (
+                      <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[1px] flex items-center justify-center">
+                        <span className="font-display text-3xl text-white">+{extraCount}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!wornPhoto && gridPieces.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center text-stone-300">
+              <Shirt size={56} strokeWidth={0.8} />
+            </div>
+          )}
+
+          {/* Editorial chrome: numbered series label + piece count + brass-rule.
+              N° 01, N° 02 etc. — magazine series typography. */}
+          <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5">
+            <span className={`inline-block w-4 h-px ${wornPhoto ? 'bg-brass-200' : 'bg-brass-300'}`} aria-hidden="true"></span>
+            <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${wornPhoto ? 'text-white/90' : 'text-stone-500'}`}>
+              {indexLabel} · {resolvedItems.length} {resolvedItems.length === 1 ? 'piece' : 'pieces'}
+            </span>
+          </div>
+          {outfit.favorite && (
+            <span className="absolute top-4 right-4 z-20 w-7 h-7 rounded-full bg-brass-300 flex items-center justify-center" title="Favourite">
+              <Star size={12} strokeWidth={1.5} className="fill-stone-900 text-stone-900" />
+            </span>
+          )}
+
+          {/* Drag handle. Visible on hover only (lg+ — touch users get
+              touch-and-hold gesture handled by TouchSensor at the parent
+              DndContext). stopPropagation prevents the underlying card
+              onClick from firing when the user grabs the handle. */}
+          <button type="button"
+            {...attributes} {...listeners}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            className="hidden lg:flex absolute bottom-4 right-4 z-30 w-9 h-9 items-center justify-center rounded-full bg-white/90 backdrop-blur ring-1 ring-stone-200 text-stone-500 hover:text-stone-900 hover:bg-white cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Rearrange this look"
+            title="Drag to rearrange"
+          >
+            <GripVertical size={16} strokeWidth={1.5} />
+          </button>
+
+          {wornPhoto && (
+            <div className="absolute bottom-5 left-5 right-5 z-20">
+              <h3 className={`font-display ${isHero ? 'text-3xl md:text-4xl' : 'text-xl md:text-2xl'} text-white leading-tight drop-shadow-sm truncate`}>
+                {outfit.name}
+              </h3>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 px-1">
+          {!wornPhoto && (
+            <h3 className={`font-display ${isHero ? 'text-3xl md:text-4xl' : 'text-2xl md:text-3xl'} text-stone-900 leading-tight truncate lg:group-hover:text-stone-700 transition-colors`}>
+              {outfit.name}
+            </h3>
+          )}
+          {(outfit.intent || resolvedItems.length > 0) && (
+            <p className={`text-[10px] tracking-[0.28em] uppercase text-stone-500 truncate ${wornPhoto ? '' : 'mt-2'}`}>
+              {[outfit.intent, resolvedItems.length ? `${resolvedItems.length} pieces` : null].filter(Boolean).join(' · ')}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -7956,7 +8127,23 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [lookbookNamerOpen, setLookbookNamerOpen] = useState(false);
   const [lookbookBusy, setLookbookBusy] = useState(false);
   const [outfitsFilter, setOutfitsFilter] = useState('all');
-  const filteredOutfits = outfitsFilter === 'favorites' ? outfits.filter((o) => o.favorite) : outfits;
+  // Sort by user-arranged `order` field (set via Lookbook drag-to-reorder).
+  // Outfits without `order` fall back to createdAt-descending so newly-saved
+  // looks land at the top before the user has explicitly arranged anything.
+  const sortedAllOutfits = React.useMemo(() => {
+    const arr = [...outfits];
+    arr.sort((a, b) => {
+      const ao = typeof a.order === 'number' ? a.order : null;
+      const bo = typeof b.order === 'number' ? b.order : null;
+      if (ao !== null && bo !== null) return ao - bo;
+      if (ao !== null) return -1; // explicitly-ordered ahead of unsorted
+      if (bo !== null) return 1;
+      // Both unsorted → newest first by createdAt
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+    return arr;
+  }, [outfits]);
+  const filteredOutfits = outfitsFilter === 'favorites' ? sortedAllOutfits.filter((o) => o.favorite) : sortedAllOutfits;
   const toast = useToast();
 
   // Desktop: PointerSensor for click-and-drag. We omit TouchSensor by design —
@@ -9018,156 +9205,56 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               <p className="text-sm mt-1">{outfitsFilter === 'favorites' ? 'Star a look from its detail page.' : 'Create one in the Studio.'}</p>
             </div>
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12">
-          {filteredOutfits.map((outfit) => {
-            const resolvedItems = resolveOutfitItems(outfit, items);
-            const isSelected = selectedOutfits.has(outfit.id);
-            const handleCardClick = () => {
-              if (selectMode) {
-                setSelectedOutfits((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(outfit.id)) next.delete(outfit.id); else next.add(outfit.id);
-                  return next;
-                });
-              } else {
-                onOpenOutfit?.(outfit.id);
-              }
-            };
-            // GOLD-STANDARD COVER LOGIC (Mr Porter / Net-a-Porter / COS):
-            //   Tier 1 — if the user has logged a worn photo, USE IT. You
-            //   wearing the look is the most luxurious possible cover.
-            //   Tier 2 — clean inset 2x2 grid of pieces on cream surface.
-            //   No rotation, no jitter, no overlap. Items visible, layout
-            //   intentional, reads as editorial not scrapbook.
-            const wornPhoto = Array.isArray(outfit.wornPhotos) && outfit.wornPhotos.length > 0
-              ? outfit.wornPhotos[outfit.wornPhotos.length - 1]?.image
-              : null;
-            // Sort by anchor-piece priority so dress/outerwear/top lead.
-            const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
-            const orderedPieces = [...resolvedItems].sort((a, b) => {
-              const ai = SLOT_PRIORITY.indexOf(a.category);
-              const bi = SLOT_PRIORITY.indexOf(b.category);
-              return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-            });
-            const gridPieces = orderedPieces.slice(0, 4);
-            const extraCount = Math.max(0, resolvedItems.length - gridPieces.length);
-            return (
-              <button key={outfit.id} onClick={handleCardClick}
-                onContextMenu={(e) => { e.preventDefault(); if (!selectMode) { setSelectMode(true); setSelectedOutfits(new Set([outfit.id])); } }}
-                className="text-left group cursor-pointer relative">
-                {selectMode && (
-                  <span className={`absolute top-3 left-3 z-30 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all backdrop-blur ${
-                    isSelected ? 'bg-stone-900 border-stone-900' : 'bg-white/90 border-stone-300'
-                  }`}>
-                    {isSelected && <CheckCircle2 size={16} strokeWidth={2.5} className="text-white" />}
-                  </span>
-                )}
-
-                {/* Cover surface — 4:5 portrait. Worn-photo variant gets a
-                    dark stone-900 frame (lets the photo carry the colour);
-                    grid variant gets cream stone-100/70 (warm, fills the
-                    space when there's no hero image). */}
-                <div className={`relative aspect-[4/5] rounded-[1.5rem] overflow-hidden transition-all duration-300 ${
-                  isSelected
-                    ? 'ring-4 ring-stone-900 scale-[0.98]'
-                    : 'border border-stone-200/60 lg:group-hover:border-brass-300/70 lg:group-hover:shadow-lg'
-                } ${wornPhoto ? 'bg-stone-900' : 'bg-stone-100/70'}`}>
-
-                  {/* Tier 1 cover: worn photo, full-bleed. */}
-                  {wornPhoto && (
-                    <>
-                      <img src={wornPhoto} alt={outfit.name}
-                        loading="lazy" decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 lg:group-hover:scale-105" />
-                      {/* Subtle top + bottom gradients for caption legibility. */}
-                      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none"></div>
-                      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
-                    </>
-                  )}
-
-                  {/* Tier 2 cover: clean 2x2 grid, inset with breathing room.
-                      Always 4 cells; empty cells show the cream surface (so
-                      a 1-piece outfit reads as deliberate composition, not a
-                      broken grid). +N overlay on the last cell when there
-                      are more pieces than fit. */}
-                  {!wornPhoto && gridPieces.length > 0 && (
-                    <div className="absolute inset-0 p-7 sm:p-9 grid grid-cols-2 grid-rows-2 gap-4 sm:gap-5">
-                      {[0, 1, 2, 3].map((slotIdx) => {
-                        const piece = gridPieces[slotIdx];
-                        if (!piece) return <div key={slotIdx} aria-hidden="true" />;
-                        const img = itemImages(piece)[0];
-                        const showExtra = slotIdx === 3 && extraCount > 0;
-                        return (
-                          <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5 transition-transform duration-700 lg:group-hover:scale-[1.02]">
-                            {img ? (
-                              <img src={img} alt={piece.name} loading="lazy" decoding="async"
-                                className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-stone-300">
-                                <Shirt size={24} strokeWidth={1} />
-                              </div>
-                            )}
-                            {showExtra && (
-                              <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[1px] flex items-center justify-center">
-                                <span className="font-display text-3xl text-white">+{extraCount}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Empty state — no resolved pieces (items deleted). */}
-                  {!wornPhoto && gridPieces.length === 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center text-stone-300">
-                      <Shirt size={56} strokeWidth={0.8} />
-                    </div>
-                  )}
-
-                  {/* Brass-rule + piece count top-left. Adapts colour based
-                      on cover variant (light on photo, dark on grid). */}
-                  <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5">
-                    <span className={`inline-block w-4 h-px ${wornPhoto ? 'bg-brass-200' : 'bg-brass-300'}`} aria-hidden="true"></span>
-                    <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${wornPhoto ? 'text-white/90' : 'text-stone-500'}`}>
-                      {resolvedItems.length} {resolvedItems.length === 1 ? 'piece' : 'pieces'}
-                    </span>
-                  </div>
-                  {outfit.favorite && (
-                    <span className="absolute top-4 right-4 z-20 w-7 h-7 rounded-full bg-brass-300 flex items-center justify-center" title="Favourite">
-                      <Star size={12} strokeWidth={1.5} className="fill-stone-900 text-stone-900" />
-                    </span>
-                  )}
-
-                  {/* Photo-cover title overlay (magazine-cover treatment). */}
-                  {wornPhoto && (
-                    <div className="absolute bottom-5 left-5 right-5 z-20">
-                      <h3 className="font-display text-xl md:text-2xl text-white leading-tight drop-shadow-sm truncate">
-                        {outfit.name}
-                      </h3>
-                    </div>
-                  )}
-                </div>
-
-                {/* Caption below the cover. Title hidden on photo covers
-                    (overlaid above) to avoid duplication; meta line always
-                    shows. */}
-                <div className="mt-5 px-1">
-                  {!wornPhoto && (
-                    <h3 className="font-display text-2xl md:text-3xl text-stone-900 leading-tight truncate lg:group-hover:text-stone-700 transition-colors">
-                      {outfit.name}
-                    </h3>
-                  )}
-                  {(outfit.intent || resolvedItems.length > 0) && (
-                    <p className={`text-[10px] tracking-[0.28em] uppercase text-stone-500 truncate ${wornPhoto ? '' : 'mt-2'}`}>
-                      {[outfit.intent, resolvedItems.length ? `${resolvedItems.length} pieces` : null].filter(Boolean).join(' · ')}
-                    </p>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(event) => {
+              const { active, over } = event;
+              if (!over || active.id === over.id) return;
+              const oldIndex = filteredOutfits.findIndex((o) => o.id === active.id);
+              const newIndex = filteredOutfits.findIndex((o) => o.id === over.id);
+              if (oldIndex < 0 || newIndex < 0) return;
+              const newOrder = arrayMove(filteredOutfits, oldIndex, newIndex).map((o) => o.id);
+              if (onReorderOutfits) onReorderOutfits(newOrder);
+              haptic('tap');
+            }}
+          >
+            <SortableContext items={filteredOutfits.map((o) => o.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12">
+                {filteredOutfits.map((outfit, idx) => {
+                  const isSelected = selectedOutfits.has(outfit.id);
+                  const handleCardClick = () => {
+                    if (selectMode) {
+                      setSelectedOutfits((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(outfit.id)) next.delete(outfit.id); else next.add(outfit.id);
+                        return next;
+                      });
+                    } else {
+                      onOpenOutfit?.(outfit.id);
+                    }
+                  };
+                  // First card in the user's arrangement = hero (cover).
+                  // Re-orderable: drag any look to the front to crown it
+                  // the cover of your lookbook.
+                  const indexLabel = `N° ${String(idx + 1).padStart(2, '0')}`;
+                  return (
+                    <LookbookSortableCard
+                      key={outfit.id}
+                      outfit={outfit}
+                      items={items}
+                      isSelected={isSelected}
+                      selectMode={selectMode}
+                      isHero={idx === 0}
+                      indexLabel={indexLabel}
+                      onClick={handleCardClick}
+                      onContextMenu={(e) => { e.preventDefault(); if (!selectMode) { setSelectMode(true); setSelectedOutfits(new Set([outfit.id])); } }}
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
           )}
           {selectMode && selectedOutfits.size > 0 && (
             <div className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-30 bg-stone-900 text-white rounded-full shadow-2xl flex items-center gap-2 px-3 py-2 animate-in slide-in-from-bottom-4 duration-200 max-w-[calc(100vw-1rem)]">

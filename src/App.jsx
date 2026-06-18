@@ -2136,6 +2136,10 @@ export default function DigitalWardrobeRoot() {
 function DigitalWardrobe() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('wardrobe');
+  // Hint to OutfitBuilder (Lookbook mode) for which internal tab to open
+  // on the next render. Used when navigating in from the Insights diary
+  // hand-off — clears itself once consumed.
+  const [lookbookInitialTab, setLookbookInitialTab] = useState(null);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -2960,7 +2964,6 @@ function DigitalWardrobe() {
               <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
-              <DesktopNavItem id="diary" icon={Calendar} label="Diary" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
               <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} />
@@ -3045,6 +3048,7 @@ function DigitalWardrobe() {
                       saveOutfit={handleSaveOutfit}
                       deleteOutfit={handleDeleteOutfit}
                       onOpenOutfit={setOpenOutfitId}
+                      onOpenItem={setSelectedItemId}
                       aiHistory={aiHistory}
                       saveAIHistory={handleSaveAIHistory}
                       deleteAIHistory={handleDeleteAIHistory}
@@ -3055,21 +3059,11 @@ function DigitalWardrobe() {
                       styleProfile={summariseStyleProfile(measurements)}
                       onCreateLookbook={handleShareLookbook}
                       onReorderOutfits={handleReorderOutfits}
+                      initialTab={lookbookInitialTab}
+                      onInitialTabConsumed={() => setLookbookInitialTab(null)}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('diary')} />}
-                  {activeTab === 'diary' && (
-                    <DiaryView
-                      items={liveItems}
-                      outfits={outfits}
-                      schedules={schedules}
-                      onScheduleOutfit={handleScheduleOutfit}
-                      onOpenOutfit={setOpenOutfitId}
-                      onSaveOutfit={handleSaveOutfit}
-                      onOpenItem={setSelectedItemId}
-                      styleProfile={measurements?.styleProfile || ''}
-                    />
-                  )}
+                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => { setLookbookInitialTab('diary'); setActiveTab('lookbook'); }} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}
@@ -3136,23 +3130,11 @@ function DigitalWardrobe() {
             </button>
           )}
 
-          {/* MOBILE FLOATING NAV PILLS — Diary at top-left, Profile at
-              top-right. Both fade out on scroll to avoid colliding with
-              sticky filter bars; pointer-events-none + aria-hidden +
-              tabIndex=-1 while hidden keep them inert. Mirror of the
-              scroll-to-top button pattern, just always-visible-at-top
-              rather than appearing-on-scroll. */}
-          <button
-            type="button"
-            onClick={() => setActiveTab('diary')}
-            className={`lg:hidden fixed top-0 left-3 z-40 mt-3 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${activeTab === 'diary' ? 'ring-2 ring-brass-300' : ''} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
-            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
-            aria-label="Open diary"
-            aria-hidden={!atTop}
-            tabIndex={atTop ? 0 : -1}
-          >
-            <Calendar size={16} strokeWidth={1.75} />
-          </button>
+          {/* MOBILE PROFILE PILL — floating top-right. The Diary now lives
+              as a tab inside Lookbook (where it belongs conceptually —
+              outfits + when they were worn), so the matching top-left
+              pill is gone. Profile keeps its floating slot since it's
+              the only destination not represented in the bottom nav. */}
           <button
             type="button"
             onClick={() => setActiveTab('profile')}
@@ -8113,7 +8095,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   );
 }
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits }) {
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -8121,7 +8103,17 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   // same underlying handlers (saveOutfit, scheduleOutfit, etc.) so the data
   // layer doesn't fork.
   const isLookbook = mode === 'lookbook';
-  const [tab, setTab] = useState(isLookbook ? 'saved' : 'create');
+  const [tab, setTab] = useState(initialTab && isLookbook ? initialTab : (isLookbook ? 'saved' : 'create'));
+  // When the parent passes initialTab (e.g. user clicks 'Open the Diary'
+  // in Insights, which routes to Lookbook with initialTab='diary'),
+  // sync to it and tell the parent it's been consumed so the hint clears.
+  useEffect(() => {
+    if (initialTab && isLookbook && initialTab !== tab) {
+      setTab(initialTab);
+      onInitialTabConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab]);
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
   // Slots the user has manually re-expanded after auto-collapse, so we
@@ -8769,15 +8761,16 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           Studio:    Compose · AI History  (history belongs with creation —
                      it's a record of past suggestions to reload into the
                      canvas, not a curated archive)
-          Lookbook:  no tabs — the Lookbook is now the whole view. Calendar
-                     moved out into the dedicated Diary destination where it
-                     sits alongside the wear journal as ONE keepsake. */}
+          Lookbook:  Lookbook · Diary      (saved outfits + the wear
+                     journal/calendar that records WHEN they were worn —
+                     two faces of the same outfit story) */}
       <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
           {(isLookbook
             ? [
                 ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
+                ['diary', 'Diary'],
               ]
             : [
                 ['create', 'Compose'],
@@ -8985,8 +8978,20 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         />
       )}
 
-      {tab === 'calendar' ? (
-        <WearCalendar items={items} outfits={outfits} schedules={schedules} onScheduleOutfit={scheduleOutfit} onOpenOutfit={onOpenOutfit} onSaveOutfit={saveOutfit} styleProfile={styleProfile} />
+      {isLookbook && tab === 'diary' ? (
+        // DIARY — the wear journal + calendar living inside Lookbook.
+        // Conceptually paired: Lookbook = outfits (curated), Diary =
+        // when those outfits (or any pieces) were actually worn.
+        <DiaryView
+          items={items}
+          outfits={outfits}
+          schedules={schedules}
+          onScheduleOutfit={scheduleOutfit}
+          onOpenOutfit={onOpenOutfit}
+          onSaveOutfit={saveOutfit}
+          onOpenItem={onOpenItem}
+          styleProfile={styleProfile}
+        />
       ) : !isLookbook && tab === 'create' ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {(() => {

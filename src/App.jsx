@@ -3021,14 +3021,6 @@ function DigitalWardrobe() {
                       aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
                       styleProfile={summariseStyleProfile(measurements)}
                       onCreateLookbook={handleShareLookbook}
-                      // When the user "Applies" an AI history entry from
-                      // Lookbook, seed Studio and navigate there. The seed
-                      // hydrates the canvas WITHOUT setting editingId, so
-                      // the next Save creates a NEW outfit doc.
-                      onApplyHistory={(entry) => {
-                        setStudioSeed({ id: 'history-' + entry.id, itemIds: entry.itemIds || [], reasoning: entry.reasoning });
-                        setActiveTab('outfits');
-                      }}
                     />
                   )}
                   {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} />}
@@ -8508,28 +8500,59 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         />
       )}
 
-      {/* Tabs render ONLY in lookbook mode. Studio is single-purpose now —
-          the tab switcher would be chrome above a single option. Removed
-          entirely for Studio per the IA restructure. */}
-      {isLookbook && (
-        <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
-             style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-          <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
-            {[
-              ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
-              ['calendar', 'Calendar'],
-              ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`],
-            ].map(([id, label]) => (
-              <button key={id} onClick={() => setTab(id)}
-                className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
-                  tab === id ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+      {/* Tab switcher.
+          Studio:    Compose · AI History  (history belongs with creation —
+                     it's a record of past suggestions to reload into the
+                     canvas, not a curated archive)
+          Lookbook:  Lookbook · Calendar   (saved looks + their schedule —
+                     the curatorial side) */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
+          {(isLookbook
+            ? [
+                ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
+                ['calendar', 'Calendar'],
+              ]
+            : [
+                ['create', 'Compose'],
+                ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`],
+              ]
+          ).map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+                tab === id ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
+      </div>
+
+      {!isLookbook && tab === 'history' && (
+        <AIHistoryView
+          history={aiHistory}
+          items={items}
+          onApply={(entry) => {
+            const next = emptyOutfit();
+            for (const id of entry.itemIds || []) {
+              const item = items.find((i) => i.id === id);
+              if (!item) continue;
+              const slot = slotForItem(item);
+              if (!slot) continue;
+              const key = slot.toLowerCase();
+              if (isMultiSlot(slot)) next[key] = Array.isArray(next[key]) ? [...next[key], item] : [item];
+              else if (!next[key]) next[key] = item;
+            }
+            setCurrentOutfit(next);
+            setAiNote(entry.reasoning);
+            setTab('create');
+            toast.show('Restored from history', { kind: 'success' });
+          }}
+          onToggleFavorite={toggleAIHistoryFavorite}
+          onDelete={deleteAIHistory}
+        />
       )}
 
       {!isLookbook && tab === 'create' && (
@@ -8699,41 +8722,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
 
       {tab === 'calendar' ? (
         <WearCalendar items={items} outfits={outfits} schedules={schedules} onScheduleOutfit={scheduleOutfit} onOpenOutfit={onOpenOutfit} onSaveOutfit={saveOutfit} styleProfile={styleProfile} />
-      ) : tab === 'history' ? (
-        <AIHistoryView
-          history={aiHistory}
-          items={items}
-          onApply={(entry) => {
-            // Lookbook mode hands the entry off to Studio via the parent
-            // (sets seedOutfit + switches activeTab). Studio mode loads
-            // it locally as before.
-            if (isLookbook && onApplyHistory) {
-              onApplyHistory(entry);
-              toast.show('Loaded into Studio', { kind: 'success' });
-              return;
-            }
-            const next = emptyOutfit();
-            for (const id of entry.itemIds || []) {
-              const item = items.find((i) => i.id === id);
-              if (!item) continue;
-              const slot = slotForItem(item);
-              if (!slot) continue;
-              const key = slot.toLowerCase();
-              if (isMultiSlot(slot)) {
-                next[key] = Array.isArray(next[key]) ? [...next[key], item] : [item];
-              } else if (!next[key]) {
-                next[key] = item;
-              }
-            }
-            setCurrentOutfit(next);
-            setAiNote(entry.reasoning);
-            setTab('create');
-            toast.show('Restored from history', { kind: 'success' });
-          }}
-          onToggleFavorite={toggleAIHistoryFavorite}
-          onDelete={deleteAIHistory}
-        />
-      ) : tab === 'create' ? (
+      ) : !isLookbook && tab === 'create' ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {(() => {
             // Sticky mobile summary: floats above bottom nav, visible while
@@ -8985,8 +8974,8 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             )}
           </DragOverlay>
         </DndContext>
-      ) : (
-        <div className="space-y-4">
+      ) : isLookbook && tab === 'saved' ? (
+        <div className="space-y-6 md:space-y-8">
           {outfits.length > 0 && (
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
@@ -9015,17 +9004,23 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               )}
             </div>
           )}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {filteredOutfits.length === 0 && (
-            <div className="col-span-full py-24 flex flex-col items-center justify-center text-stone-400 bg-white/50 border border-dashed border-stone-300 rounded-3xl">
+          {/* Editorial lookbook grid. Single column on mobile, max TWO on
+              desktop — looks deserve room to breathe. Each card is a tall
+              4:5 portrait with a deterministic flat-lay arrangement of
+              pieces (rotated, layered, sized — first piece largest, on
+              top). Cream gradient surface so the items pop. Serif name
+              below in display weight. Mirrors a magazine spread, not a
+              dashboard. */}
+          {filteredOutfits.length === 0 ? (
+            <div className="py-24 flex flex-col items-center justify-center text-stone-400 bg-white/50 border border-dashed border-stone-300 rounded-3xl">
               <Camera size={40} strokeWidth={1} className="mb-4 opacity-50" />
               <p className="text-lg font-display tracking-wide">{outfitsFilter === 'favorites' ? 'No favourites yet.' : 'No saved looks yet.'}</p>
-              <p className="text-sm mt-1">{outfitsFilter === 'favorites' ? 'Star a look from its detail page.' : 'Create one in the Create tab.'}</p>
+              <p className="text-sm mt-1">{outfitsFilter === 'favorites' ? 'Star a look from its detail page.' : 'Create one in the Studio.'}</p>
             </div>
-          )}
+          ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12">
           {filteredOutfits.map((outfit) => {
             const resolvedItems = resolveOutfitItems(outfit, items);
-            const previewImages = resolvedItems.slice(0, 4).map((it) => itemImages(it)[0]).filter(Boolean);
             const isSelected = selectedOutfits.has(outfit.id);
             const handleCardClick = () => {
               if (selectMode) {
@@ -9038,52 +9033,117 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                 onOpenOutfit?.(outfit.id);
               }
             };
+            // Deterministic hash → position/rotation per piece (same outfit
+            // always renders identically; each piece looks placed, not random).
+            const hash = (s) => { let h = 5381; for (let c = 0; c < s.length; c++) h = ((h * 33) ^ s.charCodeAt(c)) >>> 0; return h; };
+            const seeded = (id, salt) => ((hash(`${id}-${salt}`) % 1000) / 1000);
+            // Show up to 6 pieces in the flat-lay (more would feel crowded).
+            const flatLayItems = resolvedItems.slice(0, 6);
             return (
               <button key={outfit.id} onClick={handleCardClick}
                 onContextMenu={(e) => { e.preventDefault(); if (!selectMode) { setSelectMode(true); setSelectedOutfits(new Set([outfit.id])); } }}
-                // Editorial card convention: no wrapper press-scale (the
-                // selectMode toggle inside would trigger it via CSS :active
-                // cascade). The image grid below carries the hover lift.
                 className="text-left group cursor-pointer relative">
                 {selectMode && (
-                  <span className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                  <span className={`absolute top-3 left-3 z-30 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all backdrop-blur ${
                     isSelected ? 'bg-stone-900 border-stone-900' : 'bg-white/90 border-stone-300'
                   }`}>
-                    {isSelected && <CheckCircle2 size={14} strokeWidth={2.5} className="text-white" />}
+                    {isSelected && <CheckCircle2 size={16} strokeWidth={2.5} className="text-white" />}
                   </span>
                 )}
-                {/* Image surface = the 2x2 preview grid. Hover signal is a
-                    thin brass-300 ring (editorial; ties into the brass-rule
-                    eyebrow + brass nav accent + brass favourite charm used
-                    elsewhere). Shadow-xl was the previous attempt but it
-                    reads as a hard grey outline on a small square card
-                    because shadow-xl is a dual box-shadow with low spread —
-                    fine on a tall wardrobe image, ugly on a tight 4-up grid.
-                    The mini thumbs inside already scale on hover, so the
-                    ring is just the framing accent. Mutually exclusive with
-                    the selected-state stone-900 ring-4 (template-literal
-                    branch handles the override). */}
-                <div className={`aspect-square rounded-2xl overflow-hidden bg-stone-100 smooth-shadow transition-shadow duration-300 grid grid-cols-2 grid-rows-2 gap-0.5 mb-3 ${
+
+                {/* Cover surface — tall portrait, cream gradient bg, hairline
+                    border (or stone-900 ring when selected). Brass framing on
+                    hover ties into the brass-rule + brass nav accent thread. */}
+                <div className={`relative aspect-[4/5] rounded-[1.5rem] overflow-hidden transition-all duration-300 ${
                   isSelected
-                    ? 'ring-4 ring-stone-900 scale-95'
-                    : 'lg:group-hover:ring-1 lg:group-hover:ring-brass-300/70'
-                }`}>
-                  {previewImages.length === 0 && <div className="col-span-2 row-span-2 flex items-center justify-center text-stone-300"><Shirt size={32} strokeWidth={1} /></div>}
-                  {previewImages.map((src, i) => (
-                    <div key={i} className={previewImages.length === 1 ? 'col-span-2 row-span-2' : previewImages.length === 2 ? 'col-span-1 row-span-2' : previewImages.length === 3 && i === 0 ? 'col-span-2 row-span-1' : ''}>
-                      <img src={src} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    ? 'ring-4 ring-stone-900 scale-[0.98]'
+                    : 'border border-stone-200/60 lg:group-hover:border-brass-300/70 lg:group-hover:shadow-lg'
+                } bg-gradient-to-br from-stone-50 via-white to-stone-100/60`}>
+
+                  {/* Brass-rule + piece count, top-left — editorial caption
+                      pattern matching every other section header in the app. */}
+                  <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5">
+                    <span className="inline-block w-4 h-px bg-brass-300" aria-hidden="true"></span>
+                    <span className="text-[9px] tracking-[0.28em] uppercase text-stone-500 font-medium">
+                      {resolvedItems.length} {resolvedItems.length === 1 ? 'piece' : 'pieces'}
+                    </span>
+                  </div>
+                  {outfit.favorite && (
+                    <span className="absolute top-4 right-4 z-20 w-7 h-7 rounded-full bg-brass-300 flex items-center justify-center" title="Favourite">
+                      <Star size={12} strokeWidth={1.5} className="fill-stone-900 text-stone-900" />
+                    </span>
+                  )}
+
+                  {/* Empty state — no pieces resolved (items deleted). */}
+                  {flatLayItems.length === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center text-stone-300">
+                      <Shirt size={56} strokeWidth={0.8} />
                     </div>
-                  ))}
+                  )}
+
+                  {/* Stylized flat-lay. Each piece absolutely-positioned with
+                      a deterministic offset + rotation. First piece largest
+                      and centred-ish; rest staggered around it. z-order
+                      = reverse index so first piece sits on top. */}
+                  {flatLayItems.map((piece, i) => {
+                    const baseSize = i === 0 ? 56 : 38; // % of container width
+                    const rotation = (seeded(piece.id || `i${i}`, 'r') - 0.5) * 18; // -9° to +9°
+                    // Stagger positions in a loose grid so they don't all stack.
+                    const positions = [
+                      { x: 50, y: 50 },  // hero centre-ish
+                      { x: 26, y: 30 },
+                      { x: 76, y: 30 },
+                      { x: 24, y: 74 },
+                      { x: 76, y: 76 },
+                      { x: 50, y: 88 },
+                    ];
+                    const pos = positions[i] || { x: 50, y: 50 };
+                    const jitterX = (seeded(piece.id || `j${i}`, 'x') - 0.5) * 6;
+                    const jitterY = (seeded(piece.id || `j${i}`, 'y') - 0.5) * 6;
+                    return (
+                      <div key={piece.id || i}
+                        className="absolute transition-transform duration-700 ease-out lg:group-hover:scale-[1.02]"
+                        style={{
+                          left: `${pos.x + jitterX}%`,
+                          top: `${pos.y + jitterY}%`,
+                          width: `${baseSize}%`,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                          zIndex: 30 - i,
+                        }}
+                      >
+                        <div className="aspect-[3/4] bg-white rounded-lg overflow-hidden shadow-md ring-1 ring-black/5">
+                          {itemImages(piece)[0] ? (
+                            <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async"
+                              className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-stone-300 bg-stone-50">
+                              <Shirt size={20} strokeWidth={1} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="font-display text-lg text-stone-900 truncate group-hover:text-stone-700 flex items-center gap-1.5">
-                  {outfit.favorite && <Star size={12} strokeWidth={1.5} className="fill-amber-400 text-amber-500 shrink-0" />}
-                  {outfit.name}
-                </p>
-                <p className="text-[10px] text-stone-500 uppercase tracking-wider mt-0.5">{resolvedItems.length} pieces</p>
+
+                {/* Editorial caption block — serif title + small meta.
+                    More space than the previous tight cards; this is the
+                    'magazine credit' line. */}
+                <div className="mt-5 px-1">
+                  <h3 className="font-display text-2xl md:text-3xl text-stone-900 leading-tight truncate lg:group-hover:text-stone-700 transition-colors">
+                    {outfit.name}
+                  </h3>
+                  {(outfit.intent || resolvedItems.length > 0) && (
+                    <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mt-2 truncate">
+                      {[outfit.intent, resolvedItems.length ? `${resolvedItems.length} pieces` : null].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
               </button>
             );
           })}
           </div>
+          )}
           {selectMode && selectedOutfits.size > 0 && (
             <div className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-30 bg-stone-900 text-white rounded-full shadow-2xl flex items-center gap-2 px-3 py-2 animate-in slide-in-from-bottom-4 duration-200 max-w-[calc(100vw-1rem)]">
               <span className="text-xs px-3 shrink-0">{selectedOutfits.size} selected</span>
@@ -9122,7 +9182,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             />
           )}
         </div>
-      )}
+      ) : null}
 
     </div>
   );

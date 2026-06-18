@@ -3115,26 +3115,35 @@ function DigitalWardrobe() {
 
           <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
-            {/* Mobile bottom nav. Six destinations (Wardrobe / Studio /
-                Lookbook / + / Inspire / Profile) — the central FAB stays
-                visually centred because it sits at position 4 of 7. Labels
-                shortened to fit (Studio not 'Styling', Inspire not
-                'Inspiration'). max-w-lg accommodates the wider row. */}
-            <div className="flex justify-between items-center max-w-lg mx-auto py-1">
-              <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <div className="relative -top-7">
+            {/* MOBILE BOTTOM NAV — five destinations + raised central FAB.
+                The FAB sits BETWEEN two flex-1 groups (3 left, 2 right)
+                so it is TRULY horizontally centred regardless of item
+                widths — the position-4-of-6 layout was 60% from left,
+                visibly off-centre. Each side group uses justify-around
+                to distribute its items evenly within its half. Slight
+                density asymmetry (3 vs 2) is the trade-off Instagram /
+                TikTok / Twitter all accept when keeping all destinations
+                accessible — the user notices a centred FAB, not the
+                item-density delta. */}
+            <div className="flex items-center max-w-lg mx-auto py-1">
+              <div className="flex-1 flex justify-around items-center">
+                <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+                <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+                <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              </div>
+              <div className="relative -top-7 shrink-0 px-1">
                 <button onClick={() => setIsAddItemModalOpen(true)}
-                  className="w-16 h-16 shrink-0 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all active:scale-90 hover:scale-105 ring-4 ring-[#F7F5F2]"
+                  className="w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all active:scale-90 hover:scale-105 ring-4 ring-[#F7F5F2]"
                   style={{ boxShadow: '0 10px 30px -8px rgba(28, 25, 23, 0.45)' }}
                   aria-label="Add item"
                 >
                   <Plus size={26} strokeWidth={1.5} />
                 </button>
               </div>
-              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              <div className="flex-1 flex justify-around items-center">
+                <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
+                <MobileNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
+              </div>
             </div>
           </div>
 
@@ -7915,10 +7924,15 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   });
   const gridPieces = orderedPieces.slice(0, isHero ? 6 : 4);
   const extraCount = Math.max(0, resolvedItems.length - gridPieces.length);
-  // Hero gets landscape 16:10 (magazine-cover proportions); secondary
-  // cards stay portrait 4:5 (editorial grid proportions).
-  const aspect = isHero ? 'aspect-[16/10]' : 'aspect-[4/5]';
-  const gridCols = isHero ? 'grid-cols-3 grid-rows-2' : 'grid-cols-2 grid-rows-2';
+  // Hero gets landscape 16:10 (magazine-cover proportions) on desktop
+  // where it spans 2 cols. On mobile (single col) it'd render SHORTER
+  // than secondary portrait cards — defeating the "featured" treatment.
+  // So mobile gets a tall 3:4 portrait, making the hero visibly more
+  // prominent than the 4:5 secondary cards. Inner thumbnail grid flips
+  // shape with the container: 2x3 portrait on mobile, 3x2 landscape on
+  // desktop.
+  const aspect = isHero ? 'aspect-[3/4] md:aspect-[16/10]' : 'aspect-[4/5]';
+  const gridCols = isHero ? 'grid-cols-2 grid-rows-3 md:grid-cols-3 md:grid-rows-2' : 'grid-cols-2 grid-rows-2';
   return (
     <div ref={setNodeRef} style={style}
          className={isHero ? 'md:col-span-2' : ''}>

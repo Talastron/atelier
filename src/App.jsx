@@ -4110,10 +4110,10 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6"
       >
         <div>
+          {/* Weather chip removed — the Today card on the right owns the
+              daily brief (and now uses MAX temp, which is what you dress
+              for, not the current reading). One source of truth. */}
           {user && (
-            {/* Weather chip removed — the Today card on the right owns the
-                daily brief (and now uses MAX temp, which is what you dress
-                for, not the current reading). One source of truth. */}
             <div className="flex items-center gap-3 flex-wrap mb-2 lg:mb-1">
               <span className="brass-rule" aria-hidden="true"></span>
               <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">

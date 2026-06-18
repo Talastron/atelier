@@ -2661,7 +2661,7 @@ function DigitalWardrobe() {
             <button
               type="button"
               onClick={scrollMainToTop}
-              className="fixed right-4 lg:right-6 z-30 w-11 h-11 lg:w-12 lg:h-12 rounded-full bg-stone-900 text-white shadow-2xl flex items-center justify-center active:scale-90 hover:bg-stone-800 transition-all animate-in fade-in slide-in-from-bottom-2 duration-200 lg:!bottom-6"
+              className="fixed right-4 lg:right-6 z-30 w-11 h-11 lg:w-12 lg:h-12 rounded-full bg-stone-900 text-white shadow-2xl flex items-center justify-center active:scale-90 hover:bg-stone-700 transition-all animate-in fade-in slide-in-from-bottom-2 duration-200 lg:!bottom-6"
               style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
               aria-label="Scroll to top"
             >
@@ -3112,7 +3112,7 @@ function WardrobeCardImage({ item }) {
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 px-2 py-1 rounded-full bg-stone-900/30 backdrop-blur-sm">
             {images.map((_, i) => (
               <span key={i}
-                className={`block rounded-full transition-all duration-300 ${
+                className={`block rounded-full transition-all duration-200 ${
                   i === safeIndex ? 'bg-white w-1.5 h-1.5' : 'bg-white/60 w-1 h-1'
                 }`} />
             ))}
@@ -3244,7 +3244,7 @@ function WardrobeFiltersSheet({
         </div>
         <div className="px-4 sm:px-6 py-4 border-t border-stone-200/60 bg-white/95 backdrop-blur shrink-0"
              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
-          <button onClick={onClose} className="w-full bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-800 transition-all shadow-lg active:scale-[0.98]">
+          <button onClick={onClose} className="w-full bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-700 transition-all shadow-lg active:scale-[0.98]">
             Done
           </button>
         </div>
@@ -3302,7 +3302,7 @@ function SignInScreen({ onSignIn }) {
       <div className="mb-8"><AtelierMark size={88} /></div>
       <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier.</h1>
       <p className="text-stone-500 text-sm tracking-wide mb-12 text-center max-w-sm">Your private digital wardrobe. Sign in to access your collection from any device.</p>
-      <button onClick={handle} disabled={busy} className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium hover:bg-stone-800 transition-all shadow-lg disabled:opacity-50">
+      <button onClick={handle} disabled={busy} className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg disabled:opacity-50">
         {busy ? 'Signing in…' : 'Sign in with Google'}
       </button>
       {error && <p className="mt-6 text-xs text-red-700 max-w-sm text-center">{error}</p>}
@@ -3323,7 +3323,7 @@ function AccessDeniedScreen({ user, onSignOut }) {
       <p className="text-stone-500 text-sm leading-relaxed max-w-sm mb-10">
         Ask the wardrobe owner to invite you, then refresh — or sign in with a different account.
       </p>
-      <button onClick={onSignOut} className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-800 transition-all shadow-lg">
+      <button onClick={onSignOut} className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg">
         Sign out
       </button>
     </div>
@@ -3723,7 +3723,7 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
           const Row = ({ icon, accent, title, sub, onClick }) => (
             <li>
               <button onClick={onClick}
-                className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-50 transition-colors">
+                className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100transition-colors">
                 <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-stone-900 truncate">{title}</p>
@@ -4105,7 +4105,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           onClick={selectMode ? exitSelectMode : () => enterSelectMode()}
           className={`h-11 shrink-0 px-4 rounded-full text-[10px] tracking-widest uppercase border transition-colors duration-200 ${
             selectMode
-              ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-800'
+              ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-700'
               : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500 hover:text-stone-900'
           }`}
           title={selectMode ? 'Cancel selection' : 'Select multiple items'}
@@ -4147,11 +4147,11 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         <div className="flex items-center gap-3 self-start md:self-auto lg:hidden">
           {items.length > 0 && (
             selectMode ? (
-              <button onClick={exitSelectMode} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-4 py-2 border border-stone-200 rounded-full hover:border-stone-400 transition-colors">
+              <button onClick={exitSelectMode} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-4 py-2 border border-stone-200 rounded-full hover:border-stone-500 transition-colors">
                 Cancel
               </button>
             ) : (
-              <button onClick={() => enterSelectMode()} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-4 py-2 border border-stone-200 rounded-full hover:border-stone-400 transition-colors">
+              <button onClick={() => enterSelectMode()} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-4 py-2 border border-stone-200 rounded-full hover:border-stone-500 transition-colors">
                 Select
               </button>
             )
@@ -4349,7 +4349,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
             key={item.id}
             onClick={() => selectMode ? toggleSelected(item.id) : onItemClick?.(item.id)}
             onContextMenu={(e) => { e.preventDefault(); if (!selectMode) enterSelectMode(item.id); }}
-            className={`group relative flex flex-col gap-4 cursor-pointer transition-all duration-300 active:scale-[0.97] lg:hover:-translate-y-1 ${selectMode && isSelected ? 'ring-2 ring-stone-900 rounded-2xl' : ''}`}
+            className={`group relative flex flex-col gap-4 cursor-pointer transition-all duration-200 active:scale-[0.97] lg:hover:-translate-y-1 ${selectMode && isSelected ? 'ring-2 ring-stone-900 rounded-2xl' : ''}`}
           >
             <div className={`aspect-[3/4] rounded-2xl bg-stone-100 relative overflow-hidden smooth-shadow lg:group-hover:shadow-xl transition-shadow duration-300 ${selectMode && isSelected ? 'opacity-90' : ''}`}>
               <div className="absolute top-4 left-4 z-20 flex items-center gap-2 flex-wrap max-w-[calc(100%-3.5rem)]">
@@ -4474,7 +4474,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                 : 'Try a different filter, or clear the search.'}
             </p>
             {items.length === 0 && (
-              <button onClick={openAddModal} className="mt-8 bg-stone-900 text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-stone-800 transition-all shadow-lg active:scale-[0.98] inline-flex items-center gap-2">
+              <button onClick={openAddModal} className="mt-8 bg-stone-900 text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-stone-700 transition-all shadow-lg active:scale-[0.98] inline-flex items-center gap-2">
                 <Plus size={16} strokeWidth={1.5} /> Add your first item
               </button>
             )}
@@ -4535,7 +4535,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           else if (days >= 14) reasons.push(`not worn in ${days} days`);
           return (
             <button onClick={() => onItemClick?.(recommendation.id)}
-              className="text-left w-full bg-stone-900 text-white rounded-2xl lg:rounded-3xl p-4 sm:p-5 flex items-center gap-4 group hover:bg-stone-800 transition-all smooth-shadow active:scale-[0.98]">
+              className="text-left w-full bg-stone-900 text-white rounded-2xl lg:rounded-3xl p-4 sm:p-5 flex items-center gap-4 group hover:bg-stone-700 transition-all smooth-shadow active:scale-[0.98]">
               <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-stone-800 shrink-0">
                 {itemImages(recommendation)[0] && <img src={itemImages(recommendation)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
               </div>
@@ -4596,7 +4596,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                 await onBulkUpdate?.(ids, { favorite: !allFav });
                 exitSelectMode();
               }}
-              className="text-xs tracking-wider uppercase px-3 py-2 rounded-full hover:bg-stone-800 disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+              className="text-xs tracking-wider uppercase px-3 py-2 rounded-full hover:bg-stone-700 disabled:opacity-40 flex items-center gap-1.5 shrink-0"
             >
               <Star size={14} strokeWidth={1.5} /> Favourite
             </button>
@@ -4608,7 +4608,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                 await onBulkUpdate?.(ids, { status: allWish ? 'owned' : 'wishlist' });
                 exitSelectMode();
               }}
-              className="text-xs tracking-wider uppercase px-3 py-2 rounded-full hover:bg-stone-800 disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+              className="text-xs tracking-wider uppercase px-3 py-2 rounded-full hover:bg-stone-700 disabled:opacity-40 flex items-center gap-1.5 shrink-0"
             >
               <Heart size={14} strokeWidth={1.5} /> Wishlist
             </button>
@@ -5095,7 +5095,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   />
                   <button
                     type="submit" disabled={isLoading}
-                    className="absolute right-2 top-2 bottom-2 bg-stone-900 text-white px-6 rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50"
+                    className="absolute right-2 top-2 bottom-2 bg-stone-900 text-white px-6 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50"
                   >
                     {isLoading ? 'Scanning...' : 'Extract'}
                   </button>
@@ -5109,7 +5109,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <label className="group relative flex flex-col items-center justify-center p-5 sm:p-6 bg-stone-900 border border-stone-900 rounded-2xl cursor-pointer hover:bg-stone-800 transition-all col-span-2 sm:col-span-3 text-center">
+                <label className="group relative flex flex-col items-center justify-center p-5 sm:p-6 bg-stone-900 border border-stone-900 rounded-2xl cursor-pointer hover:bg-stone-700 transition-all col-span-2 sm:col-span-3 text-center">
                   <span className="absolute top-2 right-2 text-[9px] tracking-widest uppercase text-brass-300 font-medium">Fastest</span>
                   <Sparkles size={26} strokeWidth={1} className="mb-2 text-brass-300 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-display text-base sm:text-lg text-white">Identify with AI</span>
@@ -5199,7 +5199,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent([formData.brand, formData.name].filter(Boolean).join(' '))}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 transition-colors inline-flex items-center gap-1.5"
+                      className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5"
                     >
                       Find product photo ↗
                     </a>
@@ -5572,7 +5572,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
             <div className="px-4 sm:px-6 lg:px-10 py-3 sm:py-4 border-t border-stone-200/60 bg-white/95 backdrop-blur shrink-0"
                  style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
               <button type="submit" disabled={isLoading}
-                className="w-full bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-800 transition-all shadow-lg disabled:opacity-50 active:scale-[0.98]">
+                className="w-full bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-700 transition-all shadow-lg disabled:opacity-50 active:scale-[0.98]">
                 {isLoading ? 'Saving…' : (isEdit ? 'Save Changes' : 'Save to Collection')}
               </button>
             </div>
@@ -5684,7 +5684,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
     <div ref={swipeRef} className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
-          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/50 transition-colors">
+          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
             <span className="hidden sm:inline">Back to Wardrobe</span>
             <span className="sm:hidden">Back</span>
@@ -5692,12 +5692,12 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
           {(onPrev || onNext) && (
             <div className="hidden sm:flex items-center gap-1.5 text-stone-400">
               <button onClick={onPrev} disabled={!onPrev} aria-label="Previous item"
-                className="p-2 rounded-full hover:bg-stone-200/50 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+                className="p-2 rounded-full hover:bg-stone-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
                 <ChevronRight size={16} strokeWidth={1.5} className="rotate-180" />
               </button>
               {positionLabel && <span className="text-[10px] tracking-widest uppercase">{positionLabel}</span>}
               <button onClick={onNext} disabled={!onNext} aria-label="Next item"
-                className="p-2 rounded-full hover:bg-stone-200/50 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
+                className="p-2 rounded-full hover:bg-stone-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
                 <ChevronRight size={16} strokeWidth={1.5} />
               </button>
             </div>
@@ -5837,7 +5837,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   <button key={i} onClick={() => setActivePhoto(i)}
                     aria-label={`Photo ${i + 1}`}
                     className={`flex-none w-16 aspect-square rounded-lg overflow-hidden border transition-all ${
-                      activePhoto === i ? 'border-brass-400 shadow-sm' : 'border-stone-200 opacity-60 hover:opacity-100 hover:border-stone-400'
+                      activePhoto === i ? 'border-brass-400 shadow-sm' : 'border-stone-200 opacity-60 hover:opacity-100 hover:border-stone-500'
                     }`}
                   >
                     <img src={src} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
@@ -5865,7 +5865,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               </div>
               <div className="mt-4">
                 {item.status === 'wishlist' ? (
-                  <button onClick={onMarkOwned} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm bg-stone-900 text-white hover:bg-stone-800 transition-all">
+                  <button onClick={onMarkOwned} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm bg-stone-900 text-white hover:bg-stone-700 transition-all">
                     <CheckCircle2 size={16} strokeWidth={1.5} /> I bought this — move to wardrobe
                   </button>
                 ) : (
@@ -5913,7 +5913,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 <button onClick={() => !wornToday && onLogWear()} disabled={wornToday}
                   className={`w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all ${
                     wornToday ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 cursor-default'
-                              : 'bg-stone-900 text-white hover:bg-stone-800'
+                              : 'bg-stone-900 text-white hover:bg-stone-700'
                   }`}>
                   {wornToday ? <><CheckCircle2 size={16} strokeWidth={1.5} /> Logged for today</> : <><Calendar size={16} strokeWidth={1.5} /> I wore this today</>}
                 </button>
@@ -5936,7 +5936,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         <p className="text-[11px] text-brass-700/80 mt-0.5 leading-relaxed">Suggested: {reminder.action}.</p>
                       </div>
                       <button onClick={onMarkCared}
-                        className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 transition-colors shrink-0">
+                        className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors shrink-0">
                         Done
                       </button>
                     </div>
@@ -6106,7 +6106,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       return (
                         <button key={c.key} onClick={() => onSetCondition(c.key)}
                           className={`text-xs px-3.5 py-2 rounded-full border transition-all ${
-                            active ? `${ringByColor[c.color]} font-medium` : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
+                            active ? `${ringByColor[c.color]} font-medium` : 'bg-white border-stone-200 text-stone-600 hover:border-stone-500'
                           }`}>
                           {c.label}
                         </button>
@@ -6564,7 +6564,7 @@ function PhotoEditorModal({ src, onClose, onSave }) {
             Cancel
           </button>
           <button onClick={apply} disabled={busy}
-            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40">
+            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40">
             {busy ? 'Applying…' : 'Apply'}
           </button>
         </div>
@@ -6673,7 +6673,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
         </div>
 
         <div className="p-5 sm:p-6 flex-1 min-h-0 overflow-y-auto space-y-4">
-          <label className="block w-full bg-stone-900 text-white py-4 rounded-2xl text-center cursor-pointer hover:bg-stone-800 transition-colors">
+          <label className="block w-full bg-stone-900 text-white py-4 rounded-2xl text-center cursor-pointer hover:bg-stone-700 transition-colors">
             <span className="text-sm font-medium flex items-center justify-center gap-2">
               <Camera size={16} strokeWidth={1.5} /> {drafts.length === 0 ? 'Start sweep · take a photo' : 'Take another'}
             </span>
@@ -6748,7 +6748,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
               Cancel
             </button>
             <button onClick={saveAll} disabled={includedCount === 0 || savingAll}
-              className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40">
+              className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40">
               {savingAll ? 'Saving…' : `Save ${includedCount} item${includedCount === 1 ? '' : 's'}`}
             </button>
           </div>
@@ -6931,7 +6931,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                 </div>
                 {error && <p className="text-xs text-red-700 mt-3">{error}</p>}
                 <button onClick={fetchAll} disabled={!parseUrls(urlsText).length}
-                  className="w-full mt-4 bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  className="w-full mt-4 bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   <LinkIcon size={16} strokeWidth={1.5} /> Fetch {parseUrls(urlsText).length || ''} item{parseUrls(urlsText).length === 1 ? '' : 's'}
                 </button>
               </div>
@@ -7015,7 +7015,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
               Cancel
             </button>
             <button onClick={saveAll} disabled={includedCount === 0}
-              className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40">
+              className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40">
               Save {includedCount} item{includedCount === 1 ? '' : 's'}
             </button>
           </div>
@@ -7214,7 +7214,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
               />
               {error && <p className="text-xs text-red-700">{error}</p>}
               <button onClick={handleParse} disabled={!text.trim() || busy}
-                className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-800 transition-colors shadow-lg disabled:opacity-50">
+                className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-700 transition-colors shadow-lg disabled:opacity-50">
                 Parse text receipt
               </button>
             </>
@@ -7260,7 +7260,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                       type="button"
                       onClick={enrichAll}
                       disabled={enrichBusyIdx !== null || parsed.items.every((it, i) => !include[i] || !it.sourceUrl || it.imageUrl)}
-                      className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed">
+                      className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed">
                       {enrichBusyIdx !== null ? `Fetching ${enrichBusyIdx + 1}/${parsed.items.length}…` : 'Fetch all images'}
                     </button>
                   </div>
@@ -7300,7 +7300,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                               type="button"
                               onClick={() => enrichOne(i)}
                               disabled={enrichBusyIdx !== null}
-                              className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 shrink-0">
+                              className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 shrink-0">
                               {enrichBusyIdx === i ? '…' : 'Fetch'}
                             </button>
                           ) : (
@@ -7327,7 +7327,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                   Back
                 </button>
                 <button onClick={handleSaveAll} disabled={busy || includedCount === 0}
-                  className="flex-1 bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-800 transition-colors shadow-lg disabled:opacity-50">
+                  className="flex-1 bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 transition-colors shadow-lg disabled:opacity-50">
                   {busy ? 'Saving…' : `Save ${includedCount} item${includedCount === 1 ? '' : 's'}`}
                 </button>
               </div>
@@ -7841,7 +7841,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         onClick={() => !isDragging && handleSelect(slot, item)}
         className={`flex-none w-28 sm:w-32 md:w-36 cursor-pointer group transition-opacity ${isDragging ? 'opacity-30' : ''}`}
       >
-        <div className={`aspect-[3/4] rounded-2xl overflow-hidden mb-3 border-[3px] transition-all duration-300 relative ${
+        <div className={`aspect-[3/4] rounded-2xl overflow-hidden mb-3 border-[3px] transition-all duration-200 relative ${
           isSelected ? 'border-stone-900 shadow-xl' : 'border-transparent group-hover:border-stone-300'
         }`}>
           <img src={itemImages(item)[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none" loading="lazy" />
@@ -7903,7 +7903,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               <Wand2 size={14} strokeWidth={1.5} /> Quick
             </button>
             <button onClick={handleAIStyle} disabled={aiBusy || abComparing || !isAIEnabled()}
-              className="px-4 py-3 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-800 transition-all inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
+              className="px-4 py-3 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-all inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
               <Sparkles size={14} strokeWidth={1.5} />
               {aiBusy ? 'Styling…' : isAIEnabled() ? 'AI Style' : 'AI — setup'}
             </button>
@@ -7965,7 +7965,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                     { label: 'Swap bottoms', intent: 'swap the bottoms while keeping the rest', refine: true },
                   ].map((r) => (
                     <button key={r.label} onClick={() => handleAIStyle(r.intent, { refine: r.refine })} disabled={aiBusy}
-                      className="text-[11px] tracking-wide text-stone-200 hover:text-white border border-stone-700 hover:border-stone-400 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50">
+                      className="text-[11px] tracking-wide text-stone-200 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50">
                       {r.label}
                     </button>
                   ))}
@@ -8020,8 +8020,8 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
         {[['create', 'Create'], ['saved', `Saved${outfits.length ? ` · ${outfits.length}` : ''}`], ['calendar', 'Calendar'], ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`]].map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`whitespace-nowrap px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 ${
-              tab === id ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-800'
+            className={`whitespace-nowrap px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm tracking-wider uppercase transition-all duration-200 ${
+              tab === id ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'
             }`}
           >
             {label}
@@ -8111,7 +8111,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   className="w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 mb-4 focus:border-stone-900 outline-none transition-colors"
                 />
                 <button onClick={handleSave} disabled={!outfitName.trim() || OUTFIT_SLOTS.every((s) => slotItems(currentOutfit[s.toLowerCase()]).length === 0)}
-                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-stone-800 transition-all disabled:opacity-50 shadow-lg active:scale-[0.98]"
+                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-stone-700 transition-all disabled:opacity-50 shadow-lg active:scale-[0.98]"
                 >
                   <Save size={18} strokeWidth={1.5} /> Save Look
                 </button>
@@ -8158,7 +8158,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                 {[['all','All'],['favorites','★ Favourites']].map(([f, label]) => (
                   <button key={f} onClick={() => setOutfitsFilter(f)}
                     className={`text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-all border ${
-                      outfitsFilter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
+                      outfitsFilter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-500'
                     }`}>{label}</button>
                 ))}
                 <span className="text-xs text-stone-500 ml-2">{filteredOutfits.length} {filteredOutfits.length === 1 ? 'look' : 'looks'}</span>
@@ -8317,7 +8317,7 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
         subtitle={`${inspirations.length} ${inspirations.length === 1 ? 'look' : 'looks'} saved${unanalysed.length > 0 ? ` · ${unanalysed.length} unanalysed` : ''}`}
         right={
           <button onClick={onAddInspiration}
-            className="bg-stone-900 text-white px-6 py-3 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-stone-800 transition-all shadow-lg active:scale-[0.98]">
+            className="bg-stone-900 text-white px-6 py-3 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-stone-700 transition-all shadow-lg active:scale-[0.98]">
             <Plus size={16} strokeWidth={1.5} /> Save inspiration
           </button>
         }
@@ -8337,7 +8337,7 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
             {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
               <button key={f} onClick={() => setFilter(f)}
                 className={`text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-all border ${
-                  filter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
+                  filter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-500'
                 }`}>{label}</button>
             ))}
             {/* Cross-link to wishlist — inspirations often feed wishlist items;
@@ -8504,7 +8504,7 @@ function AddInspirationModal({ onClose, onSave }) {
                   <input type="url" value={linkInput} onChange={(e) => setLinkInput(e.target.value)}
                     placeholder="Paste a Pinterest / Instagram / blog URL"
                     className="block w-full pl-12 pr-32 py-4 bg-white border border-stone-200 rounded-2xl focus:ring-1 focus:ring-stone-900 focus:border-stone-900 transition-all text-sm" required />
-                  <button type="submit" disabled={busy} className="absolute right-2 top-2 bottom-2 bg-stone-900 text-white px-6 rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50">
+                  <button type="submit" disabled={busy} className="absolute right-2 top-2 bottom-2 bg-stone-900 text-white px-6 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50">
                     {busy ? 'Loading…' : 'Fetch'}
                   </button>
                 </div>
@@ -8555,7 +8555,7 @@ function AddInspirationModal({ onClose, onSave }) {
               Back
             </button>
             <button onClick={handleSave} disabled={busy || !data.image}
-              className="flex-1 bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-800 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50">
+              className="flex-1 bg-stone-900 text-white py-3.5 rounded-xl font-medium hover:bg-stone-700 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50">
               {busy ? 'Saving…' : 'Save inspiration'}
             </button>
           </div>
@@ -8597,7 +8597,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
     <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
-          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/50 transition-colors">
+          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
             <span className="hidden sm:inline">Back to Inspiration</span>
             <span className="sm:hidden">Back</span>
@@ -8692,7 +8692,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                       <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold">From your wardrobe ({matches.length} match{matches.length === 1 ? '' : 'es'})</h2>
                       {onRecreateLook && (
                         <button onClick={onRecreateLook}
-                          className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 transition-colors inline-flex items-center gap-1.5">
+                          className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5">
                           <Sparkles size={11} strokeWidth={1.5} /> Recreate this look
                         </button>
                       )}
@@ -8733,7 +8733,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                             <div className="flex flex-wrap gap-2 ml-7">
                               {onAddMissingToWishlist && (
                                 <button onClick={() => onAddMissingToWishlist(piece)}
-                                  className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-full transition-colors">
+                                  className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-stone-900 hover:bg-stone-700 text-white rounded-full transition-colors">
                                   <Heart size={11} strokeWidth={1.5} /> Add to wishlist
                                 </button>
                               )}
@@ -8786,7 +8786,7 @@ function ABCompareModal({ pair, onClose, onPick }) {
           ))}
         </div>
         {side.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed mb-4">{side.reasoning}</p>}
-        <button onClick={() => onPick(side)} className="mt-auto w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-800 transition-all active:scale-[0.98]">
+        <button onClick={() => onPick(side)} className="mt-auto w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 transition-all active:scale-[0.98]">
           Pick {label}
         </button>
       </div>
@@ -8836,8 +8836,8 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
       <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit">
         {[['all', 'All'], ['favorites', '★ Favourites']].map(([f, label]) => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-5 py-2 rounded-full text-xs tracking-wider uppercase transition-all duration-300 ${
-              filter === f ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-800'
+            className={`px-5 py-2 rounded-full text-xs tracking-wider uppercase transition-all duration-200 ${
+              filter === f ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'
             }`}>
             {label}
           </button>
@@ -8890,7 +8890,7 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
                 )}
 
                 <button onClick={() => onApply(entry)} disabled={resolvedItems.length === 0}
-                  className="w-full px-4 py-2.5 rounded-xl text-xs tracking-wider uppercase font-medium bg-stone-900 text-white hover:bg-stone-800 transition-all active:scale-[0.98] disabled:opacity-50">
+                  className="w-full px-4 py-2.5 rounded-xl text-xs tracking-wider uppercase font-medium bg-stone-900 text-white hover:bg-stone-700 transition-all active:scale-[0.98] disabled:opacity-50">
                   Re-apply to Current Look
                 </button>
               </div>
@@ -8967,7 +8967,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
           </div>
 
           <button onClick={handleGenerate} disabled={busy}
-            className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-800 transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
+            className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-700 transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
             <Sparkles size={16} strokeWidth={1.5} /> {busy ? 'Generating…' : `Generate ${count} looks`}
           </button>
         </div>
@@ -9071,12 +9071,12 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
         <div className="flex items-center justify-end mb-3 gap-2 flex-wrap">
           <button onClick={() => downloadIcs(`atelier-calendar-${todayISO()}.ics`, schedules, outfits, items)}
             disabled={Object.values(schedules || {}).filter((s) => s?.outfitId).length === 0}
-            className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-400 transition-all disabled:opacity-40 inline-flex items-center gap-1.5">
+            className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 transition-all disabled:opacity-40 inline-flex items-center gap-1.5">
             <Download size={12} strokeWidth={1.5} /> Export .ics
           </button>
           <button onClick={toggleRangeMode}
             className={`text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full transition-all border ${
-              rangeMode ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
+              rangeMode ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-500'
             }`}>
             {rangeMode ? '× Cancel range' : '✦ Pack for trip'}
           </button>
@@ -9107,7 +9107,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                   : isSelected ? 'bg-stone-900 text-white border-stone-900'
                   : isToday ? 'bg-stone-100 border-stone-300 text-stone-900'
                   : scheduled ? 'bg-amber-50 border-amber-200 hover:border-amber-400 text-stone-900'
-                  : list.length > 0 ? 'bg-stone-50 border-stone-200 hover:border-stone-400 text-stone-900'
+                  : list.length > 0 ? 'bg-stone-50 border-stone-200 hover:border-stone-500 text-stone-900'
                   : 'bg-white border-stone-100 text-stone-400 hover:border-stone-300'
                 }`}>
                 <span className="text-xs sm:text-sm">{day}</span>
@@ -9178,18 +9178,18 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
               {isFutureOrToday && onScheduleOutfit && (
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => setSchedulingDate(selectedDate)}
-                    className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-400">
+                    className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-500">
                     {scheduled ? 'Change look' : '＋ Plan a look'}
                   </button>
                   {!scheduled && (
                     <button onClick={handleCopyPrev}
-                      className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-400">
+                      className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-500">
                       ↩ Copy yesterday
                     </button>
                   )}
                   {scheduled && (
                     <button onClick={handleRepeatWeek}
-                      className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-400">
+                      className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-500">
                       ↪ Repeat all week
                     </button>
                   )}
@@ -9356,7 +9356,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                 autoFocus
               />
               <button type="submit" disabled={!destination.trim()}
-                className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-800 disabled:opacity-50">
+                className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 disabled:opacity-50">
                 Fetch forecast & compose
               </button>
               <p className="text-[10px] text-stone-400 leading-relaxed">
@@ -9424,7 +9424,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
             <button onClick={() => { setPlan(null); setStage('input'); }} className="text-xs tracking-wider uppercase px-4 py-2 rounded-full text-stone-500 hover:text-stone-900">
               Discard
             </button>
-            <button onClick={apply} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 flex items-center gap-2">
+            <button onClick={apply} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 flex items-center gap-2">
               <Calendar size={14} strokeWidth={1.5} /> Save & schedule all
             </button>
           </div>
@@ -9696,7 +9696,7 @@ function WearDiaryModal({ entries = [], friendlyDay, onOpenItem, onOpenOutfit, o
       <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-4xl mx-auto flex items-center justify-between p-4 lg:p-6">
           <button onClick={onClose}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/50 transition-colors">
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
             <span className="hidden sm:inline">Back to Insights</span>
             <span className="sm:hidden">Back</span>
@@ -9839,7 +9839,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
         <div className="p-6 space-y-4">
           {hasNative && (
             <button onClick={tryNativeShare}
-              className="w-full bg-stone-900 text-white py-4 rounded-2xl font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2 shadow-lg">
+              className="w-full bg-stone-900 text-white py-4 rounded-2xl font-medium hover:bg-stone-700 transition-colors flex items-center justify-center gap-2 shadow-lg">
               <Download size={16} strokeWidth={1.5} className="rotate-180" /> Share via…
             </button>
           )}
@@ -9869,7 +9869,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
               />
               <button onClick={tryCopy}
                 className={`px-4 py-3 rounded-xl text-xs tracking-wider uppercase font-medium transition-colors shrink-0 ${
-                  copied ? 'bg-emerald-600 text-white' : 'bg-stone-900 text-white hover:bg-stone-800'
+                  copied ? 'bg-emerald-600 text-white' : 'bg-stone-900 text-white hover:bg-stone-700'
                 }`}>
                 {copied ? 'Copied ✓' : 'Copy'}
               </button>
@@ -9916,7 +9916,7 @@ function LookbookNamerModal({ count, busy, onCancel, onCreate }) {
           <button type="button" onClick={onCancel} disabled={busy}
             className="px-5 py-3 text-sm text-stone-500 hover:text-stone-900 rounded-full">Cancel</button>
           <button type="submit" disabled={busy}
-            className="px-6 py-3 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-800 disabled:opacity-50 flex items-center gap-2">
+            className="px-6 py-3 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 disabled:opacity-50 flex items-center gap-2">
             {busy ? 'Creating…' : 'Create & copy link'}
           </button>
         </div>
@@ -10019,7 +10019,7 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onClose
             Close
           </button>
           <button onClick={() => window.print()} disabled={totalPieces === 0}
-            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 flex items-center gap-2">
+            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 flex items-center gap-2">
             <Download size={14} strokeWidth={1.5} /> Print / Save PDF
           </button>
         </div>
@@ -10120,7 +10120,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
     <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
-          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/50 transition-colors">
+          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
             <span className="hidden sm:inline">Back to Saved Looks</span>
             <span className="sm:hidden">Back</span>
@@ -10218,7 +10218,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                       try { await onLogWear(logVerdict); setLogVerdict(''); }
                       finally { setLogBusy(false); }
                     }}
-                    className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 transition-colors disabled:opacity-40 flex items-center gap-2"
+                    className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-40 flex items-center gap-2"
                   >
                     <Calendar size={14} strokeWidth={1.5} /> {logBusy ? 'Logging…' : 'I wore this today'}
                   </button>
@@ -10280,11 +10280,11 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
           <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">The Pieces</h2>
           <div className="flex bg-stone-200/50 p-1 rounded-full text-[10px] tracking-wider uppercase">
             <button onClick={() => setView('flatlay')}
-              className={`px-3 py-1.5 rounded-full transition-all ${view === 'flatlay' ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-800'}`}>
+              className={`px-3 py-1.5 rounded-full transition-all ${view === 'flatlay' ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'}`}>
               Flat-lay
             </button>
             <button onClick={() => setView('grid')}
-              className={`px-3 py-1.5 rounded-full transition-all ${view === 'grid' ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-800'}`}>
+              className={`px-3 py-1.5 rounded-full transition-all ${view === 'grid' ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'}`}>
               Grid
             </button>
           </div>
@@ -10490,7 +10490,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
         </div>
         {state.status !== 'running' && (
           <button onClick={run}
-            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 transition-colors flex items-center gap-2 shrink-0">
+            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors flex items-center gap-2 shrink-0">
             <Wand2 size={14} strokeWidth={1.5} /> {state.status === 'done' ? 'Re-analyse' : 'Analyse my wardrobe'}
           </button>
         )}
@@ -10980,7 +10980,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
               <RowTag
                 key={category}
                 {...(clickable ? { type: 'button', onClick: () => onJumpToWardrobe({ filter: 'all', category }), 'aria-label': `View ${category} in wardrobe` } : {})}
-                className={`group block w-full text-left rounded-xl p-3 -mx-3 transition-colors ${clickable ? 'hover:bg-stone-50 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900' : ''}`}
+                className={`group block w-full text-left rounded-xl p-3 -mx-3 transition-colors ${clickable ? 'hover:bg-stone-100cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900' : ''}`}
               >
                 <div className="flex justify-between items-baseline text-sm mb-2 gap-3">
                   <span className={`font-medium tracking-wide uppercase text-xs transition-colors ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-800'}`}>{category}</span>
@@ -11289,7 +11289,7 @@ function BackfillCard({ items = [], shops = [], onUpdateItem }) {
         </div>
         {candidates.length > 0 && stage !== 'running' && (
           <button onClick={run} disabled={!isAIEnabled()}
-            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800 disabled:opacity-40 flex items-center gap-2 shrink-0">
+            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 flex items-center gap-2 shrink-0">
             <Sparkles size={14} strokeWidth={1.5} /> {stage === 'done' ? 'Run again' : `Enrich ${candidates.length}`}
           </button>
         )}
@@ -11379,7 +11379,7 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
         {options.map((opt) => (
           <button key={opt} type="button" onClick={() => onPick(value === opt ? '' : opt)}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              value === opt ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-400'
+              value === opt ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
             }`}>
             {opt}
           </button>
@@ -11419,7 +11419,7 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
             return (
               <button key={p} type="button" onClick={() => togglePrinciple(p)}
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  active ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-400'
+                  active ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
                 }`}>
                 {p}
               </button>
@@ -11585,7 +11585,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
             <p className="font-display text-xl text-stone-900 truncate">{user.displayName || 'Signed in'}</p>
             <p className="text-stone-500 text-xs tracking-wide mt-1 truncate">{user.email}</p>
           </div>
-          <button onClick={signOutUser} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-400 hover:text-stone-900 text-xs tracking-wide transition-colors">
+          <button onClick={signOutUser} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors">
             <LogOut size={14} strokeWidth={1.5} /> Sign out
           </button>
         </div>
@@ -11609,7 +11609,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
               <Input label="Name (optional)" type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Anna" />
             </div>
             <div className="sm:col-span-3">
-              <button type="submit" disabled={inviteBusy} className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-800 transition-all disabled:opacity-50">
+              <button type="submit" disabled={inviteBusy} className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 transition-all disabled:opacity-50">
                 {inviteBusy ? 'Adding…' : 'Invite'}
               </button>
             </div>
@@ -11650,7 +11650,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
               {['GBP', 'USD', 'EUR'].map((c) => (
                 <button key={c} onClick={() => setCurrency(c)}
                   className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all border ${
-                    currency === c ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-400'
+                    currency === c ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
                   }`}>
                   {CURRENCY_SYMBOLS[c]} {c}
                 </button>
@@ -11669,7 +11669,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
               ].map((p) => (
                 <button key={p.v} onClick={() => setAITempPreset(p.v)}
                   className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all border text-left ${
-                    aiTempPreset === p.v ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-400'
+                    aiTempPreset === p.v ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
                   }`}>
                   <div>{p.label}</div>
                   <div className={`text-[10px] mt-0.5 ${aiTempPreset === p.v ? 'text-stone-300' : 'text-stone-400'}`}>{p.sub}</div>
@@ -11742,7 +11742,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
           <button onClick={() => downloadJson(
             `atelier-wardrobe-${todayISO()}.json`,
             { exportedAt: new Date().toISOString(), version: 1, user: { email: user?.email, displayName: user?.displayName }, measurements, items, outfits, shops }
-          )} className="bg-stone-900 text-white px-5 py-3 rounded-full font-medium text-sm flex items-center gap-2 hover:bg-stone-800 transition-all shadow-lg shrink-0">
+          )} className="bg-stone-900 text-white px-5 py-3 rounded-full font-medium text-sm flex items-center gap-2 hover:bg-stone-700 transition-all shadow-lg shrink-0">
             <Download size={16} strokeWidth={1.5} /> Download backup
           </button>
         </div>
@@ -11766,7 +11766,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
                   <p className="text-xs text-stone-900 truncate">{item.name}</p>
                   <p className="text-[10px] uppercase tracking-wider text-stone-400">Deleted {days}d ago</p>
                   <div className="flex gap-1">
-                    <button onClick={() => onRestoreItem?.(item.id)} className="flex-1 px-2 py-1.5 text-[10px] tracking-widest uppercase rounded-full bg-stone-900 text-white hover:bg-stone-800 transition-colors">
+                    <button onClick={() => onRestoreItem?.(item.id)} className="flex-1 px-2 py-1.5 text-[10px] tracking-widest uppercase rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors">
                       Restore
                     </button>
                     <button onClick={() => onHardDeleteItem?.(item.id)} className="px-2 py-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Delete forever">
@@ -11802,7 +11802,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
         </div>
 
         <div className="mt-12 pt-8 border-t border-stone-100 flex justify-end">
-          <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-medium flex items-center gap-3 hover:bg-stone-800 transition-all shadow-lg hover:shadow-xl">
+          <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-medium flex items-center gap-3 hover:bg-stone-700 transition-all shadow-lg hover:shadow-xl">
             <Save size={18} strokeWidth={1.5} /> Update Profile
           </button>
         </div>
@@ -11885,7 +11885,7 @@ function ShopRow({ shop, saveShop, deleteShop }) {
             <button onClick={addRow} className="flex-1 px-4 py-3 rounded-xl text-sm bg-white border border-dashed border-stone-300 text-stone-500 hover:border-stone-900 hover:text-stone-900 transition-all flex items-center justify-center gap-2">
               <Plus size={14} strokeWidth={1.5} /> Add size row
             </button>
-            <button onClick={saveChart} className="px-6 py-3 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-800 transition-all font-medium">
+            <button onClick={saveChart} className="px-6 py-3 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-all font-medium">
               Save chart
             </button>
           </div>
@@ -11945,7 +11945,7 @@ function ShoppingDirectory({ shops, saveShop, deleteShop }) {
               <Input label="Boutique Name" value={newShop.name} onChange={e => setNewShop({...newShop, name: e.target.value})} type="text" required />
               <Input label="Website Link" value={newShop.url} onChange={e => setNewShop({...newShop, url: e.target.value})} type="url" placeholder="https://" required />
               <Input label="Aesthetic / Category" value={newShop.category} onChange={e => setNewShop({...newShop, category: e.target.value})} type="text" placeholder="e.g. Minimalist Basics" />
-              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-800 transition-all mt-4">Save to Directory</button>
+              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-700 transition-all mt-4">Save to Directory</button>
             </form>
           </div>
         </div>
@@ -12446,7 +12446,7 @@ function OnboardingTour({ onJumpTo }) {
               {s.cta} ↗
             </button>
             <button onClick={() => last ? finish() : setStep((s) => s + 1)}
-              className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-800">
+              className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700">
               {last ? 'Done' : 'Next'}
             </button>
           </div>

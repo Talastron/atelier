@@ -12393,9 +12393,21 @@ function ShopRow({ shop, saveShop, deleteShop }) {
 function ShoppingDirectory({ shops, saveShop, deleteShop }) {
   const [newShop, setNewShop] = useState({ name: '', url: '', category: '' });
   const [restoring, setRestoring] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const existingShopNames = new Set(shops.map((s) => (s.name || '').toLowerCase()));
   const missingPresets = SHOP_SEEDS.filter((s) => !existingShopNames.has(s.name.toLowerCase()));
+
+  // Simple search filter — name OR category. Stays empty by default
+  // (most users have a small directory; search only earns its place
+  // once you've added enough brands for scanning to be slow).
+  const filteredShops = searchQuery.trim()
+    ? shops.filter((s) => {
+        const q = searchQuery.trim().toLowerCase();
+        return (s.name || '').toLowerCase().includes(q)
+            || (s.category || '').toLowerCase().includes(q);
+      })
+    : shops;
 
   const addShop = async (e) => {
     e.preventDefault();
@@ -12418,38 +12430,72 @@ function ShoppingDirectory({ shops, saveShop, deleteShop }) {
   };
 
   return (
-    <div className="space-y-12 max-w-5xl">
+    <div className="space-y-10 md:space-y-12 max-w-5xl">
       <EditorialHeader
         eyebrow="Curated houses"
         title="Directory"
         subtitle="Your trusted designers and boutiques."
         right={missingPresets.length > 0 ? (
           <button onClick={restorePresets} disabled={restoring}
-            className="bg-white border border-stone-300 text-stone-800 px-5 py-3 rounded-full text-xs tracking-widest uppercase font-medium hover:border-stone-500 transition-all disabled:opacity-50"
+            className="bg-white border border-stone-300 text-stone-700 px-5 py-3 rounded-full text-xs tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50"
           >
             {restoring ? 'Adding…' : `Add ${missingPresets.length} preset ${missingPresets.length === 1 ? 'brand' : 'brands'}`}
           </button>
         ) : null}
       />
 
+      {/* Sticky search strip — same bg/bleed pattern as the Wardrobe /
+          Inspiration / Insights / Profile sticky bars. Only renders the
+          search input when there are 3+ shops (below that, scanning the
+          short list is faster than typing). Anchor consistency across all
+          content views: a sticky strip below the editorial header. */}
+      {shops.length >= 3 && (
+        <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+             style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+          <div className="relative max-w-md">
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search boutiques by name or aesthetic…"
+              className="w-full h-10 pl-9 pr-9 bg-white border border-stone-300 rounded-full text-sm placeholder:text-stone-400 focus:border-stone-900 outline-none transition-colors"
+            />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-base pointer-events-none leading-none">⌕</span>
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors"
+                aria-label="Clear search">
+                <X size={14} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-5">
-          <div className="bg-white border border-stone-200/60 rounded-[2rem] p-8 smooth-shadow sticky top-8">
-            <h3 className="font-display text-2xl mb-6 text-stone-900">Add Boutique</h3>
+          {/* Canonical card padding (p-6 md:p-8) + heading sizing matches
+              every other section card across the app. sticky top-20 leaves
+              room for the sticky search strip above (when it renders) —
+              same offset Studio's Current Look uses below its sticky tabs. */}
+          <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow lg:sticky lg:top-20">
+            <h3 className="font-display text-xl md:text-2xl mb-6 text-stone-900">Add Boutique</h3>
             <form onSubmit={addShop} className="space-y-5">
               <Input label="Boutique Name" value={newShop.name} onChange={e => setNewShop({...newShop, name: e.target.value})} type="text" required />
               <Input label="Website Link" value={newShop.url} onChange={e => setNewShop({...newShop, url: e.target.value})} type="url" placeholder="https://" required />
               <Input label="Aesthetic / Category" value={newShop.category} onChange={e => setNewShop({...newShop, category: e.target.value})} type="text" placeholder="e.g. Minimalist Basics" />
-              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-700 transition-all mt-4">Save to Directory</button>
+              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-700 transition-colors duration-200 mt-4">Save to Directory</button>
             </form>
           </div>
         </div>
 
         <div className="lg:col-span-7 grid gap-4 align-top content-start">
-          {shops.map(shop => (
+          {filteredShops.map(shop => (
             <ShopRow key={shop.id} shop={shop} saveShop={saveShop} deleteShop={deleteShop} />
           ))}
           {shops.length === 0 && <p className="text-stone-400 italic text-center py-10 border border-dashed border-stone-300 rounded-2xl">No boutiques added yet.</p>}
+          {shops.length > 0 && filteredShops.length === 0 && (
+            <p className="text-stone-400 italic text-center py-10 border border-dashed border-stone-300 rounded-2xl">
+              No boutiques match "{searchQuery}".
+            </p>
+          )}
         </div>
       </div>
     </div>

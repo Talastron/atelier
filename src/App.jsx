@@ -11598,8 +11598,12 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
         )}
       </div>
 
+      {/* Credits list — reconstruct a flat sorted list for the magazine
+          credits below. Body-row order (upper → mid → lower) reads as
+          'top of the body down to feet' which matches the spatial
+          flat-lay above. */}
       <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-        {sorted.map((p, i) => {
+        {[...upperRow, ...midRow, ...lowerRow].map((p, i) => {
           const openable = !!(onOpenItem && p.id);
           return (
             <li key={p.id || i} className="border-b border-stone-200/60 last:border-0">

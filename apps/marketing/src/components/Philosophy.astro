@@ -1,0 +1,50 @@
+---
+// apps/marketing/src/components/Philosophy.astro
+import { BrassRule } from '@atelier/ui';
+import { EDIT_URL } from '../config.ts';
+import { Sparkles } from 'lucide-react';
+---
+
+<section
+  class="text-white rounded-[3rem] mx-4 sm:mx-8 mb-24 relative overflow-hidden shadow-2xl"
+  style={`background-color: var(--atelier-ink); padding-block: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);`}
+>
+  <div class="absolute -right-20 -bottom-20 opacity-[0.03] pointer-events-none">
+    <Sparkles size={400} strokeWidth={0.5} />
+  </div>
+
+  <div class="max-w-4xl mx-auto text-center relative z-10">
+    <div class="flex items-center justify-center gap-3 mb-8">
+      <BrassRule client:load />
+      <span
+        class="text-[10px] uppercase text-brass-300 font-medium"
+        style="letter-spacing: var(--atelier-tracking-eyebrow);"
+      >
+        The Philosophy
+      </span>
+      <BrassRule client:load />
+    </div>
+
+    <h2
+      class="text-4xl md:text-5xl lg:text-6xl mb-8"
+      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+    >
+      Buy less. Wear better. Curate a collection that lasts a lifetime.
+    </h2>
+
+    <p
+      class="text-stone-400 text-lg md:text-xl max-w-2xl mx-auto mb-12"
+      style="line-height: var(--atelier-leading-body);"
+    >
+      We believe that true style comes from understanding what you own. Stop losing
+      beautiful pieces in the back of the closet and start styling with intention.
+    </p>
+
+    <a
+      href={EDIT_URL}
+      class="bg-brass-300 text-stone-900 px-8 py-4 rounded-full text-base font-medium hover:bg-brass-200 transition-all shadow-lg active:scale-95 inline-flex items-center gap-2"
+    >
+      Begin your curation
+    </a>
+  </div>
+</section>

@@ -1,0 +1,28 @@
+---
+// apps/marketing/src/components/Footer.astro
+import { AtelierMark } from '@atelier/ui';
+import { EDIT_URL, SITE } from '../config.ts';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="bg-cream border-t border-stone-200/60 py-12">
+  <div
+    class="mx-auto flex flex-col md:flex-row items-center justify-between gap-6"
+    style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding);"
+  >
+    <a href="/" class="flex items-center gap-3">
+      <AtelierMark size={28} client:load />
+      <span class="font-display text-xl text-stone-900 tracking-tight">Atelier.</span>
+    </a>
+    <div class="flex gap-6 text-sm text-stone-500 font-medium">
+      <a href={EDIT_URL} class="hover:text-stone-900 transition-colors">Sign In</a>
+      <a href={`mailto:${SITE.supportEmail}`} class="hover:text-stone-900 transition-colors">Support</a>
+      <a href="/legal/privacy" class="hover:text-stone-900 transition-colors">Privacy</a>
+      <a href="/legal/terms" class="hover:text-stone-900 transition-colors">Terms</a>
+    </div>
+    <p class="text-xs text-stone-400 tracking-wider uppercase">
+      &copy; {year} Atelier. All rights reserved.
+    </p>
+  </div>
+</footer>

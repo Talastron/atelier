@@ -1,0 +1,20 @@
+---
+// apps/marketing/src/pages/index.astro
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import Philosophy from '../components/Philosophy.astro';
+import { Hero } from '../components/Hero.jsx';
+import { Features } from '../components/Features.jsx';
+import { EDIT_URL } from '../config.ts';
+---
+
+<Base title="Atelier — The quiet luxury of a beautifully organised wardrobe">
+  <Nav />
+  <main>
+    <Hero editUrl={EDIT_URL} client:load />
+    <Features client:visible />
+    <Philosophy />
+  </main>
+  <Footer />
+</Base>

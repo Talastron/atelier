@@ -7879,16 +7879,26 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         handleSelect(slot, null);
       }
     };
+    // Mute slots that are covered by mutual exclusion. If user picked a
+    // Dress, the Tops and Bottoms slots are visually muted to match the
+    // Archive collapse — single source of truth across both sides.
+    // Covered slots that are ALSO filled (rare layering case) keep full
+    // appearance so the user can still see their override choice.
+    const covered = pieces.length === 0 && isSlotCovered(slot);
     return (
       <div
         ref={setNodeRef}
         className={`border-2 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center relative overflow-hidden transition-all duration-200 aspect-square lg:aspect-[3/4] group ${
           isOver
             ? 'border-stone-900 ring-4 ring-stone-900/20 scale-[1.02]'
-            : pieces.length > 0 ? 'bg-white smooth-shadow border-stone-200' : 'bg-stone-100 border-dashed border-stone-300'
+            : pieces.length > 0
+              ? 'bg-white smooth-shadow border-stone-200'
+              : covered
+                ? 'bg-stone-50/60 border-stone-200/60 border-dashed opacity-50'
+                : 'bg-stone-100 border-dashed border-stone-300'
         }`}>
         {pieces.length === 0 ? (
-          <span className="text-[9px] lg:text-xs font-medium tracking-widest uppercase text-stone-400 text-center px-1 leading-tight">{slot}</span>
+          <span className={`text-[9px] lg:text-xs font-medium tracking-widest uppercase text-center px-1 leading-tight ${covered ? 'text-stone-300 line-through' : 'text-stone-400'}`}>{slot}</span>
         ) : pieces.length === 1 ? (
           <>
             <img src={itemImages(pieces[0])[0]} alt={pieces[0].name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
@@ -8231,25 +8241,64 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               of the grid row means the card un-pins when Archives ends and
               scrolls away normally — no JS bookkeeping needed. */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:items-start">
-            <div className="lg:col-span-5 lg:sticky lg:top-20 bg-white rounded-[2rem] p-4 sm:p-6 md:p-8 border border-stone-200/60 smooth-shadow flex flex-col">
-              <div className="flex items-baseline justify-between mb-3 sm:mb-6">
-                <h3 className="font-display text-lg md:text-2xl text-stone-900">Current Look</h3>
-                <span className="hidden lg:inline text-[10px] uppercase tracking-widest text-stone-400">Drag or tap</span>
-              </div>
-              <div className="grid grid-cols-3 lg:grid-cols-2 gap-2 lg:gap-3 mb-5 lg:mb-8">
-                {OUTFIT_SLOTS.map((slot) => <OutfitSlot key={slot} slot={slot} />)}
-              </div>
-              <div className="mt-auto">
-                <input type="text" placeholder="Name this look…" value={outfitName} onChange={(e) => setOutfitName(e.target.value)}
-                  className="w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 mb-4 focus:border-stone-900 outline-none transition-colors"
-                />
-                <button onClick={handleSave} disabled={!outfitName.trim() || OUTFIT_SLOTS.every((s) => slotItems(currentOutfit[s.toLowerCase()]).length === 0)}
-                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-stone-700 transition-all disabled:opacity-50 shadow-lg active:scale-[0.98]"
-                >
-                  <Save size={18} strokeWidth={1.5} /> Save Look
-                </button>
-              </div>
-            </div>
+            {(() => {
+              // Progress: count pieces, foundation (dress OR top+bottom), shoes.
+              // 'Complete' = look is wearable head-to-toe. Reaching it earns
+              // a subtle brass-accent celebration on the Save button.
+              const pieceCount = OUTFIT_SLOTS.reduce((sum, s) => sum + slotItems(currentOutfit[s.toLowerCase()]).length, 0);
+              const hasFoundation = !!currentOutfit.dresses || (!!currentOutfit.tops && !!currentOutfit.bottoms);
+              const hasShoes = !!currentOutfit.shoes;
+              const isComplete = hasFoundation && hasShoes;
+              const canSave = outfitName.trim() && pieceCount > 0;
+              return (
+                <div className="lg:col-span-5 lg:sticky lg:top-20 bg-white rounded-[2rem] p-4 sm:p-6 md:p-8 border border-stone-200/60 smooth-shadow flex flex-col">
+                  <div className="flex items-baseline justify-between mb-3 sm:mb-6 gap-3">
+                    <h3 className="font-display text-lg md:text-2xl text-stone-900">Current Look</h3>
+                    {/* Dynamic header signal: starts as the original "Drag or
+                        tap" hint while the look is empty; switches to a piece
+                        counter + readiness pill once the user has begun
+                        picking. Lets the user know at a glance how complete
+                        their composition is without scanning all 10 slots. */}
+                    {pieceCount === 0 ? (
+                      <span className="hidden lg:inline text-[10px] uppercase tracking-widest text-stone-400">Drag or tap</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest">
+                        <span className="text-stone-500">{pieceCount} {pieceCount === 1 ? 'piece' : 'pieces'}</span>
+                        {isComplete && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-medium">
+                            <Check size={9} strokeWidth={2.5} /> Ready
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 lg:grid-cols-2 gap-2 lg:gap-3 mb-5 lg:mb-8">
+                    {OUTFIT_SLOTS.map((slot) => <OutfitSlot key={slot} slot={slot} />)}
+                  </div>
+                  <div className="mt-auto">
+                    <input type="text" placeholder="Name this look…" value={outfitName} onChange={(e) => setOutfitName(e.target.value)}
+                      className="w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 mb-4 focus:border-stone-900 outline-none transition-colors"
+                    />
+                    {/* Save button: when isComplete, gets a brass-300 outer
+                        ring as a quiet celebration — the look is head-to-toe
+                        and ready to save. Subtle so it doesn't shout. */}
+                    <button onClick={handleSave} disabled={!canSave}
+                      className={`w-full bg-stone-900 text-white py-4 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-stone-700 transition-all disabled:opacity-50 shadow-lg active:scale-[0.98] ${isComplete && canSave ? 'ring-2 ring-brass-300 ring-offset-2' : ''}`}
+                    >
+                      <Save size={18} strokeWidth={1.5} /> Save Look
+                    </button>
+                    {/* Helpful hint when items are picked but name is missing
+                        — the most common reason the Save button stays disabled.
+                        Better than a silent grey button. */}
+                    {pieceCount > 0 && !outfitName.trim() && (
+                      <p className="text-[10px] tracking-widest uppercase text-stone-400 text-center mt-2">
+                        Name your look to save it
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="lg:col-span-7">
               <div className="flex items-baseline justify-between mb-4 sm:mb-6 px-2">

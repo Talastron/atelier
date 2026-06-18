@@ -7934,16 +7934,23 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
           </span>
         )}
 
-        <div className={`relative ${aspect} rounded-[1.5rem] overflow-hidden transition-all duration-300 ${
+        {/* Hover signal = border colour shift to brass + (below) a subtle
+            title colour change. That's it. No scale, no shadow lift, no
+            inner-card transform, no image zoom. Luxury fashion lookbooks
+            (Mr Porter, The Row, COS, SSENSE) hold still — the product
+            photography is the show; hover is just the cursor-equivalent
+            confirmation that the card is interactive. Restraint signals
+            premium; layered motion signals 'engagement features.' */}
+        <div className={`relative ${aspect} rounded-[1.5rem] overflow-hidden transition-colors duration-300 ${
           isSelected
-            ? 'ring-4 ring-stone-900 scale-[0.98]'
-            : 'border border-stone-200/60 lg:group-hover:border-brass-300/70 lg:group-hover:shadow-lg'
+            ? 'ring-4 ring-stone-900'
+            : 'border border-stone-200/60 lg:group-hover:border-brass-300/70'
         } ${wornPhoto ? 'bg-stone-900' : 'bg-stone-100/70'}`}>
 
           {wornPhoto && (
             <>
               <img src={wornPhoto} alt={outfit.name} loading="lazy" decoding="async"
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 lg:group-hover:scale-105" />
+                className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none"></div>
               <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
             </>
@@ -7958,7 +7965,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 const lastSlot = isHero ? 5 : 3;
                 const showExtra = slotIdx === lastSlot && extraCount > 0;
                 return (
-                  <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5 transition-transform duration-700 lg:group-hover:scale-[1.02]">
+                  <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
                     {img ? (
                       <img src={img} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     ) : (

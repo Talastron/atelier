@@ -9033,12 +9033,24 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                 onOpenOutfit?.(outfit.id);
               }
             };
-            // Deterministic hash → position/rotation per piece (same outfit
-            // always renders identically; each piece looks placed, not random).
-            const hash = (s) => { let h = 5381; for (let c = 0; c < s.length; c++) h = ((h * 33) ^ s.charCodeAt(c)) >>> 0; return h; };
-            const seeded = (id, salt) => ((hash(`${id}-${salt}`) % 1000) / 1000);
-            // Show up to 6 pieces in the flat-lay (more would feel crowded).
-            const flatLayItems = resolvedItems.slice(0, 6);
+            // GOLD-STANDARD COVER LOGIC (Mr Porter / Net-a-Porter / COS):
+            //   Tier 1 — if the user has logged a worn photo, USE IT. You
+            //   wearing the look is the most luxurious possible cover.
+            //   Tier 2 — clean inset 2x2 grid of pieces on cream surface.
+            //   No rotation, no jitter, no overlap. Items visible, layout
+            //   intentional, reads as editorial not scrapbook.
+            const wornPhoto = Array.isArray(outfit.wornPhotos) && outfit.wornPhotos.length > 0
+              ? outfit.wornPhotos[outfit.wornPhotos.length - 1]?.image
+              : null;
+            // Sort by anchor-piece priority so dress/outerwear/top lead.
+            const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+            const orderedPieces = [...resolvedItems].sort((a, b) => {
+              const ai = SLOT_PRIORITY.indexOf(a.category);
+              const bi = SLOT_PRIORITY.indexOf(b.category);
+              return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+            });
+            const gridPieces = orderedPieces.slice(0, 4);
+            const extraCount = Math.max(0, resolvedItems.length - gridPieces.length);
             return (
               <button key={outfit.id} onClick={handleCardClick}
                 onContextMenu={(e) => { e.preventDefault(); if (!selectMode) { setSelectMode(true); setSelectedOutfits(new Set([outfit.id])); } }}
@@ -9051,20 +9063,73 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   </span>
                 )}
 
-                {/* Cover surface — tall portrait, cream gradient bg, hairline
-                    border (or stone-900 ring when selected). Brass framing on
-                    hover ties into the brass-rule + brass nav accent thread. */}
+                {/* Cover surface — 4:5 portrait. Worn-photo variant gets a
+                    dark stone-900 frame (lets the photo carry the colour);
+                    grid variant gets cream stone-100/70 (warm, fills the
+                    space when there's no hero image). */}
                 <div className={`relative aspect-[4/5] rounded-[1.5rem] overflow-hidden transition-all duration-300 ${
                   isSelected
                     ? 'ring-4 ring-stone-900 scale-[0.98]'
                     : 'border border-stone-200/60 lg:group-hover:border-brass-300/70 lg:group-hover:shadow-lg'
-                } bg-gradient-to-br from-stone-50 via-white to-stone-100/60`}>
+                } ${wornPhoto ? 'bg-stone-900' : 'bg-stone-100/70'}`}>
 
-                  {/* Brass-rule + piece count, top-left — editorial caption
-                      pattern matching every other section header in the app. */}
+                  {/* Tier 1 cover: worn photo, full-bleed. */}
+                  {wornPhoto && (
+                    <>
+                      <img src={wornPhoto} alt={outfit.name}
+                        loading="lazy" decoding="async"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 lg:group-hover:scale-105" />
+                      {/* Subtle top + bottom gradients for caption legibility. */}
+                      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
+                    </>
+                  )}
+
+                  {/* Tier 2 cover: clean 2x2 grid, inset with breathing room.
+                      Always 4 cells; empty cells show the cream surface (so
+                      a 1-piece outfit reads as deliberate composition, not a
+                      broken grid). +N overlay on the last cell when there
+                      are more pieces than fit. */}
+                  {!wornPhoto && gridPieces.length > 0 && (
+                    <div className="absolute inset-0 p-7 sm:p-9 grid grid-cols-2 grid-rows-2 gap-4 sm:gap-5">
+                      {[0, 1, 2, 3].map((slotIdx) => {
+                        const piece = gridPieces[slotIdx];
+                        if (!piece) return <div key={slotIdx} aria-hidden="true" />;
+                        const img = itemImages(piece)[0];
+                        const showExtra = slotIdx === 3 && extraCount > 0;
+                        return (
+                          <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5 transition-transform duration-700 lg:group-hover:scale-[1.02]">
+                            {img ? (
+                              <img src={img} alt={piece.name} loading="lazy" decoding="async"
+                                className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-stone-300">
+                                <Shirt size={24} strokeWidth={1} />
+                              </div>
+                            )}
+                            {showExtra && (
+                              <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[1px] flex items-center justify-center">
+                                <span className="font-display text-3xl text-white">+{extraCount}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Empty state — no resolved pieces (items deleted). */}
+                  {!wornPhoto && gridPieces.length === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center text-stone-300">
+                      <Shirt size={56} strokeWidth={0.8} />
+                    </div>
+                  )}
+
+                  {/* Brass-rule + piece count top-left. Adapts colour based
+                      on cover variant (light on photo, dark on grid). */}
                   <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5">
-                    <span className="inline-block w-4 h-px bg-brass-300" aria-hidden="true"></span>
-                    <span className="text-[9px] tracking-[0.28em] uppercase text-stone-500 font-medium">
+                    <span className={`inline-block w-4 h-px ${wornPhoto ? 'bg-brass-200' : 'bg-brass-300'}`} aria-hidden="true"></span>
+                    <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${wornPhoto ? 'text-white/90' : 'text-stone-500'}`}>
                       {resolvedItems.length} {resolvedItems.length === 1 ? 'piece' : 'pieces'}
                     </span>
                   </div>
@@ -9074,67 +9139,27 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                     </span>
                   )}
 
-                  {/* Empty state — no pieces resolved (items deleted). */}
-                  {flatLayItems.length === 0 && (
-                    <div className="absolute inset-0 flex items-center justify-center text-stone-300">
-                      <Shirt size={56} strokeWidth={0.8} />
+                  {/* Photo-cover title overlay (magazine-cover treatment). */}
+                  {wornPhoto && (
+                    <div className="absolute bottom-5 left-5 right-5 z-20">
+                      <h3 className="font-display text-xl md:text-2xl text-white leading-tight drop-shadow-sm truncate">
+                        {outfit.name}
+                      </h3>
                     </div>
                   )}
-
-                  {/* Stylized flat-lay. Each piece absolutely-positioned with
-                      a deterministic offset + rotation. First piece largest
-                      and centred-ish; rest staggered around it. z-order
-                      = reverse index so first piece sits on top. */}
-                  {flatLayItems.map((piece, i) => {
-                    const baseSize = i === 0 ? 56 : 38; // % of container width
-                    const rotation = (seeded(piece.id || `i${i}`, 'r') - 0.5) * 18; // -9° to +9°
-                    // Stagger positions in a loose grid so they don't all stack.
-                    const positions = [
-                      { x: 50, y: 50 },  // hero centre-ish
-                      { x: 26, y: 30 },
-                      { x: 76, y: 30 },
-                      { x: 24, y: 74 },
-                      { x: 76, y: 76 },
-                      { x: 50, y: 88 },
-                    ];
-                    const pos = positions[i] || { x: 50, y: 50 };
-                    const jitterX = (seeded(piece.id || `j${i}`, 'x') - 0.5) * 6;
-                    const jitterY = (seeded(piece.id || `j${i}`, 'y') - 0.5) * 6;
-                    return (
-                      <div key={piece.id || i}
-                        className="absolute transition-transform duration-700 ease-out lg:group-hover:scale-[1.02]"
-                        style={{
-                          left: `${pos.x + jitterX}%`,
-                          top: `${pos.y + jitterY}%`,
-                          width: `${baseSize}%`,
-                          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-                          zIndex: 30 - i,
-                        }}
-                      >
-                        <div className="aspect-[3/4] bg-white rounded-lg overflow-hidden shadow-md ring-1 ring-black/5">
-                          {itemImages(piece)[0] ? (
-                            <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async"
-                              className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-stone-300 bg-stone-50">
-                              <Shirt size={20} strokeWidth={1} />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
 
-                {/* Editorial caption block — serif title + small meta.
-                    More space than the previous tight cards; this is the
-                    'magazine credit' line. */}
+                {/* Caption below the cover. Title hidden on photo covers
+                    (overlaid above) to avoid duplication; meta line always
+                    shows. */}
                 <div className="mt-5 px-1">
-                  <h3 className="font-display text-2xl md:text-3xl text-stone-900 leading-tight truncate lg:group-hover:text-stone-700 transition-colors">
-                    {outfit.name}
-                  </h3>
+                  {!wornPhoto && (
+                    <h3 className="font-display text-2xl md:text-3xl text-stone-900 leading-tight truncate lg:group-hover:text-stone-700 transition-colors">
+                      {outfit.name}
+                    </h3>
+                  )}
                   {(outfit.intent || resolvedItems.length > 0) && (
-                    <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mt-2 truncate">
+                    <p className={`text-[10px] tracking-[0.28em] uppercase text-stone-500 truncate ${wornPhoto ? '' : 'mt-2'}`}>
                       {[outfit.intent, resolvedItems.length ? `${resolvedItems.length} pieces` : null].filter(Boolean).join(' · ')}
                     </p>
                   )}

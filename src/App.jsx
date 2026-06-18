@@ -838,6 +838,203 @@ async function fetchTodaysWeather() {
 // Suggest a short, editorial name for the look currently being composed.
 // Reads the picked items + style intent, asks Gemini for a 2-4 word phrase.
 // Used by the Studio Save panel — saves the user from naming fatigue.
+// ─── Editorial export ────────────────────────────────────────────────────
+// Compose a saved outfit (or a free-form set of pieces) into a 1080×1920
+// PNG suitable for Instagram Story / Pinterest / etc. Pure Canvas API —
+// no html2canvas / html-to-image dependency. The composition mirrors the
+// app's editorial language: F7F5F2 page bg, brass-rule + small-caps eyebrow,
+// Playfair Display title, refined item grid, brand wordmark footer.
+function drawRoundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function loadImageForCanvas(src) {
+  if (!src) return Promise.resolve(null);
+  return new Promise((res) => {
+    const img = new Image();
+    // Data URLs are same-origin so no CORS attr needed (and setting it
+    // can actually break them in some browsers). Only set crossOrigin
+    // for http/https sources where we need the canvas to stay un-tainted.
+    if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
+    img.onload = () => res(img);
+    img.onerror = () => res(null);
+    img.src = src;
+  });
+}
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
+  const words = (text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      if (lines.length === maxLines) {
+        // Truncate with ellipsis
+        let truncated = word;
+        while (ctx.measureText(truncated + '…').width > maxWidth && truncated.length > 0) {
+          truncated = truncated.slice(0, -1);
+        }
+        lines[lines.length - 1] = lines[lines.length - 1] + ' ' + truncated.trim() + '…';
+        line = '';
+        break;
+      }
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * lineHeight));
+  return lines.length;
+}
+
+async function composeOutfitExportImage(outfit, items) {
+  const pieces = (outfit?.itemIds || [])
+    .map((id) => items.find((i) => i.id === id))
+    .filter(Boolean);
+  if (pieces.length === 0) throw new Error('No pieces in this look to export.');
+
+  // Wait for custom fonts to be ready so canvas renders Playfair / Jost,
+  // not a fallback. document.fonts.ready resolves once @font-face loads
+  // triggered by the page have completed.
+  if (document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* non-blocking */ }
+  }
+
+  const W = 1080, H = 1920;
+  const PAD = 88;
+  const BRASS = '#C9A66B';
+  const PAGE = '#F7F5F2';
+  const INK = '#1c1917';
+  const MUTED = '#78716c';
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  // Background
+  ctx.fillStyle = PAGE;
+  ctx.fillRect(0, 0, W, H);
+
+  // === HEADER ===
+  // brass-rule
+  ctx.fillStyle = BRASS;
+  ctx.fillRect(PAD, 142, 56, 3);
+  // eyebrow
+  ctx.font = '500 22px Jost, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.textBaseline = 'middle';
+  ctx.fillText('A LOOK · COMPOSED IN ATELIER', PAD + 76, 144);
+  // title
+  ctx.font = '500 76px "Playfair Display", Georgia, serif';
+  ctx.fillStyle = INK;
+  ctx.textBaseline = 'alphabetic';
+  wrapCanvasText(ctx, outfit?.name || 'A composed look', PAD, 248, W - PAD * 2, 88, 2);
+
+  // === ITEMS GRID ===
+  const imgs = await Promise.all(pieces.map((p) => loadImageForCanvas(itemImages(p)[0])));
+  // Smart grid: 1=full, 2=stack, 3-4=2col, 5-6=2col, 7-9=3col
+  const cols = pieces.length === 1 ? 1
+             : pieces.length === 2 ? 2
+             : pieces.length <= 6 ? 2
+             : 3;
+  const rows = Math.ceil(pieces.length / cols);
+  const GRID_TOP = 460;
+  const GRID_BOTTOM = H - 280;
+  const GUTTER = 36;
+  const cellW = (W - PAD * 2 - GUTTER * (cols - 1)) / cols;
+  const maxCellH = (GRID_BOTTOM - GRID_TOP - GUTTER * (rows - 1)) / rows;
+  // Prefer 3:4 portrait but cap at the available row height
+  const cellH = Math.min(cellW * (4 / 3), maxCellH);
+  const totalH = cellH * rows + GUTTER * (rows - 1);
+  const gridY0 = GRID_TOP + (GRID_BOTTOM - GRID_TOP - totalH) / 2;
+
+  pieces.forEach((p, i) => {
+    const c = i % cols, r = Math.floor(i / cols);
+    const x = PAD + c * (cellW + GUTTER);
+    const y = gridY0 + r * (cellH + GUTTER);
+    // Card surface
+    ctx.fillStyle = '#fff';
+    drawRoundedRect(ctx, x, y, cellW, cellH, 24);
+    ctx.fill();
+    const img = imgs[i];
+    if (img) {
+      ctx.save();
+      drawRoundedRect(ctx, x, y, cellW, cellH, 24);
+      ctx.clip();
+      // Cover-fit
+      const ar = img.width / img.height;
+      const ca = cellW / cellH;
+      let sw, sh, sx, sy;
+      if (ar > ca) { sh = img.height; sw = sh * ca; sx = (img.width - sw) / 2; sy = 0; }
+      else         { sw = img.width;  sh = sw / ca; sx = 0; sy = (img.height - sh) / 2; }
+      ctx.drawImage(img, sx, sy, sw, sh, x, y, cellW, cellH);
+      ctx.restore();
+    }
+    // Hairline frame
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ctx, x, y, cellW, cellH, 24);
+    ctx.stroke();
+  });
+
+  // === FOOTER ===
+  const footerY = H - 160;
+  ctx.fillStyle = BRASS;
+  ctx.fillRect(PAD, footerY, 56, 3);
+  ctx.font = '500 22px Jost, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${pieces.length} PIECE${pieces.length === 1 ? '' : 'S'}`, PAD + 76, footerY + 2);
+  ctx.font = '500 44px "Playfair Display", Georgia, serif';
+  ctx.fillStyle = INK;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('myatelier.style', PAD, footerY + 78);
+
+  // Blob (PNG, ~95% quality)
+  const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('Could not generate the image. Try again.');
+  return blob;
+}
+
+// Share an image File via the Web Share API when supported, otherwise
+// fall back to a download. Returns 'shared' | 'downloaded' | 'cancelled'.
+async function shareOrDownloadImage(blob, filename, shareText = {}) {
+  const file = new File([blob], filename, { type: blob.type || 'image/png' });
+  // Some browsers (Safari iOS, Chrome Android) support files in share.
+  // navigator.canShare() can throw on null — guard it.
+  let canShareFiles = false;
+  try { canShareFiles = !!navigator.canShare?.({ files: [file] }); } catch { /* */ }
+  if (canShareFiles && navigator.share) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: shareText.title || 'A look from Atelier',
+        text: shareText.text || '',
+      });
+      return 'shared';
+    } catch (err) {
+      if (err?.name === 'AbortError') return 'cancelled';
+      // Otherwise fall through to download
+    }
+  }
+  // Fallback: trigger download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return 'downloaded';
+}
+
 async function generateOutfitNameWithGemini(picked, intent) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
   if (!picked || picked.length === 0) throw new Error('Pick at least one piece first.');
@@ -2137,6 +2334,38 @@ function DigitalWardrobe() {
     return url;
   };
 
+  // Editorial-image export — composes the look into a 1080×1920 PNG (IG
+  // Story / Pinterest aspect) and either shares via system share sheet
+  // (with the IMAGE attached, not a link) or downloads. This is the
+  // "implicit marketing" flow the user requested: a beautiful artifact
+  // they actually want to post, with Atelier branding integrated rather
+  // than imposed.
+  const handleExportOutfit = async (outfit) => {
+    if (!outfit) return;
+    try {
+      const blob = await composeOutfitExportImage(outfit, items);
+      const slug = (outfit.name || 'look')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 40) || 'look';
+      const filename = `${slug}-atelier.png`;
+      const result = await shareOrDownloadImage(blob, filename, {
+        title: outfit.name || 'A look',
+        text: `${outfit.name || 'A look'} — composed in Atelier.`,
+      });
+      if (result === 'shared') {
+        toast.show('Shared', { kind: 'success' });
+      } else if (result === 'downloaded') {
+        toast.show('Look saved to your downloads', { kind: 'success' });
+      }
+      // 'cancelled' → silent (user backed out of the share sheet)
+    } catch (err) {
+      console.error('Export failed', err);
+      toast.show(err?.message || 'Could not export the look. Try again.', { kind: 'error' });
+    }
+  };
+
   // Single wishlist/owned item shared as a self-contained public page.
   // Mirrors handleShareOutfit: snapshots image + key metadata into
   // /public/{shareId} so the page is viewable by anyone with the link,
@@ -2901,6 +3130,7 @@ function DigitalWardrobe() {
               onDelete={async () => { await handleDeleteOutfit(openOutfit.id); setOpenOutfitId(null); }}
               onSaveOutfit={handleSaveOutfit}
               onShare={() => handleShareOutfit(openOutfit)}
+              onExport={() => handleExportOutfit(openOutfit)}
               onVary={() => handleVaryOutfit(openOutfit, 'fresh')}
               onEdit={() => handleEditOutfit(openOutfit)}
               onLogWear={(verdict) => handleLogOutfitWear(openOutfit, todayISO(), verdict)}
@@ -10496,7 +10726,14 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
   );
 }
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onVary, onEdit, onLogWear, onOpenItem }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem }) {
+  const [exporting, setExporting] = useState(false);
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const handleExportClick = async () => {
+    if (exporting || !onExport) return;
+    setExporting(true);
+    try { await onExport(); } finally { setExporting(false); }
+  };
   const [logVerdict, setLogVerdict] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
@@ -10554,12 +10791,30 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <Star size={16} strokeWidth={1.5} className={outfit.favorite ? 'fill-stone-900' : ''} />
                 </button>
               )}
+              {onExport && (
+                // Primary share: composes the look as a 1080×1920 PNG and
+                // opens the system share sheet with the image attached.
+                // Fallback (no Web Share API): downloads the image. The
+                // share sheet covers WhatsApp / IG Stories / Pinterest /
+                // email / save-to-photos in one OS-native UI — no custom
+                // platform buttons needed. Loading state shows pulsing
+                // brass icon while the canvas composes (~200-800ms).
+                <button onClick={handleExportClick} disabled={exporting}
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-stone-900 text-white border border-stone-900 hover:bg-stone-700 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+                  title="Export as a beautiful image and share — works with Instagram, WhatsApp, Pinterest, email, anywhere">
+                  <Share2 size={15} strokeWidth={1.5} className={exporting ? 'animate-pulse' : ''} />
+                  <span className="hidden sm:inline">{exporting ? 'Composing…' : 'Share'}</span>
+                </button>
+              )}
               {onShare && (
+                // Secondary share — generates a live read-only public link
+                // (Firestore-backed). For sending to friends who'll click
+                // through to a hosted page rather than receive an image.
+                // Tucked behind a subtle text link to keep the toolbar calm.
                 <button onClick={onShare}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all inline-flex items-center gap-2 whitespace-nowrap"
-                  title="Create a read-only link to share this look">
-                  <Download size={16} strokeWidth={1.5} className="sm:hidden rotate-180" />
-                  <span className="hidden sm:inline">Share</span>
+                  className="hidden sm:inline-flex p-2.5 sm:px-3 sm:py-2.5 rounded-full text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200 items-center gap-1.5"
+                  title="Generate a public read-only link instead of an image">
+                  <LinkIcon size={13} strokeWidth={1.5} /> Link
                 </button>
               )}
               {onEdit && (

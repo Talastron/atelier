@@ -11462,40 +11462,60 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 // canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
 // jewellery smaller — mimicking a real flat-lay arrangement.
 function OutfitFlatLay({ pieces, onOpenItem }) {
-  // EDITORIAL FLAT-LAY — luxury catalogue composition vocabulary.
+  // BODY-MAPPED EDITORIAL FLAT-LAY — the Vogue / Net-a-Porter
+  // "Complete the Look" convention. Pieces arrange spatially the way
+  // they're worn on the body:
   //
-  // Three things make this read as a stylist's composition, not a product
-  // grid:
-  //   (1) DRAMATIC size weighting — hero pieces (outerwear/dress) tower
-  //       over accessories. ~5× range, not the previous timid ~2×.
-  //   (2) NO white card behind each item — pieces sit directly on the
-  //       cream surface so silhouettes breathe (assumes either bg-removed
-  //       cutouts OR product shots that already have white backgrounds
-  //       which blend with the cream).
-  //   (3) Items align to a common baseline (items-end) so they "stand"
-  //       together like garments on a bed/floor in a flat-lay shoot —
-  //       jewellery clusters at the same baseline as the loafer, the
-  //       jacket looms taller behind them.
+  //   ROW 1 (UPPER)  outerwear · tops · dresses · necklaces · earrings · sunglasses · hats
+  //   ROW 2 (WAIST)  bottoms · bags · watches · bracelets · belts
+  //   ROW 3 (FEET)   shoes
   //
-  // No rotation, no jitter, no z-stacking — the user has repeatedly
-  // called out scrapbook chaos as anti-luxury. Drama comes from SCALE,
-  // not motion.
+  // Within each row, the hero garment (largest by CATEGORY_WEIGHT) sits
+  // centred and accessories cluster as satellites. Items align to the
+  // BOTTOM of each row (items-end) so they "stand" together like
+  // garments on a styled surface in a real flat-lay shoot.
   const CATEGORY_WEIGHT = {
     Outerwear: 2.2,   // hero — coats / jackets dominate the composition
     Dresses: 2.0,     // hero — when worn, the whole look
     Tops: 1.4,
     Bottoms: 1.5,
-    Shoes: 1.0,
+    Shoes: 1.2,
     Bags: 1.1,
     Swimwear: 1.4,
     Accessories: 0.7,
     Jewellery: 0.5,   // smallest — earrings / necklaces / bracelets cluster
   };
-  const ORDER = ['Outerwear', 'Dresses', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery', 'Swimwear'];
-  const sorted = [...pieces].sort((a, b) => {
-    const ai = ORDER.indexOf(a.category); const bi = ORDER.indexOf(b.category);
+  // BODY ZONE MAPPING — which horizontal band each piece belongs to.
+  // Jewellery sub-typed by name because Earrings/Necklaces sit up at
+  // the neck/face while Watches/Bracelets/Cuffs sit at the hand/wrist.
+  // Accessories sub-typed similarly: Sunglasses/Hats up top, Belts/Gloves
+  // at the waist/hand.
+  const bodyZone = (item) => {
+    const cat = item.category;
+    const name = (item.name || '').toLowerCase();
+    if (cat === 'Shoes') return 3;                                    // feet
+    if (cat === 'Bottoms') return 2;                                  // waist
+    if (cat === 'Bags') return 2;                                     // hand/waist
+    if (cat === 'Jewellery') {
+      if (/watch|bracelet|cuff|bangle|ring\b/i.test(name)) return 2;  // wrist/hand
+      return 1;                                                       // necklace, earrings → upper
+    }
+    if (cat === 'Accessories') {
+      if (/belt|glove/i.test(name)) return 2;                         // waist/hand
+      return 1;                                                       // sunglasses, hat, scarf, tie → upper
+    }
+    return 1; // Outerwear, Tops, Dresses, Swimwear → upper
+  };
+  // Within-row sort: hero garment first (will be centred by justify-center),
+  // then by category priority so accessories cluster predictably.
+  const WITHIN_ROW = ['Outerwear', 'Dresses', 'Tops', 'Swimwear', 'Bottoms', 'Bags', 'Shoes', 'Accessories', 'Jewellery'];
+  const rowSort = (a, b) => {
+    const ai = WITHIN_ROW.indexOf(a.category); const bi = WITHIN_ROW.indexOf(b.category);
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-  });
+  };
+  const upperRow = pieces.filter((p) => bodyZone(p) === 1).sort(rowSort);
+  const midRow   = pieces.filter((p) => bodyZone(p) === 2).sort(rowSort);
+  const lowerRow = pieces.filter((p) => bodyZone(p) === 3).sort(rowSort);
 
   return (
     <div>
@@ -11510,7 +11530,7 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
           background: 'radial-gradient(ellipse 80% 60% at 28% 0%, #FBFAF7 0%, #F4F0E8 55%, #ECE6D8 100%)',
         }}
       >
-        {sorted.length === 0 ? (
+        {pieces.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-stone-300">
             <Shirt size={64} strokeWidth={1} />
           </div>
@@ -11518,40 +11538,60 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
           // Tier sizing scales DOWN as the outfit grows so every piece
           // still fits without horizontal scroll. The CATEGORY_WEIGHT
           // multiplier then introduces the editorial size drama within
-          // each tier — outerwear ≈4× the width of jewellery.
+          // each row — outerwear ≈4× the width of jewellery.
           (() => {
-            const baseSize = sorted.length <= 4 ? 200 : sorted.length <= 7 ? 150 : sorted.length <= 10 ? 120 : 100;
+            const baseSize = pieces.length <= 4 ? 200 : pieces.length <= 7 ? 160 : pieces.length <= 10 ? 130 : 110;
+            // Single piece-renderer shared across all three rows.
+            const renderPiece = (p, i) => {
+              const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
+              const openable = !!(onOpenItem && p.id);
+              const Tag = openable ? 'button' : 'div';
+              const width = Math.round(weight * baseSize);
+              return (
+                <Tag
+                  key={p.id || i}
+                  {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
+                  className={`shrink-0 group ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-[1.25rem]' : ''}`}
+                  style={{ width: `${width}px` }}
+                >
+                  {/* EDITORIAL POLAROID FRAME — soft rounded card with
+                      layered shadow so the piece casts presence on the
+                      styled surface like raked light in a real flat-lay
+                      shoot. Hover lifts the shadow subtly. */}
+                  <div className="aspect-[3/4] rounded-[1.25rem] bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]">
+                    {itemImages(p)[0] ? (
+                      <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async"
+                        className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={Math.min(width * 0.4, 48)} strokeWidth={1} /></div>
+                    )}
+                  </div>
+                </Tag>
+              );
+            };
+            // Three horizontal bands stacked vertically — the body
+            // silhouette. Each band shrinks to its own content (only
+            // rendered if it has pieces). items-end aligns pieces to a
+            // shared baseline within each band so the jacket, top, and
+            // jewellery in row 1 all "stand" on the same line — exactly
+            // like a stylist's flat-lay arrangement.
             return (
-              <div className="relative flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-8">
-                {sorted.map((p, i) => {
-                  const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
-                  const openable = !!(onOpenItem && p.id);
-                  const Tag = openable ? 'button' : 'div';
-                  const width = Math.round(weight * baseSize);
-                  return (
-                    <Tag
-                      key={p.id || i}
-                      {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
-                      className={`shrink-0 group ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-[1.25rem]' : ''}`}
-                      style={{ width: `${width}px` }}
-                    >
-                      {/* EDITORIAL POLAROID FRAME — soft rounded card,
-                          hairline ring for definition, layered shadow
-                          (close + soft far) so the piece casts presence
-                          on the styled surface like raked light in a
-                          real flat-lay shoot. Hover lifts the shadow
-                          subtly — restraint, not theatre. */}
-                      <div className="aspect-[3/4] rounded-[1.25rem] bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]">
-                        {itemImages(p)[0] ? (
-                          <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async"
-                            className="w-full h-full object-contain" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={Math.min(width * 0.4, 48)} strokeWidth={1} /></div>
-                        )}
-                      </div>
-                    </Tag>
-                  );
-                })}
+              <div className="relative flex flex-col items-center gap-y-10 sm:gap-y-12">
+                {upperRow.length > 0 && (
+                  <div className="flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-6">
+                    {upperRow.map(renderPiece)}
+                  </div>
+                )}
+                {midRow.length > 0 && (
+                  <div className="flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-6">
+                    {midRow.map(renderPiece)}
+                  </div>
+                )}
+                {lowerRow.length > 0 && (
+                  <div className="flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-6">
+                    {lowerRow.map(renderPiece)}
+                  </div>
+                )}
               </div>
             );
           })()

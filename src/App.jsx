@@ -11499,7 +11499,17 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
 
   return (
     <div>
-      <div className="relative bg-stone-100/60 rounded-[2rem] border border-stone-200/60 px-6 sm:px-10 md:px-14 py-10 sm:py-14 md:py-16">
+      {/* Atmospheric backdrop — warm radial highlight from upper-left
+          like soft window light raking across a styled surface. Adds
+          the depth a real flat-lay shoot has; flat cream reads as a
+          spreadsheet, not an editorial. The radial is VERY subtle
+          (3-tone warm cream) so it never competes with the pieces. */}
+      <div
+        className="relative rounded-[2rem] border border-stone-200/60 px-6 sm:px-10 md:px-14 py-10 sm:py-14 md:py-16 overflow-hidden"
+        style={{
+          background: 'radial-gradient(ellipse 80% 60% at 28% 0%, #FBFAF7 0%, #F4F0E8 55%, #ECE6D8 100%)',
+        }}
+      >
         {sorted.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-stone-300">
             <Shirt size={64} strokeWidth={1} />
@@ -11508,11 +11518,11 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
           // Tier sizing scales DOWN as the outfit grows so every piece
           // still fits without horizontal scroll. The CATEGORY_WEIGHT
           // multiplier then introduces the editorial size drama within
-          // each tier — outerwear ≈3× the width of jewellery.
+          // each tier — outerwear ≈4× the width of jewellery.
           (() => {
             const baseSize = sorted.length <= 4 ? 200 : sorted.length <= 7 ? 150 : sorted.length <= 10 ? 120 : 100;
             return (
-              <div className="flex flex-wrap items-end justify-center gap-x-3 sm:gap-x-5 md:gap-x-7 gap-y-6">
+              <div className="relative flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-8">
                 {sorted.map((p, i) => {
                   const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
                   const openable = !!(onOpenItem && p.id);
@@ -11522,17 +11532,19 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
                     <Tag
                       key={p.id || i}
                       {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
-                      className={`shrink-0 ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-md group' : ''}`}
+                      className={`shrink-0 group ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-[1.25rem]' : ''}`}
                       style={{ width: `${width}px` }}
                     >
-                      {/* NO white card — image sits directly on the cream.
-                          aspect-[3/4] with object-contain lets the
-                          silhouette breathe; the bounding box only exists
-                          to reserve layout space. */}
-                      <div className="aspect-[3/4] flex items-end justify-center">
+                      {/* EDITORIAL POLAROID FRAME — soft rounded card,
+                          hairline ring for definition, layered shadow
+                          (close + soft far) so the piece casts presence
+                          on the styled surface like raked light in a
+                          real flat-lay shoot. Hover lifts the shadow
+                          subtly — restraint, not theatre. */}
+                      <div className="aspect-[3/4] rounded-[1.25rem] bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]">
                         {itemImages(p)[0] ? (
                           <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async"
-                            className="max-w-full max-h-full object-contain" />
+                            className="w-full h-full object-contain" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={Math.min(width * 0.4, 48)} strokeWidth={1} /></div>
                         )}

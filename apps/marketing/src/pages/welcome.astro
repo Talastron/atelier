@@ -1,0 +1,37 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { BrassRule } from '@atelier/ui';
+---
+
+<Base title="Welcome to Atelier">
+  <Nav />
+  <main
+    class="mx-auto text-center"
+    style="max-width: 640px; padding-top: 12rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+  >
+    <div class="flex items-center justify-center gap-3 mb-8">
+      <BrassRule client:load />
+      <p class="text-xs uppercase text-stone-500 font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow);">
+        Welcome
+      </p>
+      <BrassRule client:load />
+    </div>
+    <h1
+      class="text-4xl md:text-5xl tracking-tight mb-8"
+      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+    >
+      Check your inbox for the key to your atelier.
+    </h1>
+    <p class="text-stone-500 text-lg mb-12" style="line-height: var(--atelier-leading-body);">
+      We've sent a sign-in link to the email address you used at checkout. Click it from any device
+      to open your studio.
+    </p>
+    <p class="text-stone-400 text-sm">
+      The link is valid for one hour. Didn't receive it within a few minutes? Check your spam folder
+      or <a href="mailto:contact@myatelier.style" class="underline hover:text-stone-700">write to us</a>.
+    </p>
+  </main>
+  <Footer />
+</Base>

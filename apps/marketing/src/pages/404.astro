@@ -1,0 +1,32 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { BrassRule } from '@atelier/ui';
+---
+
+<Base title="Not found — Atelier">
+  <Nav />
+  <main
+    class="mx-auto text-center"
+    style="max-width: 640px; padding-top: 12rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+  >
+    <div class="flex items-center justify-center gap-3 mb-8">
+      <BrassRule client:load />
+      <p class="text-xs uppercase text-stone-500 font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow);">
+        404
+      </p>
+      <BrassRule client:load />
+    </div>
+    <h1
+      class="text-4xl md:text-5xl tracking-tight mb-8"
+      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+    >
+      This page has been misplaced.
+    </h1>
+    <p class="text-stone-500 text-lg mb-8" style="line-height: var(--atelier-leading-body);">
+      Return to the <a href="/" class="underline hover:text-stone-700">main collection</a>.
+    </p>
+  </main>
+  <Footer />
+</Base>

@@ -1,0 +1,78 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { BrassRule } from '@atelier/ui';
+
+// PLACEHOLDER — replaced in Phase 1C after Lemon Squeezy product is created.
+// Format: https://<your-store>.lemonsqueezy.com/checkout/buy/<variant-id>
+const LS_CHECKOUT_URL_MONTHLY = 'https://atelier.lemonsqueezy.com/checkout/buy/PLACEHOLDER_MONTHLY_VARIANT_ID';
+const LS_CHECKOUT_URL_ANNUAL = 'https://atelier.lemonsqueezy.com/checkout/buy/PLACEHOLDER_ANNUAL_VARIANT_ID';
+---
+
+<Base title="Pricing — Atelier">
+  <Nav />
+  <main
+    class="mx-auto"
+    style="max-width: var(--atelier-container-max); padding-top: 10rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+  >
+    <div class="text-center mb-16">
+      <div class="flex items-center justify-center gap-3 mb-6">
+        <BrassRule client:load />
+        <p class="text-xs uppercase text-stone-500 font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow);">
+          Membership
+        </p>
+        <BrassRule client:load />
+      </div>
+      <h1
+        class="text-5xl md:text-6xl tracking-tight mb-6"
+        style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+      >
+        One considered membership.
+      </h1>
+      <p class="text-stone-500 text-lg max-w-2xl mx-auto" style="line-height: var(--atelier-leading-body);">
+        Begin with a 14-day trial. No card required.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <article class="bg-white border border-stone-200/60 p-10 rounded-[2rem] smooth-shadow">
+        <h2 class="text-2xl mb-2" style="font-family: var(--atelier-font-display);">Monthly</h2>
+        <p class="text-stone-500 text-sm mb-8">Flexible, no commitment.</p>
+        <p class="text-4xl mb-8" style="font-family: var(--atelier-font-display);">
+          $— <span class="text-base text-stone-500">/ month</span>
+        </p>
+        <a
+          href={LS_CHECKOUT_URL_MONTHLY}
+          class="block text-center bg-stone-900 text-white px-8 py-4 rounded-full text-base font-medium hover:bg-stone-700 transition-all shadow-lg active:scale-95"
+        >
+          Start 14-day trial
+        </a>
+      </article>
+
+      <article class="bg-stone-900 text-white p-10 rounded-[2rem] shadow-2xl">
+        <div class="flex items-center gap-3 mb-2">
+          <h2 class="text-2xl" style="font-family: var(--atelier-font-display);">Annual</h2>
+          <span class="text-xs uppercase text-brass-300 font-medium" style="letter-spacing: var(--atelier-tracking-eyebrow);">
+            Best value
+          </span>
+        </div>
+        <p class="text-stone-400 text-sm mb-8">Save ~20% over monthly.</p>
+        <p class="text-4xl mb-8" style="font-family: var(--atelier-font-display);">
+          $— <span class="text-base text-stone-400">/ year</span>
+        </p>
+        <a
+          href={LS_CHECKOUT_URL_ANNUAL}
+          class="block text-center bg-brass-300 text-stone-900 px-8 py-4 rounded-full text-base font-medium hover:bg-brass-200 transition-all shadow-lg active:scale-95"
+        >
+          Start 14-day trial
+        </a>
+      </article>
+    </div>
+
+    <p class="text-center text-xs text-stone-400 mt-12" style="letter-spacing: 0.1em;">
+      30-day no-questions-asked refund · cancel anytime · VAT included where applicable
+    </p>
+  </main>
+  <Footer />
+</Base>

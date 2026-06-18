@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import { BrassRule } from '@atelier/ui';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('journal', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
+---
+
+<Base title="Journal — Atelier" description="Notes on style, stewardship, and the considered wardrobe.">
+  <Nav />
+  <main
+    class="mx-auto"
+    style="max-width: var(--atelier-container-max); padding-top: 10rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+  >
+    <div class="flex items-center gap-3 mb-6">
+      <BrassRule client:load />
+      <p class="text-xs uppercase text-stone-500 font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow);">
+        The Journal
+      </p>
+    </div>
+    <h1
+      class="text-5xl md:text-6xl tracking-tight mb-16"
+      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+    >
+      Notes on the considered wardrobe.
+    </h1>
+    <ul class="space-y-12" style="max-width: var(--atelier-prose-max);">
+      {posts.map((post) => (
+        <li class="border-b border-stone-200/60 pb-12 last:border-0">
+          <a href={`/journal/${post.slug}`} class="block group">
+            <time class="text-xs uppercase text-stone-400" style="letter-spacing: 0.15em;">
+              {post.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </time>
+            <h2
+              class="text-3xl tracking-tight mt-3 mb-3 group-hover:text-stone-600 transition-colors"
+              style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-tight);"
+            >
+              {post.data.title}
+            </h2>
+            <p class="text-stone-500" style="line-height: var(--atelier-leading-body);">
+              {post.data.description}
+            </p>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </main>
+  <Footer />
+</Base>

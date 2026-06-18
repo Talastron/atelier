@@ -1,0 +1,46 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { BrassRule } from '@atelier/ui';
+---
+
+<Base title="About — Atelier">
+  <Nav />
+  <main
+    class="mx-auto"
+    style="max-width: var(--atelier-container-max); padding-top: 10rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+  >
+    <div class="flex items-center gap-3 mb-6">
+      <BrassRule client:load />
+      <p class="text-xs uppercase text-stone-500 font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow);">
+        The Brand
+      </p>
+    </div>
+    <h1
+      class="text-5xl md:text-6xl tracking-tight mb-12"
+      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+    >
+      A house for the considered wardrobe.
+    </h1>
+    <div
+      class="text-stone-700 text-lg space-y-6"
+      style="max-width: var(--atelier-prose-max); line-height: var(--atelier-leading-body);"
+    >
+      <p>
+        Atelier began with a private question: what would it look like to treat a personal wardrobe the way
+        a fashion house treats a collection — every piece accounted for, every look composed with intention,
+        every investment understood for what it returns?
+      </p>
+      <p>
+        We build the digital equivalent of a fitting-room mirror, a stylist's notebook, and a curator's ledger,
+        all in one. The aim is not to acquire more clothing. The aim is to live more thoroughly with the clothing
+        you have chosen.
+      </p>
+      <p>
+        Quiet luxury, made personal.
+      </p>
+    </div>
+  </main>
+  <Footer />
+</Base>

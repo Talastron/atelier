@@ -1,0 +1,39 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('journal');
+  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+---
+
+<Base title={`${post.data.title} — Atelier`} description={post.data.description}>
+  <Nav />
+  <article
+    class="mx-auto"
+    style="max-width: var(--atelier-prose-max); padding-top: 10rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+  >
+    <time class="text-xs uppercase text-stone-400" style="letter-spacing: 0.15em;">
+      {post.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+    </time>
+    <h1
+      class="text-4xl md:text-5xl tracking-tight mt-4 mb-12"
+      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+    >
+      {post.data.title}
+    </h1>
+    <div
+      class="text-stone-700 text-lg space-y-6 prose-atelier"
+      style="line-height: var(--atelier-leading-body);"
+    >
+      <Content />
+    </div>
+  </article>
+  <Footer />
+</Base>

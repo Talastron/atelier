@@ -1,6 +1,9 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+  isSignInWithEmailLink, signInWithEmailLink,
+} from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 
@@ -62,7 +65,7 @@ export const db = initializeFirestore(app, {
 const googleProvider = new GoogleAuthProvider();
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const signOutUser = () => signOut(auth);
-export { onAuthStateChanged };
+export { onAuthStateChanged, isSignInWithEmailLink, signInWithEmailLink };
 
 // ─── Gemini via Firebase AI Logic ────────────────────────────────────────
 // Uses the Google AI (Gemini Developer API) backend — free tier, no API key

@@ -11462,171 +11462,148 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 // canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
 // jewellery smaller — mimicking a real flat-lay arrangement.
 function OutfitFlatLay({ pieces, onOpenItem }) {
-  // BODY-MAPPED EDITORIAL FLAT-LAY — the Vogue / Net-a-Porter
-  // "Complete the Look" convention. Pieces arrange spatially the way
-  // they're worn on the body:
+  // MAGAZINE SPREAD — the Net-a-Porter "Complete the Look" / Mr Porter
+  // "The Edit" / Vogue "What to Wear" convention. Asymmetric editorial
+  // grid with three regions:
   //
-  //   ROW 1 (UPPER)  outerwear · tops · dresses · necklaces · earrings · sunglasses · hats
-  //   ROW 2 (WAIST)  bottoms · bags · watches · bracelets · belts
-  //   ROW 3 (FEET)   shoes
+  //   HERO        — one signature piece (Outerwear / Dress / Top), large,
+  //                 left column on desktop. The editor's pick.
+  //   GARMENTS    — supporting garments (top, bottom, shoes, bag) in a
+  //                 tight 2-column grid to the right of the hero.
+  //   ACCESSORIES — sunglasses, jewellery, watches in a 4-6 column strip
+  //                 at the bottom, smaller cells.
   //
-  // Within each row, the hero garment (largest by CATEGORY_WEIGHT) sits
-  // centred and accessories cluster as satellites. Items align to the
-  // BOTTOM of each row (items-end) so they "stand" together like
-  // garments on a styled surface in a real flat-lay shoot.
-  const CATEGORY_WEIGHT = {
-    Outerwear: 2.2,   // hero — coats / jackets dominate the composition
-    Dresses: 2.0,     // hero — when worn, the whole look
-    Tops: 1.4,
-    Bottoms: 1.5,
-    Shoes: 1.2,
-    Bags: 1.1,
-    Swimwear: 1.4,
-    Accessories: 0.7,
-    Jewellery: 0.5,   // smallest — earrings / necklaces / bracelets cluster
-  };
-  // BODY ZONE MAPPING — which horizontal band each piece belongs to.
-  // Jewellery sub-typed by name because Earrings/Necklaces sit up at
-  // the neck/face while Watches/Bracelets/Cuffs sit at the hand/wrist.
-  // Accessories sub-typed similarly: Sunglasses/Hats up top, Belts/Gloves
-  // at the waist/hand.
-  const bodyZone = (item) => {
-    const cat = item.category;
-    const name = (item.name || '').toLowerCase();
-    if (cat === 'Shoes') return 3;                                    // feet
-    if (cat === 'Bottoms') return 2;                                  // waist
-    if (cat === 'Bags') return 2;                                     // hand/waist
-    if (cat === 'Jewellery') {
-      if (/watch|bracelet|cuff|bangle|ring\b/i.test(name)) return 2;  // wrist/hand
-      return 1;                                                       // necklace, earrings → upper
-    }
-    if (cat === 'Accessories') {
-      if (/belt|glove/i.test(name)) return 2;                         // waist/hand
-      return 1;                                                       // sunglasses, hat, scarf, tie → upper
-    }
-    return 1; // Outerwear, Tops, Dresses, Swimwear → upper
-  };
-  // Within-row sort: hero garment first (will be centred by justify-center),
-  // then by category priority so accessories cluster predictably.
-  const WITHIN_ROW = ['Outerwear', 'Dresses', 'Tops', 'Swimwear', 'Bottoms', 'Bags', 'Shoes', 'Accessories', 'Jewellery'];
-  const rowSort = (a, b) => {
-    const ai = WITHIN_ROW.indexOf(a.category); const bi = WITHIN_ROW.indexOf(b.category);
+  // Every cell carries TYPOGRAPHIC EDITORIAL CREDITS: a numbered tag
+  // (N°01, N°02 in italic serif), the brand in small-caps, and the
+  // item name below the photo. Typography is a co-equal design element,
+  // not an afterthought — that's what separates a stylist's edit from
+  // a product grid.
+  //
+  // The container snug-wraps the content (no max-width sprawl), uses
+  // an atmospheric warm-radial backdrop (raked styling light), and each
+  // cell is a polaroid-rounded white frame with a layered shadow so
+  // pieces cast presence on the styled surface.
+
+  const HERO_PRIORITY = ['Outerwear', 'Dresses', 'Swimwear', 'Tops'];
+  const ACCESSORY_CATEGORIES = new Set(['Accessories', 'Jewellery']);
+  const ORDER = ['Outerwear', 'Dresses', 'Tops', 'Swimwear', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+  const sortByOrder = (a, b) => {
+    const ai = ORDER.indexOf(a.category); const bi = ORDER.indexOf(b.category);
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   };
-  // Within each body row, split pieces into HERO (main garment) and
-  // ACCESSORY (satellites). Heroes cluster tight as the centrepiece;
-  // accessories cluster tight as a satellite group beside them. This is
-  // the difference between "items spread evenly across a row" and "a
-  // composed editorial spread with hero + supporting cast".
-  const isHeroInZone = (item, zone) => {
-    const c = item.category;
-    if (zone === 1) return c === 'Outerwear' || c === 'Tops' || c === 'Dresses' || c === 'Swimwear';
-    if (zone === 2) return c === 'Bottoms';
-    return c === 'Shoes';
+
+  // Pick hero: first piece by HERO_PRIORITY that exists in the outfit.
+  // Fallback: first piece period.
+  let hero = null;
+  for (const cat of HERO_PRIORITY) {
+    const found = pieces.find((p) => p.category === cat);
+    if (found) { hero = found; break; }
+  }
+  if (!hero && pieces.length > 0) hero = pieces[0];
+
+  const rest = pieces.filter((p) => p !== hero).sort(sortByOrder);
+  const garments = rest.filter((p) => !ACCESSORY_CATEGORIES.has(p.category));
+  const accessories = rest.filter((p) => ACCESSORY_CATEGORIES.has(p.category));
+
+  // Number every piece in display order for the editorial N°XX badges.
+  const orderedAll = [hero, ...garments, ...accessories].filter(Boolean);
+  const numberOf = new Map(orderedAll.map((p, i) => [p, i + 1]));
+
+  // Single editorial cell. Photograph above, credit caption below.
+  // The credit block carries the editorial signature — N° tag in italic
+  // serif, brand in small-caps, item name in display serif. Reads like
+  // a magazine page no matter the photography quality.
+  const Cell = ({ item, isHero = false }) => {
+    if (!item) return null;
+    const openable = !!(onOpenItem && item.id);
+    const Tag = openable ? 'button' : 'div';
+    const n = numberOf.get(item) || 0;
+    return (
+      <Tag
+        {...(openable ? { type: 'button', onClick: () => onOpenItem(item.id), 'aria-label': `Open ${item.name}` } : {})}
+        className={`group block w-full text-left ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-2xl' : ''}`}
+      >
+        {/* Polaroid frame: rounded white card, hairline ring, layered
+            shadow so the piece sits on the surface. Hero gets a slightly
+            larger radius to feel weightier. */}
+        <div className={`relative ${isHero ? 'aspect-[4/5]' : 'aspect-[3/4]'} ${isHero ? 'rounded-[1.5rem]' : 'rounded-[1.125rem]'} bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]`}>
+          {/* N°XX tag — italic serif, the editorial signature */}
+          <span className={`absolute ${isHero ? 'top-3 left-4 text-xs' : 'top-2 left-3 text-[10px]'} tracking-[0.15em] text-stone-400 font-display italic z-10`}>
+            N°{String(n).padStart(2, '0')}
+          </span>
+          {itemImages(item)[0] ? (
+            <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async"
+              className={`w-full h-full object-contain ${isHero ? 'p-4' : 'p-3'}`} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={isHero ? 64 : 28} strokeWidth={1} /></div>
+          )}
+        </div>
+        {/* CREDIT CAPTION — brand in small-caps, item name in display
+            serif. The typography pair magazines use universally. */}
+        <div className={`${isHero ? 'mt-3 px-1' : 'mt-2 px-0.5'}`}>
+          <p className={`${isHero ? 'text-[10px]' : 'text-[9px]'} tracking-[0.2em] uppercase text-stone-500 truncate`}>{item.brand || item.category}</p>
+          <p className={`font-display ${isHero ? 'text-base sm:text-lg' : 'text-xs sm:text-sm'} text-stone-900 leading-tight truncate ${openable ? 'group-hover:text-brass-700 transition-colors' : ''}`}>{item.name}</p>
+        </div>
+      </Tag>
+    );
   };
-  const partition = (zone) => {
-    const inZone = pieces.filter((p) => bodyZone(p) === zone);
-    return {
-      hero: inZone.filter((p) => isHeroInZone(p, zone)).sort(rowSort),
-      acc:  inZone.filter((p) => !isHeroInZone(p, zone)).sort(rowSort),
-    };
-  };
-  const upper = partition(1);
-  const mid   = partition(2);
-  const lower = partition(3);
-  const totalCount = upper.hero.length + upper.acc.length + mid.hero.length + mid.acc.length + lower.hero.length + lower.acc.length;
 
   return (
     <div>
       {/* Atmospheric backdrop — warm radial highlight from upper-left
-          like soft window light raking across a styled surface. The
-          radial is VERY subtle (3-tone warm cream) so it never competes
-          with the pieces. */}
+          like soft window light raking across a styled surface. */}
       <div
-        className="relative rounded-[2rem] border border-stone-200/60 px-4 sm:px-8 md:px-10 py-8 sm:py-10 md:py-12 overflow-hidden"
+        className="relative rounded-[2rem] border border-stone-200/60 px-5 sm:px-8 md:px-10 lg:px-12 py-8 sm:py-10 md:py-12 overflow-hidden"
         style={{
-          background: 'radial-gradient(ellipse 80% 60% at 28% 0%, #FBFAF7 0%, #F4F0E8 55%, #ECE6D8 100%)',
+          background: 'radial-gradient(ellipse 90% 70% at 20% 0%, #FBFAF7 0%, #F4F0E8 55%, #ECE6D8 100%)',
         }}
       >
-        {totalCount === 0 ? (
+        {pieces.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-stone-300">
             <Shirt size={64} strokeWidth={1} />
           </div>
         ) : (
-          // Tier sizing scales DOWN as the outfit grows so every piece
-          // still fits. CATEGORY_WEIGHT then drives the editorial drama
-          // within each row — outerwear ≈4× the width of jewellery.
-          (() => {
-            const baseSize = totalCount <= 4 ? 180 : totalCount <= 7 ? 150 : totalCount <= 10 ? 125 : 105;
-            const renderPiece = (p, i) => {
-              const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
-              const openable = !!(onOpenItem && p.id);
-              const Tag = openable ? 'button' : 'div';
-              const width = Math.round(weight * baseSize);
-              return (
-                <Tag
-                  key={p.id || i}
-                  {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
-                  className={`shrink-0 group ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-[1.25rem]' : ''}`}
-                  style={{ width: `${width}px` }}
-                >
-                  {/* EDITORIAL POLAROID FRAME — soft rounded card with
-                      layered shadow so the piece casts presence on the
-                      styled surface. Hover lifts the shadow subtly. */}
-                  <div className="aspect-[3/4] rounded-[1.25rem] bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]">
-                    {itemImages(p)[0] ? (
-                      <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async"
-                        className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={Math.min(width * 0.4, 48)} strokeWidth={1} /></div>
-                    )}
-                  </div>
-                </Tag>
-              );
-            };
-            // Each row = a HERO cluster (tight gap) + an ACCESSORY
-            // cluster (even tighter gap), with a controlled gap between
-            // the two. Accessory cluster gets a max-width so jewellery
-            // doesn't spread thin — it reads as ONE satellite group, not
-            // floating individual items. Rows render only when they
-            // have content.
-            const Row = ({ hero, acc }) => {
-              if (hero.length + acc.length === 0) return null;
-              return (
-                <div className="flex items-end justify-center gap-x-6 sm:gap-x-8 md:gap-x-10 gap-y-4 flex-wrap">
-                  {hero.length > 0 && (
-                    <div className="flex items-end gap-x-3 sm:gap-x-4">
-                      {hero.map(renderPiece)}
-                    </div>
-                  )}
-                  {acc.length > 0 && (
-                    <div className="flex items-end gap-x-2 sm:gap-x-3 flex-wrap justify-center max-w-[280px] sm:max-w-[320px] md:max-w-[360px]">
-                      {acc.map(renderPiece)}
-                    </div>
-                  )}
-                </div>
-              );
-            };
-            return (
-              // max-w on the column constrains the composition's reach
-              // so it stops sprawling across wide viewports. Vertical
-              // gap between rows tightened from 10/12 → 6/8 so the
-              // jacket's tall silhouette doesn't create dead air below.
-              <div className="relative flex flex-col items-center gap-y-6 sm:gap-y-8 max-w-3xl mx-auto">
-                <Row hero={upper.hero} acc={upper.acc} />
-                <Row hero={mid.hero} acc={mid.acc} />
-                <Row hero={lower.hero} acc={lower.acc} />
+          // 12-col editorial grid. Hero spans 5 cols on desktop (left),
+          // garments occupy the remaining 7 in a 2-col sub-grid (top
+          // right), accessories full-width strip below. On mobile,
+          // everything stacks single-column for legibility.
+          <div className="grid grid-cols-12 gap-x-4 gap-y-6 sm:gap-x-5 sm:gap-y-7 md:gap-x-6 md:gap-y-8 max-w-5xl mx-auto">
+            {/* HERO */}
+            {hero && (
+              <div className="col-span-12 sm:col-span-6 md:col-span-5">
+                <Cell item={hero} isHero />
               </div>
-            );
-          })()
+            )}
+            {/* SUPPORTING GARMENTS — 2-col sub-grid right of hero on
+                desktop, full-width 2-col on mobile. self-start so the
+                grid hugs the top of the hero, not stretching to match
+                hero's height. */}
+            {garments.length > 0 && (
+              <div className={`${hero ? 'col-span-12 sm:col-span-6 md:col-span-7' : 'col-span-12'} grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-5 self-start`}>
+                {garments.map((p, i) => (
+                  <Cell key={p.id || `g${i}`} item={p} />
+                ))}
+              </div>
+            )}
+            {/* ACCESSORIES STRIP — runs full width below the hero+garments
+                block. Smaller cells (4-6 cols) so jewellery doesn't dwarf
+                the garments. Always at the bottom of the spread, like
+                the accessory credits at the end of a magazine page. */}
+            {accessories.length > 0 && (
+              <div className="col-span-12 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-3 sm:gap-4">
+                {accessories.map((p, i) => (
+                  <Cell key={p.id || `a${i}`} item={p} />
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Credits list — flat list ordered top-of-body to feet, matching
-          the spatial flat-lay above. Within each body band, heroes come
-          before accessories (the same order they appear visually). */}
+      {/* Credits list — flat list ordered hero → garments → accessories,
+          matching the spatial flat-lay above. */}
       <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-        {[...upper.hero, ...upper.acc, ...mid.hero, ...mid.acc, ...lower.hero, ...lower.acc].map((p, i) => {
+        {orderedAll.map((p, i) => {
           const openable = !!(onOpenItem && p.id);
           return (
             <li key={p.id || i} className="border-b border-stone-200/60 last:border-0">

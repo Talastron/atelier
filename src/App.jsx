@@ -14,6 +14,7 @@ import { auth, db, onAuthStateChanged, signInWithGoogle, signOutUser, geminiText
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
+const BOTTOM_SUBCATEGORIES = ['Jeans', 'Trousers', 'Chinos', 'Leggings', 'Joggers', 'Shorts', 'Skirts', 'Midi Skirts', 'Maxi Skirts', 'Mini Skirts', 'Culottes', 'Cargo', 'Suit Trousers', 'Other'];
 const OUTERWEAR_SUBCATEGORIES = ['Blazers', 'Coats', 'Jackets', 'Trench Coats', 'Puffer Jackets', 'Parkas', 'Capes', 'Gilets', 'Leather Jackets', 'Other'];
 const DRESS_SUBCATEGORIES = ['Mini', 'Midi', 'Maxi', 'Wrap', 'Shift', 'Bodycon', 'Shirt Dress', 'Knit Dress', 'Cocktail', 'Evening / Gown', 'Sundress', 'Slip Dress', 'Other'];
 const ACCESSORY_SUBCATEGORIES = ['Sunglasses', 'Sun Hats', 'Hats', 'Belts', 'Scarves', 'Gloves', 'Other'];
@@ -2538,7 +2539,13 @@ function DigitalWardrobe() {
               {loading ? (
                 <WardrobeSkeleton />
               ) : (
-                <div key={activeTab} className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+                {/* No transform-based animation here — slide-in-from-bottom
+                    leaves a translateY(0) on the element after the animation
+                    completes, which establishes a containing block and breaks
+                    position:sticky for everything inside (sticky elements end
+                    up scoped to this wrapper instead of the <main> scroll
+                    ancestor). Keep fade-in only. */}
+                <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
                   {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
@@ -3828,6 +3835,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   // Sub-categories only make sense when a category that defines them is selected.
   const subCategoriesForCategory =
     categoryFilter === 'Tops' ? TOP_SUBCATEGORIES :
+    categoryFilter === 'Bottoms' ? BOTTOM_SUBCATEGORIES :
     categoryFilter === 'Outerwear' ? OUTERWEAR_SUBCATEGORIES :
     categoryFilter === 'Dresses' ? DRESS_SUBCATEGORIES :
     categoryFilter === 'Accessories' ? ACCESSORY_SUBCATEGORIES :
@@ -5137,10 +5145,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                 </div>
               </div>
 
-              {['Tops', 'Outerwear', 'Dresses', 'Accessories', 'Jewellery', 'Sportswear', 'Swimwear', 'Bags', 'Shoes'].includes(formData.category) && (
+              {['Tops', 'Bottoms', 'Outerwear', 'Dresses', 'Accessories', 'Jewellery', 'Sportswear', 'Swimwear', 'Bags', 'Shoes'].includes(formData.category) && (
                 <div>
                   <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
                     {formData.category === 'Tops' ? 'Top Type'
+                      : formData.category === 'Bottoms' ? 'Bottom Type'
                       : formData.category === 'Outerwear' ? 'Outerwear Type'
                       : formData.category === 'Dresses' ? 'Dress Type'
                       : formData.category === 'Jewellery' ? 'Jewellery Type'
@@ -5153,6 +5162,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   <select value={formData.subCategory} onChange={e => setFormData({...formData, subCategory: e.target.value})} className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors">
                     <option value="">Select type...</option>
                     {(formData.category === 'Tops' ? TOP_SUBCATEGORIES
+                      : formData.category === 'Bottoms' ? BOTTOM_SUBCATEGORIES
                       : formData.category === 'Outerwear' ? OUTERWEAR_SUBCATEGORIES
                       : formData.category === 'Dresses' ? DRESS_SUBCATEGORIES
                       : formData.category === 'Jewellery' ? JEWELLERY_SUBCATEGORIES

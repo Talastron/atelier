@@ -3850,6 +3850,21 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
     setSubCategoryFilter('All Types');
   };
 
+  // One-shot reset for the entire view: search + status pill + category +
+  // all five advanced filters. Sort is intentionally not reset — it's a
+  // persisted preference (localStorage), not a filter the user wants
+  // sweeping away just to see all items again.
+  const resetAllFilters = () => {
+    setSearchQuery('');
+    setFilter('all');
+    setCategoryFilter('All');
+    setSubCategoryFilter('All Types');
+    setSeasonFilter('All Seasons');
+    setBrandFilter('All Brands');
+    setStyleFilter('All Styles');
+    setColorFilter('All Colours');
+  };
+
   const filteredItems = items.filter(item => {
     // Status pills are 'all' | 'owned' | 'wishlist' | 'stale' | 'favorites'
     // | 'lent' | 'unavailable'.
@@ -3888,15 +3903,12 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   const activeSort = WARDROBE_SORT_OPTIONS.find((o) => o.key === sortBy) || WARDROBE_SORT_OPTIONS[0];
 
   return (
-    <div className="space-y-6 md:space-y-10 lg:space-y-2">
-      {/* Page header. On lg+ sticks at top: 0 of the main scroll container.
-          The lg:-mt-12 cancels the parent's lg:p-12 top padding so the header
-          starts AT the top of the scroll container from initial render —
-          eliminating the "scroll up before sticking" effect users notice when
-          the natural position differs from the sticky offset. lg:pt-12 puts
-          the padding back inside the header so content stays where it was. */}
+    <div className="space-y-6 md:space-y-10">
+      {/* Page header — scrolls away naturally on every breakpoint. The Filters
+          / Sort row below is the sticky toolbar (better candidate: it's
+          actionable, the greeting is decorative). */}
       <header
-        className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 lg:sticky lg:top-0 lg:z-30 lg:-mt-12 lg:pt-12 lg:pb-3 lg:-mx-12 lg:px-12 lg:bg-[#F7F5F2]/90 lg:backdrop-blur-md lg:border-b lg:border-stone-200/50"
+        className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6"
       >
         <div>
           {user && (
@@ -4013,9 +4025,9 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
 
       </div>
 
-      {/* Filter button + Sort menu + active filter badges. STICKY on mobile so
-          the user can re-filter/re-sort without scrolling back to the top of
-          a 100+ item grid.
+      {/* Filter button + Sort menu + active filter badges. STICKY on every
+          breakpoint so the user can re-filter/re-sort without scrolling back
+          to the top of a 100+ item grid.
 
           Critical: this MUST be a sibling of the grid (a direct child of the
           col-span-8 column), NOT nested inside the .flex.flex-col wrapper
@@ -4024,9 +4036,12 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           sticky (as it would inside the search/pills wrapper), the sticky has
           zero scroll-range and appears not to stick at all.
 
-          On lg+ it reverts to natural flow (lg:static) because the page-level
-          sticky header already covers the always-visible toolbar role. */}
-      <div className="flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-stone-100/95 backdrop-blur-md border-b border-stone-200/60 lg:static lg:mx-0 lg:px-0 lg:py-0 lg:bg-transparent lg:backdrop-blur-none lg:border-0"
+          Bg matches the main page colour (#F7F5F2) so the toolbar looks
+          continuous with the page rather than a separate strip. The bleed
+          (-mx-4 on mobile, -mx-12 on lg) extends the backdrop to the edge
+          of the <main> scroll container, so items behind don't peek out
+          between the toolbar and the column edge as they scroll past. */}
+      <div className="flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60 lg:-mx-12 lg:px-12"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
           {(() => {
             const activeBadges = [];
@@ -4036,6 +4051,9 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
             if (styleFilter !== 'All Styles') activeBadges.push({ label: styleFilter, clear: () => setStyleFilter('All Styles') });
             if (colorFilter !== 'All Colours') activeBadges.push({ label: colorFilter, clear: () => setColorFilter('All Colours'), swatch: COLOR_SWATCHES[colorFilter] });
             const count = activeBadges.length;
+            // "Anything narrowing the view" — broader than just the advanced
+            // badges. Used to decide whether to show the one-shot Reset.
+            const anyFilterActive = !!searchQuery || filter !== 'all' || categoryFilter !== 'All' || count > 0;
             return (
               <>
                 <button onClick={() => setFiltersOpen(true)}
@@ -4097,15 +4115,14 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                     <X size={12} strokeWidth={1.5} className="text-stone-400 group-hover:text-stone-900" />
                   </button>
                 ))}
-                {count > 1 && (
-                  <button onClick={() => {
-                    setSubCategoryFilter('All Types');
-                    setSeasonFilter('All Seasons');
-                    setBrandFilter('All Brands');
-                    setStyleFilter('All Styles');
-                    setColorFilter('All Colours');
-                  }} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline underline-offset-2 transition-colors px-2">
-                    Clear all
+                {anyFilterActive && (
+                  <button
+                    onClick={resetAllFilters}
+                    className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 bg-white border border-stone-300 hover:border-stone-500 transition-colors"
+                    title="Clear search, status, category, and all advanced filters"
+                  >
+                    <X size={12} strokeWidth={1.75} />
+                    Reset all
                   </button>
                 )}
               </>

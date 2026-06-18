@@ -3902,6 +3902,122 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
 
   const activeSort = WARDROBE_SORT_OPTIONS.find((o) => o.key === sortBy) || WARDROBE_SORT_OPTIONS[0];
 
+  // Filter state hoisted out of the render so the SAME controls JSX renders
+  // identically in the desktop unified toolbar AND the mobile sticky strip
+  // (single source of truth — change the badge logic once, both surfaces
+  // update).
+  const activeBadges = [];
+  if (subCategoryFilter !== 'All Types') activeBadges.push({ label: subCategoryFilter, clear: () => setSubCategoryFilter('All Types') });
+  if (seasonFilter !== 'All Seasons') activeBadges.push({ label: seasonFilter, clear: () => setSeasonFilter('All Seasons') });
+  if (brandFilter !== 'All Brands') activeBadges.push({ label: brandFilter, clear: () => setBrandFilter('All Brands') });
+  if (styleFilter !== 'All Styles') activeBadges.push({ label: styleFilter, clear: () => setStyleFilter('All Styles') });
+  if (colorFilter !== 'All Colours') activeBadges.push({ label: colorFilter, clear: () => setColorFilter('All Colours'), swatch: COLOR_SWATCHES[colorFilter] });
+  const activeFilterCount = activeBadges.length;
+  const anyFilterActive = !!searchQuery || filter !== 'all' || categoryFilter !== 'All' || activeFilterCount > 0;
+
+  // Filter controls fragment — used inside both the desktop unified toolbar
+  // and the mobile sticky strip. Pure JSX, no surrounding bar styling, so
+  // each consumer can wrap it in its own flex/sticky container.
+  const filterControls = (
+    <>
+      <button onClick={() => setFiltersOpen(true)}
+        className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm transition-all border ${
+          activeFilterCount > 0 ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500'
+        }`}>
+        <SlidersHorizontal size={14} strokeWidth={1.5} />
+        Filters
+        {activeFilterCount > 0 && (
+          <span className="bg-white/20 text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>
+        )}
+      </button>
+
+      <div className="relative shrink-0">
+        <button onClick={() => setSortMenuOpen((o) => !o)}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm transition-all border bg-white border-stone-300 text-stone-700 hover:border-stone-500`}>
+          <ArrowUpDown size={14} strokeWidth={1.5} />
+          <span className="hidden sm:inline">{activeSort.label}</span>
+          <span className="sm:hidden">Sort</span>
+          <ChevronDown size={12} strokeWidth={2} className={`transition-transform ${sortMenuOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {sortMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} aria-hidden="true" />
+            <div className="absolute z-40 mt-2 left-0 sm:left-auto sm:right-0 min-w-[15rem] bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 animate-in fade-in slide-in-from-top-2 duration-150" role="menu">
+              <p className="px-4 pt-1 pb-2 text-[10px] tracking-widest uppercase text-stone-400 font-medium">Sort by</p>
+              {WARDROBE_SORT_OPTIONS.map((o) => {
+                const isActive = o.key === sortBy;
+                return (
+                  <button key={o.key} onClick={() => { setSortBy(o.key); setSortMenuOpen(false); }}
+                    className={`w-full text-left px-4 py-2.5 flex items-start justify-between gap-3 transition-colors ${
+                      isActive ? 'bg-stone-100' : 'hover:bg-stone-50'
+                    }`}
+                    role="menuitemradio" aria-checked={isActive}
+                  >
+                    <div className="min-w-0">
+                      <p className={`text-sm ${isActive ? 'text-stone-900 font-medium' : 'text-stone-800'}`}>{o.label}</p>
+                      <p className="text-[11px] text-stone-500 mt-0.5">{o.hint}</p>
+                    </div>
+                    {isActive && <Check size={16} strokeWidth={2} className="shrink-0 text-stone-900 mt-0.5" />}
+                  </button>
+                );
+              })}
+              <div className="border-t border-stone-200 mt-2 pt-2 px-4 pb-1">
+                <p className="text-[10px] text-stone-400 italic">★ Favourites always pin to the top</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {activeBadges.map((b, i) => (
+        <button key={i} onClick={b.clear}
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-white border border-stone-200 text-stone-700 hover:border-stone-400 hover:text-stone-900 transition-colors group">
+          {b.swatch && <span className="w-2.5 h-2.5 rounded-full border border-stone-300/50"
+            style={b.swatch.startsWith('linear') ? { background: b.swatch } : { backgroundColor: b.swatch }} />}
+          {b.label}
+          <X size={12} strokeWidth={1.5} className="text-stone-400 group-hover:text-stone-900" />
+        </button>
+      ))}
+
+      {anyFilterActive && (
+        <button
+          onClick={resetAllFilters}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 bg-white border border-stone-300 hover:border-stone-500 transition-colors"
+          title="Clear search, status, category, and all advanced filters"
+        >
+          <X size={12} strokeWidth={1.75} />
+          Reset all
+        </button>
+      )}
+    </>
+  );
+
+  // Add/Select controls — desktop-only (mobile uses bottom-nav FAB + the
+  // Select button in the header). Pulled out for the unified toolbar.
+  const addSelectControls = (
+    <>
+      <button
+        onClick={openAddModal}
+        className="h-11 inline-flex items-center justify-center gap-2 px-5 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-800 transition-colors"
+      >
+        <Plus size={16} strokeWidth={1.75} /> Add to Collection
+      </button>
+      {items.length > 0 && (
+        <button
+          onClick={selectMode ? exitSelectMode : () => enterSelectMode()}
+          className={`h-11 shrink-0 px-4 rounded-full text-[10px] tracking-widest uppercase border transition-colors ${
+            selectMode
+              ? 'bg-stone-900 text-white border-stone-900'
+              : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+          }`}
+          title={selectMode ? 'Cancel selection' : 'Select multiple items'}
+        >
+          {selectMode ? 'Cancel' : 'Select'}
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div className="space-y-6 md:space-y-10">
       {/* Page header — scrolls away naturally on every breakpoint. The Filters
@@ -3977,6 +4093,35 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         />
       </div>
 
+      {/* ─── DESKTOP COMMAND TOOLBAR ────────────────────────────────────
+          One unified sticky bar spanning the full content width, containing
+          ALL view-level controls (Filters · Sort · active badges · Reset on
+          the left; Add to Collection · Select on the right). Sits in flow
+          above the 2-column grid; pins to top:0 when scrolled.
+
+          Why one bar instead of two per-column sticky bars (the previous
+          layout): a position:sticky element can only paint inside its own
+          containing block. Putting the filter bar inside col-span-8 and
+          the Add/Select bar inside col-span-4 left the column gutter —
+          and any area where the col-span-4 was empty — uncovered, so
+          item cards scrolling underneath were visible BETWEEN the two
+          floating islands. Gold-standard fix is to host both control
+          groups in a single full-width bar.
+
+          Solid bg (no /95) because translucency over a bold product grid
+          reads as cheap glass overlay — colors bleed through and the bar
+          loses authority. A solid surface reads as a deliberate command
+          plate. The lg:-mx-12 lg:px-12 cancels the parent padding so the
+          bar bleeds edge-to-edge of the max-w-6xl content well. */}
+      <div className="hidden lg:flex lg:sticky lg:top-0 lg:z-30 lg:items-center lg:gap-3 lg:-mx-12 lg:px-12 lg:py-3 lg:bg-[#F7F5F2] lg:border-b lg:border-stone-200/60">
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+          {filterControls}
+        </div>
+        <div className="flex items-stretch gap-2 shrink-0 pl-3 ml-3 border-l border-stone-200/80">
+          {addSelectControls}
+        </div>
+      </div>
+
       {/* Two-column dashboard on lg+: wardrobe LEFT (col-span-8), Today panel RIGHT
           (col-span-4 sticky). DOM order = wardrobe first, today second — so on
           mobile users hit search/filters/grid immediately and today cards drop
@@ -4025,109 +4170,12 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
 
       </div>
 
-      {/* Filter button + Sort menu + active filter badges. STICKY on every
-          breakpoint so the user can re-filter/re-sort without scrolling back
-          to the top of a 100+ item grid.
-
-          Critical: this MUST be a sibling of the grid (a direct child of the
-          col-span-8 column), NOT nested inside the .flex.flex-col wrapper
-          above with search/pills. A sticky element only sticks while its
-          DIRECT PARENT box is in view — if the parent ends right below the
-          sticky (as it would inside the search/pills wrapper), the sticky has
-          zero scroll-range and appears not to stick at all.
-
-          Bg matches the main page colour (#F7F5F2) so the toolbar looks
-          continuous with the page rather than a separate strip. The bleed
-          (-mx-4 on mobile, -mx-12 on lg) extends the backdrop to the edge
-          of the <main> scroll container, so items behind don't peek out
-          between the toolbar and the column edge as they scroll past. */}
-      <div className="flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60 lg:-mx-12 lg:px-12"
+      {/* MOBILE-ONLY sticky filter strip. Desktop uses the unified command
+          toolbar at the top of the wardrobe view instead. lg:hidden so the
+          two surfaces don't both render at lg+ (which would double-stick). */}
+      <div className="lg:hidden flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-          {(() => {
-            const activeBadges = [];
-            if (subCategoryFilter !== 'All Types') activeBadges.push({ label: subCategoryFilter, clear: () => setSubCategoryFilter('All Types') });
-            if (seasonFilter !== 'All Seasons') activeBadges.push({ label: seasonFilter, clear: () => setSeasonFilter('All Seasons') });
-            if (brandFilter !== 'All Brands') activeBadges.push({ label: brandFilter, clear: () => setBrandFilter('All Brands') });
-            if (styleFilter !== 'All Styles') activeBadges.push({ label: styleFilter, clear: () => setStyleFilter('All Styles') });
-            if (colorFilter !== 'All Colours') activeBadges.push({ label: colorFilter, clear: () => setColorFilter('All Colours'), swatch: COLOR_SWATCHES[colorFilter] });
-            const count = activeBadges.length;
-            // "Anything narrowing the view" — broader than just the advanced
-            // badges. Used to decide whether to show the one-shot Reset.
-            const anyFilterActive = !!searchQuery || filter !== 'all' || categoryFilter !== 'All' || count > 0;
-            return (
-              <>
-                <button onClick={() => setFiltersOpen(true)}
-                  className={`shrink-0 inline-flex items-center gap-2 px-4 py-2.5 sm:py-2 rounded-full text-xs sm:text-sm transition-all border ${
-                    count > 0 ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500'
-                  }`}>
-                  <SlidersHorizontal size={14} strokeWidth={1.5} />
-                  Filters
-                  {count > 0 && (
-                    <span className="bg-white/20 text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-full">{count}</span>
-                  )}
-                </button>
-
-                {/* Sort menu — popover-style dropdown matching the filter aesthetic.
-                    Closes on selection, on outside click (via the backdrop), or Escape. */}
-                <div className="relative shrink-0">
-                  <button onClick={() => setSortMenuOpen((o) => !o)}
-                    className={`inline-flex items-center gap-2 px-4 py-2.5 sm:py-2 rounded-full text-xs sm:text-sm transition-all border bg-white border-stone-300 text-stone-700 hover:border-stone-500`}>
-                    <ArrowUpDown size={14} strokeWidth={1.5} />
-                    <span className="hidden sm:inline">{activeSort.label}</span>
-                    <span className="sm:hidden">Sort</span>
-                    <ChevronDown size={12} strokeWidth={2} className={`transition-transform ${sortMenuOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {sortMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} aria-hidden="true" />
-                      <div className="absolute z-40 mt-2 left-0 sm:left-auto sm:right-0 min-w-[15rem] bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 animate-in fade-in slide-in-from-top-2 duration-150" role="menu">
-                        <p className="px-4 pt-1 pb-2 text-[10px] tracking-widest uppercase text-stone-400 font-medium">Sort by</p>
-                        {WARDROBE_SORT_OPTIONS.map((o) => {
-                          const isActive = o.key === sortBy;
-                          return (
-                            <button key={o.key} onClick={() => { setSortBy(o.key); setSortMenuOpen(false); }}
-                              className={`w-full text-left px-4 py-2.5 flex items-start justify-between gap-3 transition-colors ${
-                                isActive ? 'bg-stone-100' : 'hover:bg-stone-50'
-                              }`}
-                              role="menuitemradio" aria-checked={isActive}
-                            >
-                              <div className="min-w-0">
-                                <p className={`text-sm ${isActive ? 'text-stone-900 font-medium' : 'text-stone-800'}`}>{o.label}</p>
-                                <p className="text-[11px] text-stone-500 mt-0.5">{o.hint}</p>
-                              </div>
-                              {isActive && <Check size={16} strokeWidth={2} className="shrink-0 text-stone-900 mt-0.5" />}
-                            </button>
-                          );
-                        })}
-                        <div className="border-t border-stone-200 mt-2 pt-2 px-4 pb-1">
-                          <p className="text-[10px] text-stone-400 italic">★ Favourites always pin to the top</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                {activeBadges.map((b, i) => (
-                  <button key={i} onClick={b.clear}
-                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-white border border-stone-200 text-stone-700 hover:border-stone-400 hover:text-stone-900 transition-colors group">
-                    {b.swatch && <span className="w-2.5 h-2.5 rounded-full border border-stone-300/50"
-                      style={b.swatch.startsWith('linear') ? { background: b.swatch } : { backgroundColor: b.swatch }} />}
-                    {b.label}
-                    <X size={12} strokeWidth={1.5} className="text-stone-400 group-hover:text-stone-900" />
-                  </button>
-                ))}
-                {anyFilterActive && (
-                  <button
-                    onClick={resetAllFilters}
-                    className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 bg-white border border-stone-300 hover:border-stone-500 transition-colors"
-                    title="Clear search, status, category, and all advanced filters"
-                  >
-                    <X size={12} strokeWidth={1.75} />
-                    Reset all
-                  </button>
-                )}
-              </>
-            );
-          })()}
+        {filterControls}
       </div>
 
       <WardrobeFiltersSheet
@@ -4298,46 +4346,11 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so daily actions stay one tap away without burying search/filters
           or stacking under the grid. The top offset (lg:top-36) sits the
           aside just below the sticky page header. */}
-      {/* Right column. The column itself is NOT sticky — only the Add/Select
-          row at the top is. Cards below (TodayTile, DailyDigest, Today's
-          Pick, Tomorrow) flow naturally and scroll with the page so all
-          content remains reachable even on shorter viewports.
-          lg:self-stretch makes the aside fill the grid row's full height
-          (matching the tall left column) — necessary because CSS sticky
-          only sticks while its containing block is on screen. Without
-          this, the sticky Add/Select bar would scroll away once the
-          ~600px aside content scrolls past, because the aside's own
-          bottom edge would also be past the viewport. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 lg:self-stretch flex-col gap-3 lg:pr-1 lg:pb-6">
-        {/* Sticky command bar — Add/Select pin to the top of the scroll
-            container, aligned with the Filters / Sort toolbar in the left
-            column. Both use lg:top-0 + matching bg/border so the two stuck
-            bars read as a single continuous toolbar strip spanning the page
-            width.
-            py-3 (mobile: py-2) and bg match the filter row exactly so the
-            top edges land on the same y-coordinate. */}
-        <div className="lg:sticky lg:top-0 z-20 flex items-stretch gap-2 lg:bg-[#F7F5F2]/95 lg:backdrop-blur-md lg:-mx-2 lg:px-2 lg:py-3 lg:border-b lg:border-stone-200/60">
-          <button
-            onClick={openAddModal}
-            className="flex-1 h-12 bg-stone-900 text-white px-5 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-800 transition-all smooth-shadow"
-          >
-            <Plus size={18} strokeWidth={1.5} /> Add to Collection
-          </button>
-          {items.length > 0 && (
-            <button
-              onClick={selectMode ? exitSelectMode : () => enterSelectMode()}
-              className={`shrink-0 h-12 px-4 rounded-2xl text-[10px] tracking-widest uppercase border transition-colors ${
-                selectMode
-                  ? 'bg-stone-900 text-white border-stone-900'
-                  : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
-              }`}
-              title={selectMode ? 'Cancel selection' : 'Select multiple items'}
-            >
-              {selectMode ? 'Cancel' : 'Select'}
-            </button>
-          )}
-        </div>
-
+      {/* Right column — today panel only. Add/Select moved into the unified
+          desktop toolbar at the top of the wardrobe view (above the grid),
+          so this column no longer needs its own sticky bar. Cards flow
+          naturally and scroll with the page. */}
+      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 flex-col gap-3 lg:pr-1 lg:pb-6">
         <TodayTile
           items={items}
           outfits={outfits}

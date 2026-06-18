@@ -11134,12 +11134,15 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
     <div className="space-y-10 md:space-y-12 max-w-5xl">
       <EditorialHeader eyebrow="The Ledger" title="Insights" subtitle="Value, wear data, and gaps across your collection." />
 
-      {/* Sticky sub-section nav. Long page (4000+ px); without this the
-          user scrolls forever to find e.g. the colour profile or the
-          wear timeline. Each chip is an anchor link to the matching
-          section id below. Same bg + bleed pattern as the wardrobe
-          toolbar so it reads as 'page chrome' not a content card. */}
-      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60 -mt-4 md:-mt-6 -mb-2"
+      {/* Sticky sub-section nav. Long page; without this the user
+          scrolls forever to find e.g. the colour profile or the wear
+          timeline. Same bg + bleed pattern as the wardrobe toolbar so
+          it reads as page chrome, not a content card.
+          IMPORTANT: NO negative margins here — earlier version had
+          -mb-2 which pulled the hero cards up by 8px AND the nav sits
+          at z-20, so the top of the cards was visually clipped behind
+          the bar. Natural space-y spacing from the parent does the job. */}
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex gap-2 overflow-x-auto hide-scrollbar">
           {SECTIONS.map((s) => (
@@ -11152,36 +11155,35 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       </nav>
 
       <div id="insights-value" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 scroll-mt-24">
-        {/* Refined hero card: dropped shadow-2xl (heavy) for smooth-shadow,
-            dropped the giant rotated PoundSterling decoration (dated), kept
-            the dark surface as the primary value signal. Brass-rule accent
-            on the eyebrow matches the editorial language used everywhere
-            else. Typography parity with the Wishlist Target card next to
-            it so the two-up reads as a balanced pair. */}
-        <div className="bg-stone-900 text-white p-6 md:p-8 rounded-[2rem] smooth-shadow relative overflow-hidden">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="inline-block w-4 h-px bg-brass-300" aria-hidden="true"></span>
+        {/* Hero value cards. Two design notes:
+            • Dark card uses NO shadow — a dark surface against the light
+              page already reads as elevated; smooth-shadow on dark is
+              redundant decoration. Light card keeps smooth-shadow because
+              it needs the depth cue against the same-tone page.
+            • Both cards lead with the brass-rule + eyebrow editorial
+              pattern used in every main-column header so the page speaks
+              one typographic language. */}
+        <div className="bg-stone-900 text-white p-7 md:p-9 rounded-[2rem] relative overflow-hidden">
+          <div className="flex items-center gap-3 mb-5">
+            <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
             <p className="text-stone-400 text-[10px] font-semibold tracking-[0.28em] uppercase">Current Archive Value</p>
           </div>
-          <h3 className="text-5xl md:text-6xl font-display font-medium">£{ownedTotal.toLocaleString()}</h3>
-          <p className="text-sm text-stone-400 mt-6 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-stone-500"></span>
-            Across {ownedItems.length} curated items
+          <h3 className="text-5xl md:text-6xl font-display font-medium tracking-tight">£{ownedTotal.toLocaleString()}</h3>
+          <p className="text-xs text-stone-400 mt-6 tracking-widest uppercase">
+            Across {ownedItems.length} curated pieces
           </p>
         </div>
 
         {/* Wishlist Target — clickable, jumps to Wardrobe filtered to wishlist.
-            Removed hover:-translate-y-0.5 + active:scale (anti-pattern fixed
-            elsewhere — wrapper transforms fire CSS :active for inner buttons).
-            Hover signal is just border darkening to stone-500. */}
+            No wrapper transforms (anti-pattern fixed elsewhere). */}
         <button
           onClick={() => onJumpToWardrobe?.({ filter: 'wishlist' })}
           disabled={!onJumpToWardrobe || wishlistItems.length === 0}
-          className="text-left bg-white border border-stone-200/60 p-6 md:p-8 rounded-[2rem] smooth-shadow transition-colors duration-200 enabled:hover:border-stone-500 disabled:cursor-default group"
+          className="text-left bg-white border border-stone-200/60 p-7 md:p-9 rounded-[2rem] smooth-shadow transition-colors duration-200 enabled:hover:border-stone-500 disabled:cursor-default group"
         >
-          <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3">
-              <span className="inline-block w-4 h-px bg-brass-300" aria-hidden="true"></span>
+              <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
               <p className="text-stone-500 text-[10px] font-semibold tracking-[0.28em] uppercase">Wishlist Target</p>
             </div>
             {wishlistItems.length > 0 && (
@@ -11190,10 +11192,10 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
               </span>
             )}
           </div>
-          <h3 className="text-5xl md:text-6xl font-display text-stone-900 font-medium">£{wishlistTotal.toLocaleString()}</h3>
-          <p className="text-sm text-stone-500 mt-6 flex items-center gap-2">
-            <Heart size={14} className="text-stone-400" />
-            {wishlistItems.length} items desired
+          <h3 className="text-5xl md:text-6xl font-display text-stone-900 font-medium tracking-tight">£{wishlistTotal.toLocaleString()}</h3>
+          <p className="text-xs text-stone-500 mt-6 tracking-widest uppercase inline-flex items-center gap-1.5">
+            <Heart size={11} strokeWidth={1.5} className="text-stone-400" />
+            {wishlistItems.length} pieces desired
           </p>
         </button>
       </div>

@@ -8246,7 +8246,10 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             return (
               <button key={outfit.id} onClick={handleCardClick}
                 onContextMenu={(e) => { e.preventDefault(); if (!selectMode) { setSelectMode(true); setSelectedOutfits(new Set([outfit.id])); } }}
-                className="text-left group transition-transform active:scale-[0.97] relative">
+                // Editorial card convention: no wrapper press-scale (the
+                // selectMode toggle inside would trigger it via CSS :active
+                // cascade). The image grid below carries the hover lift.
+                className="text-left group cursor-pointer relative">
                 {selectMode && (
                   <span className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                     isSelected ? 'bg-stone-900 border-stone-900' : 'bg-white/90 border-stone-300'
@@ -8254,7 +8257,12 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                     {isSelected && <CheckCircle2 size={14} strokeWidth={2.5} className="text-white" />}
                   </span>
                 )}
-                <div className={`aspect-square rounded-2xl overflow-hidden bg-stone-100 smooth-shadow grid grid-cols-2 grid-rows-2 gap-0.5 mb-3 transition-all ${isSelected ? 'ring-4 ring-stone-900 scale-95' : ''}`}>
+                {/* Image surface = the 2x2 preview grid. Shadow lift on
+                    hover signals interactivity (same language as wardrobe
+                    cards). No image-zoom here — the grid is 4 mini thumbs,
+                    zooming all 4 at once feels jittery. Shadow alone is
+                    the editorial cue. */}
+                <div className={`aspect-square rounded-2xl overflow-hidden bg-stone-100 smooth-shadow lg:group-hover:shadow-xl transition-shadow duration-500 grid grid-cols-2 grid-rows-2 gap-0.5 mb-3 ${isSelected ? 'ring-4 ring-stone-900 scale-95' : ''}`}>
                   {previewImages.length === 0 && <div className="col-span-2 row-span-2 flex items-center justify-center text-stone-300"><Shirt size={32} strokeWidth={1} /></div>}
                   {previewImages.map((src, i) => (
                     <div key={i} className={previewImages.length === 1 ? 'col-span-2 row-span-2' : previewImages.length === 2 ? 'col-span-1 row-span-2' : previewImages.length === 3 && i === 0 ? 'col-span-2 row-span-1' : ''}>
@@ -8405,10 +8413,16 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {visible.map((insp) => (
                 <button key={insp.id} onClick={() => onOpenInspiration(insp.id)}
-                  className="text-left group transition-transform active:scale-[0.97] lg:hover:-translate-y-1">
-                  <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 smooth-shadow lg:group-hover:shadow-xl transition-shadow duration-300 relative">
+                  // Same editorial card convention as wardrobe items:
+                  // image is the interactive surface (zoom + shadow lift);
+                  // caption stays anchored; no wrapper press-scale (avoids
+                  // the wrapper jumping when inner controls fire).
+                  className="text-left group cursor-pointer">
+                  <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 smooth-shadow lg:group-hover:shadow-xl transition-shadow duration-500 relative">
                     {insp.image ? (
-                      <img src={insp.image} alt={insp.caption || 'inspiration'} className="w-full h-full object-cover" loading="lazy" />
+                      <img src={insp.image} alt={insp.caption || 'inspiration'}
+                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                        loading="lazy" decoding="async" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-stone-300"><Bookmark size={40} strokeWidth={1} /></div>
                     )}

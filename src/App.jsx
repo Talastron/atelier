@@ -8201,7 +8201,17 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   return (
                     <div key={slot}>
                       <h4 className="text-[11px] font-bold text-stone-500 uppercase tracking-[0.2em] mb-3 md:mb-4 px-2">{slot} · {pool.length}</h4>
-                      <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 hide-scrollbar px-2">
+                      {/* Mobile: horizontal scroll (touch-swipe is natural).
+                          Desktop (lg+): flex-wrap so items flow into multiple
+                          rows. The reason for the breakpoint switch is a
+                          CSS spec quirk — setting overflow-x: auto implicitly
+                          promotes overflow-y to auto, making the container
+                          capture vertical wheel events. On mobile that's
+                          fine (no wheel), but on desktop it made the page
+                          un-scrollable when the cursor was anywhere over
+                          the items. lg:overflow-x-visible removes the scroll
+                          container entirely; lg:flex-wrap takes over layout. */}
+                      <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 hide-scrollbar px-2 lg:flex-wrap lg:overflow-x-visible lg:pb-0">
                         {pool.map((item) => <DraggableArchiveItem key={item.id} slot={slot} item={item} />)}
                         {pool.length === 0 && (
                           <div className="w-full py-8 text-center text-stone-400 text-sm border border-dashed border-stone-300 rounded-2xl">No pieces in {slot.toLowerCase()} yet.</div>

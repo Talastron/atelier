@@ -11781,10 +11781,10 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
     finally { setBusy(false); }
   };
 
+  // StyleManifestoCard — dark surface, no shadow per convention
+  // (dark on light page already reads as elevated). Padding harmonised
+  // to p-6 md:p-8 matching the Insights section cards.
   return (
-    {/* StyleManifestoCard — dark surface, no shadow per convention
-        (dark on light page already reads as elevated). Padding harmonised
-        to p-6 md:p-8 matching the Insights section cards. */}
     <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-8 relative overflow-hidden">
       <div className="absolute -right-10 -bottom-10 opacity-[0.04] pointer-events-none">
         <Sparkles size={220} strokeWidth={0.8} />

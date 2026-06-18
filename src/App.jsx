@@ -11185,22 +11185,26 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   };
   return (
     <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
-        <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
-          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
-            <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
-            <span className="hidden sm:inline">Back to Saved Looks</span>
+      <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
+        <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">
+          <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-xs sm:text-sm tracking-wide text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
+            <ChevronRight size={16} strokeWidth={1.5} className="rotate-180" />
+            <span className="hidden sm:inline">Back to Lookbook</span>
             <span className="sm:hidden">Back</span>
           </button>
           {!confirmDelete ? (
-            <div className="flex gap-2">
+            // Refined toolbar — primary actions (Share, Vary) lead; star is
+            // an inline toggle; Edit and Duplicate are quieter; Delete is a
+            // text-only icon button. Less visual noise than the previous
+            // six-equal-pills row.
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {onSaveOutfit && (
                 <button
                   onClick={() => onSaveOutfit({ ...outfit, favorite: !outfit.favorite })}
-                  className={`p-2.5 rounded-full transition-all active:scale-90 ${
+                  className={`p-2.5 rounded-full transition-colors duration-200 ${
                     outfit.favorite
-                      ? 'bg-brass-300 text-stone-900 border border-brass-400'
-                      : 'bg-white border border-stone-200 text-stone-400 hover:border-brass-400 hover:text-brass-500'
+                      ? 'bg-brass-300 text-stone-900'
+                      : 'text-stone-400 hover:text-stone-900 hover:bg-stone-100'
                   }`}
                   aria-label={outfit.favorite ? 'Remove favourite' : 'Add to favourites'}
                   title={outfit.favorite ? 'Remove favourite' : 'Add to favourites'}
@@ -11208,16 +11212,17 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <Star size={16} strokeWidth={1.5} className={outfit.favorite ? 'fill-stone-900' : ''} />
                 </button>
               )}
+              {onVary && isAIEnabled() && (
+                <button onClick={onVary}
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-brass-300 text-stone-900 hover:bg-brass-200 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap font-medium"
+                  title="Spin a variation of this look with AI">
+                  <Wand2 size={15} strokeWidth={1.5} />
+                  <span className="hidden md:inline">Vary look</span>
+                </button>
+              )}
               {onExport && (
-                // Single Share button — opens the in-app editorial preview
-                // modal. The modal previews the composed image in Atelier's
-                // own design language and then offers three actions
-                // (Share / Save image / Public link) before any handover
-                // to the OS share sheet. One clean entry-point; no toolbar
-                // soup. Old separate Link button removed — it's a secondary
-                // action inside the modal now.
                 <button onClick={onExport}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-stone-900 text-white border border-stone-900 hover:bg-stone-700 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap"
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap"
                   title="Preview, then share or save this look">
                   <Share2 size={15} strokeWidth={1.5} />
                   <span className="hidden sm:inline">Share</span>
@@ -11225,62 +11230,72 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               )}
               {onEdit && (
                 <button onClick={onEdit}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all whitespace-nowrap"
-                  title="Edit this look in Styling Studio — change pieces, rename, save back to the same outfit">
+                  className="hidden sm:inline-flex px-3 py-2.5 rounded-full text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200"
+                  title="Edit this look in Styling Studio">
                   Edit
                 </button>
               )}
-              {onVary && isAIEnabled() && (
-                <button onClick={onVary}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-brass-200 text-stone-900 border border-brass-300 hover:bg-brass-300 transition-all inline-flex items-center gap-2 whitespace-nowrap font-medium"
-                  title="Spin a variation of this look with AI">
-                  <Wand2 size={16} strokeWidth={1.5} />
-                  <span className="hidden sm:inline">Vary look</span>
-                </button>
-              )}
               <button onClick={async () => { await onDuplicate?.(); toast.show('Duplicated · edit anytime', { kind: 'success' }); }}
-                className="px-4 py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all whitespace-nowrap">
+                className="hidden sm:inline-flex px-3 py-2.5 rounded-full text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200"
+                title="Save a copy of this look">
                 Duplicate
               </button>
-              <button onClick={() => setConfirmDelete(true)} className="p-2.5 rounded-full bg-white border border-stone-200 text-stone-400 hover:border-red-300 hover:text-red-600 transition-all" aria-label="Delete look">
+              <button onClick={() => setConfirmDelete(true)} className="p-2.5 rounded-full text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors duration-200" aria-label="Delete look" title="Delete look">
                 <Trash2 size={16} strokeWidth={1.5} />
               </button>
             </div>
           ) : (
             <div className="flex gap-2">
-              <button onClick={async () => { await onDelete(); toast.show('Look deleted', { kind: 'success' }); }} className="px-4 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm bg-red-600 text-white hover:bg-red-700 transition-all whitespace-nowrap">Delete look</button>
-              <button onClick={() => setConfirmDelete(false)} className="px-3 sm:px-4 py-2.5 rounded-full text-xs sm:text-sm text-stone-500 hover:text-stone-900 transition-all">Cancel</button>
+              <button onClick={async () => { await onDelete(); toast.show('Look deleted', { kind: 'success' }); }} className="px-4 sm:px-5 py-2.5 rounded-full text-xs sm:text-sm bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 whitespace-nowrap">Delete look</button>
+              <button onClick={() => setConfirmDelete(false)} className="px-3 sm:px-4 py-2.5 rounded-full text-xs sm:text-sm text-stone-500 hover:text-stone-900 transition-colors duration-200">Cancel</button>
             </div>
           )}
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-12">
-        <header className="mb-10">
-          <p className="text-[11px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-3">Saved Look</p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display text-stone-900">{outfit.name}</h1>
-          <p className="text-stone-500 mt-4 text-sm">
+        <header className="mb-10 sm:mb-12">
+          {/* Editorial eyebrow — brass-rule + small-caps, same pattern as
+              every other main-column header in the app. Was a plain caps
+              line before; now speaks the same typographic vocabulary. */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="brass-rule" aria-hidden="true"></span>
+            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Saved Look</span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display text-stone-900 tracking-tight leading-[1.05]">{outfit.name}</h1>
+          <p className="text-stone-500 mt-5 text-sm tracking-wide">
             {pieces.length} pieces · total value £{total.toLocaleString()}
             {outfit.intent && <span className="ml-3 text-stone-400">· styled for "{outfit.intent}"</span>}
           </p>
+          {/* AI reasoning as an italic pull-quote (Vogue editorial style) —
+              dark stone-900 surface, no shadow per convention, brass accent
+              before the quote. */}
           {outfit.reasoning && (
-            <div className="mt-6 bg-stone-900 text-white rounded-2xl p-4 sm:p-5 text-sm leading-relaxed flex items-start gap-3 max-w-3xl">
+            <div className="mt-7 bg-stone-900 text-white rounded-2xl p-5 sm:p-6 text-sm leading-relaxed flex items-start gap-3 max-w-3xl">
               <Sparkles size={14} strokeWidth={1.5} className="shrink-0 mt-0.5 text-brass-300" />
-              <p className="italic">{outfit.reasoning}</p>
+              <p className="italic">"{outfit.reasoning}"</p>
             </div>
           )}
 
           {onLogWear && (
-            <div className="mt-6 bg-white border border-stone-200 rounded-2xl p-5 max-w-3xl">
-              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                <div>
-                  <p className="text-[10px] tracking-widest uppercase text-stone-500 font-bold">Wear this look</p>
-                  <p className="text-xs text-stone-500 mt-1">Logs every piece in one tap — counts toward each item's wear history.</p>
+            // Wear-this-look card — tightened. Brass-rule eyebrow + serif
+            // header. Two primary actions ("I wore this today" dark pill,
+            // "Snap fit" outline) on the right. Verdict chips + optional
+            // input demoted as quieter follow-up controls below — they
+            // refine the wear log AFTER the user has decided to log.
+            <div className="mt-8 bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6 max-w-3xl smooth-shadow">
+              <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="brass-rule" aria-hidden="true"></span>
+                    <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wear this look</span>
+                  </div>
+                  <p className="text-xs text-stone-500 leading-relaxed">Logs every piece in one tap — counts toward each item's wear history.</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   {wornPhotos.length < 6 && (
-                    <label className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-colors flex items-center gap-2 cursor-pointer" title="Snap a selfie wearing this look">
-                      <Camera size={14} strokeWidth={1.5} /> Snap fit
+                    <label className="text-[10px] tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 flex items-center gap-2 cursor-pointer" title="Snap a selfie wearing this look">
+                      <Camera size={13} strokeWidth={1.5} /> Snap fit
                       <input type="file" accept="image/*" capture="user" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
                     </label>
                   )}
@@ -11292,9 +11307,9 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                       try { await onLogWear(logVerdict); setLogVerdict(''); }
                       finally { setLogBusy(false); }
                     }}
-                    className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors disabled:opacity-40 flex items-center gap-2"
+                    className="text-[10px] tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 disabled:opacity-40 flex items-center gap-2 font-medium"
                   >
-                    <Calendar size={14} strokeWidth={1.5} /> {logBusy ? 'Logging…' : 'I wore this today'}
+                    <Calendar size={13} strokeWidth={1.5} /> {logBusy ? 'Logging…' : 'I wore this today'}
                   </button>
                 </div>
               </div>
@@ -11302,7 +11317,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 {QUICK_VERDICT_CHIPS.map((c) => (
                   <button key={c} type="button"
                     onClick={() => setLogVerdict((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c)}
-                    className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-all">
+                    className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
                     {c}
                   </button>
                 ))}
@@ -11312,17 +11327,22 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 onChange={(e) => setLogVerdict(e.target.value)}
                 placeholder="Optional verdict — applies to every piece…"
                 maxLength={120}
-                className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-all"
+                className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-colors"
               />
             </div>
           )}
 
-          {/* Worn photos — actual photos of when you wore this look */}
-          <div className="mt-8">
-            <div className="flex items-baseline justify-between mb-3">
-              <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">Wore this · {wornPhotos.length}/6</h2>
+          {/* Worn photos — brass-rule editorial eyebrow consistent with the
+              rest of the app. Photos render as small portrait cards in a
+              horizontal scroll. */}
+          <div className="mt-10">
+            <div className="flex items-baseline justify-between mb-4 gap-3">
+              <div className="flex items-center gap-3">
+                <span className="brass-rule" aria-hidden="true"></span>
+                <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wore this · {wornPhotos.length}/6</span>
+              </div>
               {wornPhotos.length < 6 && (
-                <label className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 cursor-pointer transition-colors">
+                <label className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 cursor-pointer transition-colors duration-200">
                   {photoBusy ? 'Adding…' : '＋ Add photo'}
                   <input type="file" accept="image/*" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
                 </label>
@@ -11350,15 +11370,18 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
           </div>
         </header>
 
-        <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3 flex-wrap">
-          <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">The Pieces</h2>
+        <div className="flex items-center justify-between mb-6 sm:mb-8 gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="brass-rule" aria-hidden="true"></span>
+            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">The Pieces</span>
+          </div>
           <div className="flex bg-stone-200/50 p-1 rounded-full text-[10px] tracking-wider uppercase">
             <button onClick={() => setView('flatlay')}
-              className={`px-3 py-1.5 rounded-full transition-all ${view === 'flatlay' ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'}`}>
+              className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'flatlay' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
               Flat-lay
             </button>
             <button onClick={() => setView('grid')}
-              className={`px-3 py-1.5 rounded-full transition-all ${view === 'grid' ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'}`}>
+              className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'grid' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
               Grid
             </button>
           </div>
@@ -11367,7 +11390,10 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
         {view === 'flatlay' ? (
           <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          // GRID VIEW — consistent with the Lookbook restraint: no
+          // hover-zoom on the image, just a brass border framing on
+          // hover (matches Lookbook card convention).
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-7">
             {pieces.map((piece, i) => {
               const openable = !!(onOpenItem && piece.id);
               const Tag = openable ? 'button' : 'div';
@@ -11377,7 +11403,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   {...(openable ? { type: 'button', onClick: () => onOpenItem(piece.id), 'aria-label': `Open ${piece.name}` } : {})}
                   className={`flex flex-col gap-3 text-left ${openable ? 'group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900 rounded-2xl' : ''}`}
                 >
-                  <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 smooth-shadow ${openable ? 'transition-transform group-hover:scale-[1.02] group-active:scale-[0.98]' : ''}`}>
+                  <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-stone-200/60 transition-colors duration-300 ${openable ? 'lg:group-hover:border-brass-300/70' : ''}`}>
                     {itemImages(piece)[0] ? (
                       <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     ) : (
@@ -11386,7 +11412,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   </div>
                   <div className="px-1">
                     <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{piece.brand}</p>
-                    <p className={`font-display text-base text-stone-800 leading-snug ${openable ? 'group-hover:text-brass-600 transition-colors' : ''}`}>{piece.name}</p>
+                    <p className={`font-display text-base text-stone-800 leading-snug truncate ${openable ? 'group-hover:text-stone-700 transition-colors' : ''}`}>{piece.name}</p>
                     <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
                   </div>
                 </Tag>
@@ -11405,16 +11431,14 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 // canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
 // jewellery smaller — mimicking a real flat-lay arrangement.
 function OutfitFlatLay({ pieces, onOpenItem }) {
-  // Cheap deterministic hash → pseudo-random number in [0, 1) per piece id.
-  const seeded = (id, salt) => {
-    let h = 5381;
-    const s = `${id || ''}-${salt}`;
-    for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
-    return (Math.abs(h) % 10000) / 10000;
-  };
-  const CATEGORY_WEIGHT = { Outerwear: 1.2, Dresses: 1.2, Tops: 1.0, Bottoms: 1.0, Shoes: 0.85, Bags: 0.85, Accessories: 0.7, Jewellery: 0.6, Swimwear: 0.95 };
-
-  // Order: Outerwear, Dresses, Tops, Bottoms, Shoes, Bags, Accessories, Jewellery, Others
+  // Redesign: clean editorial composition. No rotation, no jitter, no
+  // brass-bordered gradient container — that scrapbook treatment was the
+  // anti-pattern the user repeatedly called out on the Lookbook cards.
+  // Items now arrange in a category-weighted horizontal row on a cream
+  // surface — anchor pieces (outerwear/dresses) larger, accessories
+  // smaller, all aligned to a common baseline. Same vocabulary as a
+  // luxury catalogue flat-lay.
+  const CATEGORY_WEIGHT = { Outerwear: 1.25, Dresses: 1.25, Tops: 1.0, Bottoms: 1.0, Shoes: 0.85, Bags: 0.85, Accessories: 0.7, Jewellery: 0.6, Swimwear: 0.95 };
   const ORDER = ['Outerwear', 'Dresses', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery', 'Swimwear'];
   const sorted = [...pieces].sort((a, b) => {
     const ai = ORDER.indexOf(a.category); const bi = ORDER.indexOf(b.category);
@@ -11423,49 +11447,40 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
 
   return (
     <div>
-      <div className="relative bg-gradient-to-br from-stone-100 via-stone-50 to-brass-50/30 rounded-[2rem] overflow-hidden border border-brass-300">
-        <div className="relative" style={{ height: 'min(70vh, 540px)' }}>
-          {sorted.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-stone-300">
-              <Shirt size={64} strokeWidth={1} />
-            </div>
-          )}
-          {sorted.map((p, i) => {
-            const total = sorted.length;
-            const col = (i + 0.5) / total;
-            const rotation = (seeded(p.id, 'r') - 0.5) * 12; // -6° to +6°
-            const yOffset = (seeded(p.id, 'y') - 0.5) * 30;   // -15px to +15px
-            const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
-            const baseSize = total <= 4 ? 38 : total <= 6 ? 30 : 24; // % of container
-            const size = baseSize * weight;
-            const left = `${col * 100}%`;
-            const z = 10 + Math.floor(weight * 10); // outerwear in front
-            const openable = !!(onOpenItem && p.id);
-            const Tag = openable ? 'button' : 'div';
-            return (
-              <Tag
-                key={p.id || i}
-                {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
-                className={`absolute ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 rounded-2xl' : ''}`}
-                style={{
-                  left,
-                  top: '50%',
-                  width: `${size}%`,
-                  transform: `translate(-50%, calc(-50% + ${yOffset}px)) rotate(${rotation}deg)`,
-                  zIndex: z,
-                }}
-              >
-                <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white shadow-lg ring-1 ring-black/5 ${openable ? 'transition-transform hover:scale-[1.05] active:scale-[0.97]' : ''}`}>
-                  {itemImages(p)[0] ? (
-                    <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
-                  )}
-                </div>
-              </Tag>
-            );
-          })}
-        </div>
+      <div className="relative bg-stone-100/60 rounded-[2rem] overflow-hidden border border-stone-200/60 p-8 sm:p-10 md:p-14">
+        {sorted.length === 0 ? (
+          <div className="h-64 flex items-center justify-center text-stone-300">
+            <Shirt size={64} strokeWidth={1} />
+          </div>
+        ) : (
+          // Flex row with category-weighted widths so anchor pieces read
+          // larger; items align to a common baseline (items-end). Horizontal
+          // scroll on overflow — preserves the editorial line composition
+          // when there are many pieces.
+          <div className="flex items-end justify-center gap-6 sm:gap-8 md:gap-10 overflow-x-auto hide-scrollbar">
+            {sorted.map((p, i) => {
+              const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
+              const openable = !!(onOpenItem && p.id);
+              const Tag = openable ? 'button' : 'div';
+              return (
+                <Tag
+                  key={p.id || i}
+                  {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
+                  className={`shrink-0 ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 rounded-xl group' : ''}`}
+                  style={{ width: `${Math.round(weight * 130)}px` }}
+                >
+                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-white">
+                    {itemImages(p)[0] ? (
+                      <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
+                    )}
+                  </div>
+                </Tag>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">

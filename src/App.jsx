@@ -2539,12 +2539,11 @@ function DigitalWardrobe() {
               {loading ? (
                 <WardrobeSkeleton />
               ) : (
-                {/* No transform-based animation here — slide-in-from-bottom
-                    leaves a translateY(0) on the element after the animation
-                    completes, which establishes a containing block and breaks
-                    position:sticky for everything inside (sticky elements end
-                    up scoped to this wrapper instead of the <main> scroll
-                    ancestor). Keep fade-in only. */}
+                // No transform-based animation here — slide-in-from-bottom
+                // leaves a translateY(0) on the element after the animation
+                // completes, which establishes a containing block and breaks
+                // position:sticky for descendants (they end up scoped to this
+                // wrapper instead of the main scroll ancestor). Fade-in only.
                 <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
                   {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} />}
                   {activeTab === 'outfits' && (

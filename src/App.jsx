@@ -7431,6 +7431,13 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [tab, setTab] = useState('create');
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
+  // Slots the user has manually re-expanded after auto-collapse, so we
+  // don't fight them by re-collapsing on every render. Cleared when the
+  // slot becomes empty again.
+  const [manuallyExpanded, setManuallyExpanded] = useState(() => new Set());
+  // Refs to each archive section header so handleSelect can scroll the
+  // next open section into view after a pick.
+  const archiveSectionRefs = React.useRef({});
   // When editing an existing outfit, hold its id so handleSave updates the
   // same doc instead of creating a new one. Reset to null after save/exit.
   const [editingId, setEditingId] = useState(null);
@@ -7503,9 +7510,63 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       });
       haptic('tap');
       toast.show(`${slot}: ${item.name}`, { kind: 'default', duration: 1400 });
+      // Multi-slots stay expanded — user is mid-curation, don't fight them.
     } else {
       setCurrentOutfit((prev) => ({ ...prev, [key]: item }));
-      if (item) { haptic('tap'); toast.show(`Added to ${slot}`, { kind: 'default', duration: 1400 }); }
+      if (item) {
+        haptic('tap');
+        toast.show(`Added to ${slot}`, { kind: 'default', duration: 1400 });
+        // Auto-flow: drop any manual-expand on this slot so it auto-collapses,
+        // then smooth-scroll to the next OPEN section (not filled, not
+        // covered-by-mutual-exclusion). Wrapped in setTimeout so the DOM
+        // has updated to its post-collapse height before we measure scroll.
+        setManuallyExpanded((prev) => {
+          if (!prev.has(slot)) return prev;
+          const next = new Set(prev); next.delete(slot); return next;
+        });
+        setTimeout(() => scrollToNextOpenSection(slot, { tops: slot === 'Tops' ? item : currentOutfit.tops, bottoms: slot === 'Bottoms' ? item : currentOutfit.bottoms, dresses: slot === 'Dresses' ? item : currentOutfit.dresses }), 150);
+      }
+    }
+  };
+
+  // Mutual-exclusion rules: dress vs separates. If a dress is filled,
+  // tops/bottoms are 'covered' (and vice versa). The user can override
+  // via the "Add anyway" link in the collapsed summary.
+  const isSlotCovered = (slot, outfit = currentOutfit) => {
+    const hasDress = !!outfit.dresses;
+    const hasTopOrBottom = !!outfit.tops || !!outfit.bottoms;
+    if (slot === 'Tops' || slot === 'Bottoms') return hasDress;
+    if (slot === 'Dresses') return hasTopOrBottom;
+    return false;
+  };
+  const isSlotFilled = (slot, outfit = currentOutfit) =>
+    slotItems(outfit[slot.toLowerCase()]).length > 0;
+  const isSlotCollapsed = (slot) => {
+    if (manuallyExpanded.has(slot)) return false;
+    // Multi-slots: user might want to keep stacking — only collapse if
+    // truly covered (which never happens for jewellery, but the API is
+    // consistent).
+    if (isMultiSlot(slot)) return false;
+    return isSlotFilled(slot) || isSlotCovered(slot);
+  };
+  const toggleSectionExpansion = (slot) => {
+    setManuallyExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(slot)) next.delete(slot); else next.add(slot);
+      return next;
+    });
+  };
+  const scrollToNextOpenSection = (currentSlot, outfitOverride) => {
+    const startIdx = OUTFIT_SLOTS.indexOf(currentSlot);
+    if (startIdx < 0) return;
+    for (let i = startIdx + 1; i < OUTFIT_SLOTS.length; i++) {
+      const slot = OUTFIT_SLOTS[i];
+      if (isSlotFilled(slot, outfitOverride) || isSlotCovered(slot, outfitOverride)) continue;
+      const el = archiveSectionRefs.current[slot];
+      if (el?.scrollIntoView) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
     }
   };
 
@@ -8195,28 +8256,82 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                 <h3 className="font-display text-xl md:text-2xl text-stone-900">Wardrobe Archives</h3>
                 <span className="text-[10px] uppercase tracking-widest text-stone-400 hidden lg:inline">Tap or drag to a slot</span>
               </div>
-              <div className="space-y-8 sm:space-y-10">
+              <div className="space-y-6 sm:space-y-8">
                 {OUTFIT_SLOTS.map((slot) => {
                   const pool = items.filter((i) => itemFitsSlot(i, slot));
+                  const filled = slotItems(currentOutfit[slot.toLowerCase()]);
+                  const covered = isSlotCovered(slot);
+                  const collapsed = isSlotCollapsed(slot);
+                  const coverReason = covered
+                    ? (slot === 'Dresses'
+                        ? "You've picked separates — a dress isn't needed."
+                        : "You're wearing a dress — separates aren't needed.")
+                    : null;
                   return (
-                    <div key={slot}>
-                      <h4 className="text-[11px] font-bold text-stone-500 uppercase tracking-[0.2em] mb-3 md:mb-4 px-2">{slot} · {pool.length}</h4>
-                      {/* Mobile: horizontal scroll (touch-swipe is natural).
-                          Desktop (lg+): flex-wrap so items flow into multiple
-                          rows. The reason for the breakpoint switch is a
-                          CSS spec quirk — setting overflow-x: auto implicitly
-                          promotes overflow-y to auto, making the container
-                          capture vertical wheel events. On mobile that's
-                          fine (no wheel), but on desktop it made the page
-                          un-scrollable when the cursor was anywhere over
-                          the items. lg:overflow-x-visible removes the scroll
-                          container entirely; lg:flex-wrap takes over layout. */}
-                      <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 hide-scrollbar px-2 lg:flex-wrap lg:overflow-x-visible lg:pb-0">
-                        {pool.map((item) => <DraggableArchiveItem key={item.id} slot={slot} item={item} />)}
-                        {pool.length === 0 && (
-                          <div className="w-full py-8 text-center text-stone-400 text-sm border border-dashed border-stone-300 rounded-2xl">No pieces in {slot.toLowerCase()} yet.</div>
+                    <div
+                      key={slot}
+                      ref={(el) => { archiveSectionRefs.current[slot] = el; }}
+                      // scroll-mt offsets the sticky tab bar (~72px tall) so
+                      // a scrolled-to section sits BELOW the bar, not behind
+                      // it. Matches the lg:top-20 used on Current Look.
+                      className="scroll-mt-24"
+                    >
+                      <div className="flex items-center justify-between mb-3 md:mb-4 px-2">
+                        <h4 className="text-[11px] font-bold text-stone-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                          {slot} · {pool.length}
+                          {filled.length > 0 && (
+                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-700">
+                              <Check size={10} strokeWidth={2.5} />
+                            </span>
+                          )}
+                        </h4>
+                        {(filled.length > 0 || covered) && (
+                          <button onClick={() => toggleSectionExpansion(slot)}
+                            className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors duration-200">
+                            {collapsed ? (covered ? 'Add anyway' : 'Change') : 'Done'}
+                          </button>
                         )}
                       </div>
+
+                      {/* Collapsed UI: compact summary (filled) OR muted note
+                          (covered by mutual exclusion). Expanded UI: full
+                          archive grid (same as before). */}
+                      {collapsed && covered && filled.length === 0 ? (
+                        <div className="mx-2 px-4 py-3 rounded-2xl bg-stone-50 border border-stone-200/60 text-xs text-stone-500 italic">
+                          {coverReason}
+                        </div>
+                      ) : collapsed && filled.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleSectionExpansion(slot)}
+                          className="w-[calc(100%-1rem)] mx-2 flex items-center gap-3 bg-white border border-stone-200 rounded-2xl p-2.5 hover:border-stone-500 transition-colors duration-200 text-left"
+                        >
+                          <div className="flex gap-1.5 shrink-0">
+                            {filled.slice(0, 3).map((item) => (
+                              <div key={item.id} className="w-10 h-14 rounded-lg overflow-hidden bg-stone-100">
+                                {itemImages(item)[0] && (
+                                  <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async"
+                                    className="w-full h-full object-cover" />
+                                )}
+                              </div>
+                            ))}
+                            {filled.length > 3 && (
+                              <span className="text-[10px] text-stone-500 self-center">+{filled.length - 3}</span>
+                            )}
+                          </div>
+                          <span className="text-sm text-stone-800 flex-1 min-w-0 truncate">
+                            {filled.map((i) => i.name).join(', ')}
+                          </span>
+                          <span className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0 pr-2">Tap to swap</span>
+                        </button>
+                      ) : (
+                        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 hide-scrollbar px-2 lg:flex-wrap lg:overflow-x-visible lg:pb-0">
+                          {pool.map((item) => <DraggableArchiveItem key={item.id} slot={slot} item={item} />)}
+                          {pool.length === 0 && (
+                            <div className="w-full py-8 text-center text-stone-400 text-sm border border-dashed border-stone-300 rounded-2xl">No pieces in {slot.toLowerCase()} yet.</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

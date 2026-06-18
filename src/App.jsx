@@ -6286,7 +6286,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 onClick={onStyleWithItem}
                 className="w-full pt-6 border-t border-stone-200 group text-left"
               >
-                <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 sm:p-6 relative overflow-hidden hover:from-stone-800 hover:to-stone-700 transition-all shadow-2xl active:scale-[0.99]">
+                <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 sm:p-6 relative overflow-hidden hover:from-stone-800 hover:to-stone-700 transition-all active:scale-[0.99]">
                   <div className="absolute -right-12 -top-12 opacity-[0.08] rotate-12 pointer-events-none">
                     <Sparkles size={180} strokeWidth={0.8} />
                   </div>
@@ -10794,7 +10794,7 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
                   zIndex: z,
                 }}
               >
-                <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white shadow-2xl ring-1 ring-black/5 ${openable ? 'transition-transform hover:scale-[1.05] active:scale-[0.97]' : ''}`}>
+                <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white shadow-lg ring-1 ring-black/5 ${openable ? 'transition-transform hover:scale-[1.05] active:scale-[0.97]' : ''}`}>
                   {itemImages(p)[0] ? (
                     <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   ) : (
@@ -11782,7 +11782,10 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
   };
 
   return (
-    <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden">
+    {/* StyleManifestoCard — dark surface, no shadow per convention
+        (dark on light page already reads as elevated). Padding harmonised
+        to p-6 md:p-8 matching the Insights section cards. */}
+    <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-8 relative overflow-hidden">
       <div className="absolute -right-10 -bottom-10 opacity-[0.04] pointer-events-none">
         <Sparkles size={220} strokeWidth={0.8} />
       </div>

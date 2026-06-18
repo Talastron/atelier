@@ -4114,10 +4114,30 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           plate. The lg:-mx-12 lg:px-12 cancels the parent padding so the
           bar bleeds edge-to-edge of the max-w-6xl content well. */}
       <div className="hidden lg:flex lg:sticky lg:top-0 lg:z-30 lg:items-center lg:gap-3 lg:-mx-12 lg:px-12 lg:py-3 lg:bg-[#F7F5F2] lg:border-b lg:border-stone-200/60">
+        {/* Search — left. Compact pill matching the rest of the toolbar
+            aesthetic. Persists while scrolling (because the toolbar is
+            sticky), which the previous big in-column search did not. */}
+        <div className="relative shrink-0 w-72 xl:w-80">
+          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, brand, description…"
+            className="w-full h-11 pl-10 pr-9 bg-white border border-stone-300 rounded-full text-sm placeholder:text-stone-400 focus:border-stone-900 outline-none transition-colors"
+          />
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 text-base pointer-events-none leading-none">⌕</span>
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors"
+              aria-label="Clear search">
+              <X size={14} strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+        {/* Filter controls — middle, takes remaining width so the toolbar
+            never has an awkward empty gap. */}
         <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
           {filterControls}
         </div>
-        <div className="flex items-stretch gap-2 shrink-0 pl-3 ml-3 border-l border-stone-200/80">
+        {/* Add / Select — right, separated by a hairline divider. */}
+        <div className="flex items-stretch gap-2 shrink-0 pl-3 ml-1 border-l border-stone-200/80">
           {addSelectControls}
         </div>
       </div>
@@ -4133,7 +4153,11 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       <div className="lg:col-span-8 lg:col-start-1 lg:row-start-1 space-y-6 md:space-y-8 min-w-0">
 
       <div className="flex flex-col gap-4 md:gap-6">
-        <div className="relative">
+        {/* Mobile-only search. On lg+ search has moved into the unified
+            sticky toolbar so it stays accessible while scrolling and so the
+            toolbar's middle gap is filled (avoiding the awkward Filters-
+            on-left/Add-on-right with empty void between them). */}
+        <div className="relative lg:hidden">
           <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, brand, description…"
             className="w-full h-12 pl-12 pr-4 bg-white border border-stone-200 rounded-2xl text-sm focus:border-stone-900 outline-none transition-colors"

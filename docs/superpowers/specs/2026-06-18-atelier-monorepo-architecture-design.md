@@ -112,9 +112,9 @@ Talastron/atelier/
 
 ### Stack
 
-- **Astro 5+** with the official React integration. Static-first; renders pages to HTML at build time; ships zero JavaScript by default. React components become "islands" — interactive only where explicitly hydrated.
-- **Tailwind v4** via `@tailwindcss/vite` plugin (configless, theme declared via `@theme` blocks in CSS).
-- **MDX support** enabled for journal/editorial pages.
+- **Astro 5+** with the official React integration (`@astrojs/react`). Static-first; renders pages to HTML at build time; ships zero JavaScript by default. React components become "islands" — interactive only where explicitly hydrated.
+- **Tailwind v4** via the `@tailwindcss/vite` plugin loaded through Astro's Vite config. Theme tokens declared via `@theme` blocks in `apps/marketing/src/styles/global.css`. The legacy `@astrojs/tailwind` integration is **not** used — it is deprecated in favor of the Vite plugin path for v4.
+- **MDX support** via `@astrojs/mdx` for journal/editorial pages.
 
 ### Page inventory (V1)
 
@@ -124,7 +124,7 @@ Talastron/atelier/
 | `/about` | Brand story, manifesto, founder voice | Astro page (mostly static prose) |
 | `/journal` | Index of editorial posts | Astro page listing MDX entries |
 | `/journal/[slug]` | Individual journal post | MDX |
-| `/pricing` | Tier, FAQ, "Start your trial" CTA → Lemon Squeezy | Astro page with React island for the checkout button |
+| `/pricing` | Tier, FAQ, "Start your trial" CTA → Lemon Squeezy hosted checkout (window-redirect, not embedded iframe) | Astro page with a minimal React island for the CTA button + price-toggle interactivity |
 | `/welcome` | Post-checkout success page; tells user to check email for the magic link | Astro page |
 | `/legal/terms`, `/legal/privacy` | Boilerplate | MDX |
 | `404` | Branded error page | Astro |
@@ -263,7 +263,7 @@ A Cloudflare Pages Function. Responsibilities:
 1. Verify HMAC signature on every webhook against `LEMONSQUEEZY_WEBHOOK_SECRET`. Reject non-2xx if signature mismatch.
 2. Check idempotency: if `event_id` already in `processed_webhook_events`, return 200 immediately.
 3. Switch on event type:
-   - `subscription_created` → create Firebase Auth user (or find existing by email), write subscription doc, send magic link.
+   - `subscription_created` → create Firebase Auth user (or find existing by email), write subscription doc, send magic link via Firebase Auth's built-in `sendSignInLinkToEmail()` (V1 uses Firebase's default email handler; a custom transactional email provider — Resend, Postmark — can be wired later for branded templates).
    - `subscription_updated` → update status + `currentPeriodEnd`.
    - `subscription_cancelled` → mark cancelled (preserve access until period end).
    - `subscription_resumed` → status → active.
@@ -299,7 +299,7 @@ A Cloudflare Pages Function. Responsibilities:
 |---|---|---|
 | `LEMONSQUEEZY_WEBHOOK_SECRET` | Cloudflare Pages env vars (encrypted) | HMAC verification |
 | `LEMONSQUEEZY_API_KEY` | Cloudflare Pages env vars (encrypted) | Reconciliation scripts; admin actions |
-| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | Cloudflare Pages env vars (encrypted, JSON) | Pages Function uses Firebase Admin SDK |
+| `FIREBASE_ADMIN_SERVICE_ACCOUNT` | Cloudflare Pages env vars (encrypted, **base64-encoded JSON string**) | Pages Function decodes and uses Firebase Admin SDK. Base64 is used because newlines in the raw JSON (especially in `private_key`) can be mangled by env-var transports |
 | `FIREBASE_PROJECT_ID` | Cloudflare Pages env vars | Configuration |
 | Firebase client SDK config | App source code (public per Firebase model) | Standard practice |
 | `FIREBASE_TOKEN` (Phase 2 only) | GitHub Actions secrets | CI deploys |

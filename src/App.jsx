@@ -2192,10 +2192,20 @@ function DigitalWardrobe() {
   // once at the auth-loading splash, finds no main element, and never
   // re-attaches the listener.
   const [showScrollTop, setShowScrollTop] = useState(false);
+  // Separate near-top tracker for the floating mobile Profile button.
+  // The Profile pill lives at top-right and would otherwise collide with
+  // the sticky filter/sort bars that every view pins to the top edge
+  // (Wardrobe, Lookbook, Inspiration all use sticky headers that kick
+  // in at ~0px scroll). Hiding it as soon as the user starts scrolling
+  // gets it out of the way; it returns when they scroll back to the top.
+  const [atTop, setAtTop] = useState(true);
   useEffect(() => {
     const el = mainScrollRef.current;
     if (!el) return;
-    const onScroll = () => setShowScrollTop(el.scrollTop > 200);
+    const onScroll = () => {
+      setShowScrollTop(el.scrollTop > 200);
+      setAtTop(el.scrollTop < 8);
+    };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, [authReady, user, accessDenied]);
@@ -3115,16 +3125,20 @@ function DigitalWardrobe() {
 
           {/* MOBILE PROFILE BUTTON — floating top-right pill. Profile
               moved off the bottom nav so the central + FAB sits at a
-              true geometric centre (5-slot layout: 2 left + FAB + 2
-              right). Profile is still one-tap accessible from any view,
-              just lives in the corner now instead of the bar. Mirrors
-              the existing scroll-to-top pattern on the left. */}
+              true geometric centre. The pill hides on scroll so it
+              doesn't collide with the sticky filter / sort bars that
+              every view pins to the top. Fades back in when the user
+              scrolls back to the top. pointer-events-none + opacity-0
+              during hidden state keeps it from intercepting taps on
+              the sticky bar beneath. */}
           <button
             type="button"
             onClick={() => setActiveTab('profile')}
-            className={`lg:hidden fixed top-0 right-3 z-40 mt-3 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all ${activeTab === 'profile' ? 'ring-2 ring-brass-300' : ''}`}
+            className={`lg:hidden fixed top-0 right-3 z-40 mt-3 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${activeTab === 'profile' ? 'ring-2 ring-brass-300' : ''} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
             style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
             aria-label="Open profile"
+            aria-hidden={!atTop}
+            tabIndex={atTop ? 0 : -1}
           >
             <Ruler size={16} strokeWidth={1.75} />
           </button>

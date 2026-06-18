@@ -835,6 +835,42 @@ async function fetchTodaysWeather() {
 // Gemini: distil the user's wear history into a 3-line style manifesto. Reads
 // the most-worn / favourite items and what they've actually paired together.
 // Cached on the profile doc; user re-runs on demand.
+// Suggest a short, editorial name for the look currently being composed.
+// Reads the picked items + style intent, asks Gemini for a 2-4 word phrase.
+// Used by the Studio Save panel — saves the user from naming fatigue.
+async function generateOutfitNameWithGemini(picked, intent) {
+  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!picked || picked.length === 0) throw new Error('Pick at least one piece first.');
+  const itemList = picked
+    .map((p) => [p.brand, p.category, p.subCategory, p.name].filter(Boolean).join(' '))
+    .filter(Boolean)
+    .slice(0, 8)
+    .join('\n- ');
+  const prompt = `You are naming a saved outfit for an editorial wardrobe app called Atelier.
+Give it a SHORT name: 2 to 4 words, evocative, no quotes, no full stops, title case.
+Mood: refined, understated, editorial — not slogans, not corny.
+
+Items in this look:
+- ${itemList}
+
+Style intent: ${intent && intent !== 'Any' ? intent : 'unstated'}
+
+Examples of the tone wanted:
+- "Sunday Loafer"
+- "Linen Wander"
+- "Office Sharp"
+- "Soft Midnight"
+- "Brass & Wool"
+
+Reply with the name only — no preamble, no explanation.`;
+  const result = await geminiText(prompt, { temperature: 0.9 });
+  return (result || '')
+    .trim()
+    .split('\n')[0]
+    .replace(/^["'`]+|["'`.,!?]+$/g, '')
+    .slice(0, 40);
+}
+
 async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [] }) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
@@ -5166,32 +5202,32 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   </button>
                 )}
                 {onOpenBulkImport && (
-                  <button type="button" onClick={onOpenBulkImport} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-900 transition-all col-span-2 sm:col-span-3">
+                  <button type="button" onClick={onOpenBulkImport} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all col-span-2 sm:col-span-3">
                     <LinkIcon size={22} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                     <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Search & Bulk Import</span>
                     <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Find on the web · paste many URLs at once</span>
                   </button>
                 )}
-                <label className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-900 transition-all">
+                <label className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                   <Camera size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Add Photos</span>
                   <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Up to 6</span>
                   <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                 </label>
-                <label className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-900 transition-all">
+                <label className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                   <Wand2 size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Scan Label</span>
                   <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Care tag · barcode</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handleScanInput} className="hidden" />
                 </label>
                 {onOpenReceiptModal && (
-                  <button type="button" onClick={onOpenReceiptModal} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-900 transition-all">
+                  <button type="button" onClick={onOpenReceiptModal} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                     <Sparkles size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                     <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Paste Receipt</span>
                     <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Order email</span>
                   </button>
                 )}
-                <button type="button" onClick={() => setStep(2)} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-900 transition-all">
+                <button type="button" onClick={() => setStep(2)} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                   <Plus size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Manual Entry</span>
                   <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Type details</span>
@@ -5346,7 +5382,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                     </div>
                   )}
                   {formData.images.length < 6 && (
-                    <label className="aspect-square rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center cursor-pointer hover:border-stone-900 transition-all text-stone-400 hover:text-stone-900">
+                    <label className="aspect-square rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center cursor-pointer hover:border-stone-500 transition-all text-stone-400 hover:text-stone-900">
                       <Plus size={22} strokeWidth={1.5} />
                       <span className="text-[10px] tracking-wider uppercase mt-1">Add</span>
                       <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
@@ -5755,7 +5791,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             >
               <Star size={16} strokeWidth={1.5} className={item.favorite ? 'fill-stone-900' : ''} />
             </button>
-            <button onClick={onEdit} className="p-2.5 sm:px-5 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-900 transition-all">
+            <button onClick={onEdit} className="p-2.5 sm:px-5 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all">
               <span className="hidden sm:inline">Edit</span>
               <span className="sm:hidden text-xs font-medium px-1">Edit</span>
             </button>
@@ -5771,7 +5807,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   className={`p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm transition-all inline-flex items-center gap-2 border ${
                     isWish
                       ? 'bg-brass-200 text-stone-900 border-brass-300 hover:bg-brass-300 font-medium'
-                      : 'bg-white border-stone-200 text-stone-700 hover:border-stone-900'
+                      : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
                   }`}
                   title={isWish ? 'Share this wishlist item for second opinions' : 'Share this piece'}
                   aria-label="Share item"
@@ -5797,7 +5833,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             )}
             <button
               onClick={onDuplicate}
-              className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all inline-flex items-center gap-2"
+              className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-500 transition-all inline-flex items-center gap-2"
               title="Duplicate (e.g. same item in a different colour)"
               aria-label="Duplicate item"
             >
@@ -5911,7 +5947,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                     <CheckCircle2 size={16} strokeWidth={1.5} /> I bought this — move to wardrobe
                   </button>
                 ) : (
-                  <button onClick={onMarkWishlist} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all">
+                  <button onClick={onMarkWishlist} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-500 transition-all">
                     <Heart size={16} strokeWidth={1.5} /> Move back to wishlist
                   </button>
                 )}
@@ -6047,13 +6083,13 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <a href={`https://www.vinted.co.uk/catalog?search_text=${q}`} target="_blank" rel="noopener noreferrer"
-                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 hover:text-stone-900">Vinted ↗</a>
+                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500 hover:text-stone-900">Vinted ↗</a>
                     <a href={`https://www.vestiairecollective.com/search/?q=${q}`} target="_blank" rel="noopener noreferrer"
-                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 hover:text-stone-900">Vestiaire ↗</a>
+                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500 hover:text-stone-900">Vestiaire ↗</a>
                     <a href={`https://www.ebay.co.uk/sh/lst/active?q=${q}`} target="_blank" rel="noopener noreferrer"
-                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 hover:text-stone-900">eBay ↗</a>
+                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500 hover:text-stone-900">eBay ↗</a>
                     <a href={`https://www.oxfam.org.uk/shop/donate-clothes/`} target="_blank" rel="noopener noreferrer"
-                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 hover:text-stone-900">Donate (Oxfam) ↗</a>
+                      className="text-xs tracking-wider uppercase px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500 hover:text-stone-900">Donate (Oxfam) ↗</a>
                   </div>
                 </div>
               );
@@ -6230,7 +6266,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                     {shops.map((s) => (
                       <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer"
                         title={s.hint}
-                        className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors">
+                        className="inline-flex items-center gap-2 text-xs px-3 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors">
                         <Search size={12} strokeWidth={1.5} /> {s.label}
                       </a>
                     ))}
@@ -6587,15 +6623,15 @@ function PhotoEditorModal({ src, onClose, onSave }) {
 
           <div className="mt-4 flex items-center justify-center gap-2">
             <button type="button" onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
-              className="text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 inline-flex items-center gap-2">
+              className="text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500 inline-flex items-center gap-2">
               ↺ 90°
             </button>
             <button type="button" onClick={() => setRotation((r) => (r + 90) % 360)}
-              className="text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900 inline-flex items-center gap-2">
+              className="text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500 inline-flex items-center gap-2">
               ↻ 90°
             </button>
             <button type="button" onClick={() => setCrop({ x: 0.05, y: 0.05, w: 0.9, h: 0.9 })}
-              className="text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-900">
+              className="text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-200 text-stone-700 hover:border-stone-500">
               Reset crop
             </button>
           </div>
@@ -6925,7 +6961,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                       href={brandSearchUrl(s.website, query || ' ')}
                       target="_blank" rel="noopener noreferrer"
                       className={`text-xs tracking-wider uppercase px-3 py-1.5 rounded-full border transition-colors ${
-                        query.trim() ? 'bg-white border-stone-200 text-stone-700 hover:border-stone-900 hover:text-stone-900' : 'bg-stone-50 border-stone-100 text-stone-300 cursor-not-allowed pointer-events-none'
+                        query.trim() ? 'bg-white border-stone-200 text-stone-700 hover:border-stone-500 hover:text-stone-900' : 'bg-stone-50 border-stone-100 text-stone-300 cursor-not-allowed pointer-events-none'
                       }`}>
                       {s.name} ↗
                     </a>
@@ -7229,7 +7265,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                 Two ways: paste the order email text below, or drop in a screenshot of the order confirmation page. Atelier extracts brand, items, prices, and purchase date — you'll review each one before saving.
               </p>
 
-              <label className="block w-full p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-900 transition-all">
+              <label className="block w-full p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-stone-100 flex items-center justify-center shrink-0">
                     {busy ? <div className="w-5 h-5 border-2 border-stone-300 border-t-stone-900 rounded-full animate-spin" /> : <Camera size={20} strokeWidth={1.5} className="text-stone-700" />}
@@ -7350,7 +7386,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                               href={searchUrlFor(it)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-900 hover:text-stone-900 transition-colors shrink-0">
+                              className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors shrink-0">
                               Find on web ↗
                             </a>
                           )}
@@ -7365,7 +7401,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
 
               <div className="flex gap-2">
                 <button onClick={() => { setParsed(null); setError(null); }}
-                  className="px-5 py-3 rounded-xl text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-colors">
+                  className="px-5 py-3 rounded-xl text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-500 transition-colors">
                   Back
                 </button>
                 <button onClick={handleSaveAll} disabled={busy || includedCount === 0}
@@ -7463,10 +7499,26 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     setOutfitName(editOutfit.name || '');
     setEditingId(editOutfit.id);
     setTab('create');
+    // EDIT MODE: expand all sections that have content. Default behaviour
+    // (auto-collapse on fill) is wrong for editing — the user just clicked
+    // "Edit", they want to SEE what's in the look and pick something to
+    // swap, not have everything hidden behind "Tap to swap" buttons. Drop
+    // every filled or covered slot into manuallyExpanded so they render
+    // as full archive grids on load.
+    const expandedOnEdit = new Set();
+    for (const s of OUTFIT_SLOTS) {
+      const has = slotItems(next[s.toLowerCase()]).length > 0;
+      const wouldBeCovered = (s === 'Tops' || s === 'Bottoms') ? !!next.dresses
+                          : (s === 'Dresses') ? (!!next.tops || !!next.bottoms)
+                          : false;
+      if (has || wouldBeCovered) expandedOnEdit.add(s);
+    }
+    setManuallyExpanded(expandedOnEdit);
   }, [editOutfit?.id]);
   const [capsuleOpen, setCapsuleOpen] = useState(false);
   const [activeDragItem, setActiveDragItem] = useState(null);
   const [styleIntent, setStyleIntent] = useState('Any');
+  const [suggestingName, setSuggestingName] = useState(false);
   const [customIntent, setCustomIntent] = useState('');
   const [showCustom, setShowCustom] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -7567,6 +7619,30 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
       }
+    }
+  };
+
+  // AI name suggestion — saves the user from naming fatigue. Pulls the
+  // currently-picked items + intent into a short evocative phrase via
+  // Gemini, then drops it into the name input. Toast on failure.
+  const handleSuggestName = async () => {
+    const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(currentOutfit[s.toLowerCase()]));
+    if (picked.length === 0) {
+      toast.show('Pick at least one piece first', { kind: 'default' });
+      return;
+    }
+    setSuggestingName(true);
+    try {
+      const intent = customIntent.trim() || (styleIntent !== 'Any' ? styleIntent : '');
+      const name = await generateOutfitNameWithGemini(picked, intent);
+      if (name) {
+        setOutfitName(name);
+        haptic('tap');
+      }
+    } catch (err) {
+      toast.show(err?.message || 'Could not suggest a name', { kind: 'error' });
+    } finally {
+      setSuggestingName(false);
     }
   };
 
@@ -8276,9 +8352,28 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                     {OUTFIT_SLOTS.map((slot) => <OutfitSlot key={slot} slot={slot} />)}
                   </div>
                   <div className="mt-auto">
-                    <input type="text" placeholder="Name this look…" value={outfitName} onChange={(e) => setOutfitName(e.target.value)}
-                      className="w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 mb-4 focus:border-stone-900 outline-none transition-colors"
-                    />
+                    {/* Name input + inline AI Suggest button. The Suggest
+                        button only appears when AI is enabled AND the user
+                        has picked at least one piece (otherwise there's
+                        nothing to name from). Positioned inside the input
+                        on the right via absolute positioning. */}
+                    <div className="relative mb-4">
+                      <input type="text" placeholder="Name this look…" value={outfitName} onChange={(e) => setOutfitName(e.target.value)}
+                        className={`w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 focus:border-stone-900 outline-none transition-colors ${isAIEnabled() && pieceCount > 0 ? 'pr-28' : ''}`}
+                      />
+                      {isAIEnabled() && pieceCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleSuggestName}
+                          disabled={suggestingName}
+                          title="Suggest a name with AI"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:opacity-50"
+                        >
+                          <Sparkles size={10} strokeWidth={1.75} className={suggestingName ? 'animate-pulse text-amber-500' : 'text-amber-500'} />
+                          {suggestingName ? '…' : 'Suggest'}
+                        </button>
+                      )}
+                    </div>
                     {/* Save button: when isComplete, gets a brass-300 outer
                         ring as a quiet celebration — the look is head-to-toe
                         and ready to save. Subtle so it doesn't shout. */}
@@ -8797,7 +8892,7 @@ function AddInspirationModal({ onClose, onSave }) {
                 <div className="flex-grow border-t border-stone-200"></div>
               </div>
 
-              <label className="block w-full p-8 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-900 transition-all text-center">
+              <label className="block w-full p-8 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all text-center">
                 <Camera size={28} strokeWidth={1} className="mx-auto mb-3 text-stone-900" />
                 <p className="font-medium text-sm text-stone-900">Upload an image</p>
                 <p className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase">From camera roll or screenshot</p>
@@ -8832,7 +8927,7 @@ function AddInspirationModal({ onClose, onSave }) {
         {step === 'preview' && (
           <div className="px-4 sm:px-6 py-4 border-t border-stone-200/60 bg-white/95 backdrop-blur shrink-0 flex gap-2"
                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.75rem)' }}>
-            <button onClick={() => setStep('choose')} className="px-4 py-3 rounded-xl text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-colors">
+            <button onClick={() => setStep('choose')} className="px-4 py-3 rounded-xl text-sm bg-white border border-stone-200 text-stone-700 hover:border-stone-500 transition-colors">
               Back
             </button>
             <button onClick={handleSave} disabled={busy || !data.image}
@@ -8887,7 +8982,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
             <div className="flex items-center gap-2">
               {onSaveAsWishlist && (
                 <button onClick={onSaveAsWishlist}
-                  className="text-xs tracking-widest uppercase px-3 sm:px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-900 transition-all inline-flex items-center gap-1.5"
+                  className="text-xs tracking-widest uppercase px-3 sm:px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all inline-flex items-center gap-1.5"
                   title="Save this inspiration as a wishlist item">
                   <Heart size={13} strokeWidth={1.5} />
                   <span className="hidden sm:inline">Save to wishlist</span>
@@ -9019,12 +9114,12 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                 </button>
                               )}
                               <a href={googleShop} target="_blank" rel="noopener noreferrer"
-                                 className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-900 text-stone-800 rounded-full transition-colors">
+                                 className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
                                 <Store size={11} strokeWidth={1.5} /> Shop on Google
                               </a>
                               {yourShops && (
                                 <a href={yourShops} target="_blank" rel="noopener noreferrer"
-                                   className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-900 text-stone-800 rounded-full transition-colors">
+                                   className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
                                   <Bookmark size={11} strokeWidth={1.5} /> Search your shops
                                 </a>
                               )}
@@ -9117,8 +9212,11 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
       <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit">
         {[['all', 'All'], ['favorites', '★ Favourites']].map(([f, label]) => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-5 py-2 rounded-full text-xs tracking-wider uppercase transition-all duration-200 ${
-              filter === f ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'
+            // Matches the Studio tabs + wardrobe status pills convention:
+            // active = white bg + bold (no shadow), inactive = stone-100 hover
+            // bg so hover is actually visible against the stone-200/50 track.
+            className={`px-5 py-2 rounded-full text-xs tracking-wider uppercase transition-colors duration-200 ${
+              filter === f ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
             }`}>
             {label}
           </button>
@@ -10012,7 +10110,7 @@ function WearDiaryModal({ entries = [], friendlyDay, onOpenItem, onOpenOutfit, o
                       <div className="flex gap-2 flex-wrap mb-2">
                         {day.items.map((it) => (
                           <button key={it.id} onClick={() => onOpenItem?.(it.id)}
-                            className="w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 border border-stone-200/60 hover:border-stone-900 transition-colors"
+                            className="w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 border border-stone-200/60 hover:border-stone-500 transition-colors"
                             title={`${it.name}${it.brand ? ' · ' + it.brand : ''}`}
                           >
                             {itemImages(it)[0] ? (
@@ -10127,12 +10225,12 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
 
           <div className="grid grid-cols-2 gap-3">
             <a href={whatsappHref} target="_blank" rel="noopener noreferrer"
-              className="bg-white border border-stone-200 hover:border-stone-900 rounded-2xl py-4 flex flex-col items-center gap-2 transition-colors">
+              className="bg-white border border-stone-200 hover:border-stone-500 rounded-2xl py-4 flex flex-col items-center gap-2 transition-colors">
               <span className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-base font-bold">W</span>
               <span className="text-xs tracking-wider uppercase text-stone-700">WhatsApp</span>
             </a>
             <a href={emailHref}
-              className="bg-white border border-stone-200 hover:border-stone-900 rounded-2xl py-4 flex flex-col items-center gap-2 transition-colors">
+              className="bg-white border border-stone-200 hover:border-stone-500 rounded-2xl py-4 flex flex-col items-center gap-2 transition-colors">
               <span className="w-9 h-9 rounded-full bg-stone-100 text-stone-700 flex items-center justify-center">@</span>
               <span className="text-xs tracking-wider uppercase text-stone-700">Email</span>
             </a>
@@ -10424,7 +10522,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               )}
               {onShare && (
                 <button onClick={onShare}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-900 transition-all inline-flex items-center gap-2 whitespace-nowrap"
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all inline-flex items-center gap-2 whitespace-nowrap"
                   title="Create a read-only link to share this look">
                   <Download size={16} strokeWidth={1.5} className="sm:hidden rotate-180" />
                   <span className="hidden sm:inline">Share</span>
@@ -10432,7 +10530,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               )}
               {onEdit && (
                 <button onClick={onEdit}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-900 transition-all whitespace-nowrap"
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all whitespace-nowrap"
                   title="Edit this look in Styling Studio — change pieces, rename, save back to the same outfit">
                   Edit
                 </button>
@@ -10446,7 +10544,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 </button>
               )}
               <button onClick={async () => { await onDuplicate?.(); toast.show('Duplicated · edit anytime', { kind: 'success' }); }}
-                className="px-4 py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-900 transition-all whitespace-nowrap">
+                className="px-4 py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-all whitespace-nowrap">
                 Duplicate
               </button>
               <button onClick={() => setConfirmDelete(true)} className="p-2.5 rounded-full bg-white border border-stone-200 text-stone-400 hover:border-red-300 hover:text-red-600 transition-all" aria-label="Delete look">
@@ -10486,7 +10584,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 </div>
                 <div className="flex gap-2 shrink-0">
                   {wornPhotos.length < 6 && (
-                    <label className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-900 transition-colors flex items-center gap-2 cursor-pointer" title="Snap a selfie wearing this look">
+                    <label className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-500 transition-colors flex items-center gap-2 cursor-pointer" title="Snap a selfie wearing this look">
                       <Camera size={14} strokeWidth={1.5} /> Snap fit
                       <input type="file" accept="image/*" capture="user" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
                     </label>
@@ -10509,7 +10607,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 {QUICK_VERDICT_CHIPS.map((c) => (
                   <button key={c} type="button"
                     onClick={() => setLogVerdict((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c)}
-                    className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-900 hover:text-stone-900 transition-all">
+                    className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-all">
                     {c}
                   </button>
                 ))}
@@ -11012,7 +11110,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
         <button
           onClick={() => onJumpToWardrobe?.({ filter: 'wishlist' })}
           disabled={!onJumpToWardrobe || wishlistItems.length === 0}
-          className="text-left bg-white border border-stone-200/60 p-10 rounded-[2rem] smooth-shadow transition-all enabled:hover:border-stone-900 enabled:hover:-translate-y-0.5 enabled:active:scale-[0.99] disabled:cursor-default group"
+          className="text-left bg-white border border-stone-200/60 p-10 rounded-[2rem] smooth-shadow transition-all enabled:hover:border-stone-500 enabled:hover:-translate-y-0.5 enabled:active:scale-[0.99] disabled:cursor-default group"
         >
           <div className="flex items-baseline justify-between gap-3 mb-4">
             <p className="text-stone-500 text-xs font-semibold tracking-[0.2em] uppercase">Wishlist Target</p>
@@ -11085,7 +11183,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
         </div>
       ) : monthSpendItems.length > 0 && onOpenProfile ? (
         <button onClick={onOpenProfile}
-          className="w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-900 transition-colors group">
+          className="w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-500 transition-colors group">
           <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-2">Spending · {monthName}</p>
           <h3 className="font-display text-2xl text-stone-900">£{monthSpend.toLocaleString()} added this month</h3>
           <p className="text-sm text-stone-500 mt-3 leading-relaxed">
@@ -11202,7 +11300,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
                   <div className="flex gap-2 flex-wrap">
                     {day.items.map((it) => (
                       <button key={it.id} onClick={() => onOpenItem?.(it.id)}
-                        className="w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 border border-stone-200/60 hover:border-stone-900 transition-colors"
+                        className="w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 border border-stone-200/60 hover:border-stone-500 transition-colors"
                         title={`${it.name} · ${it.brand || ''}`}
                       >
                         {itemImages(it)[0] ? (
@@ -11228,7 +11326,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
           </ul>
           {wearDiary.length > recentDiary.length && (
             <button onClick={() => setDiaryOpen(true)}
-              className="block mt-6 mx-auto text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-5 py-2.5 rounded-full border border-stone-200 hover:border-stone-900 transition-colors">
+              className="block mt-6 mx-auto text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-5 py-2.5 rounded-full border border-stone-200 hover:border-stone-500 transition-colors">
               Open full diary · {wearDiary.length} day{wearDiary.length === 1 ? '' : 's'}
             </button>
           )}
@@ -12163,7 +12261,7 @@ function ShopRow({ shop, saveShop, deleteShop }) {
             ))}
           </div>
           <div className="flex gap-2 mt-4">
-            <button onClick={addRow} className="flex-1 px-4 py-3 rounded-xl text-sm bg-white border border-dashed border-stone-300 text-stone-500 hover:border-stone-900 hover:text-stone-900 transition-all flex items-center justify-center gap-2">
+            <button onClick={addRow} className="flex-1 px-4 py-3 rounded-xl text-sm bg-white border border-dashed border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-900 transition-all flex items-center justify-center gap-2">
               <Plus size={14} strokeWidth={1.5} /> Add size row
             </button>
             <button onClick={saveChart} className="px-6 py-3 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-all font-medium">
@@ -12211,7 +12309,7 @@ function ShoppingDirectory({ shops, saveShop, deleteShop }) {
         subtitle="Your trusted designers and boutiques."
         right={missingPresets.length > 0 ? (
           <button onClick={restorePresets} disabled={restoring}
-            className="bg-white border border-stone-300 text-stone-800 px-5 py-3 rounded-full text-xs tracking-widest uppercase font-medium hover:border-stone-900 transition-all disabled:opacity-50"
+            className="bg-white border border-stone-300 text-stone-800 px-5 py-3 rounded-full text-xs tracking-widest uppercase font-medium hover:border-stone-500 transition-all disabled:opacity-50"
           >
             {restoring ? 'Adding…' : `Add ${missingPresets.length} preset ${missingPresets.length === 1 ? 'brand' : 'brands'}`}
           </button>
@@ -12275,7 +12373,7 @@ function WearVerdictInput({ initial, onSave }) {
       <div className="flex flex-wrap gap-1.5 mb-2">
         {QUICK_VERDICT_CHIPS.map((c) => (
           <button key={c} type="button" onClick={() => addChip(c)}
-            className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-900 hover:text-stone-900 transition-all">
+            className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-all">
             {c}
           </button>
         ))}
@@ -12492,7 +12590,7 @@ function PublicShareView({ shareId }) {
             <nav className="flex flex-wrap gap-2 mb-12 sticky top-2 z-10 bg-[#F7F5F2]/80 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
               {looks.map((l, i) => (
                 <a key={l.id || i} href={`#look-${i}`}
-                  className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-900 hover:text-stone-900 transition-colors">
+                  className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors">
                   {i + 1}. {l.name}
                 </a>
               ))}
@@ -12723,7 +12821,7 @@ function OnboardingTour({ onJumpTo }) {
             Skip
           </button>
           <div className="flex gap-2">
-            <button onClick={jump} className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-900">
+            <button onClick={jump} className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-500">
               {s.cta} ↗
             </button>
             <button onClick={() => last ? finish() : setStep((s) => s + 1)}

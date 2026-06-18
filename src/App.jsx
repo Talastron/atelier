@@ -7934,107 +7934,118 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
           </span>
         )}
 
-        {/* Hover signal = border colour shift to brass + (below) a subtle
-            title colour change. That's it. No scale, no shadow lift, no
-            inner-card transform, no image zoom. Luxury fashion lookbooks
-            (Mr Porter, The Row, COS, SSENSE) hold still — the product
-            photography is the show; hover is just the cursor-equivalent
-            confirmation that the card is interactive. Restraint signals
-            premium; layered motion signals 'engagement features.' */}
-        <div className={`relative ${aspect} rounded-[1.5rem] overflow-hidden transition-colors duration-300 ${
+        {/* Magazine-cover treatment: the card is a self-contained artifact.
+            Title lives INSIDE the card at the bottom (postcard style), so the
+            entire look — image, brass-rule, title, drag handle — fits inside
+            one bounded rectangle. No external caption below saves ~80px of
+            vertical space per card, getting more cards above the fold on
+            typical laptop viewports.
+            Hover signal = border colour shift to brass only. No scale, no
+            shadow lift, no image zoom. Restraint signals premium. */}
+        <div className={`relative ${aspect} rounded-[1.5rem] overflow-hidden transition-colors duration-300 flex flex-col ${
           isSelected
             ? 'ring-4 ring-stone-900'
             : 'border border-stone-200/60 lg:group-hover:border-brass-300/70'
         } ${wornPhoto ? 'bg-stone-900' : 'bg-stone-100/70'}`}>
 
-          {wornPhoto && (
-            <>
-              <img src={wornPhoto} alt={outfit.name} loading="lazy" decoding="async"
-                className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none"></div>
-              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/55 to-transparent pointer-events-none"></div>
-            </>
-          )}
+          {/* IMAGE AREA — flex-1 takes the available height above the caption. */}
+          <div className="flex-1 min-h-0 relative">
+            {wornPhoto && (
+              <>
+                <img src={wornPhoto} alt={outfit.name} loading="lazy" decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover" />
+                <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent pointer-events-none"></div>
+              </>
+            )}
 
-          {!wornPhoto && gridPieces.length > 0 && (
-            <div className={`absolute inset-0 ${isHero ? 'p-9 md:p-12' : 'p-7 sm:p-9'} grid ${gridCols} gap-4 sm:gap-5`}>
-              {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
-                const piece = gridPieces[slotIdx];
-                if (!piece) return <div key={slotIdx} aria-hidden="true" />;
-                const img = itemImages(piece)[0];
-                const lastSlot = isHero ? 5 : 3;
-                const showExtra = slotIdx === lastSlot && extraCount > 0;
-                return (
-                  <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
-                    {img ? (
-                      <img src={img} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={24} strokeWidth={1} /></div>
-                    )}
-                    {showExtra && (
-                      <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[1px] flex items-center justify-center">
-                        <span className="font-display text-3xl text-white">+{extraCount}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+            {!wornPhoto && gridPieces.length > 0 && (
+              <div className={`absolute inset-0 ${isHero ? 'px-9 pt-9 pb-3 md:px-12 md:pt-12 md:pb-4' : 'px-7 pt-7 pb-3 sm:px-9 sm:pt-9 sm:pb-4'} grid ${gridCols} gap-4 sm:gap-5`}>
+                {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
+                  const piece = gridPieces[slotIdx];
+                  if (!piece) return <div key={slotIdx} aria-hidden="true" />;
+                  const img = itemImages(piece)[0];
+                  const lastSlot = isHero ? 5 : 3;
+                  const showExtra = slotIdx === lastSlot && extraCount > 0;
+                  return (
+                    <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
+                      {img ? (
+                        <img src={img} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={24} strokeWidth={1} /></div>
+                      )}
+                      {showExtra && (
+                        <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[1px] flex items-center justify-center">
+                          <span className="font-display text-3xl text-white">+{extraCount}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!wornPhoto && gridPieces.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center text-stone-300">
+                <Shirt size={56} strokeWidth={0.8} />
+              </div>
+            )}
+
+            {/* Editorial chrome lives over the image area: N° series label
+                + piece count + brass-rule top-left; favourite chip top-right;
+                drag handle bottom-right (visible on hover). All absolute
+                within the image area only, so they don't intrude on the
+                caption strip below. */}
+            <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5">
+              <span className={`inline-block w-4 h-px ${wornPhoto ? 'bg-brass-200' : 'bg-brass-300'}`} aria-hidden="true"></span>
+              <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${wornPhoto ? 'text-white/90' : 'text-stone-500'}`}>
+                {indexLabel} · {resolvedItems.length} {resolvedItems.length === 1 ? 'piece' : 'pieces'}
+              </span>
             </div>
-          )}
-
-          {!wornPhoto && gridPieces.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-stone-300">
-              <Shirt size={56} strokeWidth={0.8} />
-            </div>
-          )}
-
-          {/* Editorial chrome: numbered series label + piece count + brass-rule.
-              N° 01, N° 02 etc. — magazine series typography. */}
-          <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5">
-            <span className={`inline-block w-4 h-px ${wornPhoto ? 'bg-brass-200' : 'bg-brass-300'}`} aria-hidden="true"></span>
-            <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${wornPhoto ? 'text-white/90' : 'text-stone-500'}`}>
-              {indexLabel} · {resolvedItems.length} {resolvedItems.length === 1 ? 'piece' : 'pieces'}
-            </span>
+            {outfit.favorite && (
+              <span className="absolute top-4 right-4 z-20 w-7 h-7 rounded-full bg-brass-300 flex items-center justify-center" title="Favourite">
+                <Star size={12} strokeWidth={1.5} className="fill-stone-900 text-stone-900" />
+              </span>
+            )}
+            <button type="button"
+              {...attributes} {...listeners}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              className="hidden lg:flex absolute bottom-4 right-4 z-30 w-9 h-9 items-center justify-center rounded-full bg-white/90 backdrop-blur ring-1 ring-stone-200 text-stone-500 hover:text-stone-900 hover:bg-white cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label="Rearrange this look"
+              title="Drag to rearrange"
+            >
+              <GripVertical size={16} strokeWidth={1.5} />
+            </button>
           </div>
-          {outfit.favorite && (
-            <span className="absolute top-4 right-4 z-20 w-7 h-7 rounded-full bg-brass-300 flex items-center justify-center" title="Favourite">
-              <Star size={12} strokeWidth={1.5} className="fill-stone-900 text-stone-900" />
-            </span>
-          )}
 
-          {/* Drag handle. Visible on hover only (lg+ — touch users get
-              touch-and-hold gesture handled by TouchSensor at the parent
-              DndContext). stopPropagation prevents the underlying card
-              onClick from firing when the user grabs the handle. */}
-          <button type="button"
-            {...attributes} {...listeners}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            className="hidden lg:flex absolute bottom-4 right-4 z-30 w-9 h-9 items-center justify-center rounded-full bg-white/90 backdrop-blur ring-1 ring-stone-200 text-stone-500 hover:text-stone-900 hover:bg-white cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-label="Rearrange this look"
-            title="Drag to rearrange"
-          >
-            <GripVertical size={16} strokeWidth={1.5} />
-          </button>
-
-          {wornPhoto && (
-            <div className="absolute bottom-5 left-5 right-5 z-20">
+          {/* CAPTION STRIP — inside the card at the bottom. Sits on the cream
+              surface for grid covers (a tiny brass-rule divider above
+              separates it from the image area); on photo covers, a tall
+              dark gradient blends the title into the photo (magazine-cover
+              style, no hard edge).
+              Title intentionally larger on the hero card to preserve the
+              magazine-cover visual hierarchy. */}
+          {wornPhoto ? (
+            <div className="relative z-20 bg-gradient-to-t from-black/70 via-black/40 to-transparent pt-16 pb-5 px-6">
               <h3 className={`font-display ${isHero ? 'text-3xl md:text-4xl' : 'text-xl md:text-2xl'} text-white leading-tight drop-shadow-sm truncate`}>
                 {outfit.name}
               </h3>
+              {outfit.intent && (
+                <p className="text-[10px] tracking-[0.28em] uppercase text-white/80 mt-1.5 truncate">
+                  {outfit.intent}
+                </p>
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="mt-5 px-1">
-          {!wornPhoto && (
-            <h3 className={`font-display ${isHero ? 'text-3xl md:text-4xl' : 'text-2xl md:text-3xl'} text-stone-900 leading-tight truncate lg:group-hover:text-stone-700 transition-colors`}>
-              {outfit.name}
-            </h3>
-          )}
-          {(outfit.intent || resolvedItems.length > 0) && (
-            <p className={`text-[10px] tracking-[0.28em] uppercase text-stone-500 truncate ${wornPhoto ? '' : 'mt-2'}`}>
-              {[outfit.intent, resolvedItems.length ? `${resolvedItems.length} pieces` : null].filter(Boolean).join(' · ')}
-            </p>
+          ) : (
+            <div className="relative z-20 px-7 pb-6 pt-2 sm:px-9 sm:pb-7">
+              <h3 className={`font-display ${isHero ? 'text-3xl md:text-4xl' : 'text-xl md:text-2xl'} text-stone-900 leading-tight truncate lg:group-hover:text-stone-700 transition-colors`}>
+                {outfit.name}
+              </h3>
+              {outfit.intent && (
+                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mt-1.5 truncate">
+                  {outfit.intent}
+                </p>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -9227,7 +9238,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             }}
           >
             <SortableContext items={filteredOutfits.map((o) => o.id)} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-12">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
                 {filteredOutfits.map((outfit, idx) => {
                   const isSelected = selectedOutfits.has(outfit.id);
                   const handleCardClick = () => {

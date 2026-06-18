@@ -3097,14 +3097,39 @@ function WardrobeCardImage({ item }) {
 
   return (
     <div className="w-full h-full relative" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      <img
-        src={images[safeIndex]}
-        alt={item.name}
-        onError={() => setFailed(true)}
-        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 pointer-events-none"
-        loading="lazy"
-        draggable={false}
-      />
+      {/* Editorial crossfade carousel (Net-a-Porter / SSENSE pattern):
+          all images render stacked via absolute inset-0; only the active
+          one is opacity-100, the rest are opacity-0. Chevron clicks just
+          flip safeIndex → the previous image fades out as the new one
+          fades in over 300ms. No flash, no src-swap jump.
+
+          Two transitions, two elements:
+            • Layer wrapper: transition-opacity 300ms (the crossfade)
+            • Image itself:  transition-transform 700ms (the hover zoom)
+          Trying to put both on one element would mean fighting one
+          shared duration for two unrelated effects.
+
+          loading=eager on all so the carousel doesn't wait for a network
+          round-trip when the user clicks next — items typically have 1-6
+          photos so the up-front cost is small. */}
+      {images.map((src, i) => (
+        <div
+          key={i}
+          className={`absolute inset-0 transition-opacity duration-300 ease-out ${
+            i === safeIndex ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <img
+            src={src}
+            alt={i === safeIndex ? item.name : ''}
+            onError={() => setFailed(true)}
+            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 pointer-events-none"
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+          />
+        </div>
+      ))}
 
       {hasMulti && (
         <>
@@ -3118,11 +3143,14 @@ function WardrobeCardImage({ item }) {
             ))}
           </div>
 
-          {/* Desktop hover chevrons */}
+          {/* Desktop hover chevrons. Hover lift on the button itself uses
+              the unified light-pill hover convention (white bg, no extra
+              transform — the underlying card no longer lifts either, so a
+              chevron transform would feel out of place). */}
           <button type="button"
             onClick={(e) => { e.stopPropagation(); setPhotoIndex((i) => Math.max(0, i - 1)); }}
             disabled={safeIndex === 0}
-            className="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/85 hover:bg-white text-stone-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-default shadow-md z-10"
+            className="hidden lg:flex absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/85 hover:bg-white text-stone-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-30 disabled:cursor-default shadow-md z-10"
             aria-label="Previous photo"
           >
             <ChevronRight size={14} strokeWidth={1.5} className="rotate-180" />
@@ -3130,7 +3158,7 @@ function WardrobeCardImage({ item }) {
           <button type="button"
             onClick={(e) => { e.stopPropagation(); setPhotoIndex((i) => Math.min(images.length - 1, i + 1)); }}
             disabled={safeIndex === images.length - 1}
-            className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/85 hover:bg-white text-stone-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-30 disabled:cursor-default shadow-md z-10"
+            className="hidden lg:flex absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/85 hover:bg-white text-stone-800 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-30 disabled:cursor-default shadow-md z-10"
             aria-label="Next photo"
           >
             <ChevronRight size={14} strokeWidth={1.5} />

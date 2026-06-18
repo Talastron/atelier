@@ -1,0 +1,45 @@
+/* apps/marketing/src/styles/global.css */
+
+/* Import design tokens — defines all --atelier-* CSS custom properties */
+@import '@atelier/design-tokens/index.css';
+
+/* Tailwind v4 */
+@import 'tailwindcss';
+
+/* Tailwind v4 theme: extend the default palette with Atelier tokens
+   so utilities like `bg-brass-300`, `text-cream`, etc. work. */
+@theme {
+  --color-cream: var(--atelier-cream);
+  --color-ink: var(--atelier-ink);
+
+  --color-brass-200: var(--atelier-brass-200);
+  --color-brass-300: var(--atelier-brass-300);
+  --color-brass-600: var(--atelier-brass-600);
+
+  --font-display: var(--atelier-font-display);
+  --font-sans: var(--atelier-font-sans);
+}
+
+/* Base body styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--atelier-cream);
+  color: var(--atelier-stone-900);
+  font-family: var(--atelier-font-sans);
+  line-height: var(--atelier-leading-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--atelier-brass-200);
+  color: var(--atelier-stone-900);
+}
+
+/* Smooth-shadow utility (used by FeatureCard and image frames) */
+.smooth-shadow {
+  box-shadow: var(--atelier-shadow-smooth);
+}

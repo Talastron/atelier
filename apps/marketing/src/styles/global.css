@@ -49,3 +49,50 @@ body {
 .smooth-shadow {
   box-shadow: var(--atelier-shadow-smooth);
 }
+
+/* ── Editorial type features (used by the Journal) ────────────────────────── */
+
+/* Old-style figures: lowercase-height numerals with descenders.
+   Reads like a typeset book rather than a UI clock. */
+.figures-oldstyle {
+  font-feature-settings: 'onum' on;
+}
+
+/* ── Journal prose styles ─────────────────────────────────────────────────── */
+
+.prose-atelier {
+  font-family: var(--atelier-font-sans);
+  font-size: 1.125rem;            /* 18px */
+  line-height: 1.78;
+  color: var(--atelier-stone-700);
+}
+
+.prose-atelier > p {
+  margin: 0;
+}
+
+.prose-atelier > p + p {
+  margin-top: 1.5rem;
+}
+
+/* Drop cap on the first letter of the first paragraph.
+   Uses ::first-letter so the prose stays plain MDX — no wrapper needed. */
+.prose-atelier > p:first-of-type::first-letter {
+  font-family: var(--atelier-font-display);
+  font-weight: 500;
+  font-feature-settings: 'onum' on;
+  color: var(--atelier-brass-600);
+  float: left;
+  font-size: 5.5rem;
+  line-height: 0.86;
+  padding-top: 0.45rem;
+  padding-right: 0.85rem;
+  padding-bottom: 0.1rem;
+}
+
+/* Brass-rule used as a section break inside MDX renders as <span aria-hidden>.
+   Promote to a centred block so it reads as a punctuation mark, not a dangling glyph. */
+.prose-atelier > span[aria-hidden='true'] {
+  display: block;
+  margin: 2.75rem auto;
+}

@@ -2,37 +2,148 @@
 import Base from '../../layouts/Base.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
+import { BrassRule, Colophon } from '@atelier/ui';
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('journal');
-  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+  const all = (await getCollection('journal', ({ data }) => !data.draft)).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime()
+  );
+  return all.map((post, idx) => ({
+    params: { slug: post.slug },
+    props: {
+      post,
+      // In date-desc order: newer = idx-1, older = idx+1.
+      // For reading flow we call the older one "previous" and the newer one "next".
+      newer: idx > 0 ? all[idx - 1] : null,
+      older: idx < all.length - 1 ? all[idx + 1] : null,
+      // Essay number is oldest-first, so essay N°.01 is the oldest piece.
+      essayNumber: all.length - idx,
+    },
+  }));
 }
 
-const { post } = Astro.props;
+const { post, newer, older, essayNumber } = Astro.props;
 const { Content } = await post.render();
+
+function fmtLongDate(d: Date) {
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+const essayLabel = `THE JOURNAL · VOL I · ESSAY N°${String(essayNumber).padStart(2, '0')}`;
 ---
 
-<Base title={`${post.data.title} — Atelier`} description={post.data.description}>
+<Base title={`${post.data.title} — The Journal — Atelier`} description={post.data.description}>
   <Nav />
+
+  {/* ── Masthead micro-strip ───────────────────────────────────────────────── */}
+  <div class="text-center" style="padding-top: 7.5rem; padding-bottom: 0.5rem;">
+    <div class="flex items-center justify-center gap-4">
+      <BrassRule client:load />
+      <p
+        class="text-[10px] figures-oldstyle"
+        style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-brass-600); font-weight: 500;"
+      >
+        {essayLabel}
+      </p>
+      <BrassRule client:load />
+    </div>
+  </div>
+
   <article
     class="mx-auto"
-    style="max-width: var(--atelier-prose-max); padding-top: 10rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+    style="max-width: var(--atelier-prose-max); padding-top: 3.5rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
   >
-    <time class="text-xs uppercase text-stone-400" style="letter-spacing: 0.15em;">
-      {post.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-    </time>
-    <h1
-      class="text-4xl md:text-5xl tracking-tight mt-4 mb-12"
-      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
-    >
-      {post.data.title}
-    </h1>
-    <div
-      class="text-stone-700 text-lg space-y-6 prose-atelier"
-      style="line-height: var(--atelier-leading-body);"
-    >
+    {/* ── Header ──────────────────────────────────────────────────────────── */}
+    <header class="text-center mb-14">
+      {post.data.kicker && (
+        <p
+          class="text-[10px] mb-7"
+          style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-500); font-weight: 500;"
+        >
+          {post.data.kicker}
+        </p>
+      )}
+      <h1
+        class="text-4xl md:text-5xl tracking-tight mb-9"
+        style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display); color: var(--atelier-stone-900);"
+      >
+        {post.data.title}
+      </h1>
+      <div class="flex items-center justify-center gap-4">
+        <BrassRule client:load />
+        <time
+          class="text-sm figures-oldstyle"
+          style="font-family: var(--atelier-font-display); font-style: italic; color: var(--atelier-stone-500);"
+        >
+          {fmtLongDate(post.data.date)}
+        </time>
+        <BrassRule client:load />
+      </div>
+    </header>
+
+    {/* ── Body ─────────────────────────────────────────────────────────────── */}
+    <div class="prose-atelier">
       <Content />
+    </div>
+
+    {/* ── Closing ornament ─────────────────────────────────────────────────── */}
+    <Colophon client:load />
+
+    {/* ── Previous / Next navigator ────────────────────────────────────────── */}
+    {(older || newer) && (
+      <nav
+        class="grid grid-cols-1 md:grid-cols-2 gap-10 mt-20 pt-12"
+        style="border-top: 1px solid var(--atelier-stone-200);"
+      >
+        {older ? (
+          <a href={`/journal/${older.slug}`} class="group">
+            <p
+              class="text-[10px] mb-3"
+              style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-500); font-weight: 500;"
+            >
+              <span style="color: var(--atelier-brass-600);">←</span> PREVIOUS ESSAY
+            </p>
+            <p
+              class="text-xl md:text-2xl tracking-tight transition-colors group-hover:text-stone-600"
+              style="font-family: var(--atelier-font-display); color: var(--atelier-stone-900); line-height: var(--atelier-leading-tight);"
+            >
+              {older.data.title}
+            </p>
+          </a>
+        ) : (
+          <span aria-hidden="true"></span>
+        )}
+        {newer ? (
+          <a href={`/journal/${newer.slug}`} class="group md:text-right">
+            <p
+              class="text-[10px] mb-3"
+              style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-500); font-weight: 500;"
+            >
+              NEXT ESSAY <span style="color: var(--atelier-brass-600);">→</span>
+            </p>
+            <p
+              class="text-xl md:text-2xl tracking-tight transition-colors group-hover:text-stone-600"
+              style="font-family: var(--atelier-font-display); color: var(--atelier-stone-900); line-height: var(--atelier-leading-tight);"
+            >
+              {newer.data.title}
+            </p>
+          </a>
+        ) : (
+          <span aria-hidden="true"></span>
+        )}
+      </nav>
+    )}
+
+    {/* ── Return to index ──────────────────────────────────────────────────── */}
+    <div class="text-center mt-16">
+      <a
+        href="/journal"
+        class="inline-flex items-center gap-2 text-xs transition-colors hover:text-stone-900"
+        style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-500); font-weight: 500;"
+      >
+        RETURN TO THE QUARTERLY
+      </a>
     </div>
   </article>
   <Footer />

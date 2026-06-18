@@ -2,52 +2,197 @@
 import Base from '../../layouts/Base.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
-import { BrassRule } from '@atelier/ui';
+import { BrassRule, RomanNumeral } from '@atelier/ui';
 import { getCollection } from 'astro:content';
 
-const posts = (await getCollection('journal', ({ data }) => !data.draft)).sort(
+const all = (await getCollection('journal', ({ data }) => !data.draft)).sort(
   (a, b) => b.data.date.getTime() - a.data.date.getTime()
 );
+
+const [hero, ...rest] = all;
+
+function fmtLongDate(d: Date) {
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+function fmtShortDate(d: Date) {
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long' });
+}
 ---
 
-<Base title="Journal — Atelier" description="Notes on style, stewardship, and the considered wardrobe.">
+<Base title="The Journal — Atelier" description="Notes on style, stewardship, and the considered wardrobe.">
   <Nav />
-  <main
-    class="mx-auto"
-    style="max-width: var(--atelier-container-max); padding-top: 10rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
-  >
-    <div class="flex items-center gap-3 mb-6">
-      <BrassRule client:load />
-      <p class="text-xs uppercase text-stone-500 font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow);">
-        The Journal
-      </p>
-    </div>
-    <h1
-      class="text-5xl md:text-6xl tracking-tight mb-16"
-      style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+  <main>
+
+    {/* ── Masthead ─────────────────────────────────────────────────────────── */}
+    <section
+      class="text-center"
+      style="padding-top: 9rem; padding-bottom: 3.5rem; padding-inline: var(--atelier-page-padding);"
     >
-      Notes on the considered wardrobe.
-    </h1>
-    <ul class="space-y-12" style="max-width: var(--atelier-prose-max);">
-      {posts.map((post) => (
-        <li class="border-b border-stone-200/60 pb-12 last:border-0">
-          <a href={`/journal/${post.slug}`} class="block group">
-            <time class="text-xs uppercase text-stone-400" style="letter-spacing: 0.15em;">
-              {post.data.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </time>
-            <h2
-              class="text-3xl tracking-tight mt-3 mb-3 group-hover:text-stone-600 transition-colors"
-              style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-tight);"
+      <p
+        class="text-[11px] mb-5"
+        style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-brass-600); font-weight: 500;"
+      >
+        THE ATELIER QUARTERLY
+      </p>
+      <div class="flex items-center justify-center gap-4 mb-2">
+        <BrassRule client:load />
+        <span
+          class="figures-oldstyle"
+          style="font-family: var(--atelier-font-display); font-style: italic; font-size: 1.5rem; color: var(--atelier-stone-700);"
+        >
+          Volume I · MMXXVI
+        </span>
+        <BrassRule client:load />
+      </div>
+      <h1
+        class="mt-6 text-5xl md:text-7xl mx-auto"
+        style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display); color: var(--atelier-stone-900); max-width: 18ch;"
+      >
+        <em style="font-weight: 400;">Notes</em> on the considered wardrobe.
+      </h1>
+    </section>
+
+    {/* ── Hero entry — the most recent piece, given its own room ──────────── */}
+    <section
+      class="mx-auto"
+      style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding); margin-bottom: 8rem;"
+    >
+      <a href={`/journal/${hero.slug}`} class="block group">
+        <div
+          class="grid md:grid-cols-12 gap-8 md:gap-12 items-start py-14 md:py-16"
+          style="border-top: 1px solid var(--atelier-stone-200); border-bottom: 1px solid var(--atelier-stone-200);"
+        >
+          {/* Left meta column */}
+          <div class="md:col-span-3 flex flex-col gap-3">
+            <p
+              class="text-[10px]"
+              style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-brass-600); font-weight: 500;"
             >
-              {post.data.title}
-            </h2>
-            <p class="text-stone-500" style="line-height: var(--atelier-leading-body);">
-              {post.data.description}
+              {hero.data.kicker ?? 'THE LATEST'}
             </p>
-          </a>
-        </li>
-      ))}
-    </ul>
+            <p
+              class="figures-oldstyle"
+              style="font-family: var(--atelier-font-display); font-style: italic; color: var(--atelier-stone-500); font-size: 1.05rem;"
+            >
+              {fmtLongDate(hero.data.date)}
+            </p>
+            <span style="display: inline-block; width: var(--atelier-brass-rule-width); height: var(--atelier-brass-rule-height); background: var(--atelier-brass-300); margin-top: 0.5rem;"></span>
+          </div>
+
+          {/* Right title + standfirst */}
+          <div class="md:col-span-9">
+            <h2
+              class="text-4xl md:text-6xl tracking-tight mb-6 transition-colors group-hover:text-stone-600"
+              style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display); color: var(--atelier-stone-900);"
+            >
+              {hero.data.title}
+            </h2>
+            <p
+              class="text-lg md:text-xl"
+              style="color: var(--atelier-stone-600); line-height: var(--atelier-leading-snug); max-width: 50ch;"
+            >
+              {hero.data.description}
+            </p>
+            <span
+              class="inline-flex items-center gap-2 mt-10 text-xs"
+              style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-700); font-weight: 500;"
+            >
+              READ THE ESSAY
+              <span
+                class="transition-transform group-hover:translate-x-1"
+                style="color: var(--atelier-brass-600); display: inline-block;"
+              >→</span>
+            </span>
+          </div>
+        </div>
+      </a>
+    </section>
+
+    {/* ── Table of Contents ───────────────────────────────────────────────── */}
+    <section
+      class="mx-auto"
+      style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding); padding-bottom: 7rem;"
+    >
+      <div class="flex items-center justify-center gap-4 mb-20">
+        <BrassRule client:load />
+        <p
+          class="text-[11px]"
+          style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-500); font-weight: 500;"
+        >
+          TABLE OF CONTENTS
+        </p>
+        <BrassRule client:load />
+      </div>
+
+      <ol
+        class="grid md:grid-cols-2 gap-x-16 lg:gap-x-24 gap-y-20"
+        style="max-width: 1100px; margin: 0 auto; list-style: none; padding: 0;"
+      >
+        {rest.map((post, i) => {
+          // Number essays oldest-first, so the chronologically first essay is N°.I.
+          const total = rest.length;
+          const essayNumber = total - i;
+          // Even-indexed (i=0,2,4) align flush left; odd-indexed (1,3,5) drop down
+          // and align flush right — asymmetric chess-board rhythm.
+          const isOffset = i % 2 === 1;
+          return (
+            <li class={isOffset ? 'md:mt-16' : ''}>
+              <a href={`/journal/${post.slug}`} class="block group">
+                <div class="flex items-baseline gap-4 mb-5">
+                  <RomanNumeral n={essayNumber} client:load className="text-2xl md:text-3xl" />
+                  <span
+                    class="flex-1"
+                    style="height: 1px; background: var(--atelier-stone-300); transform: translateY(-0.35rem);"
+                  ></span>
+                  <span
+                    class="text-xs figures-oldstyle"
+                    style="font-family: var(--atelier-font-display); font-style: italic; color: var(--atelier-stone-500);"
+                  >
+                    {fmtShortDate(post.data.date)}
+                  </span>
+                </div>
+                <p
+                  class="text-[10px] mb-3"
+                  style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-brass-600); font-weight: 500; min-height: 1em;"
+                >
+                  {post.data.kicker ?? ' '}
+                </p>
+                <h3
+                  class="text-2xl md:text-3xl tracking-tight mb-4 transition-colors group-hover:text-stone-600"
+                  style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-tight); color: var(--atelier-stone-900);"
+                >
+                  {post.data.title}
+                </h3>
+                <p
+                  class="text-base"
+                  style="color: var(--atelier-stone-500); line-height: var(--atelier-leading-snug); max-width: 42ch;"
+                >
+                  {post.data.description}
+                </p>
+              </a>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+
+    {/* ── Colophon strip ──────────────────────────────────────────────────── */}
+    <section
+      class="text-center"
+      style="padding-block: 5rem; border-top: 1px solid var(--atelier-stone-200);"
+    >
+      <div class="flex items-center justify-center gap-4">
+        <BrassRule client:load />
+        <p
+          class="text-[10px] figures-oldstyle"
+          style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-500); font-weight: 500;"
+        >
+          END OF CONTENTS · VOLUME I
+        </p>
+        <BrassRule client:load />
+      </div>
+    </section>
+
   </main>
   <Footer />
 </Base>

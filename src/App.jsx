@@ -8060,10 +8060,13 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           Archives. Same bg + bleed pattern as the wardrobe sticky toolbar. */}
       <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+        {/* Segmented-track tabs — canonical size matches the Wardrobe status
+            pills (px-4 sm:px-5 py-3 sm:py-2 text-[10px] sm:text-xs). Both
+            controls now read as the same UI primitive. */}
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
           {[['create', 'Create'], ['saved', `Saved${outfits.length ? ` · ${outfits.length}` : ''}`], ['calendar', 'Calendar'], ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`]].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`whitespace-nowrap px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm tracking-wider uppercase transition-colors duration-200 ${
+              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
                 tab === id ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
               }`}
             >
@@ -8727,11 +8730,16 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
               Unanalysed without scrolling back to the top. Solid bg
               matches the page (#F7F5F2) and bleeds edge-to-edge of the
               <main> scroll container via negative margins. */}
+          {/* Sticky filter bar — pill sizing matches the Insights sub-nav
+              (px-3 py-1.5 text-[10px] sm:text-xs). One canonical 'sticky-bar
+              pill' style across both views: same height, same typography,
+              same border. Active state still uses the dark fill so the
+              current filter is unmistakable. */}
           <div className="flex items-center gap-2 flex-wrap sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
                style={{ top: 'env(safe-area-inset-top, 0px)' }}>
             {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-colors duration-200 border ${
+                className={`shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border ${
                   filter === f
                     ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-700'
                     : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
@@ -8742,9 +8750,9 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
                 what they've earmarked from their saved looks. */}
             {wishlistCount > 0 && onJumpToWishlist && (
               <button onClick={onJumpToWishlist}
-                className="text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-colors duration-200 border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 inline-flex items-center gap-2 ml-auto">
-                <Heart size={12} strokeWidth={1.5} /> Wishlist · {wishlistCount}
-                <ChevronRight size={12} strokeWidth={1.5} className="-mr-1" />
+                className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 inline-flex items-center gap-1.5 ml-auto">
+                <Heart size={11} strokeWidth={1.5} /> Wishlist · {wishlistCount}
+                <ChevronRight size={11} strokeWidth={1.5} className="-mr-0.5" />
               </button>
             )}
             {filter === 'unanalysed' && unanalysed.length > 0 && (
@@ -9236,13 +9244,12 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
 
   return (
     <div className="space-y-4">
+      {/* Canonical segmented-track pill size — matches Wardrobe status pills
+          and Studio tabs (px-4 sm:px-5 py-3 sm:py-2 text-[10px] sm:text-xs). */}
       <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit">
         {[['all', 'All'], ['favorites', '★ Favourites']].map(([f, label]) => (
           <button key={f} onClick={() => setFilter(f)}
-            // Matches the Studio tabs + wardrobe status pills convention:
-            // active = white bg + bold (no shadow), inactive = stone-100 hover
-            // bg so hover is actually visible against the stone-200/50 track.
-            className={`px-5 py-2 rounded-full text-xs tracking-wider uppercase transition-colors duration-200 ${
+            className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
               filter === f ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
             }`}>
             {label}

@@ -7907,26 +7907,48 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     <div className="space-y-6 md:space-y-10">
       <EditorialHeader eyebrow="Studio" title="Styling Studio" subtitle="Compose, save, and revisit editorial looks." />
 
+      {/* Tabs — moved to top of view (was BELOW the intent card, which read
+          as 'chrome floating above primary navigation'). Sticky so they
+          stay reachable while scrolling a long Saved grid or Wardrobe
+          Archives. Same bg + bleed pattern as the wardrobe sticky toolbar. */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
+          {[['create', 'Create'], ['saved', `Saved${outfits.length ? ` · ${outfits.length}` : ''}`], ['calendar', 'Calendar'], ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`]].map(([id, label]) => (
+            <button key={id} onClick={() => setTab(id)}
+              className={`whitespace-nowrap px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm tracking-wider uppercase transition-colors duration-200 ${
+                tab === id ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {tab === 'create' && (
         <div className="bg-white border border-stone-200/60 rounded-[2rem] p-4 sm:p-6 smooth-shadow space-y-4">
           <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Wand2 size={14} strokeWidth={1.5} className="text-stone-500" />
-              <span className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold">Style intent</span>
+            {/* Editorial eyebrow + brass-rule pattern — same language as the
+                "GOOD MORNING, SIBYLLE" + brass-rule in every main-column
+                header. Replaces the previous Wand icon + plain text label. */}
+            <div className="flex items-center gap-3">
+              <span className="brass-rule" aria-hidden="true"></span>
+              <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Style intent</span>
             </div>
-            <button onClick={() => setShowCustom((s) => !s)} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors">
+            <button onClick={() => setShowCustom((s) => !s)} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors duration-200">
               {showCustom ? 'Hide custom' : '+ Custom intent'}
             </button>
           </div>
 
-          {/* Style intent chips */}
+          {/* Style intent chips — unified hover convention */}
           <div className="flex flex-wrap gap-2">
             {['Any', ...STYLES].map((s) => (
               <button key={s} onClick={() => setStyleIntent(s)}
-                className={`px-4 py-2 rounded-full text-xs transition-all border ${
+                className={`px-4 py-2 rounded-full text-xs border transition-colors duration-200 ${
                   styleIntent === s
-                    ? 'bg-stone-900 border-stone-900 text-white font-medium'
-                    : 'bg-white border-stone-300 text-stone-700 hover:border-stone-900'
+                    ? 'bg-stone-900 border-stone-900 text-white font-medium hover:bg-stone-700'
+                    : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
                 }`}>
                 {s}
               </button>
@@ -7944,37 +7966,41 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             />
           )}
 
-          {/* Two engines, same intent */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Primary action stack. AI Style is the hero CTA (full-width,
+              dark pill) — it's what most users actually want. Quick is a
+              secondary affordance for users who explicitly want a non-AI
+              suggestion, sized smaller as a text-link-style action below. */}
+          <button onClick={handleAIStyle} disabled={aiBusy || abComparing || !isAIEnabled()}
+            className="w-full px-4 py-3.5 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 font-medium">
+            <Sparkles size={14} strokeWidth={1.5} />
+            {aiBusy ? 'Styling…' : isAIEnabled() ? 'AI Style' : 'AI — setup'}
+          </button>
+          <div className="flex items-center justify-center gap-4 text-[11px] tracking-widest uppercase">
             <button onClick={handleQuickStyle} disabled={aiBusy || abComparing}
-              className="px-4 py-3 rounded-xl text-sm bg-white border border-stone-300 text-stone-900 hover:border-stone-900 transition-all inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
-              <Wand2 size={14} strokeWidth={1.5} /> Quick
+              className="text-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50 inline-flex items-center gap-1.5">
+              <Wand2 size={11} strokeWidth={1.5} /> Quick (no AI)
             </button>
-            <button onClick={handleAIStyle} disabled={aiBusy || abComparing || !isAIEnabled()}
-              className="px-4 py-3 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-all inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
-              <Sparkles size={14} strokeWidth={1.5} />
-              {aiBusy ? 'Styling…' : isAIEnabled() ? 'AI Style' : 'AI — setup'}
-            </button>
+            {isAIEnabled() && (
+              <>
+                <span className="text-stone-300" aria-hidden="true">·</span>
+                <button onClick={handleABCompare} disabled={aiBusy || abComparing}
+                  className="text-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50 inline-flex items-center gap-1.5">
+                  <Sparkles size={11} strokeWidth={1.5} className="text-amber-500" />
+                  {abComparing ? 'Generating…' : 'Compare two looks'}
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Compare two AI suggestions side-by-side */}
-          {isAIEnabled() && (
-            <button onClick={handleABCompare} disabled={aiBusy || abComparing}
-              className="w-full px-4 py-2.5 rounded-xl text-xs bg-white border border-stone-200 text-stone-700 hover:border-stone-900 transition-all inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50">
-              <Sparkles size={12} strokeWidth={1.5} className="text-amber-500" />
-              {abComparing ? 'Generating two looks…' : 'Compare two AI suggestions side-by-side'}
-            </button>
-          )}
-
-          {/* Quick mood presets — tap any to instantly AI-style for that scenario */}
+          {/* Quick mood presets — unified hover convention */}
           {isAIEnabled() && (
             <div>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Or try a mood</p>
+              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-400 mb-2 font-medium">Or try a mood</p>
               <div className="flex flex-wrap gap-2">
                 {MOOD_PRESETS.map((mood) => (
                   <button key={mood} disabled={aiBusy}
                     onClick={() => { setCustomIntent(mood); setShowCustom(true); handleAIStyle(mood); }}
-                    className="px-3 py-2 rounded-full text-xs bg-stone-50 border border-stone-200 text-stone-700 hover:border-stone-900 hover:bg-white transition-all disabled:opacity-50 inline-flex items-center gap-1.5">
+                    className="px-3 py-2 rounded-full text-xs bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50 inline-flex items-center gap-1.5">
                     <Sparkles size={11} strokeWidth={1.5} className="text-amber-500" /> {mood}
                   </button>
                 ))}
@@ -8022,11 +8048,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             </div>
           )}
 
-          {/* Capsule generator — separate intent, uses same style */}
+          {/* Capsule generator — unified light-pill hover convention. */}
           <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-3 flex-wrap">
             <span className="text-[10px] tracking-widest uppercase text-stone-500">Multiple looks at once</span>
             <button onClick={() => setCapsuleOpen(true)}
-              className="px-4 py-2 rounded-full text-xs bg-stone-100 hover:bg-stone-200 text-stone-800 transition-all inline-flex items-center gap-2">
+              className="px-4 py-2 rounded-full text-xs bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center gap-2">
               <Sparkles size={14} strokeWidth={1.5} /> Build a capsule
             </button>
           </div>
@@ -8064,18 +8090,6 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           }}
         />
       )}
-
-      <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
-        {[['create', 'Create'], ['saved', `Saved${outfits.length ? ` · ${outfits.length}` : ''}`], ['calendar', 'Calendar'], ['history', `AI History${aiHistory.length ? ` · ${aiHistory.length}` : ''}`]].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`whitespace-nowrap px-4 sm:px-6 py-2 rounded-full text-xs sm:text-sm tracking-wider uppercase transition-all duration-200 ${
-              tab === id ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-900'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
       {tab === 'calendar' ? (
         <WearCalendar items={items} outfits={outfits} schedules={schedules} onScheduleOutfit={scheduleOutfit} onOpenOutfit={onOpenOutfit} onSaveOutfit={saveOutfit} styleProfile={styleProfile} />
@@ -8205,8 +8219,10 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               <div className="flex items-center gap-2 flex-wrap">
                 {[['all','All'],['favorites','★ Favourites']].map(([f, label]) => (
                   <button key={f} onClick={() => setOutfitsFilter(f)}
-                    className={`text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-all border ${
-                      outfitsFilter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-500'
+                    className={`text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border ${
+                      outfitsFilter === f
+                        ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-700'
+                        : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
                     }`}>{label}</button>
                 ))}
                 <span className="text-xs text-stone-500 ml-2">{filteredOutfits.length} {filteredOutfits.length === 1 ? 'look' : 'looks'}</span>

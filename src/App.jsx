@@ -3105,8 +3105,21 @@ function WardrobeCardImage({ item }) {
   );
 }
 
+// Edge-case status filters that live in the sheet rather than the visible
+// pill row (those are reserved for the 4 lifecycle states a user wants
+// one-tap access to: All / Favourites / Owned / Wishlist).
+const CONDITION_OPTIONS = [
+  { key: 'all', label: 'Any condition' },
+  { key: 'unavailable', label: 'In wash / etc' },
+  { key: 'lent', label: 'Lent out' },
+  { key: 'stale', label: 'Stale 90+ days' },
+];
+const CONDITION_KEYS = new Set(['unavailable', 'lent', 'stale']);
+const CONDITION_LABEL_BY_KEY = Object.fromEntries(CONDITION_OPTIONS.map((o) => [o.key, o.label]));
+
 function WardrobeFiltersSheet({
   open, onClose,
+  filter, setFilter,
   subCategories, subCategoryFilter, setSubCategoryFilter,
   seasonFilter, setSeasonFilter,
   allBrands, brandFilter, setBrandFilter,
@@ -3143,6 +3156,27 @@ function WardrobeFiltersSheet({
           </button>
         </div>
         <div className="p-4 sm:p-6 lg:p-8 flex-1 min-h-0 overflow-y-auto space-y-6">
+          {/* Condition — edge-state filters that don't earn a spot in the
+              visible pill row (In wash, Lent out, Stale). Treats the
+              shared `filter` state as condition-only: if user picks
+              In wash, filter becomes 'unavailable' and the visible
+              pill row de-highlights; a badge appears in the toolbar. */}
+          <div>
+            <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Condition</h4>
+            <ChipRow
+              items={CONDITION_OPTIONS.map((o) => o.label)}
+              value={CONDITION_KEYS.has(filter) ? CONDITION_LABEL_BY_KEY[filter] : 'Any condition'}
+              set={(label) => {
+                const opt = CONDITION_OPTIONS.find((o) => o.label === label);
+                if (!opt) return;
+                // Selecting a condition replaces whatever pill was active —
+                // a user can't be in 'Owned' AND 'In wash' via this UI.
+                // Picking "Any condition" while a condition was active
+                // returns to 'all'.
+                setFilter(opt.key);
+              }}
+            />
+          </div>
           {subCategories && (
             <div>
               <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Sub-type</h4>
@@ -3389,7 +3423,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
   const suggestedPieces = suggestion?.itemIds?.map((id) => items.find((i) => i.id === id)).filter(Boolean) || [];
 
   return (
-    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 shadow-2xl relative overflow-hidden">
+    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 smooth-shadow relative overflow-hidden">
       <div className="absolute -right-12 -top-12 opacity-[0.06] rotate-12 pointer-events-none">
         <Sparkles size={220} strokeWidth={0.8} />
       </div>
@@ -3907,6 +3941,11 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   // (single source of truth — change the badge logic once, both surfaces
   // update).
   const activeBadges = [];
+  // Condition badge first — when a sheet-only status is active (In wash /
+  // Lent / Stale), no pill highlights, so the badge is the only feedback
+  // that the view is filtered. Put it FIRST so it reads as the dominant
+  // filter, not an afterthought.
+  if (CONDITION_KEYS.has(filter)) activeBadges.push({ label: CONDITION_LABEL_BY_KEY[filter], clear: () => setFilter('all') });
   if (subCategoryFilter !== 'All Types') activeBadges.push({ label: subCategoryFilter, clear: () => setSubCategoryFilter('All Types') });
   if (seasonFilter !== 'All Seasons') activeBadges.push({ label: seasonFilter, clear: () => setSeasonFilter('All Seasons') });
   if (brandFilter !== 'All Brands') activeBadges.push({ label: brandFilter, clear: () => setBrandFilter('All Brands') });
@@ -4179,8 +4218,13 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
             </button>
           )}
         </div>
+        {/* Primary status — the 4 lifecycle states a user actually wants
+            one-click access to. The edge cases (In wash, Lent out, Stale)
+            now live in the Filters sheet under "Condition" — they were
+            getting clipped on the right edge here AND adding visual chrome
+            for filters most users don't use daily. */}
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
-          {[['all', 'All'], ['favorites', '★ Favourites'], ['owned', 'Owned'], ['wishlist', 'Wishlist'], ['unavailable', 'In wash / etc'], ['lent', 'Lent out'], ['stale', 'Stale 90+d']].map(([f, label]) => (
+          {[['all', 'All'], ['favorites', '★ Favourites'], ['owned', 'Owned'], ['wishlist', 'Wishlist']].map(([f, label]) => (
             <button key={f} onClick={() => setFilter(f)}
               className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-all duration-300 ${
                 filter === f ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-800'
@@ -4190,7 +4234,12 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+        {/* Categories — horizontal scroll on mobile (overflow-x-auto), wrap
+            to multiple rows on lg so nothing gets clipped in the main
+            column. Previously the row was always overflow-x-auto, which on
+            desktop hid the last few categories behind the column edge with
+            no scroll affordance. */}
+        <div className="flex flex-wrap items-center gap-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 overflow-x-auto lg:overflow-visible hide-scrollbar pb-1 lg:pb-0">
           {CATEGORIES.map((cat) => (
             <button key={cat} onClick={() => selectCategory(cat)}
               className={`shrink-0 px-4 sm:px-5 py-3 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 border whitespace-nowrap ${
@@ -4215,6 +4264,8 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       <WardrobeFiltersSheet
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
+        filter={filter}
+        setFilter={setFilter}
         subCategories={subCategoriesForCategory}
         subCategoryFilter={subCategoryFilter}
         setSubCategoryFilter={setSubCategoryFilter}
@@ -4424,7 +4475,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           else if (days >= 14) reasons.push(`not worn in ${days} days`);
           return (
             <button onClick={() => onItemClick?.(recommendation.id)}
-              className="text-left w-full bg-stone-900 text-white rounded-2xl lg:rounded-3xl p-4 sm:p-5 flex items-center gap-4 group hover:bg-stone-800 transition-all shadow-2xl active:scale-[0.98]">
+              className="text-left w-full bg-stone-900 text-white rounded-2xl lg:rounded-3xl p-4 sm:p-5 flex items-center gap-4 group hover:bg-stone-800 transition-all smooth-shadow active:scale-[0.98]">
               <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-stone-800 shrink-0">
                 {itemImages(recommendation)[0] && <img src={itemImages(recommendation)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
               </div>

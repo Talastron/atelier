@@ -11513,35 +11513,51 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
     const ai = WITHIN_ROW.indexOf(a.category); const bi = WITHIN_ROW.indexOf(b.category);
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   };
-  const upperRow = pieces.filter((p) => bodyZone(p) === 1).sort(rowSort);
-  const midRow   = pieces.filter((p) => bodyZone(p) === 2).sort(rowSort);
-  const lowerRow = pieces.filter((p) => bodyZone(p) === 3).sort(rowSort);
+  // Within each body row, split pieces into HERO (main garment) and
+  // ACCESSORY (satellites). Heroes cluster tight as the centrepiece;
+  // accessories cluster tight as a satellite group beside them. This is
+  // the difference between "items spread evenly across a row" and "a
+  // composed editorial spread with hero + supporting cast".
+  const isHeroInZone = (item, zone) => {
+    const c = item.category;
+    if (zone === 1) return c === 'Outerwear' || c === 'Tops' || c === 'Dresses' || c === 'Swimwear';
+    if (zone === 2) return c === 'Bottoms';
+    return c === 'Shoes';
+  };
+  const partition = (zone) => {
+    const inZone = pieces.filter((p) => bodyZone(p) === zone);
+    return {
+      hero: inZone.filter((p) => isHeroInZone(p, zone)).sort(rowSort),
+      acc:  inZone.filter((p) => !isHeroInZone(p, zone)).sort(rowSort),
+    };
+  };
+  const upper = partition(1);
+  const mid   = partition(2);
+  const lower = partition(3);
+  const totalCount = upper.hero.length + upper.acc.length + mid.hero.length + mid.acc.length + lower.hero.length + lower.acc.length;
 
   return (
     <div>
       {/* Atmospheric backdrop — warm radial highlight from upper-left
-          like soft window light raking across a styled surface. Adds
-          the depth a real flat-lay shoot has; flat cream reads as a
-          spreadsheet, not an editorial. The radial is VERY subtle
-          (3-tone warm cream) so it never competes with the pieces. */}
+          like soft window light raking across a styled surface. The
+          radial is VERY subtle (3-tone warm cream) so it never competes
+          with the pieces. */}
       <div
-        className="relative rounded-[2rem] border border-stone-200/60 px-6 sm:px-10 md:px-14 py-10 sm:py-14 md:py-16 overflow-hidden"
+        className="relative rounded-[2rem] border border-stone-200/60 px-4 sm:px-8 md:px-10 py-8 sm:py-10 md:py-12 overflow-hidden"
         style={{
           background: 'radial-gradient(ellipse 80% 60% at 28% 0%, #FBFAF7 0%, #F4F0E8 55%, #ECE6D8 100%)',
         }}
       >
-        {pieces.length === 0 ? (
+        {totalCount === 0 ? (
           <div className="h-64 flex items-center justify-center text-stone-300">
             <Shirt size={64} strokeWidth={1} />
           </div>
         ) : (
           // Tier sizing scales DOWN as the outfit grows so every piece
-          // still fits without horizontal scroll. The CATEGORY_WEIGHT
-          // multiplier then introduces the editorial size drama within
-          // each row — outerwear ≈4× the width of jewellery.
+          // still fits. CATEGORY_WEIGHT then drives the editorial drama
+          // within each row — outerwear ≈4× the width of jewellery.
           (() => {
-            const baseSize = pieces.length <= 4 ? 200 : pieces.length <= 7 ? 160 : pieces.length <= 10 ? 130 : 110;
-            // Single piece-renderer shared across all three rows.
+            const baseSize = totalCount <= 4 ? 180 : totalCount <= 7 ? 150 : totalCount <= 10 ? 125 : 105;
             const renderPiece = (p, i) => {
               const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
               const openable = !!(onOpenItem && p.id);
@@ -11556,8 +11572,7 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
                 >
                   {/* EDITORIAL POLAROID FRAME — soft rounded card with
                       layered shadow so the piece casts presence on the
-                      styled surface like raked light in a real flat-lay
-                      shoot. Hover lifts the shadow subtly. */}
+                      styled surface. Hover lifts the shadow subtly. */}
                   <div className="aspect-[3/4] rounded-[1.25rem] bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]">
                     {itemImages(p)[0] ? (
                       <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async"
@@ -11569,41 +11584,49 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
                 </Tag>
               );
             };
-            // Three horizontal bands stacked vertically — the body
-            // silhouette. Each band shrinks to its own content (only
-            // rendered if it has pieces). items-end aligns pieces to a
-            // shared baseline within each band so the jacket, top, and
-            // jewellery in row 1 all "stand" on the same line — exactly
-            // like a stylist's flat-lay arrangement.
+            // Each row = a HERO cluster (tight gap) + an ACCESSORY
+            // cluster (even tighter gap), with a controlled gap between
+            // the two. Accessory cluster gets a max-width so jewellery
+            // doesn't spread thin — it reads as ONE satellite group, not
+            // floating individual items. Rows render only when they
+            // have content.
+            const Row = ({ hero, acc }) => {
+              if (hero.length + acc.length === 0) return null;
+              return (
+                <div className="flex items-end justify-center gap-x-6 sm:gap-x-8 md:gap-x-10 gap-y-4 flex-wrap">
+                  {hero.length > 0 && (
+                    <div className="flex items-end gap-x-3 sm:gap-x-4">
+                      {hero.map(renderPiece)}
+                    </div>
+                  )}
+                  {acc.length > 0 && (
+                    <div className="flex items-end gap-x-2 sm:gap-x-3 flex-wrap justify-center max-w-[280px] sm:max-w-[320px] md:max-w-[360px]">
+                      {acc.map(renderPiece)}
+                    </div>
+                  )}
+                </div>
+              );
+            };
             return (
-              <div className="relative flex flex-col items-center gap-y-10 sm:gap-y-12">
-                {upperRow.length > 0 && (
-                  <div className="flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-6">
-                    {upperRow.map(renderPiece)}
-                  </div>
-                )}
-                {midRow.length > 0 && (
-                  <div className="flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-6">
-                    {midRow.map(renderPiece)}
-                  </div>
-                )}
-                {lowerRow.length > 0 && (
-                  <div className="flex flex-wrap items-end justify-center gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-6">
-                    {lowerRow.map(renderPiece)}
-                  </div>
-                )}
+              // max-w on the column constrains the composition's reach
+              // so it stops sprawling across wide viewports. Vertical
+              // gap between rows tightened from 10/12 → 6/8 so the
+              // jacket's tall silhouette doesn't create dead air below.
+              <div className="relative flex flex-col items-center gap-y-6 sm:gap-y-8 max-w-3xl mx-auto">
+                <Row hero={upper.hero} acc={upper.acc} />
+                <Row hero={mid.hero} acc={mid.acc} />
+                <Row hero={lower.hero} acc={lower.acc} />
               </div>
             );
           })()
         )}
       </div>
 
-      {/* Credits list — reconstruct a flat sorted list for the magazine
-          credits below. Body-row order (upper → mid → lower) reads as
-          'top of the body down to feet' which matches the spatial
-          flat-lay above. */}
+      {/* Credits list — flat list ordered top-of-body to feet, matching
+          the spatial flat-lay above. Within each body band, heroes come
+          before accessories (the same order they appear visually). */}
       <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-        {[...upperRow, ...midRow, ...lowerRow].map((p, i) => {
+        {[...upper.hero, ...upper.acc, ...mid.hero, ...mid.acc, ...lower.hero, ...lower.acc].map((p, i) => {
           const openable = !!(onOpenItem && p.id);
           return (
             <li key={p.id || i} className="border-b border-stone-200/60 last:border-0">

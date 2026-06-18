@@ -4378,16 +4378,14 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
             onClick={() => selectMode ? toggleSelected(item.id) : onItemClick?.(item.id)}
             onContextMenu={(e) => { e.preventDefault(); if (!selectMode) enterSelectMode(item.id); }}
             // Editorial product-card pattern (Net-a-Porter / MatchesFashion /
-            // Mr Porter / SSENSE): the IMAGE is the interactive surface; the
-            // text block beneath is a stable reference and never moves on
-            // hover. We removed the previous lg:hover:-translate-y-1 which
-            // lifted the entire assembly — that bounce read as juvenile/app-
-            // like, not editorial.
-            //
-            // transition-transform on the wrapper is just for the
-            // active:scale-[0.97] click feedback (a quick 150ms tap-down).
-            // No hover transform here — that lives on the image inside.
-            className={`group relative flex flex-col gap-4 cursor-pointer transition-transform duration-150 active:scale-[0.97] ${selectMode && isSelected ? 'ring-2 ring-stone-900 rounded-2xl' : ''}`}
+            // Mr Porter / SSENSE): cursor:pointer + hover zoom is enough
+            // click affordance. NO press-scale on the wrapper — even with
+            // stopPropagation on inner buttons (chevrons, favourite star),
+            // CSS :active still cascades up the DOM, which made the whole
+            // card (image + text) jump when the user clicked a chevron.
+            // The press-scale was also a mobile-app idiom out of place in
+            // an editorial product grid.
+            className={`group relative flex flex-col gap-4 cursor-pointer ${selectMode && isSelected ? 'ring-2 ring-stone-900 rounded-2xl' : ''}`}
           >
             {/* Image surface: this is where ALL hover effects happen.
                 Soft shadow lift (smooth-shadow → shadow-xl) tells the user

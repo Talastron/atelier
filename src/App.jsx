@@ -12030,12 +12030,43 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
     }
   };
 
+  // Sub-section anchors — same pattern as Insights: long page with many
+  // discrete cards, sticky chip nav jumps directly to the relevant one.
+  // 'People' only appears for owners (matches the conditional Invited
+  // Friends section).
+  const PROFILE_SECTIONS = [
+    { id: 'profile-account', label: 'Account' },
+    ...(isOwner ? [{ id: 'profile-people', label: 'People' }] : []),
+    { id: 'profile-settings', label: 'Settings' },
+    { id: 'profile-style', label: 'Style' },
+    { id: 'profile-cutouts', label: 'Cutouts' },
+    { id: 'profile-backup', label: 'Backup' },
+    { id: 'profile-trash', label: 'Trash' },
+    { id: 'profile-measurements', label: 'Measurements' },
+  ];
+
   return (
-    <div className="space-y-12 max-w-3xl">
+    <div className="space-y-10 md:space-y-12 max-w-3xl">
       <EditorialHeader eyebrow="Your atelier" title="Profile" subtitle="Account, measurements, style, and preferences." />
 
+      {/* Sticky sub-section nav — matches the Insights pattern. Same
+          'Pattern B' pill sizing (px-3 py-1.5 text-[10px] sm:text-xs)
+          established in the unification commit so all sticky-bar pills
+          across the app speak one language. */}
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+          {PROFILE_SECTIONS.map((s) => (
+            <a key={s.id} href={`#${s.id}`}
+              className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
+              {s.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
       {user && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow flex items-center gap-5">
+        <div id="profile-account" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow flex items-center gap-5">
           {user.photoURL ? (
             <img src={user.photoURL} alt="" className="w-16 h-16 rounded-full ring-2 ring-stone-100" referrerPolicy="no-referrer" />
           ) : (
@@ -12054,9 +12085,9 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
       )}
 
       {isOwner && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-8 md:p-10 smooth-shadow">
+        <div id="profile-people" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-6">
-            <h3 className="font-display text-2xl text-stone-900">Invited Friends</h3>
+            <h3 className="font-display text-xl md:text-2xl text-stone-900">Invited Friends</h3>
             <span className="text-xs text-stone-400 tracking-widest uppercase">{allowlist.length} {allowlist.length === 1 ? 'person' : 'people'}</span>
           </div>
           <p className="text-stone-500 text-sm leading-relaxed mb-8">
@@ -12102,7 +12133,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
         </div>
       )}
 
-      <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+      <div id="profile-settings" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-6">Settings</h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -12168,10 +12199,12 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
         </div>
       </div>
 
-      <StyleProfileCard measurements={measurements} saveMeasurements={saveMeasurements} />
-      <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
+      <div id="profile-style" className="scroll-mt-24 space-y-10 md:space-y-12">
+        <StyleProfileCard measurements={measurements} saveMeasurements={saveMeasurements} />
+        <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
+      </div>
 
-      <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+      <div id="profile-cutouts" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
             <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-2">Photo cutouts <span className="text-[10px] tracking-widest uppercase text-brass-600 ml-2 align-middle">Beta</span></h3>
@@ -12193,7 +12226,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
 
       <BackfillCard items={items} shops={shops} onUpdateItem={onUpdateItem} />
 
-      <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+      <div id="profile-backup" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
             <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-2">Backup &amp; export</h3>
@@ -12211,7 +12244,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
       </div>
 
       {deletedItems.length > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+        <div id="profile-trash" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
             <h3 className="font-display text-xl md:text-2xl text-stone-900">Trash</h3>
             <span className="text-[10px] tracking-widest uppercase text-stone-500">{deletedItems.length} item{deletedItems.length === 1 ? '' : 's'}</span>
@@ -12242,7 +12275,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
         </div>
       )}
 
-      <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-12 smooth-shadow">
+      <div id="profile-measurements" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="bg-stone-50 border border-stone-200 text-stone-600 p-5 rounded-2xl text-sm flex gap-4 mb-10 leading-relaxed">
           <AlertCircle className="shrink-0 mt-0.5 text-stone-900" size={20} strokeWidth={1.5} />
           <p>Recording your measurements here makes it quick to <strong>cross-check brand size charts</strong> before buying anything on your wishlist. Stored privately under your account.</p>

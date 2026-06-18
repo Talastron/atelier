@@ -11118,37 +11118,80 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
   const colorTotal = sortedColors.reduce((s, [, n]) => s + n, 0);
   const taggedItemsCount = ownedItems.filter((i) => itemColors(i).length > 0).length;
 
+  // Sub-section anchors so the sticky nav below the header can jump
+  // straight to a section without a 4000px scroll. Each major section
+  // sets its id={anchor.X.id}; the nav <a> hrefs target #{id}.
+  const SECTIONS = [
+    { id: 'insights-value', label: 'Value' },
+    { id: 'insights-spending', label: 'Spending' },
+    { id: 'insights-behaviour', label: 'Behaviour' },
+    { id: 'insights-composition', label: 'Composition' },
+    { id: 'insights-diary', label: 'Diary' },
+    { id: 'insights-leaders', label: 'Leaderboards' },
+  ];
+
   return (
     <div className="space-y-10 md:space-y-12 max-w-5xl">
       <EditorialHeader eyebrow="The Ledger" title="Insights" subtitle="Value, wear data, and gaps across your collection." />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-stone-900 text-white p-10 rounded-[2rem] shadow-2xl relative overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12"><PoundSterling size={240} strokeWidth={1} /></div>
-          <p className="text-stone-400 text-xs font-semibold tracking-[0.2em] uppercase mb-4 relative z-10">Current Archive Value</p>
-          <h3 className="text-6xl font-display relative z-10 font-medium">£{ownedTotal.toLocaleString()}</h3>
-          <p className="text-sm text-stone-400 mt-8 relative z-10 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-stone-500"></span>
+      {/* Sticky sub-section nav. Long page (4000+ px); without this the
+          user scrolls forever to find e.g. the colour profile or the
+          wear timeline. Each chip is an anchor link to the matching
+          section id below. Same bg + bleed pattern as the wardrobe
+          toolbar so it reads as 'page chrome' not a content card. */}
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60 -mt-4 md:-mt-6 -mb-2"
+           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+          {SECTIONS.map((s) => (
+            <a key={s.id} href={`#${s.id}`}
+              className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
+              {s.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
+      <div id="insights-value" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 scroll-mt-24">
+        {/* Refined hero card: dropped shadow-2xl (heavy) for smooth-shadow,
+            dropped the giant rotated PoundSterling decoration (dated), kept
+            the dark surface as the primary value signal. Brass-rule accent
+            on the eyebrow matches the editorial language used everywhere
+            else. Typography parity with the Wishlist Target card next to
+            it so the two-up reads as a balanced pair. */}
+        <div className="bg-stone-900 text-white p-6 md:p-8 rounded-[2rem] smooth-shadow relative overflow-hidden">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="inline-block w-4 h-px bg-brass-300" aria-hidden="true"></span>
+            <p className="text-stone-400 text-[10px] font-semibold tracking-[0.28em] uppercase">Current Archive Value</p>
+          </div>
+          <h3 className="text-5xl md:text-6xl font-display font-medium">£{ownedTotal.toLocaleString()}</h3>
+          <p className="text-sm text-stone-400 mt-6 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-stone-500"></span>
             Across {ownedItems.length} curated items
           </p>
         </div>
 
-        {/* Wishlist Target — clickable. Jumps to Wardrobe filtered to wishlist. */}
+        {/* Wishlist Target — clickable, jumps to Wardrobe filtered to wishlist.
+            Removed hover:-translate-y-0.5 + active:scale (anti-pattern fixed
+            elsewhere — wrapper transforms fire CSS :active for inner buttons).
+            Hover signal is just border darkening to stone-500. */}
         <button
           onClick={() => onJumpToWardrobe?.({ filter: 'wishlist' })}
           disabled={!onJumpToWardrobe || wishlistItems.length === 0}
-          className="text-left bg-white border border-stone-200/60 p-10 rounded-[2rem] smooth-shadow transition-all enabled:hover:border-stone-500 enabled:hover:-translate-y-0.5 enabled:active:scale-[0.99] disabled:cursor-default group"
+          className="text-left bg-white border border-stone-200/60 p-6 md:p-8 rounded-[2rem] smooth-shadow transition-colors duration-200 enabled:hover:border-stone-500 disabled:cursor-default group"
         >
-          <div className="flex items-baseline justify-between gap-3 mb-4">
-            <p className="text-stone-500 text-xs font-semibold tracking-[0.2em] uppercase">Wishlist Target</p>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-block w-4 h-px bg-brass-300" aria-hidden="true"></span>
+              <p className="text-stone-500 text-[10px] font-semibold tracking-[0.28em] uppercase">Wishlist Target</p>
+            </div>
             {wishlistItems.length > 0 && (
               <span className="text-[10px] tracking-widest uppercase text-stone-400 group-hover:text-stone-900 transition-colors inline-flex items-center gap-1">
                 View <ChevronRight size={12} strokeWidth={1.5} />
               </span>
             )}
           </div>
-          <h3 className="text-5xl font-display text-stone-900">£{wishlistTotal.toLocaleString()}</h3>
-          <p className="text-sm text-stone-500 mt-8 flex items-center gap-2">
+          <h3 className="text-5xl md:text-6xl font-display text-stone-900 font-medium">£{wishlistTotal.toLocaleString()}</h3>
+          <p className="text-sm text-stone-500 mt-6 flex items-center gap-2">
             <Heart size={14} className="text-stone-400" />
             {wishlistItems.length} items desired
           </p>
@@ -11160,7 +11203,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
           card with a link to Profile if there's no budget but they have
           purchases this month. */}
       {monthlyBudget > 0 ? (
-        <div className={`rounded-[2rem] p-8 md:p-10 smooth-shadow relative overflow-hidden border ${
+        <div id="insights-spending" className={`scroll-mt-24 rounded-[2rem] p-6 md:p-8 smooth-shadow relative overflow-hidden border ${
           budgetTone === 'green' ? 'bg-white border-stone-200/60'
           : budgetTone === 'amber' ? 'bg-amber-50 border-amber-200'
           : 'bg-red-50 border-red-200'
@@ -11210,7 +11253,8 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
         </div>
       ) : monthSpendItems.length > 0 && onOpenProfile ? (
         <button onClick={onOpenProfile}
-          className="w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-500 transition-colors group">
+          id="insights-spending"
+          className="scroll-mt-24 w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-500 transition-colors group">
           <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-2">Spending · {monthName}</p>
           <h3 className="font-display text-2xl text-stone-900">£{monthSpend.toLocaleString()} added this month</h3>
           <p className="text-sm text-stone-500 mt-3 leading-relaxed">
@@ -11225,7 +11269,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
           surface them. The anti-overconsumption companion to the spending
           meter: 'before you buy, wear what you already own'. */}
       {inSeasonItems.length >= 3 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-8 md:p-10 smooth-shadow">
+        <div id="insights-behaviour" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
             <div>
               <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-1">Season coverage · {seasonName} {now.getFullYear()}</p>
@@ -11270,7 +11314,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
                     <Wrap
                       key={it.id}
                       {...(clickable ? { type: 'button', onClick: () => onOpenItem(it.id), 'aria-label': `Open ${it.name}` } : {})}
-                      className={`text-left ${clickable ? 'group transition-transform active:scale-[0.97] hover:-translate-y-0.5' : ''}`}
+                      className={`text-left ${clickable ? 'group cursor-pointer' : ''}`}
                     >
                       <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 mb-2 border border-stone-200/60">
                         {itemImages(it)[0] ? (
@@ -11295,7 +11339,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
           modal with the entire history. Joins worn photos + event names
           from the schedule for a real keepsake feel rather than a flat log. */}
       {wearDiary.length > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-8 md:p-10 smooth-shadow">
+        <div id="insights-diary" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between gap-3 mb-6 flex-wrap">
             <div>
               <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-1">Wear diary</p>
@@ -11370,7 +11414,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
         />
       )}
 
-      <div className="bg-white border border-stone-200/60 rounded-[2rem] p-10 smooth-shadow">
+      <div id="insights-composition" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-baseline justify-between gap-3 mb-8 flex-wrap">
           <h3 className="font-display text-2xl text-stone-900">Investment by Category</h3>
           {Object.keys(categoryBreakdown).length > 0 && onJumpToWardrobe && (
@@ -11386,7 +11430,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
               <RowTag
                 key={category}
                 {...(clickable ? { type: 'button', onClick: () => onJumpToWardrobe({ filter: 'all', category }), 'aria-label': `View ${category} in wardrobe` } : {})}
-                className={`group block w-full text-left rounded-xl p-3 -mx-3 transition-colors ${clickable ? 'hover:bg-stone-100cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900' : ''}`}
+                className={`group block w-full text-left rounded-xl p-3 -mx-3 transition-colors ${clickable ? 'hover:bg-stone-100 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900' : ''}`}
               >
                 <div className="flex justify-between items-baseline text-sm mb-2 gap-3">
                   <span className={`font-medium tracking-wide uppercase text-xs transition-colors ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-800'}`}>{category}</span>
@@ -11406,7 +11450,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       </div>
 
       {sortedColors.length > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-10 smooth-shadow">
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
             <h3 className="font-display text-xl md:text-2xl text-stone-900">Colour profile</h3>
             <span className="text-[10px] tracking-widest uppercase text-stone-500">
@@ -11467,7 +11511,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       )}
 
       {totalWears > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-10 smooth-shadow">
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
             <h3 className="font-display text-xl md:text-2xl text-stone-900">Wears over time</h3>
             <span className="text-[10px] tracking-widest uppercase text-stone-500">Last 12 months</span>
@@ -11507,7 +11551,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       </div>
 
       {bestCpw.length > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-10 smooth-shadow">
+        <div id="insights-leaders" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
             <h3 className="font-display text-xl md:text-2xl text-stone-900">Best value · cost per wear</h3>
             <TrendingDown size={18} className="text-stone-400" />
@@ -11531,7 +11575,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       )}
 
       {worstValue.length > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-10 smooth-shadow">
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
             <h3 className="font-display text-xl md:text-2xl text-stone-900">Worst value · still paying for these</h3>
             <span className="text-[10px] uppercase tracking-widest text-stone-400">Owned 6+ months</span>
@@ -11562,7 +11606,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       )}
 
       {mostWorn.length > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-10 smooth-shadow">
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-6">Most worn</h3>
           <div className="space-y-4">
             {mostWorn.map((item, idx) => (

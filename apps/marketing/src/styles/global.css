@@ -6,6 +6,12 @@
 /* Tailwind v4 */
 @import 'tailwindcss';
 
+/* Scan the shared UI package for Tailwind class usage.
+   Without this, classes used ONLY in @atelier/ui components (e.g. w-14, bg-stone-50,
+   rounded-2xl in FeatureCard) get omitted from the bundle, since Tailwind only auto-scans
+   files inside the app's own directory by default. */
+@source "../../../../packages/ui/src/**/*.{js,jsx}";
+
 /* Tailwind v4 theme: extend the default palette with Atelier tokens
    so utilities like `bg-brass-300`, `text-cream`, etc. work. */
 @theme {

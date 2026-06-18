@@ -7883,8 +7883,14 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         onClick={() => !isDragging && handleSelect(slot, item)}
         className={`flex-none w-28 sm:w-32 md:w-36 cursor-pointer group transition-opacity ${isDragging ? 'opacity-30' : ''}`}
       >
+        {/* Hover framing: thin brass instead of stone-300 — same brass
+            thread used on outfit cards, brass-rule eyebrows, brass nav
+            accent etc. Border-3px stays as the layout (reserves space)
+            so selected-state border-stone-900 doesn't cause a shift;
+            on hover the unselected card shows a subtle brass-300/40
+            framing. */}
         <div className={`aspect-[3/4] rounded-2xl overflow-hidden mb-3 border-[3px] transition-all duration-200 relative ${
-          isSelected ? 'border-stone-900 shadow-xl' : 'border-transparent group-hover:border-stone-300'
+          isSelected ? 'border-stone-900 shadow-xl' : 'border-transparent group-hover:border-brass-300/40'
         }`}>
           <img src={itemImages(item)[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none" loading="lazy" />
           <div className="hidden lg:block absolute top-1.5 left-1.5 p-1 bg-white/85 backdrop-blur rounded-full text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -8393,11 +8399,20 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Sticky filter strip — same pattern as the wardrobe view's
+              filter/sort toolbar. Stays visible while scrolling a long
+              inspiration grid so the user can switch between All and
+              Unanalysed without scrolling back to the top. Solid bg
+              matches the page (#F7F5F2) and bleeds edge-to-edge of the
+              <main> scroll container via negative margins. */}
+          <div className="flex items-center gap-2 flex-wrap sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+               style={{ top: 'env(safe-area-inset-top, 0px)' }}>
             {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-all border ${
-                  filter === f ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-500'
+                className={`text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-colors duration-200 border ${
+                  filter === f
+                    ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-700'
+                    : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
                 }`}>{label}</button>
             ))}
             {/* Cross-link to wishlist — inspirations often feed wishlist items;
@@ -8405,7 +8420,7 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
                 what they've earmarked from their saved looks. */}
             {wishlistCount > 0 && onJumpToWishlist && (
               <button onClick={onJumpToWishlist}
-                className="text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-all border bg-white border-stone-200 text-stone-600 hover:border-stone-900 hover:text-stone-900 inline-flex items-center gap-2 ml-auto">
+                className="text-xs tracking-widest uppercase px-4 py-2 rounded-full transition-colors duration-200 border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 inline-flex items-center gap-2 ml-auto">
                 <Heart size={12} strokeWidth={1.5} /> Wishlist · {wishlistCount}
                 <ChevronRight size={12} strokeWidth={1.5} className="-mr-1" />
               </button>

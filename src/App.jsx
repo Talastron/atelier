@@ -4113,31 +4113,41 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           loses authority. A solid surface reads as a deliberate command
           plate. The lg:-mx-12 lg:px-12 cancels the parent padding so the
           bar bleeds edge-to-edge of the max-w-6xl content well. */}
-      <div className="hidden lg:flex lg:sticky lg:top-0 lg:z-30 lg:items-center lg:gap-3 lg:-mx-12 lg:px-12 lg:py-3 lg:bg-[#F7F5F2] lg:border-b lg:border-stone-200/60">
-        {/* Search — left. Compact pill matching the rest of the toolbar
-            aesthetic. Persists while scrolling (because the toolbar is
-            sticky), which the previous big in-column search did not. */}
-        <div className="relative shrink-0 w-72 xl:w-80">
-          <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, brand, description…"
-            className="w-full h-11 pl-10 pr-9 bg-white border border-stone-300 rounded-full text-sm placeholder:text-stone-400 focus:border-stone-900 outline-none transition-colors"
-          />
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 text-base pointer-events-none leading-none">⌕</span>
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors"
-              aria-label="Clear search">
-              <X size={14} strokeWidth={1.5} />
-            </button>
-          )}
+      <div className="hidden lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:sticky lg:top-0 lg:z-30 lg:items-center lg:-mx-12 lg:px-12 lg:py-3 lg:bg-[#F7F5F2] lg:border-b lg:border-stone-200/60">
+        {/* LEFT REGION — col-span-8. Sits directly above the pills + grid
+            in the main column below. Contains search + all filter controls.
+            By mirroring the page's grid template, the toolbar reads as
+            "page structure made interactive" rather than a separate strip
+            floating across the layout. The gap between this region and the
+            right region is the ACTUAL lg:gap-8 column gutter — same one
+            that separates the main column from the Today panel — so the
+            user perceives one consistent vertical rhythm. */}
+        <div className="lg:col-span-8 flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0 w-64 xl:w-72">
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, brand, description…"
+              className="w-full h-11 pl-10 pr-9 bg-white border border-stone-300 rounded-full text-sm placeholder:text-stone-400 focus:border-stone-900 outline-none transition-colors"
+            />
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 text-base pointer-events-none leading-none">⌕</span>
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors"
+                aria-label="Clear search">
+                <X size={14} strokeWidth={1.5} />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            {filterControls}
+          </div>
         </div>
-        {/* Filter controls — middle, takes remaining width so the toolbar
-            never has an awkward empty gap. */}
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-          {filterControls}
-        </div>
-        {/* Add / Select — right, separated by a hairline divider. */}
-        <div className="flex items-stretch gap-2 shrink-0 pl-3 ml-1 border-l border-stone-200/80">
+
+        {/* RIGHT REGION — col-span-4. Sits directly above the Today panel
+            in the aside below, so Add/Select read as "controls FOR the
+            collection beneath them," not "controls floating in space."
+            justify-end keeps the buttons aligned to the toolbar's right
+            edge (same edge the Today card uses). */}
+        <div className="lg:col-span-4 flex items-stretch gap-2 justify-end">
           {addSelectControls}
         </div>
       </div>

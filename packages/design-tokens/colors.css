@@ -1,0 +1,28 @@
+/* packages/design-tokens/colors.css */
+/* Atelier color tokens. Consumed by both apps via CSS custom properties. */
+
+:root {
+  /* Foundational neutrals */
+  --atelier-cream: #F7F5F2;      /* primary background */
+  --atelier-ink: #1c1917;        /* primary text, dark surfaces */
+
+  /* Brass — accent / luxury signature */
+  --atelier-brass-200: #E2C896;
+  --atelier-brass-300: #D4B378;
+  --atelier-brass-600: #A8884C;
+
+  /* Stone — extended neutral scale, aligns with Tailwind stone */
+  --atelier-stone-50:  #fafaf9;
+  --atelier-stone-100: #f5f5f4;
+  --atelier-stone-200: #e7e5e4;
+  --atelier-stone-300: #d6d3d1;
+  --atelier-stone-400: #a8a29e;
+  --atelier-stone-500: #78716c;
+  --atelier-stone-600: #57534e;
+  --atelier-stone-700: #44403c;
+  --atelier-stone-800: #292524;
+  --atelier-stone-900: #1c1917;
+
+  /* Semantic */
+  --atelier-emerald-700: #047857;  /* used sparingly for "investment insight" accents */
+}

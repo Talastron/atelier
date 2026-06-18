@@ -1,0 +1,20 @@
+{
+  "name": "@atelier/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Atelier design tokens — colors, type, spacing",
+  "type": "module",
+  "main": "./tokens.js",
+  "exports": {
+    ".": "./tokens.js",
+    "./tokens": "./tokens.js",
+    "./colors.css": "./colors.css",
+    "./type.css": "./type.css",
+    "./space.css": "./space.css",
+    "./index.css": "./index.css"
+  },
+  "files": [
+    "*.css",
+    "*.js"
+  ]
+}

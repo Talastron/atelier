@@ -1,0 +1,29 @@
+/* packages/design-tokens/type.css */
+/* Atelier typography tokens. Font loading is the consumer's responsibility (Google Fonts link in <head>). */
+
+:root {
+  --atelier-font-display: 'Playfair Display', 'Times New Roman', Georgia, serif;
+  --atelier-font-sans: 'Jost', 'Helvetica Neue', Arial, sans-serif;
+
+  /* Modular type scale (base 16px, ratio ~1.25) */
+  --atelier-text-xs:   0.75rem;     /* 12px */
+  --atelier-text-sm:   0.875rem;    /* 14px */
+  --atelier-text-base: 1rem;        /* 16px */
+  --atelier-text-lg:   1.125rem;    /* 18px */
+  --atelier-text-xl:   1.25rem;     /* 20px */
+  --atelier-text-2xl:  1.5rem;      /* 24px */
+  --atelier-text-3xl:  1.875rem;    /* 30px */
+  --atelier-text-4xl:  2.25rem;     /* 36px */
+  --atelier-text-5xl:  3rem;        /* 48px */
+  --atelier-text-6xl:  3.75rem;     /* 60px */
+  --atelier-text-7xl:  4.5rem;      /* 72px */
+
+  /* Line heights */
+  --atelier-leading-display: 1.05;
+  --atelier-leading-tight:   1.15;
+  --atelier-leading-snug:    1.35;
+  --atelier-leading-body:    1.7;
+
+  /* Letter-spacing for editorial uppercase labels */
+  --atelier-tracking-eyebrow: 0.28em;
+}

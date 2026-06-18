@@ -1,0 +1,6 @@
+/* packages/design-tokens/index.css */
+/* Imports all Atelier design tokens. Apps consume this once in their global stylesheet. */
+
+@import './colors.css';
+@import './type.css';
+@import './space.css';

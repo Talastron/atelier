@@ -1,0 +1,30 @@
+/* packages/design-tokens/space.css */
+/* Atelier spacing tokens. Built on an 8px baseline grid. */
+
+:root {
+  /* Page container */
+  --atelier-container-max: 1280px;
+  --atelier-page-padding: clamp(1.5rem, 4vw, 3rem);
+
+  /* Vertical section rhythm — generous, luxurious */
+  --atelier-section-padding-y: clamp(4rem, 8vw, 8rem);
+
+  /* Editorial prose constraints */
+  --atelier-prose-max: 65ch;
+  --atelier-prose-narrow: 50ch;
+
+  /* Radii */
+  --atelier-radius-sm: 0.5rem;
+  --atelier-radius-md: 1rem;
+  --atelier-radius-lg: 2rem;
+  --atelier-radius-xl: 3rem;
+  --atelier-radius-pill: 9999px;
+
+  /* Shadow — soft, low-contrast */
+  --atelier-shadow-smooth: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+  --atelier-shadow-lifted: 0 20px 60px -20px rgba(0, 0, 0, 0.12);
+
+  /* Brass-rule motif (the 24x1.5px decorative line) */
+  --atelier-brass-rule-width: 24px;
+  --atelier-brass-rule-height: 1.5px;
+}

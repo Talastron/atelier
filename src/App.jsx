@@ -785,8 +785,12 @@ function itemColors(item) {
 // Weather: fetched via browser geolocation + Open-Meteo (no API key needed).
 // Cached for 1 hour in localStorage so subsequent visits don't re-prompt.
 async function fetchTodaysWeather() {
+  // Cache-key version bump — the old `atelier-weather` cache held
+  // {temp: currentTemp} which is the wrong number for dressing. Bumping
+  // forces a fresh fetch on the new daily-max endpoint.
+  const CACHE_KEY = 'atelier-weather-v2';
   try {
-    const cached = JSON.parse(localStorage.getItem('atelier-weather') || 'null');
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
     if (cached && Date.now() - cached.ts < 3600_000) return cached.data;
   } catch { /* ignore */ }
   if (!navigator.geolocation) return null;
@@ -795,15 +799,35 @@ async function fetchTodaysWeather() {
       navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000, maximumAge: 600_000 })
     );
     const { latitude, longitude } = pos.coords;
+    // Daily MAX drives dressing decisions. The previous current_weather
+    // call returned the temp at the moment of fetch — misleading at 7am
+    // when the high won't hit for another 6 hours, or at 9pm when the
+    // sun's gone. Daily endpoint gives the day's high and the dominant
+    // weather code (e.g. "Partly cloudy" reflects the overall day, not
+    // the current sky). timezone=auto pins the daily window to the
+    // user's local day boundary.
     const resp = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&temperature_unit=celsius`
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
+      `&daily=temperature_2m_max,temperature_2m_min,weather_code` +
+      `&current_weather=true&temperature_unit=celsius&timezone=auto&forecast_days=1`
     );
     if (!resp.ok) return null;
     const json = await resp.json();
-    const w = json.current_weather;
-    if (!w) return null;
-    const data = { temp: Math.round(w.temperature), code: w.weathercode };
-    localStorage.setItem('atelier-weather', JSON.stringify({ ts: Date.now(), data }));
+    const d = json.daily;
+    const cw = json.current_weather;
+    if (!d || !d.temperature_2m_max?.length) return null;
+    const data = {
+      // `temp` is now the day's HIGH — keeping the field name so all
+      // downstream consumers (AI prompts, badges, Today card) just keep
+      // working but with a more useful number.
+      temp: Math.round(d.temperature_2m_max[0]),
+      tempMin: Math.round(d.temperature_2m_min[0]),
+      // Daily weather_code is the dominant condition for the day.
+      code: d.weather_code[0],
+      // Keep the current reading too for any consumer that wants it.
+      tempNow: cw ? Math.round(cw.temperature) : null,
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
     return data;
   } catch { return null; }
 }
@@ -2493,6 +2517,16 @@ function DigitalWardrobe() {
               <h1 className="text-3xl font-display font-medium tracking-wide">Atelier.</h1>
             </div>
 
+            {/* Editorial eyebrow + brass rule above the nav — mirrors the
+                "GOOD MORNING, SIBYLLE" + brass-rule pattern in every main
+                column header. The sidebar now speaks the same typographic
+                language instead of being a flat list floating in the page. */}
+            <div className="flex items-center gap-3 mb-4 px-1">
+              <span className="brass-rule" aria-hidden="true"></span>
+              <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">
+                Studio
+              </p>
+            </div>
             <nav className="space-y-2 flex-1">
               <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
@@ -3297,10 +3331,18 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
   return (
     <button
       onClick={() => setTab(id)}
-      className={`w-full h-12 flex items-center justify-between px-5 rounded-2xl transition-all duration-300 ${
+      className={`relative w-full h-12 flex items-center justify-between px-5 rounded-2xl transition-all duration-300 ${
         isActive ? 'bg-white smooth-shadow text-stone-900' : 'text-stone-500 hover:bg-stone-200/50 hover:text-stone-800'
       }`}
     >
+      {/* Brass accent on the active pill — the same brass thread used in
+          the main-column editorial header (brass-rule eyebrow) and in the
+          Today card's brass accent. Ties the sidebar to the rest of the
+          design language so nav doesn't read as a separate, plainer area. */}
+      {isActive && (
+        <span aria-hidden="true"
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-brass-300" />
+      )}
       <div className="flex items-center gap-4">
         <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
         <span className={`text-sm tracking-wide ${isActive ? 'font-medium' : 'font-normal'}`}>{label}</span>
@@ -3432,7 +3474,9 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
         <div className="min-w-0">
           <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-bold">Today</p>
           <p className="font-display text-lg sm:text-xl text-white mt-0.5">
-            {weather ? `${weather.temp}°C · ${weatherLabel(weather.code)}` : 'How are you styling today?'}
+            {weather
+              ? `${weather.tempMin != null && weather.tempMin !== weather.temp ? `${weather.tempMin}–` : ''}${weather.temp}°C · ${weatherLabel(weather.code)}`
+              : 'How are you styling today?'}
           </p>
         </div>
       </div>
@@ -4067,16 +4111,14 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       >
         <div>
           {user && (
+            {/* Weather chip removed — the Today card on the right owns the
+                daily brief (and now uses MAX temp, which is what you dress
+                for, not the current reading). One source of truth. */}
             <div className="flex items-center gap-3 flex-wrap mb-2 lg:mb-1">
               <span className="brass-rule" aria-hidden="true"></span>
               <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
                 {getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ''}
               </p>
-              {weather && (
-                <span className="text-[10px] tracking-widest uppercase text-stone-500 px-2.5 py-1 bg-white rounded-full border border-stone-200">
-                  {weather.temp}°C · {weatherLabel(weather.code)}
-                </span>
-              )}
             </div>
           )}
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-3xl xl:text-4xl font-display text-stone-900 tracking-tight leading-[1.05]">Your Collection</h2>

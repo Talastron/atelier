@@ -8159,8 +8159,18 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             );
           })()}
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-5 bg-white rounded-[2rem] p-4 sm:p-6 md:p-8 border border-stone-200/60 smooth-shadow flex flex-col">
+          {/* lg:items-start stops the default grid-row stretch — without it,
+              both columns would inherit the height of the (much taller)
+              Wardrobe Archives, forcing the Current Look card to stretch to
+              ~3000px with empty white space below the slots and a Save
+              button pinned to the bottom via mt-auto. With items-start the
+              column shrinks to its content height, and lg:sticky lg:top-20
+              keeps it pinned just below the sticky tab bar while the user
+              scrolls through Archives. Sticky's natural release at the end
+              of the grid row means the card un-pins when Archives ends and
+              scrolls away normally — no JS bookkeeping needed. */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:items-start">
+            <div className="lg:col-span-5 lg:sticky lg:top-20 bg-white rounded-[2rem] p-4 sm:p-6 md:p-8 border border-stone-200/60 smooth-shadow flex flex-col">
               <div className="flex items-baseline justify-between mb-3 sm:mb-6">
                 <h3 className="font-display text-lg md:text-2xl text-stone-900">Current Look</h3>
                 <span className="hidden lg:inline text-[10px] uppercase tracking-widest text-stone-400">Drag or tap</span>

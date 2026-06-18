@@ -11160,6 +11160,27 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const pieces = resolveOutfitItems(outfit, items);
   const total = pieces.reduce((sum, it) => sum + Number(it.price || 0), 0);
   const wornPhotos = Array.isArray(outfit.wornPhotos) ? outfit.wornPhotos : [];
+  // Editorial substance for the header: when was this look saved? When was
+  // it last worn? How many times? Magazines always credit their dates.
+  const savedDate = outfit.createdAt ? new Date(outfit.createdAt) : null;
+  const savedLabel = savedDate
+    ? savedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: savedDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined })
+    : null;
+  // Wear stats: any wear of ANY piece on a date counts as a wear of the
+  // outfit IF the wornPhotos array also has that date — else fall back to
+  // wornPhotos count alone. wornPhotos is the authoritative "I wore this
+  // outfit" signal because pieces wear-log can fire for non-outfit wears.
+  const wearDates = wornPhotos.map((p) => p.date).filter(Boolean).sort();
+  const wearCount = wearDates.length;
+  const lastWornISO = wearDates[wearDates.length - 1];
+  const lastWornLabel = lastWornISO ? (() => {
+    const t = todayISO();
+    if (lastWornISO === t) return 'today';
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    if (lastWornISO === y.toISOString().slice(0, 10)) return 'yesterday';
+    const d = new Date(lastWornISO + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  })() : null;
 
   const handleAddWornPhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -11263,9 +11284,19 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Saved Look</span>
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display text-stone-900 tracking-tight leading-[1.05]">{outfit.name}</h1>
-          <p className="text-stone-500 mt-5 text-sm tracking-wide">
-            {pieces.length} pieces · total value £{total.toLocaleString()}
-            {outfit.intent && <span className="ml-3 text-stone-400">· styled for "{outfit.intent}"</span>}
+          {/* Editorial credits line — pieces, value, intent, plus the
+              magazine-style date/wear context (saved when · worn how often
+              · last seen when). Joined with middle-dot separators in a single
+              tracked uppercase line so it reads as a credit, not data. */}
+          <p className="text-[11px] text-stone-500 mt-5 tracking-[0.18em] uppercase">
+            {[
+              `${pieces.length} pieces`,
+              `£${total.toLocaleString()}`,
+              outfit.intent ? `for ${outfit.intent}` : null,
+              savedLabel ? `saved ${savedLabel}` : null,
+              wearCount > 0 ? `worn ${wearCount}×` : null,
+              lastWornLabel && wearCount > 0 ? `last ${lastWornLabel}` : null,
+            ].filter(Boolean).join(' · ')}
           </p>
           {/* AI reasoning as an italic pull-quote (Vogue editorial style) —
               dark stone-900 surface, no shadow per convention, brass accent
@@ -11447,39 +11478,49 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
 
   return (
     <div>
-      <div className="relative bg-stone-100/60 rounded-[2rem] overflow-hidden border border-stone-200/60 p-8 sm:p-10 md:p-14">
+      <div className="relative bg-stone-100/60 rounded-[2rem] border border-stone-200/60 px-6 sm:px-8 md:px-10 py-8 sm:py-10">
         {sorted.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-stone-300">
             <Shirt size={64} strokeWidth={1} />
           </div>
         ) : (
-          // Flex row with category-weighted widths so anchor pieces read
-          // larger; items align to a common baseline (items-end). Horizontal
-          // scroll on overflow — preserves the editorial line composition
-          // when there are many pieces.
-          <div className="flex items-end justify-center gap-6 sm:gap-8 md:gap-10 overflow-x-auto hide-scrollbar">
-            {sorted.map((p, i) => {
-              const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
-              const openable = !!(onOpenItem && p.id);
-              const Tag = openable ? 'button' : 'div';
-              return (
-                <Tag
-                  key={p.id || i}
-                  {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
-                  className={`shrink-0 ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 rounded-xl group' : ''}`}
-                  style={{ width: `${Math.round(weight * 130)}px` }}
-                >
-                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-white">
-                    {itemImages(p)[0] ? (
-                      <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
-                    )}
-                  </div>
-                </Tag>
-              );
-            })}
-          </div>
+          // Wrapping flex row. Items size DOWN as the outfit gets bigger so
+          // every piece fits without cropping or horizontal scrolling. A
+          // luxury catalogue never crops product shots; wrapping to a
+          // second/third row reads as editorial composition, scrolling
+          // reads as broken layout. Tier sizing:
+          //   ≤4 pieces  →  140px base, 80×135 footprint (large, breathing)
+          //   5-7 pieces →  110px base
+          //   8-10 pieces→  92px base
+          //   11+ pieces →  78px base (most compact, still legible)
+          (() => {
+            const baseSize = sorted.length <= 4 ? 140 : sorted.length <= 7 ? 110 : sorted.length <= 10 ? 92 : 78;
+            return (
+              <div className="flex flex-wrap items-end justify-center gap-y-6 gap-x-5 sm:gap-x-7">
+                {sorted.map((p, i) => {
+                  const weight = CATEGORY_WEIGHT[p.category] ?? 1.0;
+                  const openable = !!(onOpenItem && p.id);
+                  const Tag = openable ? 'button' : 'div';
+                  return (
+                    <Tag
+                      key={p.id || i}
+                      {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
+                      className={`shrink-0 ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-2 rounded-xl group' : ''}`}
+                      style={{ width: `${Math.round(weight * baseSize)}px` }}
+                    >
+                      <div className="aspect-[3/4] rounded-xl overflow-hidden bg-white">
+                        {itemImages(p)[0] ? (
+                          <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-contain" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
+                        )}
+                      </div>
+                    </Tag>
+                  );
+                })}
+              </div>
+            );
+          })()
         )}
       </div>
 

@@ -2538,10 +2538,9 @@ function DigitalWardrobe() {
 
             <div className="border-t border-stone-200/60 pt-5 mt-6">
               <button onClick={() => setActiveTab('profile')}
-                // Same hover language as nav items: stone-100 bg, no shadow.
-                // The previous hover:bg-white + hover:smooth-shadow felt like
-                // a different design system from the nav above it.
-                className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-stone-100 transition-colors duration-200 group"
+                // Same hover language as nav items: stone-200/70 on the
+                // #F7F5F2 sidebar (stone-100 was invisible against #F7F5F2).
+                className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-stone-200/70 transition-colors duration-200 group"
               >
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full ring-2 ring-stone-100 shrink-0" referrerPolicy="no-referrer" />
@@ -2558,7 +2557,7 @@ function DigitalWardrobe() {
               </button>
               {/* Sign out — left-aligned with profile-row content above (matches
                   the 12px avatar + 14px gap so the icon lines up under the name). */}
-              <button onClick={signOutUser} className="w-full flex items-center gap-2 mt-2 px-2 py-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-100 hover:text-stone-900 transition-colors duration-200">
+              <button onClick={signOutUser} className="w-full flex items-center gap-2 mt-2 px-2 py-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-200/70 hover:text-stone-900 transition-colors duration-200">
                 <span className="w-12 flex items-center justify-center shrink-0">
                   <LogOut size={12} strokeWidth={1.5} />
                 </span>
@@ -3173,7 +3172,7 @@ function WardrobeFiltersSheet({
           <button key={it} onClick={() => set(it)}
             className={`px-3 py-2 rounded-full text-xs border whitespace-nowrap flex items-center gap-2 transition-colors duration-200 ${
               active
-                ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800'
+                ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-700'
                 : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
             }`}>
             {swatch && <span className="w-3 h-3 rounded-full border border-stone-300/50"
@@ -3337,12 +3336,13 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
     <button
       onClick={() => setTab(id)}
       // Active state: white bg + bold text + chevron is plenty of signal
-      // on the #F7F5F2 sidebar. The previous smooth-shadow read as
-      // "elevated card" — wrong language for nav items, which should
-      // feel anchored to the sidebar, not floating above it.
-      // Hover follows the unified convention: stone-100 bg, stone-900 text.
+      // on the #F7F5F2 sidebar. No shadow — nav items should feel anchored
+      // to the sidebar, not floating above it.
+      // Hover: stone-200/70 — stone-100 was visually identical to the
+      // #F7F5F2 sidebar bg (only 2 RGB points apart), so the hover read
+      // as "no feedback at all." Stone-200/70 is a clear step down.
       className={`w-full h-12 flex items-center justify-between px-5 rounded-2xl transition-colors duration-200 ${
-        isActive ? 'bg-white text-stone-900' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
+        isActive ? 'bg-white text-stone-900' : 'text-stone-500 hover:bg-stone-200/70 hover:text-stone-900'
       }`}
     >
       <div className="flex items-center gap-4">
@@ -4015,7 +4015,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       <button onClick={() => setFiltersOpen(true)}
         className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm border transition-colors duration-200 ${
           activeFilterCount > 0
-            ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800'
+            ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-700'
             : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
         }`}>
         <SlidersHorizontal size={14} strokeWidth={1.5} />
@@ -4096,7 +4096,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
     <>
       <button
         onClick={openAddModal}
-        className="h-11 inline-flex items-center justify-center gap-2 px-5 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-800 transition-colors duration-200"
+        className="h-11 inline-flex items-center justify-center gap-2 px-5 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-700 transition-colors duration-200"
       >
         <Plus size={16} strokeWidth={1.75} /> Add to Collection
       </button>
@@ -4302,7 +4302,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
             <button key={cat} onClick={() => selectCategory(cat)}
               className={`shrink-0 px-4 sm:px-5 py-3 sm:py-2 rounded-full text-xs sm:text-sm border whitespace-nowrap transition-colors duration-200 ${
                 categoryFilter === cat
-                  ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800'
+                  ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-700'
                   : 'bg-transparent border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-900'
               }`}
             >
@@ -6891,7 +6891,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                   <a href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`}
                     target="_blank" rel="noopener noreferrer"
                     className={`text-xs tracking-wider uppercase px-3 py-1.5 rounded-full border transition-colors ${
-                      query.trim() ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800' : 'bg-stone-50 border-stone-100 text-stone-300 cursor-not-allowed pointer-events-none'
+                      query.trim() ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-700' : 'bg-stone-50 border-stone-100 text-stone-300 cursor-not-allowed pointer-events-none'
                     }`}>
                     Google Shopping ↗
                   </a>

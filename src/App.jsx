@@ -7964,7 +7964,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     return (
       <div
         ref={setNodeRef}
-        className={`border-2 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center relative overflow-hidden transition-all duration-200 aspect-square lg:aspect-[3/4] group ${
+        className={`border-2 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center relative overflow-hidden transition-all duration-200 aspect-square lg:aspect-square group ${
           isOver
             ? 'border-stone-900 ring-4 ring-stone-900/20 scale-[1.02]'
             : pieces.length > 0
@@ -8326,6 +8326,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               const hasShoes = !!currentOutfit.shoes;
               const isComplete = hasFoundation && hasShoes;
               const canSave = outfitName.trim() && pieceCount > 0;
+              // Flat list of all picked pieces in slot order — fuel for the
+              // live composition strip below the header.
+              const allPicked = OUTFIT_SLOTS.flatMap((s) =>
+                slotItems(currentOutfit[s.toLowerCase()]).map((item) => ({ slot: s, item }))
+              );
               return (
                 <div className="lg:col-span-5 lg:sticky lg:top-20 bg-white rounded-[2rem] p-4 sm:p-6 md:p-8 border border-stone-200/60 smooth-shadow flex flex-col">
                   <div className="flex items-baseline justify-between mb-3 sm:mb-6 gap-3">
@@ -8348,6 +8353,28 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                       </span>
                     )}
                   </div>
+                  {/* Live composition strip — every picked piece in slot
+                      order, always above the fold. Solves the 'I picked
+                      earrings but the Earrings slot is below the viewport'
+                      blind-spot: as soon as you pick, the thumb appears
+                      up here in the strip even though the corresponding
+                      slot might be 400px down. Renders nothing when empty
+                      (Current Look starts clean). Horizontal scroll on
+                      overflow — relevant for multi-slot accessory stacks. */}
+                  {allPicked.length > 0 && (
+                    <div className="flex items-center gap-1.5 mb-4 sm:mb-5 -mx-1 px-1 overflow-x-auto hide-scrollbar">
+                      {allPicked.map(({ slot, item }) => (
+                        <div key={`${slot}-${item.id}`}
+                          title={`${slot} · ${item.name}`}
+                          className="shrink-0 w-8 h-11 rounded-md overflow-hidden bg-stone-100 ring-1 ring-stone-200/60">
+                          {itemImages(item)[0] && (
+                            <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async"
+                              className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 lg:grid-cols-2 gap-2 lg:gap-3 mb-5 lg:mb-8">
                     {OUTFIT_SLOTS.map((slot) => <OutfitSlot key={slot} slot={slot} />)}
                   </div>

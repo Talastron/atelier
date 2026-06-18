@@ -11,6 +11,9 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test"
   },
+  "dependencies": {
+    "jose": "^5.9.6"
+  },
   "devDependencies": {
     "prettier": "^3.4.2"
   },

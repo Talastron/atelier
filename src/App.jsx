@@ -2538,7 +2538,10 @@ function DigitalWardrobe() {
 
             <div className="border-t border-stone-200/60 pt-5 mt-6">
               <button onClick={() => setActiveTab('profile')}
-                className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-white hover:smooth-shadow transition-all group"
+                // Same hover language as nav items: stone-100 bg, no shadow.
+                // The previous hover:bg-white + hover:smooth-shadow felt like
+                // a different design system from the nav above it.
+                className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-stone-100 transition-colors duration-200 group"
               >
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full ring-2 ring-stone-100 shrink-0" referrerPolicy="no-referrer" />
@@ -2555,7 +2558,7 @@ function DigitalWardrobe() {
               </button>
               {/* Sign out — left-aligned with profile-row content above (matches
                   the 12px avatar + 14px gap so the icon lines up under the name). */}
-              <button onClick={signOutUser} className="w-full flex items-center gap-2 mt-2 px-2 py-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-200/50 hover:text-stone-700 transition-colors">
+              <button onClick={signOutUser} className="w-full flex items-center gap-2 mt-2 px-2 py-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-100 hover:text-stone-900 transition-colors duration-200">
                 <span className="w-12 flex items-center justify-center shrink-0">
                   <LogOut size={12} strokeWidth={1.5} />
                 </span>
@@ -3168,8 +3171,10 @@ function WardrobeFiltersSheet({
         const swatch = getSwatch?.(it);
         return (
           <button key={it} onClick={() => set(it)}
-            className={`px-3 py-2 rounded-full text-xs transition-all border whitespace-nowrap flex items-center gap-2 ${
-              active ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400'
+            className={`px-3 py-2 rounded-full text-xs border whitespace-nowrap flex items-center gap-2 transition-colors duration-200 ${
+              active
+                ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800'
+                : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
             }`}>
             {swatch && <span className="w-3 h-3 rounded-full border border-stone-300/50"
               style={swatch.startsWith?.('linear') ? { background: swatch } : { backgroundColor: swatch }} />}
@@ -3331,18 +3336,15 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
   return (
     <button
       onClick={() => setTab(id)}
-      className={`relative w-full h-12 flex items-center justify-between px-5 rounded-2xl transition-all duration-300 ${
-        isActive ? 'bg-white smooth-shadow text-stone-900' : 'text-stone-500 hover:bg-stone-200/50 hover:text-stone-800'
+      // Active state: white bg + bold text + chevron is plenty of signal
+      // on the #F7F5F2 sidebar. The previous smooth-shadow read as
+      // "elevated card" — wrong language for nav items, which should
+      // feel anchored to the sidebar, not floating above it.
+      // Hover follows the unified convention: stone-100 bg, stone-900 text.
+      className={`w-full h-12 flex items-center justify-between px-5 rounded-2xl transition-colors duration-200 ${
+        isActive ? 'bg-white text-stone-900' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
       }`}
     >
-      {/* Brass accent on the active pill — the same brass thread used in
-          the main-column editorial header (brass-rule eyebrow) and in the
-          Today card's brass accent. Ties the sidebar to the rest of the
-          design language so nav doesn't read as a separate, plainer area. */}
-      {isActive && (
-        <span aria-hidden="true"
-          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-brass-300" />
-      )}
       <div className="flex items-center gap-4">
         <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
         <span className={`text-sm tracking-wide ${isActive ? 'font-medium' : 'font-normal'}`}>{label}</span>
@@ -4001,11 +4003,20 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   // Filter controls fragment — used inside both the desktop unified toolbar
   // and the mobile sticky strip. Pure JSX, no surrounding bar styling, so
   // each consumer can wrap it in its own flex/sticky container.
+  // Unified hover convention across the toolbar:
+  //   • Light pill rest:  bg-white border-stone-300 text-stone-700
+  //   • Light pill hover: border-stone-500 text-stone-900
+  //   • Dark pill rest:   bg-stone-900 text-white
+  //   • Dark pill hover:  bg-stone-800
+  //   • All transitions:  transition-colors duration-200 (no transform/all)
+  // Single convention applied to Filters, Sort, badges, Reset, Add, Select.
   const filterControls = (
     <>
       <button onClick={() => setFiltersOpen(true)}
-        className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm transition-all border ${
-          activeFilterCount > 0 ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500'
+        className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm border transition-colors duration-200 ${
+          activeFilterCount > 0
+            ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800'
+            : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
         }`}>
         <SlidersHorizontal size={14} strokeWidth={1.5} />
         Filters
@@ -4016,7 +4027,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
 
       <div className="relative shrink-0">
         <button onClick={() => setSortMenuOpen((o) => !o)}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm transition-all border bg-white border-stone-300 text-stone-700 hover:border-stone-500`}>
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
           <ArrowUpDown size={14} strokeWidth={1.5} />
           <span className="hidden sm:inline">{activeSort.label}</span>
           <span className="sm:hidden">Sort</span>
@@ -4031,8 +4042,10 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                 const isActive = o.key === sortBy;
                 return (
                   <button key={o.key} onClick={() => { setSortBy(o.key); setSortMenuOpen(false); }}
-                    className={`w-full text-left px-4 py-2.5 flex items-start justify-between gap-3 transition-colors ${
-                      isActive ? 'bg-stone-100' : 'hover:bg-stone-50'
+                    // Menu items: stone-100 on hover (unified soft-bg hover
+                    // shade — was stone-50 here, stone-100 elsewhere).
+                    className={`w-full text-left px-4 py-2.5 flex items-start justify-between gap-3 transition-colors duration-200 ${
+                      isActive ? 'bg-stone-100' : 'hover:bg-stone-100'
                     }`}
                     role="menuitemradio" aria-checked={isActive}
                   >
@@ -4054,7 +4067,9 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
 
       {activeBadges.map((b, i) => (
         <button key={i} onClick={b.clear}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-white border border-stone-200 text-stone-700 hover:border-stone-400 hover:text-stone-900 transition-colors group">
+          // Badges use the same border-stone-300 rest / stone-500 hover as
+          // Filters/Sort so the whole toolbar speaks one language.
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 group">
           {b.swatch && <span className="w-2.5 h-2.5 rounded-full border border-stone-300/50"
             style={b.swatch.startsWith('linear') ? { background: b.swatch } : { backgroundColor: b.swatch }} />}
           {b.label}
@@ -4065,7 +4080,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       {anyFilterActive && (
         <button
           onClick={resetAllFilters}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 bg-white border border-stone-300 hover:border-stone-500 transition-colors"
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200"
           title="Clear search, status, category, and all advanced filters"
         >
           <X size={12} strokeWidth={1.75} />
@@ -4075,23 +4090,23 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
     </>
   );
 
-  // Add/Select controls — desktop-only (mobile uses bottom-nav FAB + the
-  // Select button in the header). Pulled out for the unified toolbar.
+  // Add/Select controls — same unified language. Add to Collection is the
+  // primary dark pill; Select is a light toggle (active = dark pill).
   const addSelectControls = (
     <>
       <button
         onClick={openAddModal}
-        className="h-11 inline-flex items-center justify-center gap-2 px-5 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-800 transition-colors"
+        className="h-11 inline-flex items-center justify-center gap-2 px-5 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-800 transition-colors duration-200"
       >
         <Plus size={16} strokeWidth={1.75} /> Add to Collection
       </button>
       {items.length > 0 && (
         <button
           onClick={selectMode ? exitSelectMode : () => enterSelectMode()}
-          className={`h-11 shrink-0 px-4 rounded-full text-[10px] tracking-widest uppercase border transition-colors ${
+          className={`h-11 shrink-0 px-4 rounded-full text-[10px] tracking-widest uppercase border transition-colors duration-200 ${
             selectMode
-              ? 'bg-stone-900 text-white border-stone-900'
-              : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+              ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-800'
+              : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500 hover:text-stone-900'
           }`}
           title={selectMode ? 'Cancel selection' : 'Select multiple items'}
         >
@@ -4268,24 +4283,27 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
           {[['all', 'All'], ['favorites', '★ Favourites'], ['owned', 'Owned'], ['wishlist', 'Wishlist']].map(([f, label]) => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-all duration-300 ${
-                filter === f ? 'bg-white text-stone-900 shadow-sm font-medium' : 'text-stone-500 hover:text-stone-800'
+              // Active pill: white bg, bold text, no shadow (same call as
+              // sidebar nav — anchored, not floating). Inactive hover gets
+              // a subtle stone-100 bg too so the affordance is clearer than
+              // text-only color change.
+              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+                filter === f ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
               }`}
             >
               {label}
             </button>
           ))}
         </div>
-        {/* Categories — horizontal scroll on mobile (overflow-x-auto), wrap
-            to multiple rows on lg so nothing gets clipped in the main
-            column. Previously the row was always overflow-x-auto, which on
-            desktop hid the last few categories behind the column edge with
-            no scroll affordance. */}
+        {/* Categories — horizontal scroll on mobile, wrap on lg.
+            Hover follows unified convention: border-stone-500 + text-stone-900. */}
         <div className="flex flex-wrap items-center gap-2 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 overflow-x-auto lg:overflow-visible hide-scrollbar pb-1 lg:pb-0">
           {CATEGORIES.map((cat) => (
             <button key={cat} onClick={() => selectCategory(cat)}
-              className={`shrink-0 px-4 sm:px-5 py-3 sm:py-2 rounded-full text-xs sm:text-sm transition-all duration-300 border whitespace-nowrap ${
-                categoryFilter === cat ? 'bg-stone-900 border-stone-900 text-white' : 'bg-transparent border-stone-300 text-stone-600 hover:border-stone-400'
+              className={`shrink-0 px-4 sm:px-5 py-3 sm:py-2 rounded-full text-xs sm:text-sm border whitespace-nowrap transition-colors duration-200 ${
+                categoryFilter === cat
+                  ? 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800'
+                  : 'bg-transparent border-stone-300 text-stone-600 hover:border-stone-500 hover:text-stone-900'
               }`}
             >
               {cat}

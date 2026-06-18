@@ -1035,6 +1035,155 @@ async function shareOrDownloadImage(blob, filename, shareText = {}) {
   return 'downloaded';
 }
 
+// Editorial in-app preview before the system share sheet. Replaces the
+// previous "tap Share → OS dialog jumps in" flow which felt like an
+// abrupt brand handover. New flow: tap Share → Atelier-styled modal
+// previews the composed image, offers three actions in our own visual
+// language (Share / Save / Public link), and the OS sheet only opens
+// on explicit user confirmation.
+function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
+  const [imageBlob, setImageBlob] = React.useState(null);
+  const [imageUrl, setImageUrl] = React.useState(null);
+  const [composing, setComposing] = React.useState(true);
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const toast = useToast();
+  useEscapeKey(onClose);
+
+  // Compose the editorial PNG on mount. Cleanup revokes the object URL
+  // on unmount so the blob can be GC'd.
+  useEffect(() => {
+    let cancelled = false;
+    setComposing(true); setError(null);
+    composeOutfitExportImage(outfit, items)
+      .then((blob) => {
+        if (cancelled) return;
+        setImageBlob(blob);
+        setImageUrl(URL.createObjectURL(blob));
+        setComposing(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err?.message || 'Could not compose the look.');
+        setComposing(false);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outfit?.id]);
+
+  // Revoke object URL when component unmounts or url changes
+  useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
+
+  const slug = React.useMemo(() => (outfit?.name || 'look')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'look',
+    [outfit?.name]);
+  const filename = `${slug}-atelier.png`;
+
+  const handleShare = async () => {
+    if (!imageBlob || busy) return;
+    setBusy(true);
+    try {
+      const result = await shareOrDownloadImage(imageBlob, filename, {
+        title: outfit?.name || 'A look',
+        text: `${outfit?.name || 'A look'} — composed in Atelier.`,
+      });
+      if (result === 'shared') { toast.show('Shared', { kind: 'success' }); onClose(); }
+      else if (result === 'downloaded') { toast.show('Saved to downloads', { kind: 'success' }); }
+    } catch (err) {
+      toast.show(err?.message || 'Could not share', { kind: 'error' });
+    } finally { setBusy(false); }
+  };
+  const handleDownload = () => {
+    if (!imageBlob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(imageBlob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast.show('Saved to downloads', { kind: 'success' });
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-[#F7F5F2] w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
+           onClick={(e) => e.stopPropagation()}>
+        {/* Editorial header — same eyebrow + brass-rule pattern as every
+            other main-column header. Tiny X close in a stone-100 chip. */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
+            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Share this look</span>
+          </div>
+          <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors" aria-label="Close">
+            <X size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        {/* Body — title + image preview */}
+        <div className="px-6 pt-6 pb-4 overflow-y-auto flex-1">
+          <h3 className="font-display text-2xl md:text-3xl text-stone-900 leading-tight mb-1 truncate">
+            {outfit?.name || 'A composed look'}
+          </h3>
+          <p className="text-[10px] tracking-widest uppercase text-stone-500 mb-5">
+            {(outfit?.itemIds || []).length} {(outfit?.itemIds || []).length === 1 ? 'piece' : 'pieces'} · Composed for sharing
+          </p>
+
+          {/* Preview frame — 9:16 to mirror the actual output. White card
+              + hairline border so the preview itself reads as a deliberate
+              artifact, not a screenshot. */}
+          <div className="relative rounded-2xl overflow-hidden bg-white border border-stone-200/60 smooth-shadow"
+               style={{ aspectRatio: '9 / 16' }}>
+            {composing && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-stone-400">
+                <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin"></div>
+                <p className="text-[10px] tracking-[0.28em] uppercase">Composing</p>
+              </div>
+            )}
+            {error && !composing && (
+              <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-stone-500 text-sm italic">
+                {error}
+              </div>
+            )}
+            {imageUrl && !composing && !error && (
+              <img src={imageUrl} alt="Preview of the composed look" className="w-full h-full object-contain" />
+            )}
+          </div>
+          <p className="text-[10px] tracking-widest uppercase text-stone-400 text-center mt-3">
+            1080 × 1920 · Instagram Story · Pinterest
+          </p>
+        </div>
+
+        {/* Action footer. Primary Share is the dark hero pill — opens the
+            system share sheet WITH the image attached (or downloads if
+            the platform doesn't support file-share). Secondary actions
+            sit below as a quieter row: Save directly to disk, or generate
+            a public hosted link via the existing Firestore flow. */}
+        <div className="px-6 py-5 border-t border-stone-200/60 bg-white space-y-3 shrink-0"
+             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}>
+          <button onClick={handleShare} disabled={!imageBlob || busy || !!error}
+            className="w-full h-12 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-700 transition-colors duration-200 inline-flex items-center justify-center gap-2 disabled:opacity-50">
+            <Share2 size={16} strokeWidth={1.5} className={busy ? 'animate-pulse' : ''} />
+            {busy ? 'Opening share…' : 'Share'}
+          </button>
+          <div className="flex gap-2">
+            <button onClick={handleDownload} disabled={!imageBlob || busy}
+              className="flex-1 h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
+              <Download size={13} strokeWidth={1.5} /> Save image
+            </button>
+            {onCreateLink && (
+              <button onClick={() => { onCreateLink(); onClose(); }}
+                className="flex-1 h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5">
+                <LinkIcon size={12} strokeWidth={1.5} /> Public link
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 async function generateOutfitNameWithGemini(picked, intent) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
   if (!picked || picked.length === 0) throw new Error('Pick at least one piece first.');
@@ -2334,36 +2483,15 @@ function DigitalWardrobe() {
     return url;
   };
 
-  // Editorial-image export — composes the look into a 1080×1920 PNG (IG
-  // Story / Pinterest aspect) and either shares via system share sheet
-  // (with the IMAGE attached, not a link) or downloads. This is the
-  // "implicit marketing" flow the user requested: a beautiful artifact
-  // they actually want to post, with Atelier branding integrated rather
-  // than imposed.
-  const handleExportOutfit = async (outfit) => {
+  // Editorial-share flow — opens the in-app preview modal rather than
+  // jumping straight to the OS share sheet. The modal renders the
+  // composed image in Atelier's language, then offers Share / Save /
+  // Public-link actions. This is the "luxury publishing moment" — the
+  // user sees the artifact before it leaves the app.
+  const [shareModalOutfit, setShareModalOutfit] = useState(null);
+  const handleExportOutfit = (outfit) => {
     if (!outfit) return;
-    try {
-      const blob = await composeOutfitExportImage(outfit, items);
-      const slug = (outfit.name || 'look')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 40) || 'look';
-      const filename = `${slug}-atelier.png`;
-      const result = await shareOrDownloadImage(blob, filename, {
-        title: outfit.name || 'A look',
-        text: `${outfit.name || 'A look'} — composed in Atelier.`,
-      });
-      if (result === 'shared') {
-        toast.show('Shared', { kind: 'success' });
-      } else if (result === 'downloaded') {
-        toast.show('Look saved to your downloads', { kind: 'success' });
-      }
-      // 'cancelled' → silent (user backed out of the share sheet)
-    } catch (err) {
-      console.error('Export failed', err);
-      toast.show(err?.message || 'Could not export the look. Try again.', { kind: 'error' });
-    }
+    setShareModalOutfit(outfit);
   };
 
   // Single wishlist/owned item shared as a self-contained public page.
@@ -2956,6 +3084,15 @@ function DigitalWardrobe() {
           <PwaInstallNudge hasContent={liveItems.length > 0} />
           <NotificationManager items={liveItems} outfits={outfits} schedules={schedules} />
           <OnboardingTour onJumpTo={(tab) => setActiveTab(tab)} />
+
+          {shareModalOutfit && (
+            <ShareLookModal
+              outfit={shareModalOutfit}
+              items={items}
+              onClose={() => setShareModalOutfit(null)}
+              onCreateLink={() => handleShareOutfit(shareModalOutfit)}
+            />
+          )}
 
           {shareTarget && (
             <ShareLinkModal
@@ -10727,13 +10864,6 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
 }
 
 function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem }) {
-  const [exporting, setExporting] = useState(false);
-  const [shareMenuOpen, setShareMenuOpen] = useState(false);
-  const handleExportClick = async () => {
-    if (exporting || !onExport) return;
-    setExporting(true);
-    try { await onExport(); } finally { setExporting(false); }
-  };
   const [logVerdict, setLogVerdict] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
@@ -10792,29 +10922,18 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 </button>
               )}
               {onExport && (
-                // Primary share: composes the look as a 1080×1920 PNG and
-                // opens the system share sheet with the image attached.
-                // Fallback (no Web Share API): downloads the image. The
-                // share sheet covers WhatsApp / IG Stories / Pinterest /
-                // email / save-to-photos in one OS-native UI — no custom
-                // platform buttons needed. Loading state shows pulsing
-                // brass icon while the canvas composes (~200-800ms).
-                <button onClick={handleExportClick} disabled={exporting}
-                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-stone-900 text-white border border-stone-900 hover:bg-stone-700 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
-                  title="Export as a beautiful image and share — works with Instagram, WhatsApp, Pinterest, email, anywhere">
-                  <Share2 size={15} strokeWidth={1.5} className={exporting ? 'animate-pulse' : ''} />
-                  <span className="hidden sm:inline">{exporting ? 'Composing…' : 'Share'}</span>
-                </button>
-              )}
-              {onShare && (
-                // Secondary share — generates a live read-only public link
-                // (Firestore-backed). For sending to friends who'll click
-                // through to a hosted page rather than receive an image.
-                // Tucked behind a subtle text link to keep the toolbar calm.
-                <button onClick={onShare}
-                  className="hidden sm:inline-flex p-2.5 sm:px-3 sm:py-2.5 rounded-full text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200 items-center gap-1.5"
-                  title="Generate a public read-only link instead of an image">
-                  <LinkIcon size={13} strokeWidth={1.5} /> Link
+                // Single Share button — opens the in-app editorial preview
+                // modal. The modal previews the composed image in Atelier's
+                // own design language and then offers three actions
+                // (Share / Save image / Public link) before any handover
+                // to the OS share sheet. One clean entry-point; no toolbar
+                // soup. Old separate Link button removed — it's a secondary
+                // action inside the modal now.
+                <button onClick={onExport}
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-stone-900 text-white border border-stone-900 hover:bg-stone-700 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap"
+                  title="Preview, then share or save this look">
+                  <Share2 size={15} strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Share</span>
                 </button>
               )}
               {onEdit && (

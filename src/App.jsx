@@ -8257,12 +8257,22 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                     {isSelected && <CheckCircle2 size={14} strokeWidth={2.5} className="text-white" />}
                   </span>
                 )}
-                {/* Image surface = the 2x2 preview grid. Shadow lift on
-                    hover signals interactivity (same language as wardrobe
-                    cards). No image-zoom here — the grid is 4 mini thumbs,
-                    zooming all 4 at once feels jittery. Shadow alone is
-                    the editorial cue. */}
-                <div className={`aspect-square rounded-2xl overflow-hidden bg-stone-100 smooth-shadow lg:group-hover:shadow-xl transition-shadow duration-500 grid grid-cols-2 grid-rows-2 gap-0.5 mb-3 ${isSelected ? 'ring-4 ring-stone-900 scale-95' : ''}`}>
+                {/* Image surface = the 2x2 preview grid. Hover signal is a
+                    thin brass-300 ring (editorial; ties into the brass-rule
+                    eyebrow + brass nav accent + brass favourite charm used
+                    elsewhere). Shadow-xl was the previous attempt but it
+                    reads as a hard grey outline on a small square card
+                    because shadow-xl is a dual box-shadow with low spread —
+                    fine on a tall wardrobe image, ugly on a tight 4-up grid.
+                    The mini thumbs inside already scale on hover, so the
+                    ring is just the framing accent. Mutually exclusive with
+                    the selected-state stone-900 ring-4 (template-literal
+                    branch handles the override). */}
+                <div className={`aspect-square rounded-2xl overflow-hidden bg-stone-100 smooth-shadow transition-shadow duration-300 grid grid-cols-2 grid-rows-2 gap-0.5 mb-3 ${
+                  isSelected
+                    ? 'ring-4 ring-stone-900 scale-95'
+                    : 'lg:group-hover:ring-1 lg:group-hover:ring-brass-300/70'
+                }`}>
                   {previewImages.length === 0 && <div className="col-span-2 row-span-2 flex items-center justify-center text-stone-300"><Shirt size={32} strokeWidth={1} /></div>}
                   {previewImages.map((src, i) => (
                     <div key={i} className={previewImages.length === 1 ? 'col-span-2 row-span-2' : previewImages.length === 2 ? 'col-span-1 row-span-2' : previewImages.length === 3 && i === 0 ? 'col-span-2 row-span-1' : ''}>

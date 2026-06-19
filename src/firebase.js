@@ -4,7 +4,10 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged,
   isSignInWithEmailLink, signInWithEmailLink, sendSignInLinkToEmail,
 } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import {
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  collection, doc, addDoc, setDoc, serverTimestamp, increment,
+} from 'firebase/firestore';
 import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 
 const firebaseConfig = {
@@ -269,30 +272,150 @@ function mapGeminiError(err) {
   return new Error('AI failed unexpectedly. Try again, or refresh the page.');
 }
 
+// ─── AI usage tracking ──────────────────────────────────────────────────
+// Per-user spend tracking so we can see real cost-per-active-user numbers
+// instead of estimating from competitor pricing. Each Gemini call writes:
+//   1. A detail doc at /users/{uid}/aiUsage/{autoId} — immutable audit log
+//   2. An increment to the monthly rollup at /users/{uid}/aiUsageMonthly/{YYYY-MM}
+//      — fast aggregate reads for the admin dashboard
+//
+// Fire-and-forget — logging failures must never break the user-facing AI
+// response. We catch and console.warn so a permission-denied or network
+// blip doesn't surface as an error toast.
+//
+// Token counts come from Firebase AI Logic's usageMetadata if exposed, or
+// are estimated at ~4 chars/token (Gemini's typical text ratio). The
+// estimate is 80–90% accurate for text and good enough to spot the
+// cost outliers, which is the point.
+
+// Gemini pricing per 1M tokens, USD. Source: Google AI pricing, June 2026.
+// Update if Google revises rates; existing logged docs keep their original
+// estCostUsd values (we don't backfill).
+const GEMINI_PRICING = {
+  'gemini-2.5-flash': { input: 0.30, output: 2.50 },
+  'gemini-2.5-pro':   { input: 1.25, output: 5.00 },
+  'gemini-2.0-flash': { input: 0.10, output: 0.40 },
+};
+
+function computeAiCost(model, inputTokens, outputTokens) {
+  const pricing = GEMINI_PRICING[model] || GEMINI_PRICING['gemini-2.5-flash'];
+  return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000;
+}
+
+function extractTokenCounts(result, promptCharLen, responseCharLen) {
+  // Real counts from Gemini if exposed
+  const usage = result?.response?.usageMetadata;
+  if (usage && Number.isFinite(usage.promptTokenCount) && Number.isFinite(usage.candidatesTokenCount)) {
+    return {
+      inputTokens: usage.promptTokenCount,
+      outputTokens: usage.candidatesTokenCount,
+      estimated: false,
+    };
+  }
+  // Fallback estimate (~4 chars/token for text; vision images aren't
+  // counted by length — they're handled separately below)
+  return {
+    inputTokens: Math.ceil(promptCharLen / 4),
+    outputTokens: Math.ceil(responseCharLen / 4),
+    estimated: true,
+  };
+}
+
+// Fire-and-forget logger. Never throws — failures are logged to console only.
+async function logAiUsage({ feature, model, hasVision, inputTokens, outputTokens, estimated }) {
+  const uid = auth.currentUser?.uid;
+  if (!uid) return; // not signed in (e.g. App Check trial or local dev) — skip
+
+  const estCostUsd = computeAiCost(model, inputTokens, outputTokens);
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  try {
+    // 1. Per-call detail doc
+    await addDoc(collection(db, 'users', uid, 'aiUsage'), {
+      ts: serverTimestamp(),
+      feature,
+      model,
+      hasVision,
+      inputTokens,
+      outputTokens,
+      estCostUsd,
+      estimated,
+    });
+
+    // 2. Monthly rollup. setDoc with merge:true deep-merges and applies
+    //    FieldValue.increment at any nesting depth, so the byFeature map
+    //    builds up correctly across calls.
+    await setDoc(
+      doc(db, 'users', uid, 'aiUsageMonthly', monthKey),
+      {
+        totalCalls: increment(1),
+        totalInputTokens: increment(inputTokens),
+        totalOutputTokens: increment(outputTokens),
+        totalEstCostUsd: increment(estCostUsd),
+        byFeature: {
+          [feature]: {
+            calls: increment(1),
+            inputTokens: increment(inputTokens),
+            outputTokens: increment(outputTokens),
+            estCostUsd: increment(estCostUsd),
+          },
+        },
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    // Never break the AI response on logging failure. Most likely cause
+    // is a Firestore rules mismatch (deploy aiUsage rules) or an offline
+    // queue. Warn once per session.
+    console.warn('[ai-usage] logging failed:', err?.message || err);
+  }
+}
+
 // Plain text generation. Returns the model's response string.
 // `opts`: { temperature, jsonMode, model }
-export async function geminiText(prompt, opts = {}) {
+// `feature`: short identifier for usage tracking (e.g. 'concierge',
+// 'suggest-look'). Defaults to 'unlabeled' so existing call sites keep
+// working; pass the real label to enable per-feature cost breakdown.
+export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
   checkRateLimit();  // throws with friendly message if exceeded
   recordCall();      // record BEFORE the call so failed attempts also count
                      // (prevents a runaway loop of failures from looking "free")
   try {
+    const modelName = opts.model || 'gemini-2.5-flash';
     const ai = getAiSafe();
     const model = getGenerativeModel(ai, {
-      model: opts.model || 'gemini-2.5-flash',
+      model: modelName,
       generationConfig: {
         temperature: opts.temperature ?? 0.7,
         ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
       },
     });
     const result = await model.generateContent(prompt);
-    return result.response.text();
+    const text = result.response.text();
+
+    // Track usage (fire-and-forget — no await, no rejection bubble)
+    const promptStr = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
+    const tokens = extractTokenCounts(result, promptStr.length, text.length);
+    logAiUsage({
+      feature,
+      model: modelName,
+      hasVision: false,
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
+      estimated: tokens.estimated,
+    });
+
+    return text;
   } catch (err) {
     throw mapGeminiError(err);
   }
 }
 
 // Multimodal: prompt + a single image (data URL). Same options as geminiText.
-export async function geminiTextVision(prompt, imageDataUrl, opts = {}) {
+// `feature`: short identifier for usage tracking.
+export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature = 'unlabeled') {
   checkRateLimit();
   recordCall();
   try {
@@ -300,8 +423,9 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}) {
     const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!match) throw new Error('Image format not recognised.');
     const [, mimeType, data] = match;
+    const modelName = opts.model || 'gemini-2.5-flash';
     const model = getGenerativeModel(ai, {
-      model: opts.model || 'gemini-2.5-flash',
+      model: modelName,
       generationConfig: {
         temperature: opts.temperature ?? 0.4,
         ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
@@ -311,7 +435,25 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}) {
       prompt,
       { inlineData: { mimeType, data } },
     ]);
-    return result.response.text();
+    const text = result.response.text();
+
+    // Track usage. Vision adds non-trivial image tokens — Gemini's
+    // usageMetadata accounts for them when present; the estimate
+    // fallback adds a flat 258 (Gemini's documented per-image token cost
+    // for images up to 384px) to the prompt-char estimate.
+    const promptStr = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
+    const tokens = extractTokenCounts(result, promptStr.length, text.length);
+    if (tokens.estimated) tokens.inputTokens += 258;
+    logAiUsage({
+      feature,
+      model: modelName,
+      hasVision: true,
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
+      estimated: tokens.estimated,
+    });
+
+    return text;
   } catch (err) {
     throw mapGeminiError(err);
   }

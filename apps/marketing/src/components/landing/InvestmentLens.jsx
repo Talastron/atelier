@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 /**
- * InvestmentLens — a magazine "by the numbers" data spread for the home
- * page. Four sample statistics counted up by tween-animation when the
- * section enters the viewport, framed by an editorial paragraph on the
- * left so the figures land as composed criticism rather than dashboard.
+ * InvestmentLens — "The Annual Report, by way of example."
  *
- * Numbers are illustrative — these are the kinds of figures Atelier
- * surfaces inside the studio. Wired to dummy data here; the production
- * studio computes them per-member from real wardrobe + wear logs.
+ * Reframed from a dashboard-style stats grid (which read as "this is your
+ * live data") into a printed annual-report extract for a fictional member,
+ * Lena. Each figure now sits in a long-form row with rich narrative
+ * microcopy that tells her specific story — what the number is, what it
+ * cost, what the studio did about it.
  *
- * The counter animation uses requestAnimationFrame for smooth easing
- * (cubic-out — fast start, gentle settle), respects prefers-reduced-motion,
- * and only fires once per visit (no replay on scroll).
+ * Same fictional-member device as the Style Manifesto on /about — keeps
+ * the demo honest while making the figures land as composed criticism
+ * rather than a SaaS metrics screen.
+ *
+ * Visual format: vellum-style certificate (cream-on-cream with brass
+ * border-rule and corner ornaments), so the section reads as a printed
+ * page from a yearly report rather than a live dashboard surface. The
+ * existing animated count-up is preserved; only the framing and layout
+ * have changed.
  */
 
 const BrassRule = () => (
@@ -27,10 +32,10 @@ const BrassRule = () => (
   />
 );
 
-// Four sample statistics. Each is editorially distinct — low-is-good
-// (cost per wear), problem-naming (unworn), possibility-naming (outfits
-// composed), compounding (wears unlocked).
-const STATS = [
+// Four figures from Lena's first twelve months. Each pairs a number with
+// a one-paragraph story that names what the number is, what it cost, and
+// what the studio did about it.
+const FIGURES = [
   {
     numeral: 'N°. I',
     prefix: '£',
@@ -38,7 +43,8 @@ const STATS = [
     decimals: 2,
     suffix: '',
     label: 'Cost per wear',
-    caption: 'Your most-worn piece, year one.',
+    body:
+      "Lena's camel cashmere rollneck. Worn forty-seven times since she bought it in October — a piece that has, by the numbers, paid for itself nine times over. The studio flagged it as her highest-returning garment at the end of the first quarter.",
   },
   {
     numeral: 'N°. II',
@@ -47,7 +53,8 @@ const STATS = [
     decimals: 0,
     suffix: '%',
     label: 'Unworn in twelve months',
-    caption: 'The quiet half of your closet.',
+    body:
+      'Seven garments. Four of them inherited, two bought in haste, one a gift that never fit. The studio flagged them in March; Lena released three by July. The remaining four she has chosen to keep, with reasons noted.',
   },
   {
     numeral: 'N°. III',
@@ -56,7 +63,8 @@ const STATS = [
     decimals: 0,
     suffix: '',
     label: 'Outfits composed',
-    caption: 'From a collection of forty-two pieces.',
+    body:
+      "From a forty-two-piece collection. The Concierge composed 184 of them in response to a question; the Lookbook holds the 63 Lena composed herself and chose to keep. Every composition is searchable, copyable, replayable.",
   },
   {
     numeral: 'N°. IV',
@@ -65,11 +73,12 @@ const STATS = [
     decimals: 1,
     suffix: '×',
     label: 'Wears unlocked, per piece',
-    caption: 'The compounding return of stewardship.',
+    body:
+      'The annual stewardship return. Every garment in her collection has, on average, been worn five-and-a-third times more than it would have been in the year before she joined. The compounding return of attention paid.',
   },
 ];
 
-function useCountUp(target, decimals, inView, durationMs = 1600) {
+function useCountUp(target, decimals, inView, durationMs = 1800) {
   const [value, setValue] = useState(0);
   const startedRef = useRef(false);
 
@@ -77,7 +86,6 @@ function useCountUp(target, decimals, inView, durationMs = 1600) {
     if (!inView || startedRef.current) return;
     startedRef.current = true;
 
-    // Respect reduced-motion users — snap to final value, no animation.
     const reduce =
       typeof window !== 'undefined' &&
       window.matchMedia &&
@@ -92,7 +100,6 @@ function useCountUp(target, decimals, inView, durationMs = 1600) {
     const tick = (now) => {
       const elapsed = now - start;
       const t = Math.min(elapsed / durationMs, 1);
-      // Cubic-out easing — fast start, gentle settle. Suits luxury pacing.
       const eased = 1 - Math.pow(1 - t, 3);
       setValue(eased * target);
       if (t < 1) rafId = requestAnimationFrame(tick);
@@ -101,62 +108,83 @@ function useCountUp(target, decimals, inView, durationMs = 1600) {
     return () => cancelAnimationFrame(rafId);
   }, [inView, target, durationMs]);
 
-  // Format with the right number of decimals only at render time so
-  // intermediate counter values display tidily (e.g. "2.84" never "2.8400001").
   return value.toFixed(decimals);
 }
 
-function Stat({ stat, inView }) {
-  const formatted = useCountUp(stat.value, stat.decimals, inView);
+function FigureRow({ figure, inView, isLast, index }) {
+  // Each row starts its count-up with a small cascade delay so the figures
+  // arrive in sequence — gives the page a "report being read out" rhythm.
+  const [rowInView, setRowInView] = useState(false);
+  useEffect(() => {
+    if (!inView) return;
+    const t = setTimeout(() => setRowInView(true), 200 + index * 350);
+    return () => clearTimeout(t);
+  }, [inView, index]);
+
+  const formatted = useCountUp(figure.value, figure.decimals, rowInView);
 
   return (
-    <div className="flex flex-col items-center text-center md:items-start md:text-left">
+    <div
+      className="relative"
+      style={{
+        paddingBlock: 'clamp(2rem, 4vw, 2.75rem)',
+        borderBottom: isLast ? 'none' : '1px solid var(--atelier-stone-200)',
+      }}
+    >
+      {/* Numeral eyebrow */}
       <p
-        className="text-[10px] uppercase mb-3"
+        className="text-[10px] uppercase mb-5"
         style={{
-          letterSpacing: '0.32em',
+          letterSpacing: '0.4em',
           color: 'var(--atelier-brass-600)',
           fontWeight: 600,
         }}
       >
-        {stat.numeral}
+        {figure.numeral}
       </p>
-      <p
-        className="mb-3"
-        style={{
-          fontFamily: 'var(--atelier-font-display)',
-          fontSize: 'clamp(2.5rem, 5vw, 3.5rem)',
-          lineHeight: 1,
-          letterSpacing: '-0.015em',
-          color: 'var(--atelier-stone-900)',
-          // Tabular figures so the digits don't jump around as they count
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        {stat.prefix}{formatted}{stat.suffix}
-      </p>
-      <h3
-        className="mb-1.5 text-[10px] uppercase"
-        style={{
-          letterSpacing: '0.28em',
-          color: 'var(--atelier-stone-900)',
-          fontWeight: 600,
-        }}
-      >
-        {stat.label}
-      </h3>
-      <p
-        className="italic"
-        style={{
-          fontFamily: 'var(--atelier-font-display)',
-          fontSize: '0.875rem',
-          lineHeight: 1.55,
-          color: 'var(--atelier-stone-500)',
-          maxWidth: '28ch',
-        }}
-      >
-        {stat.caption}
-      </p>
+
+      {/* Body — figure on the left, label + narrative on the right.
+          Stacks on mobile so the figure lands as a separate beat. */}
+      <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-y-4 gap-x-10 items-baseline">
+        {/* The figure itself */}
+        <p
+          style={{
+            fontFamily: 'var(--atelier-font-display)',
+            fontSize: 'clamp(2.75rem, 5.5vw, 4rem)',
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+            color: 'var(--atelier-stone-900)',
+            fontVariantNumeric: 'tabular-nums',
+            minWidth: '4ch',
+          }}
+        >
+          {figure.prefix}{formatted}{figure.suffix}
+        </p>
+
+        {/* Label + body */}
+        <div>
+          <h3
+            className="mb-3 text-[10px] uppercase"
+            style={{
+              letterSpacing: '0.32em',
+              color: 'var(--atelier-stone-900)',
+              fontWeight: 600,
+            }}
+          >
+            {figure.label}
+          </h3>
+          <p
+            style={{
+              fontSize: 'clamp(0.9375rem, 1.15vw, 1rem)',
+              lineHeight: 1.7,
+              color: 'var(--atelier-stone-600)',
+              maxWidth: '52ch',
+            }}
+          >
+            {figure.body}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -169,13 +197,11 @@ export function InvestmentLens() {
     if (!containerRef.current) return;
     const obs = new IntersectionObserver(
       ([entry]) => {
-        // 0.25 threshold — counters start when the section is visibly
-        // committed in the viewport, not on first pixel-touch.
-        if (entry.isIntersecting && entry.intersectionRatio > 0.25) {
+        if (entry.isIntersecting && entry.intersectionRatio > 0.15) {
           setInView(true);
         }
       },
-      { threshold: [0, 0.25, 0.5] }
+      { threshold: [0, 0.15, 0.5] }
     );
     obs.observe(containerRef.current);
     return () => obs.disconnect();
@@ -185,7 +211,7 @@ export function InvestmentLens() {
     <section
       ref={containerRef}
       style={{
-        paddingBlock: 'clamp(4rem, 7vw, 6rem)',
+        paddingBlock: 'clamp(5rem, 9vw, 7rem)',
         paddingInline: 'var(--atelier-page-padding)',
         background: 'var(--atelier-stone-50)',
       }}
@@ -195,74 +221,191 @@ export function InvestmentLens() {
         style={{ maxWidth: 'var(--atelier-container-max)' }}
       >
         {/* Section header */}
-        <div className="text-center mb-12 lg:mb-14">
-          <div className="flex items-center justify-center gap-3 mb-4">
+        <div className="text-center mb-14 lg:mb-16">
+          <div className="flex items-center justify-center gap-3 mb-5">
             <BrassRule />
             <p
               className="text-[10px] uppercase font-medium"
               style={{ letterSpacing: '0.32em', color: 'var(--atelier-brass-600)' }}
             >
-              The Investment Lens
+              The Annual Report &middot; By way of example
             </p>
             <BrassRule />
           </div>
           <h2
-            className="mx-auto"
+            className="mx-auto mb-5"
             style={{
               fontFamily: 'var(--atelier-font-display)',
-              fontSize: 'clamp(2rem, 3.5vw, 3rem)',
+              fontSize: 'clamp(2.25rem, 4vw, 3.25rem)',
               lineHeight: 1.05,
               letterSpacing: '-0.01em',
               color: 'var(--atelier-stone-900)',
               maxWidth: '22ch',
             }}
           >
-            A wardrobe, <em style={{ fontWeight: 400 }}>by the numbers</em>.
+            A year inside Atelier, <em style={{ fontWeight: 400 }}>in figures</em>.
           </h2>
+          <p
+            className="mx-auto"
+            style={{
+              fontSize: 'clamp(0.95rem, 1.1vw, 1.0625rem)',
+              lineHeight: 1.65,
+              color: 'var(--atelier-stone-500)',
+              maxWidth: '54ch',
+            }}
+          >
+            These are the figures from one member's first twelve months. Yours
+            are computed live inside the studio, and stay only with you.
+          </p>
         </div>
 
-        {/* Two-column body: editorial framing on the left, stats grid on the
-            right. Stacks to a single column on mobile, with the framing
-            paragraph above the figures. */}
-        <div className="grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-12 lg:gap-16 items-start">
-          {/* Left — editorial framing */}
-          <div className="text-center lg:text-left">
+        {/* Vellum certificate frame — the printed-report container that
+            holds the figures. Same border-rule + corner-ornament vocabulary
+            as the Style Manifesto on /about, so the two sample artefacts
+            read as belonging to the same publication. */}
+        <article
+          className="relative mx-auto"
+          style={{
+            maxWidth: 820,
+            background: '#ffffff',
+            border: '1px solid var(--atelier-stone-200)',
+            borderRadius: 4,
+            padding: 'clamp(2rem, 5vw, 3.5rem) clamp(1.75rem, 4vw, 3.5rem)',
+            boxShadow:
+              '0 50px 120px -30px rgba(28, 25, 23, 0.12), 0 18px 40px -16px rgba(28, 25, 23, 0.08)',
+          }}
+        >
+          {/* Brass border-rule inside the card */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 18,
+              border: '1px solid rgba(212, 179, 120, 0.35)',
+              pointerEvents: 'none',
+              borderRadius: 2,
+            }}
+          />
+
+          {/* Corner ornaments — small brass squares at each inner corner */}
+          <span aria-hidden="true" style={cornerStyle('top', 'left')} />
+          <span aria-hidden="true" style={cornerStyle('top', 'right')} />
+          <span aria-hidden="true" style={cornerStyle('bottom', 'left')} />
+          <span aria-hidden="true" style={cornerStyle('bottom', 'right')} />
+
+          <div className="relative">
+            {/* Report title + frontispiece intro */}
+            <header className="text-center mb-2">
+              <p
+                className="text-[10px] uppercase mb-2"
+                style={{
+                  letterSpacing: '0.4em',
+                  color: 'var(--atelier-brass-600)',
+                  fontWeight: 600,
+                }}
+              >
+                The Annual Report
+              </p>
+              <p
+                className="italic"
+                style={{
+                  fontFamily: 'var(--atelier-font-display)',
+                  fontSize: '0.875rem',
+                  color: 'var(--atelier-stone-500)',
+                }}
+              >
+                composed for L — , Volume I, MMXXVI
+              </p>
+            </header>
+
+            {/* Intro paragraph — Lena's setup, italic display serif */}
             <p
-              className="italic mx-auto lg:mx-0"
+              className="italic text-center mx-auto"
               style={{
                 fontFamily: 'var(--atelier-font-display)',
-                fontSize: 'clamp(1.125rem, 1.5vw, 1.375rem)',
-                lineHeight: 1.55,
-                color: 'var(--atelier-stone-700)',
-                maxWidth: '32ch',
-              }}
-            >
-              What you wear tells you who you are.
-              What you don't wear tells you who you used to think you were.
-            </p>
-            <p
-              className="mt-6 mx-auto lg:mx-0"
-              style={{
-                fontSize: '0.9375rem',
+                fontSize: 'clamp(1rem, 1.3vw, 1.125rem)',
                 lineHeight: 1.7,
-                color: 'var(--atelier-stone-500)',
-                maxWidth: '34ch',
+                color: 'var(--atelier-stone-700)',
+                maxWidth: '50ch',
+                margin: 'clamp(1.5rem, 3vw, 2rem) auto clamp(2rem, 4vw, 2.75rem)',
               }}
             >
-              Atelier counts both. The figures opposite are a sample of what
-              the studio surfaces — the small intelligences that quietly fix
-              the wardrobe nothing else has.
+              This is Lena. She joined in October last year with thirty-two
+              pieces in her wardrobe, added ten more by spring, and has been
+              logging wears ever since. The figures below are the first
+              reading of her closet.
             </p>
-          </div>
 
-          {/* Right — 2x2 stats grid with hairline separators */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-12 gap-x-12 sm:gap-x-10">
-            {STATS.map((stat) => (
-              <Stat key={stat.numeral} stat={stat} inView={inView} />
-            ))}
+            {/* Hairline divider before the figures */}
+            <div
+              aria-hidden="true"
+              style={{
+                height: 1,
+                background:
+                  'linear-gradient(to right, transparent, var(--atelier-stone-200) 15%, var(--atelier-stone-200) 85%, transparent)',
+              }}
+            />
+
+            {/* The four figures, stacked vertically as a printed-report list */}
+            <div>
+              {FIGURES.map((figure, i) => (
+                <FigureRow
+                  key={figure.numeral}
+                  figure={figure}
+                  inView={inView}
+                  isLast={i === FIGURES.length - 1}
+                  index={i}
+                />
+              ))}
+            </div>
+
+            {/* Sign-off */}
+            <div className="flex flex-col items-center mt-10 gap-3">
+              <div className="flex items-center gap-2" aria-hidden="true">
+                <span style={{ display: 'inline-block', width: 3, height: 3, borderRadius: '50%', background: 'var(--atelier-brass-300)' }} />
+                <span style={{ display: 'inline-block', width: 3, height: 3, borderRadius: '50%', background: 'var(--atelier-brass-600)' }} />
+                <span style={{ display: 'inline-block', width: 3, height: 3, borderRadius: '50%', background: 'var(--atelier-brass-300)' }} />
+              </div>
+              <p
+                className="text-center italic"
+                style={{
+                  fontFamily: 'var(--atelier-font-display)',
+                  fontSize: '0.9375rem',
+                  color: 'var(--atelier-stone-500)',
+                  lineHeight: 1.55,
+                  maxWidth: '42ch',
+                }}
+              >
+                Your figures, your story. Computed live. Kept private.
+              </p>
+              <p
+                className="text-center text-[10px] uppercase mt-1"
+                style={{
+                  letterSpacing: '0.32em',
+                  color: 'var(--atelier-stone-400)',
+                  fontWeight: 500,
+                }}
+              >
+                Atelier &mdash; The Long Barn, Surrey
+              </p>
+            </div>
           </div>
-        </div>
+        </article>
       </div>
     </section>
   );
+}
+
+// Small helper — corner ornament absolute-position style. Avoids
+// repeating the same five property lines four times in the JSX.
+function cornerStyle(vertical, horizontal) {
+  return {
+    position: 'absolute',
+    [vertical]: 14,
+    [horizontal]: 14,
+    width: 6,
+    height: 6,
+    background: 'var(--atelier-brass-600)',
+    borderRadius: 1,
+  };
 }

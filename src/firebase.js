@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged,
-  isSignInWithEmailLink, signInWithEmailLink,
+  isSignInWithEmailLink, signInWithEmailLink, sendSignInLinkToEmail,
 } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
@@ -93,6 +93,29 @@ export const signInWithGoogle = async () => {
     }
     throw err;
   }
+};
+
+// Magic-link sign-in initiated FROM the app (vs the LS webhook flow).
+//
+// Used when a paid customer lost their original magic-link email or wants to
+// sign in from a fresh device. Pre-stores the email in localStorage so that
+// MagicLinkComplete can auto-complete sign-in if they click the link on the
+// same browser; otherwise (different device) MagicLinkComplete will prompt
+// for the email at click time, which is fine.
+//
+// Anyone can request a link to any email — that's safe because:
+//   1. The link is sent to the email address (only that mailbox owner can click)
+//   2. Even if signed in, access to the wardrobe still gates on Firestore rules
+//      (isOwner / isInvited / hasActiveSubscription) — random sign-ups land on
+//      AccessDenied with a "Start your trial" CTA.
+const EMAIL_STORAGE_KEY = 'atelier.signInEmail';
+export const sendMagicLink = async (email) => {
+  const actionCodeSettings = {
+    url: window.location.origin + '/',
+    handleCodeInApp: true,
+  };
+  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+  try { localStorage.setItem(EMAIL_STORAGE_KEY, email); } catch { /* swallow */ }
 };
 
 export const signOutUser = () => signOut(auth);

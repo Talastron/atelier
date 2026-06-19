@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -4036,21 +4036,101 @@ function FullScreenLoader({ label }) {
 function SignInScreen({ onSignIn }) {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
-  const handle = async () => {
+  // 'idle' = show Google + "or use email" link
+  // 'emailForm' = show email input + send button
+  // 'sent' = show "check your inbox" confirmation
+  const [mode, setMode] = useState('idle');
+  const [email, setEmail] = useState('');
+
+  const handleGoogle = async () => {
     setBusy(true); setError(null);
     try { await onSignIn(); }
     catch (e) { setError(e?.message || 'Sign-in failed.'); }
     finally { setBusy(false); }
   };
+
+  const handleSendLink = async (e) => {
+    e?.preventDefault();
+    if (!email || busy) return;
+    setBusy(true); setError(null);
+    try {
+      await sendMagicLink(email);
+      setMode('sent');
+    } catch (err) {
+      setError(err?.message || 'Could not send sign-in link. Try again, or write to contact@myatelier.style.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] px-6 font-sans">
       <div className="mb-8"><AtelierMark size={88} /></div>
       <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier.</h1>
-      <p className="text-stone-500 text-sm tracking-wide mb-12 text-center max-w-sm">Your private digital wardrobe. Sign in to access your collection from any device.</p>
-      <button onClick={handle} disabled={busy} className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg disabled:opacity-50">
-        {busy ? 'Signing in…' : 'Sign in with Google'}
-      </button>
-      {error && <p className="mt-6 text-xs text-red-700 max-w-sm text-center">{error}</p>}
+      <p className="text-stone-500 text-sm tracking-wide mb-12 text-center max-w-sm">
+        Your private digital wardrobe. Sign in to access your collection from any device.
+      </p>
+
+      {mode === 'sent' ? (
+        <div className="max-w-sm w-full text-center">
+          <p className="text-stone-700 text-sm leading-relaxed mb-3">
+            Check your inbox at <span className="font-medium text-stone-900">{email}</span> for your sign-in link.
+          </p>
+          <p className="text-stone-400 text-xs leading-relaxed">
+            The link is valid for one hour. Didn't receive it? Check your spam folder or{' '}
+            <button onClick={() => { setMode('emailForm'); setError(null); }} className="underline hover:text-stone-700">
+              try again
+            </button>.
+          </p>
+        </div>
+      ) : mode === 'emailForm' ? (
+        <form onSubmit={handleSendLink} className="w-full max-w-sm flex flex-col gap-3">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your.email@example.com"
+            disabled={busy}
+            autoFocus
+            autoComplete="email"
+            className="w-full px-5 py-4 bg-white border border-stone-200 rounded-full text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={!email || busy}
+            className="w-full bg-stone-900 text-white px-10 py-4 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg disabled:opacity-50"
+          >
+            {busy ? 'Sending…' : 'Email me a sign-in link'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('idle'); setError(null); }}
+            className="text-xs text-stone-500 hover:text-stone-900 mt-2"
+          >
+            ← Back to Google sign-in
+          </button>
+        </form>
+      ) : (
+        <>
+          <button
+            onClick={handleGoogle}
+            disabled={busy}
+            className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg disabled:opacity-50"
+          >
+            {busy ? 'Signing in…' : 'Sign in with Google'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('emailForm'); setError(null); }}
+            className="mt-6 text-sm text-stone-500 hover:text-stone-900 transition-colors"
+          >
+            Or sign in with email
+          </button>
+        </>
+      )}
+
+      {error && <p className="mt-6 text-xs text-red-700 max-w-sm text-center leading-relaxed">{error}</p>}
     </div>
   );
 }

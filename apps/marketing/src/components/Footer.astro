@@ -1,28 +1,39 @@
 ---
 // apps/marketing/src/components/Footer.astro
 //
-// The closing chapter. Treated as the back cover of a book: a signature
-// artifact (the armoire sketch) on one side, the colophon on the other.
+// The closing chapter. Treated as the back cover of a book.
 //
-// Structure — three quiet movements:
-//   1. Masthead row — brand block + three nav columns + signature artifact
-//   2. Brass-rule divider
-//   3. Colophon — copyright + UK Companies Act 2006 statutory disclosure
+// Two distinct treatments — mobile and desktop are different compositions,
+// not the same composition resized:
 //
-// The signature artifact is the equivalent of Chanel's rue Cambon sketch:
-// a hand-drawn-style line illustration that gives the brand a "spiritual
-// home." For Atelier — a digital wardrobe — that home is the wardrobe
-// itself, rendered as a French armoire with doors slightly ajar. The
-// SVG below is a tasteful placeholder; eventual replacement with an
-// illustrator-drawn version should swap only the <svg> markup, leaving
-// the layout, address line, and surrounding chrome intact.
+//   MOBILE (default → lg)
+//     Vertical centered stack — like a publisher's frontispiece:
+//       1. Brand mast — hanger atop the wordmark (vertical, not horizontal)
+//       2. Single-line tagline
+//       3. Brass-rule Volume I · MMXXVI eyebrow
+//       4. Three nav sections, stacked, generous editorial rhythm
+//       5. Armoire centerpiece (larger than on desktop — full canvas)
+//       6. Address line beneath
+//       7. Brass-rule divider
+//       8. Colophon — stacked centered
+//       9. Return to the top — graceful exit link
+//
+//   DESKTOP (lg+)
+//     12-column grid — brand : nav : signature read left to right:
+//       3 cols brand | 6 cols nav (3 sub-cols) | 3 cols signature
+//
+// The signature artifact (armoire) is a Regency-style line drawing. The
+// SVG below is a tasteful placeholder; replacement with a commissioned
+// illustrator drawing should swap only the <svg> markup, leaving the
+// layout, address line, and surrounding chrome intact.
 //
 // Address line ("The Long Barn · Cobham · Surrey") uses Atelier's real
-// registered office in frontispiece form — three units of increasing
-// geography. The full statutory address (with postcode + Companies Act
-// disclosures) lives quietly in the colophon below.
+// registered office in frontispiece form. The full statutory address
+// (with postcode + Companies Act disclosures) lives quietly in the
+// colophon below.
 import { AtelierMark } from '@atelier/ui';
 import { EDIT_URL, SITE } from '../config.ts';
+import { ArrowUp } from 'lucide-react';
 
 const year = new Date().getFullYear();
 
@@ -52,9 +63,14 @@ const sections = [
     ],
   },
 ];
+
+// Atelier hanger mark inlined here so the armoire SVG below can reuse
+// the same brass + stone vocabulary. Kept in this file because the
+// footer is the only consumer of the larger 56px size.
 ---
 
 <footer
+  id="footer"
   class="border-t border-stone-200/60"
   style="background: var(--atelier-cream);"
 >
@@ -62,63 +78,86 @@ const sections = [
     class="mx-auto"
     style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding);"
   >
-    {/* ── Movement 1: Masthead + Navigation + Signature ───────────────── */}
+    {/* ──────────────────────────────────────────────────────────────────
+        MOVEMENT 1: Masthead + Navigation + Signature
+        Mobile: stacked vertical, centered. Desktop: 12-col grid.
+        ────────────────────────────────────────────────────────────── */}
     <div
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-x-10 gap-y-14 lg:gap-x-12"
-      style="padding-top: clamp(4rem, 7vw, 6rem); padding-bottom: clamp(2.5rem, 5vw, 4rem);"
+      class="flex flex-col items-center text-center lg:grid lg:grid-cols-12 lg:items-start lg:text-left lg:gap-x-12"
+      style="padding-top: clamp(4.5rem, 8vw, 6.5rem); padding-bottom: clamp(3rem, 5vw, 4rem); gap: clamp(3.5rem, 6vw, 5rem);"
     >
-      {/* ── Brand block (lg: 3 cols) ─────────────────────────────────── */}
-      <div class="lg:col-span-3" style="max-width: 30ch;">
-        <a href="/" class="inline-flex items-center gap-3 group">
-          <AtelierMark size={44} client:load />
+      {/* ── Brand mast (mobile: vertical centered · desktop: left col) ── */}
+      <div class="lg:col-span-3 flex flex-col items-center lg:items-start" style="max-width: 32ch;">
+        {/* Brand mark — vertical on mobile (mast over wordmark), horizontal
+            on desktop. The mobile vertical treatment reads as a book
+            frontispiece — more iconic, more present. */}
+        <a
+          href="/"
+          class="flex flex-col items-center lg:flex-row lg:items-center gap-3 group"
+          aria-label="Atelier — return home"
+        >
+          <AtelierMark size={56} client:load />
           <span
-            class="text-[1.625rem] tracking-tight transition-colors group-hover:text-stone-700"
-            style="font-family: var(--atelier-font-display); color: var(--atelier-stone-900); letter-spacing: -0.005em;"
+            class="tracking-tight transition-colors group-hover:text-stone-700"
+            style="font-family: var(--atelier-font-display); color: var(--atelier-stone-900); font-size: clamp(1.875rem, 5vw, 1.875rem); letter-spacing: -0.005em; line-height: 1;"
           >
             Atelier.
           </span>
         </a>
+
+        {/* Tagline — single declarative line */}
         <p
-          class="mt-5"
+          class="mt-6 lg:mt-5"
           style="color: var(--atelier-stone-500); font-size: 0.9375rem; line-height: 1.6;"
         >
           Quiet luxury for your wardrobe.
         </p>
-        <div class="flex items-center gap-3 mt-7">
+
+        {/* Volume eyebrow — brass rule + edition */}
+        <div class="flex items-center gap-3 mt-8 lg:mt-7">
           <span
             aria-hidden="true"
             style="display: inline-block; width: 24px; height: 1.5px; background: var(--atelier-brass-300);"
           />
           <p
             class="text-[10px] uppercase font-medium"
-            style="letter-spacing: 0.28em; color: var(--atelier-stone-500);"
+            style="letter-spacing: 0.32em; color: var(--atelier-stone-500);"
           >
             Volume I &middot; MMXXVI
           </p>
+          <span
+            class="lg:hidden"
+            aria-hidden="true"
+            style="display: inline-block; width: 24px; height: 1.5px; background: var(--atelier-brass-300);"
+          />
         </div>
       </div>
 
-      {/* ── Navigation (lg: 6 cols, 3×2 internal) ────────────────────── */}
+      {/* ── Navigation ───────────────────────────────────────────────────
+          Mobile: vertical stack of sections, generous editorial rhythm.
+          Desktop (md+): 3-column grid. Skip the cramped 640px-tablet
+          3-col state — go straight from stacked → proper grid at md. */}
       <nav
-        class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10 lg:gap-12"
+        class="lg:col-span-6 w-full flex flex-col items-center lg:items-stretch md:grid md:grid-cols-3 lg:gap-x-12 md:text-left"
+        style="gap: clamp(2.5rem, 4vw, 2.5rem);"
         aria-label="Footer navigation"
       >
         {sections.map((section) => (
-          <div>
+          <div class="flex flex-col items-center md:items-start">
             <h3
               class="mb-5 text-[10px] uppercase font-semibold"
-              style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-900);"
+              style="letter-spacing: 0.28em; color: var(--atelier-stone-900);"
             >
               {section.eyebrow}
             </h3>
-            <ul class="flex flex-col gap-3">
+            <ul class="flex flex-col gap-1">
               {section.links.map((link) => (
                 <li>
                   <a
                     href={link.href}
                     {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                    class="footer-link text-sm"
-                    style="line-height: 1.5;"
+                    class="footer-link text-sm inline-block"
+                    style="line-height: 1.5; padding-block: 0.5rem;"
                   >
                     {link.label}
                   </a>
@@ -129,41 +168,24 @@ const sections = [
         ))}
       </nav>
 
-      {/* ── Signature artifact (lg: 3 cols) ──────────────────────────────
-           The armoire — Atelier's spiritual home, rendered as a hand-drawn
-           line illustration. Replaceable with a commissioned illustrator
-           drawing later; the layout below assumes ~140px wide × 220px tall.
-           On mobile, sits centered as a closing flourish. On desktop, sits
-           right-aligned as a signature seal. */}
+      {/* ── Signature artifact ──────────────────────────────────────────
+          Mobile: centered centerpiece, larger (~184px). Desktop: right
+          column, smaller (148px). The mobile treatment makes this the
+          unmissable closing moment of the page. */}
       <div
-        class="lg:col-span-3 flex flex-col items-center lg:items-end gap-4"
+        class="lg:col-span-3 flex flex-col items-center lg:items-end gap-5 lg:gap-4"
       >
-        {/* Armoire SVG — Regency cabinetmaker, perfectly symmetrical, doors
-            closed. Reads as an heirloom piece from a Sotheby's catalogue
-            rather than a sketch in a notebook. Brass appears only on the
-            metalwork (escutcheons + ring pulls) so it catches the eye
-            against the otherwise grey-stone line work.
-
-            Composition (top to bottom):
-              - Urn finial centred on a serpentine swan-neck pediment
-              - Dentil-moulded cornice (multiple parallel lines for layered
-                shadow)
-              - Two tall doors, each with two raised cartouche panels
-              - Beaded edge around each door (extra inset line)
-              - Brass escutcheon and ring pull at the dividing rail
-              - Stepped plinth with apron moulding
-              - Bracket feet at the four corners
-              - Single hairline floor shadow */}
+        {/* Armoire SVG. Width is responsive: larger on mobile where it
+            has the full canvas, smaller on desktop where it sits in
+            a 3-col sidebar. Aspect ratio preserved by viewBox. */}
         <svg
-          width="156"
-          height="270"
           viewBox="0 0 160 280"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
+          class="footer-armoire"
           style="display: block;"
         >
-          {/* ── Pediment ─────────────────────────────────────────────── */}
-          {/* Urn finial — sits centred on the broken pediment */}
+          {/* ── Pediment: urn finial + swan-neck scrolls ──────────── */}
           <g stroke="var(--atelier-stone-700)" stroke-width="0.7" fill="none" stroke-linecap="round">
             <path d="M 77 4 Q 80 1 83 4" />
             <line x1="80" y1="4" x2="80" y2="8" />
@@ -172,45 +194,16 @@ const sections = [
             <line x1="76" y1="22" x2="84" y2="22" />
           </g>
 
-          {/* Swan-neck pediment — two scrolled curves meeting at the finial */}
-          <path
-            d="M 16 36 Q 18 24 38 22 Q 60 20 76 22"
-            fill="none"
-            stroke="var(--atelier-stone-700)"
-            stroke-width="1.1"
-            stroke-linecap="round"
-          />
-          <path
-            d="M 144 36 Q 142 24 122 22 Q 100 20 84 22"
-            fill="none"
-            stroke="var(--atelier-stone-700)"
-            stroke-width="1.1"
-            stroke-linecap="round"
-          />
-          {/* Pediment inner echo — the second parallel line for depth */}
-          <path
-            d="M 22 36 Q 24 28 40 26 Q 60 24 76 26"
-            fill="none"
-            stroke="var(--atelier-stone-400)"
-            stroke-width="0.6"
-            stroke-linecap="round"
-          />
-          <path
-            d="M 138 36 Q 136 28 120 26 Q 100 24 84 26"
-            fill="none"
-            stroke="var(--atelier-stone-400)"
-            stroke-width="0.6"
-            stroke-linecap="round"
-          />
+          <path d="M 16 36 Q 18 24 38 22 Q 60 20 76 22" fill="none" stroke="var(--atelier-stone-700)" stroke-width="1.1" stroke-linecap="round" />
+          <path d="M 144 36 Q 142 24 122 22 Q 100 20 84 22" fill="none" stroke="var(--atelier-stone-700)" stroke-width="1.1" stroke-linecap="round" />
+          <path d="M 22 36 Q 24 28 40 26 Q 60 24 76 26" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.6" stroke-linecap="round" />
+          <path d="M 138 36 Q 136 28 120 26 Q 100 24 84 26" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.6" stroke-linecap="round" />
 
-          {/* ── Cornice ──────────────────────────────────────────────── */}
-          {/* Stacked horizontal mouldings: each line adds visual weight */}
+          {/* ── Cornice + dentil moulding ──────────────────────────── */}
           <line x1="14" y1="38" x2="146" y2="38" stroke="var(--atelier-stone-700)" stroke-width="1.1" stroke-linecap="round" />
           <line x1="16" y1="41" x2="144" y2="41" stroke="var(--atelier-stone-500)" stroke-width="0.7" />
           <line x1="14" y1="46" x2="146" y2="46" stroke="var(--atelier-stone-700)" stroke-width="0.9" />
 
-          {/* Dentil moulding — small repeating teeth, the signature of
-              neoclassical cabinetry. Eight dentils across, evenly spaced. */}
           <g fill="var(--atelier-stone-600)">
             <rect x="22" y="48" width="4" height="3" />
             <rect x="34" y="48" width="4" height="3" />
@@ -225,102 +218,59 @@ const sections = [
           </g>
           <line x1="14" y1="54" x2="146" y2="54" stroke="var(--atelier-stone-700)" stroke-width="1.1" stroke-linecap="round" />
 
-          {/* ── Body — main cabinet box ──────────────────────────────── */}
-          <rect
-            x="18"
-            y="54"
-            width="124"
-            height="178"
-            fill="none"
-            stroke="var(--atelier-stone-700)"
-            stroke-width="1.2"
-          />
-          {/* Central stile — the divider between the two doors */}
+          {/* ── Body ──────────────────────────────────────────────── */}
+          <rect x="18" y="54" width="124" height="178" fill="none" stroke="var(--atelier-stone-700)" stroke-width="1.2" />
           <line x1="80" y1="58" x2="80" y2="228" stroke="var(--atelier-stone-700)" stroke-width="1" />
 
-          {/* ── Left door ────────────────────────────────────────────── */}
-          {/* Outer beaded edge — extra inset line creates the bead detail */}
+          {/* ── Left door — closed, with cartouche panel + brass ──── */}
           <rect x="22" y="58" width="55" height="170" fill="none" stroke="var(--atelier-stone-600)" stroke-width="0.7" />
-          {/* Upper raised panel */}
           <rect x="28" y="64" width="43" height="62" fill="none" stroke="var(--atelier-stone-600)" stroke-width="0.9" />
           <rect x="31" y="67" width="37" height="56" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.5" />
-          {/* Cartouche in upper panel — small oval centred */}
           <ellipse cx="49.5" cy="95" rx="9" ry="13" fill="none" stroke="var(--atelier-stone-500)" stroke-width="0.6" />
           <ellipse cx="49.5" cy="95" rx="6.5" ry="10" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.4" />
-
-          {/* Lower raised panel — taller, no cartouche (restraint) */}
           <rect x="28" y="138" width="43" height="84" fill="none" stroke="var(--atelier-stone-600)" stroke-width="0.9" />
           <rect x="31" y="141" width="37" height="78" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.5" />
-
-          {/* Brass furniture — escutcheon + ring pull, set on the
-              dividing rail between the two panels (the most logical place
-              for a real cabinetmaker to put them) */}
           <g>
-            {/* Escutcheon backplate */}
             <ellipse cx="72" cy="132" rx="2.5" ry="3.2" fill="var(--atelier-cream)" stroke="var(--atelier-brass-600)" stroke-width="0.5" />
             <line x1="72" y1="131" x2="72" y2="133.5" stroke="var(--atelier-brass-600)" stroke-width="0.5" stroke-linecap="round" />
-            {/* Ring pull — circle hanging from escutcheon */}
             <circle cx="72" cy="138" r="2.2" fill="none" stroke="var(--atelier-brass-600)" stroke-width="0.55" />
           </g>
 
-          {/* ── Right door (mirror of left) ──────────────────────────── */}
+          {/* ── Right door — mirror of left ─────────────────────────── */}
           <rect x="83" y="58" width="55" height="170" fill="none" stroke="var(--atelier-stone-600)" stroke-width="0.7" />
           <rect x="89" y="64" width="43" height="62" fill="none" stroke="var(--atelier-stone-600)" stroke-width="0.9" />
           <rect x="92" y="67" width="37" height="56" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.5" />
           <ellipse cx="110.5" cy="95" rx="9" ry="13" fill="none" stroke="var(--atelier-stone-500)" stroke-width="0.6" />
           <ellipse cx="110.5" cy="95" rx="6.5" ry="10" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.4" />
-
           <rect x="89" y="138" width="43" height="84" fill="none" stroke="var(--atelier-stone-600)" stroke-width="0.9" />
           <rect x="92" y="141" width="37" height="78" fill="none" stroke="var(--atelier-stone-400)" stroke-width="0.5" />
-
           <g>
             <ellipse cx="88" cy="132" rx="2.5" ry="3.2" fill="var(--atelier-cream)" stroke="var(--atelier-brass-600)" stroke-width="0.5" />
             <line x1="88" y1="131" x2="88" y2="133.5" stroke="var(--atelier-brass-600)" stroke-width="0.5" stroke-linecap="round" />
             <circle cx="88" cy="138" r="2.2" fill="none" stroke="var(--atelier-brass-600)" stroke-width="0.55" />
           </g>
 
-          {/* ── Apron + plinth ───────────────────────────────────────── */}
+          {/* ── Apron + plinth + bracket feet ──────────────────────── */}
           <line x1="14" y1="232" x2="146" y2="232" stroke="var(--atelier-stone-700)" stroke-width="1.1" stroke-linecap="round" />
           <line x1="16" y1="236" x2="144" y2="236" stroke="var(--atelier-stone-500)" stroke-width="0.6" />
-          {/* Apron — gentle inward curve at the centre */}
-          <path
-            d="M 16 240 L 60 240 Q 80 250 100 240 L 144 240"
-            fill="none"
-            stroke="var(--atelier-stone-700)"
-            stroke-width="1"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-
-          {/* ── Bracket feet ─────────────────────────────────────────── */}
-          {/* Two at each end — front and side profile suggested with one
-              line each. Splayed slightly outward, classic Regency. */}
+          <path d="M 16 240 L 60 240 Q 80 250 100 240 L 144 240" fill="none" stroke="var(--atelier-stone-700)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" />
           <path d="M 16 240 L 14 258 L 22 258 L 24 240" fill="none" stroke="var(--atelier-stone-700)" stroke-width="0.9" stroke-linejoin="round" />
           <path d="M 136 240 L 138 258 L 146 258 L 144 240" fill="none" stroke="var(--atelier-stone-700)" stroke-width="0.9" stroke-linejoin="round" />
 
-          {/* ── Floor shadow ─────────────────────────────────────────── */}
-          <line
-            x1="6"
-            y1="264"
-            x2="154"
-            y2="264"
-            stroke="var(--atelier-stone-300)"
-            stroke-width="0.6"
-            stroke-linecap="round"
-          />
+          {/* ── Floor shadow ──────────────────────────────────────── */}
+          <line x1="6" y1="264" x2="154" y2="264" stroke="var(--atelier-stone-300)" stroke-width="0.6" stroke-linecap="round" />
         </svg>
 
-        {/* Address line — frontispiece form. Three units, increasing
-            geography. The real registered office, set as a colophon
-            rather than a regulatory disclosure. */}
-        <div class="flex flex-col items-center lg:items-end gap-2">
+        {/* Address line — frontispiece form. Three units of increasing
+            geography. Real registered office, not invented. */}
+        <div class="flex flex-col items-center lg:items-end gap-2.5">
           <span
             aria-hidden="true"
             style="display: inline-block; width: 18px; height: 1.5px; background: var(--atelier-brass-300);"
           />
           <p
             class="text-[10px] uppercase font-medium text-center lg:text-right"
-            style="letter-spacing: 0.32em; color: var(--atelier-stone-700); line-height: 1.8;"
+            style="letter-spacing: 0.32em; color: var(--atelier-stone-700); line-height: 1.9;"
           >
             The Long Barn<br />
             Cobham<br />
@@ -330,18 +280,21 @@ const sections = [
       </div>
     </div>
 
-    {/* ── Brass-rule divider ────────────────────────────────────────── */}
+    {/* ── Brass-rule divider ──────────────────────────────────────── */}
     <div
       aria-hidden="true"
       style="height: 1px; background: linear-gradient(to right, transparent, var(--atelier-stone-200) 15%, var(--atelier-stone-200) 85%, transparent);"
     />
 
-    {/* ── Movement 3: Colophon — copyright + statutory disclosure ───── */}
+    {/* ──────────────────────────────────────────────────────────────────
+        MOVEMENT 2: Colophon
+        Mobile: stacked, centered, generous gap. Desktop: flex-row.
+        ────────────────────────────────────────────────────────────── */}
     <div
-      class="flex flex-col md:flex-row md:items-baseline md:justify-between gap-4"
-      style="padding-top: 2rem; padding-bottom: 2.5rem;"
+      class="flex flex-col items-center text-center md:flex-row md:items-baseline md:justify-between md:text-left gap-6 md:gap-4"
+      style="padding-top: 2.5rem; padding-bottom: 2rem;"
     >
-      {/* Left: copyright + brand attribution */}
+      {/* Copyright + brand attribution */}
       <p
         class="text-[11px] uppercase"
         style="letter-spacing: 0.22em; color: var(--atelier-stone-500); font-weight: 500;"
@@ -349,23 +302,48 @@ const sections = [
         &copy; {year} Atelier &middot; A product of Talastron Ltd
       </p>
 
-      {/* Right: statutory disclosure — single quiet paragraph with subtle
-          separators. The address line above carries the romance; this
-          line carries the legal weight, set as small print. */}
-      <p
-        class="text-[11px] md:text-right"
-        style="color: var(--atelier-stone-400); line-height: 1.7; max-width: 60ch;"
+      {/* Statutory disclosure — structured as discrete lines on mobile
+          so middle-dot separators don't break mid-line, and the eye
+          can rest at each fact. Recombines into two lines on desktop. */}
+      <div
+        class="flex flex-col gap-0.5 md:text-right"
+        style="color: var(--atelier-stone-400); font-size: 11px; line-height: 1.7; max-width: 60ch;"
       >
-        Talastron Ltd &middot; Registered in England &amp; Wales &middot; Company No. 15464691 &middot; VAT No. GB&nbsp;463&nbsp;5874&nbsp;58<br />
-        Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11&nbsp;3NE
-      </p>
+        <p class="hidden md:block">
+          Talastron Ltd &middot; Registered in England &amp; Wales &middot; Company No. 15464691 &middot; VAT No. GB&nbsp;463&nbsp;5874&nbsp;58
+        </p>
+        <p class="md:hidden">Talastron Ltd</p>
+        <p class="md:hidden">Registered in England &amp; Wales</p>
+        <p class="md:hidden">Company No. 15464691 &middot; VAT No. GB&nbsp;463&nbsp;5874&nbsp;58</p>
+        <p>
+          Registered office: The Long Barn, Cobham Park Road,<br class="hidden md:block" />
+          Cobham, Surrey, KT11&nbsp;3NE
+        </p>
+      </div>
+    </div>
+
+    {/* ──────────────────────────────────────────────────────────────────
+        Return to the top — the graceful exit.
+        ────────────────────────────────────────────────────────────── */}
+    <div
+      class="flex justify-center"
+      style="padding-bottom: clamp(2.5rem, 5vw, 3rem);"
+    >
+      <a
+        href="#top"
+        class="footer-return inline-flex items-center gap-2 text-[10px] uppercase font-medium"
+        style="letter-spacing: 0.32em; color: var(--atelier-stone-400); padding: 0.75rem 1rem;"
+      >
+        Return to the top
+        <ArrowUp size={11} strokeWidth={1.6} client:load />
+      </a>
     </div>
   </div>
 </footer>
 
 <style>
-  /* CSS hover/focus replaces inline JS — keyboard-accessible and
-     respects reduced-motion preferences without re-implementation. */
+  /* Footer nav links — CSS hover/focus replaces inline JS for
+     keyboard accessibility and reduced-motion support. */
   .footer-link {
     color: var(--atelier-stone-600);
     transition: color 200ms ease;
@@ -373,5 +351,28 @@ const sections = [
   .footer-link:hover,
   .footer-link:focus-visible {
     color: var(--atelier-stone-900);
+  }
+
+  /* Return-to-top link */
+  .footer-return {
+    transition: color 200ms ease;
+  }
+  .footer-return:hover,
+  .footer-return:focus-visible {
+    color: var(--atelier-stone-700);
+  }
+
+  /* Armoire SVG — responsive size. Larger on mobile where it has the
+     full canvas to itself; smaller on desktop where it sits in a 3-col
+     sidebar alongside the brand and nav. */
+  .footer-armoire {
+    width: 184px;
+    height: 322px;
+  }
+  @media (min-width: 1024px) {
+    .footer-armoire {
+      width: 148px;
+      height: 260px;
+    }
   }
 </style>

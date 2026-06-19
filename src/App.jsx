@@ -4047,16 +4047,27 @@ function AccessDeniedScreen({ user, onSignOut }) {
       <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mb-8">
         <AlertCircle className="text-stone-900" size={26} strokeWidth={1.5} />
       </div>
-      <h1 className="text-3xl font-display font-medium tracking-wide mb-3">Atelier is private.</h1>
-      <p className="text-stone-500 text-sm leading-relaxed max-w-sm mb-2">
-        You're signed in as <span className="text-stone-800 font-medium">{user.email}</span>, but this email hasn't been invited yet.
-      </p>
+      <h1 className="text-3xl font-display font-medium tracking-wide mb-3">Atelier awaits.</h1>
       <p className="text-stone-500 text-sm leading-relaxed max-w-sm mb-10">
-        Ask the wardrobe owner to invite you, then refresh — or sign in with a different account.
+        You're signed in as <span className="text-stone-800 font-medium">{user.email}</span>, but this account doesn't currently have access. Start a 14-day trial to unlock your collection.
       </p>
-      <button onClick={onSignOut} className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg">
-        Sign out
-      </button>
+      <div className="flex flex-col sm:flex-row items-center gap-3 mb-8">
+        <a
+          href="https://myatelier.style/pricing"
+          className="bg-stone-900 text-white px-8 py-3 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg"
+        >
+          Start your trial
+        </a>
+        <button
+          onClick={onSignOut}
+          className="text-sm text-stone-500 hover:text-stone-900 px-6 py-3 transition-colors"
+        >
+          Sign out
+        </button>
+      </div>
+      <p className="text-xs text-stone-400 leading-relaxed max-w-sm">
+        Already a member with a different email, or expecting an invite from the wardrobe owner? Sign out and try again, or write to <a href="mailto:contact@myatelier.style" className="underline hover:text-stone-700">contact@myatelier.style</a>.
+      </p>
     </div>
   );
 }
@@ -13987,10 +13998,11 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
   // Sub-section anchors — same pattern as Insights: long page with many
   // discrete cards, sticky chip nav jumps directly to the relevant one.
   // 'People' only appears for owners (matches the conditional Invited
-  // Friends section).
+  // Friends section). 'Subscription' only appears for non-owners (owners
+  // don't pay).
   const PROFILE_SECTIONS = [
     { id: 'profile-account', label: 'Account' },
-    ...(isOwner ? [{ id: 'profile-people', label: 'People' }] : []),
+    ...(isOwner ? [{ id: 'profile-people', label: 'People' }] : [{ id: 'profile-subscription', label: 'Subscription' }]),
     { id: 'profile-settings', label: 'Settings' },
     { id: 'profile-style', label: 'Style' },
     { id: 'profile-cutouts', label: 'Cutouts' },
@@ -14035,6 +14047,31 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
           <button onClick={signOutUser} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors">
             <LogOut size={14} strokeWidth={1.5} /> Sign out
           </button>
+        </div>
+      )}
+
+      {/* Subscription — non-owners only. Owners don't pay. The customer portal
+          link goes to Lemon Squeezy's hosted billing UI where customers sign
+          in with their email and can update card, change plan, view invoices,
+          or cancel. Per-subscription deep-links exist but are signed and expire,
+          so we link to the generic store entry. */}
+      {!isOwner && (
+        <div id="profile-subscription" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          <h3 className="font-display text-2xl text-stone-900 mb-2">Membership</h3>
+          <p className="text-stone-500 text-sm leading-relaxed mb-6">
+            Update your payment method, view past invoices, change plan, or cancel — all through your secure customer portal.
+          </p>
+          <a
+            href="https://myatelier.lemonsqueezy.com/billing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors"
+          >
+            Manage subscription
+          </a>
+          <p className="text-xs text-stone-400 mt-6 leading-relaxed">
+            Opens in a new tab. You'll sign in with your subscription email to access your account.
+          </p>
         </div>
       )}
 

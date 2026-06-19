@@ -215,6 +215,13 @@ function EditorialHeader({ eyebrow, title, subtitle, right, className = '' }) {
 }
 
 // --- Toast notifications -------------------------------------------------
+// EDITORIAL CARD TOASTS — a luxury app's confirmations shouldn't read
+// as utility chrome. Each toast is a small floating card:
+//   • brass-rule eyebrow with a short tag (e.g., SAVED, WORN, ERROR)
+//   • serif message (display font), display: italic for soft messages
+//   • soft layered shadow + warm-white surface
+// The shape is the same as a polaroid frame in the rest of the app —
+// the toast reads as the same product, not a system alert.
 const ToastContext = createContext({ show: () => {} });
 function useToast() { return useContext(ToastContext); }
 
@@ -222,30 +229,87 @@ function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const show = useCallback((message, opts = {}) => {
     const id = Math.random().toString(36).slice(2);
-    const toast = { id, message, kind: opts.kind || 'default', duration: opts.duration ?? 2600 };
+    // opts.eyebrow overrides the auto-derived eyebrow; lets call sites
+    // pass 'WORN' or 'SHARED' instead of the default kind-based label.
+    const toast = { id, message, kind: opts.kind || 'default', eyebrow: opts.eyebrow || null, duration: opts.duration ?? 2800 };
     setToasts((prev) => [...prev, toast]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), toast.duration);
   }, []);
+  // Default eyebrow per kind. Call sites that want something more
+  // specific (WORN, SCHEDULED, SAVED) pass { eyebrow: '...' }.
+  const eyebrowFor = (t) => t.eyebrow || (
+    t.kind === 'error' ? 'ATTENTION'
+    : t.kind === 'success' ? 'CONFIRMED'
+    : 'NOTED'
+  );
   return (
     <ToastContext.Provider value={{ show }}>
       {children}
-      <div className="fixed left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none"
+      <div className="fixed left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2.5 items-center pointer-events-none w-full px-4 sm:px-0 sm:w-auto sm:max-w-md"
            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}
            aria-live="polite" aria-atomic="true" role="status">
-        {toasts.map((t) => (
-          <div key={t.id}
-            className={`pointer-events-auto px-5 py-3 rounded-full text-sm shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-4 fade-in duration-300 border ${
-              t.kind === 'error' ? 'bg-red-50/95 text-red-900 border-red-200'
-              : t.kind === 'success' ? 'bg-stone-900/95 text-white border-stone-700'
-              : 'bg-white/95 text-stone-900 border-stone-200'
-            }`}
-            role={t.kind === 'error' ? 'alert' : undefined}>
-            {t.message}
-          </div>
-        ))}
+        {toasts.map((t) => {
+          const isError = t.kind === 'error';
+          return (
+            <div key={t.id}
+              className={`pointer-events-auto w-full sm:w-auto sm:min-w-[280px] sm:max-w-md rounded-2xl px-5 py-4 backdrop-blur-md animate-in slide-in-from-bottom-3 fade-in duration-300 ring-1 ${
+                isError
+                  ? 'bg-red-50/95 ring-red-200/70 shadow-[0_2px_8px_rgba(127,29,29,0.08),0_16px_36px_-12px_rgba(127,29,29,0.18)]'
+                  : 'bg-white/95 ring-stone-200/70 shadow-[0_2px_8px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]'
+              }`}
+              role={isError ? 'alert' : undefined}>
+              <div className="flex items-center gap-2.5 mb-1">
+                <span className={`inline-block w-4 h-px ${isError ? 'bg-red-400' : 'bg-brass-400'}`} aria-hidden="true" />
+                <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${isError ? 'text-red-600' : 'text-stone-500'}`}>
+                  {eyebrowFor(t)}
+                </span>
+              </div>
+              <p className={`font-display text-base leading-tight ${isError ? 'text-red-900' : 'text-stone-900'}`}>
+                {t.message}
+              </p>
+            </div>
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );
+}
+
+// useCountUp — animates a numeric value from 0 → `target` over `duration` ms
+// using requestAnimationFrame + an ease-out curve. Returns the current
+// in-flight value (an integer) for direct rendering.
+//
+// The single most luxury-feeling micro-interaction in the app: stat
+// numbers in the Diary header, Insights cards, anywhere they appear
+// will count up instead of just snapping into place on view-mount. The
+// brain perceives this as 'careful' rather than 'static data'.
+//
+// Respects prefers-reduced-motion: when the user has opted out of motion,
+// the hook returns the target instantly with no animation.
+function useCountUp(target, duration = 800) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    const t = Number(target) || 0;
+    // Reduced-motion: snap to final value, no animation.
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setValue(t);
+      return;
+    }
+    let raf = 0;
+    let start = null;
+    const step = (ts) => {
+      if (start === null) start = ts;
+      const elapsed = ts - start;
+      const progress = Math.min(1, elapsed / duration);
+      // ease-out cubic — fast at first, settles softly at target
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(t * eased));
+      if (progress < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
 }
 // ------------------------------------------------------------------------
 
@@ -2426,7 +2490,7 @@ function DigitalWardrobe() {
     await setDoc(doc(userOutfitsRef(user.uid), outfit.id), outfit);
     // Capsule generator handles its own summary toast — don't spam per-look here.
     if (!outfit.capsule) {
-      toast.show(`Look "${outfit.name}" saved`, { kind: 'success' });
+      toast.show(outfit.name, { kind: 'success', eyebrow: 'SAVED' });
     }
   };
   const handleDeleteOutfit = async (id) => {
@@ -2897,10 +2961,10 @@ function DigitalWardrobe() {
       });
       touched++;
     }
-    if (touched === 0) { toast.show('Already logged for today', { kind: 'default' }); return; }
+    if (touched === 0) { toast.show('Already logged for today', { kind: 'default', eyebrow: 'NOTED' }); return; }
     await batch.commit();
     haptic('success');
-    toast.show(`Logged "${outfit.name}" · ${touched} ${touched === 1 ? 'piece' : 'pieces'}`, { kind: 'success' });
+    toast.show(`${outfit.name} · ${touched} ${touched === 1 ? 'piece' : 'pieces'}`, { kind: 'success', eyebrow: 'WORN' });
     // Fire-and-forget Gemini narration. Won't block the wear log.
     try {
       const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
@@ -10807,6 +10871,50 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
   );
 }
 
+// One stat tile inside the Diary header strip — number counts up from 0
+// on mount via useCountUp(). Suffix is the "days" / "wears" qualifier
+// rendered small + grey beside the number. Extracted as its own
+// component so each useCountUp() call has its own animation lifecycle
+// and the parent doesn't re-render on every animation frame.
+function DiaryStatTile({ eyebrow, value, suffix, tone = 'default', children }) {
+  const animated = useCountUp(value);
+  const numberClass = tone === 'brass' && value > 0 ? 'text-brass-600' : tone === 'dim' ? 'text-stone-300' : 'text-stone-900';
+  return (
+    <div>
+      <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">{eyebrow}</p>
+      {children || (
+        <p className={`font-display text-3xl sm:text-4xl leading-none ${numberClass}`}>
+          {animated}
+          {suffix && <span className="text-xs text-stone-500 font-sans ml-1.5 align-middle">{suffix}</span>}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// DiaryStatsRow — the four-up stats grid inside the Diary header card.
+// Wraps four DiaryStatTile children so each gets its own useCountUp
+// animation and the Most Worn tile (a tap-through button) renders as
+// children rather than the default animated number.
+function DiaryStatsRow({ daysCount, wears, streak, mostWorn, onOpenItem }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+      <DiaryStatTile eyebrow="Days logged" value={daysCount} />
+      <DiaryStatTile eyebrow="Total wears" value={wears} />
+      <DiaryStatTile eyebrow="Current streak" value={streak} suffix={`day${streak === 1 ? '' : 's'}`} tone={streak > 0 ? 'brass' : 'dim'} />
+      {mostWorn && (
+        <div className="col-span-2 md:col-span-1">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Most worn</p>
+          <button onClick={() => onOpenItem?.(mostWorn.item.id)} className="text-left group">
+            <p className="font-display text-base sm:text-lg text-stone-900 leading-tight group-hover:text-brass-700 transition-colors truncate">{mostWorn.item.name}</p>
+            <p className="text-[10px] tracking-wider uppercase text-stone-500 mt-1">× {mostWorn.count} wear{mostWorn.count === 1 ? '' : 's'}</p>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // THE DIARY — top-level destination that merges the wear journal AND
 // the planning calendar into one coherent product.
 //
@@ -10933,36 +11041,12 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
         </p>
       </header>
 
-      {/* STATS PANEL — shared by both tabs */}
+      {/* STATS PANEL — shared by both tabs. Numbers count up on mount
+          via useCountUp() for the luxury "this was carefully calculated"
+          feel. Reduced-motion users get the final value instantly. */}
       {wearDiary.length > 0 && (
         <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 sm:p-8 mb-8 smooth-shadow">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-            <div>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Days logged</p>
-              <p className="font-display text-3xl sm:text-4xl text-stone-900 leading-none">{wearDiary.length}</p>
-            </div>
-            <div>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Total wears</p>
-              <p className="font-display text-3xl sm:text-4xl text-stone-900 leading-none">{stats.wears}</p>
-            </div>
-            <div>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Current streak</p>
-              <p className={`font-display text-3xl sm:text-4xl leading-none ${stats.streak > 0 ? 'text-brass-600' : 'text-stone-300'}`}>
-                {stats.streak}
-                <span className="text-xs text-stone-500 font-sans ml-1.5 align-middle">day{stats.streak === 1 ? '' : 's'}</span>
-              </p>
-            </div>
-            {stats.mostWorn && (
-              <div className="col-span-2 md:col-span-1">
-                <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Most worn</p>
-                <button onClick={() => onOpenItem?.(stats.mostWorn.item.id)}
-                  className="text-left group">
-                  <p className="font-display text-base sm:text-lg text-stone-900 leading-tight group-hover:text-brass-700 transition-colors truncate">{stats.mostWorn.item.name}</p>
-                  <p className="text-[10px] tracking-wider uppercase text-stone-500 mt-1">× {stats.mostWorn.count} wear{stats.mostWorn.count === 1 ? '' : 's'}</p>
-                </button>
-              </div>
-            )}
-          </div>
+          <DiaryStatsRow daysCount={wearDiary.length} wears={stats.wears} streak={stats.streak} mostWorn={stats.mostWorn} onOpenItem={onOpenItem} />
         </div>
       )}
 

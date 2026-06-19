@@ -1323,6 +1323,81 @@ Reply with the line only.`;
   }
 }
 
+// generateConciergeReply — multi-turn chat with the user's personal
+// stylist. Builds a single prompt that concatenates system context
+// (wardrobe inventory, most-worn pieces, style profile, owner name,
+// today) + the full conversation history + the next user turn, then
+// asks Gemini to play the stylist.
+//
+// Returns the assistant's reply text. Throws on AI failure so the
+// caller can surface a graceful error in the chat thread.
+async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '' }) {
+  if (!isAIEnabled()) throw new Error('AI is not configured.');
+
+  // Compress the wardrobe into a per-category inventory line. Cap at
+  // ~60 pieces per category to keep the prompt under budget for very
+  // large closets — Gemini's context is generous but we don't want to
+  // burn tokens on accessory minutiae.
+  const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
+  const byCat = {};
+  for (const it of owned) {
+    const cat = it.category || 'Other';
+    if (!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(it);
+  }
+  const inventory = Object.entries(byCat).map(([cat, list]) => {
+    const lines = list.slice(0, 60).map((it) => {
+      const bits = [it.name];
+      if (it.color) bits.push(`(${it.color}${it.brand ? `, ${it.brand}` : ''})`);
+      else if (it.brand) bits.push(`(${it.brand})`);
+      return bits.join(' ');
+    });
+    return `- ${cat.toUpperCase()}: ${lines.join('; ')}`;
+  }).join('\n');
+
+  // Most-worn signal — the stylist should know what the user actually
+  // reaches for so suggestions feel grounded in lived behaviour.
+  const mostWorn = [...owned]
+    .map((it) => ({ it, count: itemWearCount(it) }))
+    .filter((x) => x.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+    .map((x) => `${x.it.name} × ${x.count}`)
+    .join(', ');
+
+  // Saved outfits the stylist can suggest by name.
+  const savedLooks = outfits.slice(0, 30).map((o) => {
+    const ct = Object.values(o).filter((v) => v && typeof v === 'object' && (v.id || Array.isArray(v))).length;
+    return `"${o.name}"${o.intent ? ` (for ${o.intent})` : ''}`;
+  }).join(', ');
+
+  const today = new Date();
+  const todayLabel = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const systemBlock = `You are the personal stylist of ${ownerFirstName || 'the user'}, working from a complete view of their wardrobe. Your voice is warm, considered, decisive. You speak like a trusted couturier — never sycophantic, never corporate. Brief and confident; one short paragraph plus a tidy bullet list when proposing pieces. Avoid filler ("Great question!"), avoid generic style advice. Reference specific pieces by exact name from the inventory below.
+
+Today is ${todayLabel}.
+${styleProfile ? `\nThe client's style profile: ${styleProfile}\n` : ''}
+THE WARDROBE (live inventory — only suggest from this):
+${inventory || '(no items yet)'}
+${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
+${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}
+
+When proposing an outfit, format as:
+A one-sentence rationale, then:
+• [Piece name] — short reason
+• [Piece name] — short reason
+
+When asked anything else (critique, packing, advice), reply in 1-3 short paragraphs of natural prose. No headings, no markdown. Keep it under 180 words unless asked for detail.`;
+
+  const conversationBlock = messages.map((m) => `${m.role === 'user' ? 'CLIENT' : 'STYLIST'}: ${m.text}`).join('\n\n');
+
+  const prompt = `${systemBlock}\n\n──────\n\n${conversationBlock}\n\nSTYLIST:`;
+
+  const reply = await geminiText(prompt, { temperature: 0.75 });
+  return (reply || '').trim();
+}
+
 async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [] }) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
@@ -2242,6 +2317,10 @@ function DigitalWardrobe() {
   // on the next render. Used when navigating in from the Insights diary
   // hand-off — clears itself once consumed.
   const [lookbookInitialTab, setLookbookInitialTab] = useState(null);
+  // Atelier Concierge — AI chat stylist. Opens as a right-edge slide-in
+  // panel; reachable from the sidebar (desktop) and a hero card on the
+  // Wardrobe landing page (mobile + desktop).
+  const [isConciergeOpen, setIsConciergeOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -3063,6 +3142,21 @@ function DigitalWardrobe() {
               </p>
             </div>
             <nav className="space-y-2 flex-1">
+              {/* THE CONCIERGE — flagship AI feature, sits at the top of
+                  the sidebar as the most luxurious entry point. Not a
+                  destination tab (it's an overlay), so we use a plain
+                  button styled to match DesktopNavItem. Brass-coloured
+                  Sparkles icon signals 'special' without screaming. */}
+              <button
+                onClick={() => setIsConciergeOpen(true)}
+                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-stone-700 hover:bg-stone-200/70 hover:text-stone-900 transition-colors duration-200 group"
+              >
+                <span className="w-5 flex items-center justify-center text-brass-500 group-hover:text-brass-600 transition-colors">
+                  <Sparkles size={18} strokeWidth={1.5} />
+                </span>
+                <span className="text-sm font-medium">Concierge</span>
+                <span className="ml-auto text-[9px] tracking-[0.25em] uppercase text-stone-400 group-hover:text-brass-500 transition-colors">Ask</span>
+              </button>
               <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
@@ -3117,7 +3211,7 @@ function DigitalWardrobe() {
                 // position:sticky for descendants (they end up scoped to this
                 // wrapper instead of the main scroll ancestor). Fade-in only.
                 <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
-                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} />}
+                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
                       mode="studio"
@@ -3326,6 +3420,16 @@ function DigitalWardrobe() {
               onRegenerate={(intentKey) => handleVaryOutfit(varySourceOutfit, intentKey)}
               onSave={handleSaveVariation}
               onClose={dismissVariation}
+            />
+          )}
+
+          {isConciergeOpen && (
+            <AtelierConcierge
+              onClose={() => setIsConciergeOpen(false)}
+              items={liveItems}
+              outfits={outfits}
+              styleProfile={summariseStyleProfile(measurements)}
+              ownerFirstName={(user?.displayName || '').split(' ')[0] || ''}
             />
           )}
 
@@ -4473,7 +4577,7 @@ function sortWardrobeItems(items, sortBy) {
   return arr.sort((a, b) => favBoost(a, b) || comparator(a, b));
 }
 
-function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0 }) {
+function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const enterSelectMode = (firstId = null) => {
@@ -4767,6 +4871,18 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           <p className="text-stone-500 mt-2 md:mt-3 lg:mt-1 text-xs md:text-sm tracking-wide uppercase font-medium">
             {items.length} Pieces Curated
           </p>
+          {/* THE CONCIERGE — small inline CTA right under the greeting.
+              Most discoverable on landing without being a banner-style
+              intrusion. Brass icon signals 'special'; pill matches the
+              app's standard secondary-button shape. Hidden until the
+              user has items (the Concierge needs context to be useful). */}
+          {onOpenConcierge && items.length >= 3 && (
+            <button onClick={onOpenConcierge}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-200 hover:border-brass-400 text-stone-700 hover:text-brass-700 transition-colors duration-200 group">
+              <Sparkles size={14} strokeWidth={1.5} className="text-brass-500 group-hover:text-brass-600 transition-colors" />
+              <span className="text-[11px] tracking-widest uppercase font-medium">Ask the Concierge</span>
+            </button>
+          )}
         </div>
         {/* Select button kept in header on mobile (the bottom nav has no Select).
             On desktop, Select has moved into the sticky aside next to Add — kept
@@ -11649,6 +11765,252 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
       )}
     </div>,
     document.body
+  );
+}
+
+// ─── THE ATELIER CONCIERGE ─────────────────────────────────────────────
+// Conversational AI stylist. Right-edge slide-in panel (480-560px wide
+// on tablet+ ; full-screen on mobile) — feels like opening a hotel
+// concierge desk. Multi-turn chat with Gemini using the full wardrobe
+// as context. Time-of-day greeting opens each session.
+//
+// Architecture:
+//   • messages state: [{role: 'user'|'assistant', text}]
+//   • busy flag while a reply is in flight
+//   • error flag if a reply fails (offers retry of last user message)
+//   • input controlled with submit-on-enter (shift+enter = new line)
+//   • auto-scrolls to bottom on new messages
+function AtelierConcierge({ onClose, items, outfits, styleProfile, ownerFirstName }) {
+  useEscapeKey(onClose);
+
+  // Time-of-day greeting — sets the tone before the user even types.
+  // Hour ranges deliberately broad so the greeting feels right at edges.
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    const first = ownerFirstName || '';
+    if (h < 5) return `Up late${first ? `, ${first}` : ''}. What are you dressing for?`;
+    if (h < 12) return `Good morning${first ? `, ${first}` : ''}. What's the day asking of you?`;
+    if (h < 17) return `Good afternoon${first ? `, ${first}` : ''}. How can I help you dress?`;
+    if (h < 22) return `Good evening${first ? `, ${first}` : ''}. Are we dressing for something?`;
+    return `Late evening${first ? `, ${first}` : ''}. Planning tomorrow, or out tonight?`;
+  }, [ownerFirstName]);
+
+  const [messages, setMessages] = useState(() => [{ role: 'assistant', text: greeting }]);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const scrollRef = React.useRef(null);
+  const textareaRef = React.useRef(null);
+
+  // Auto-scroll the chat to the bottom whenever messages change.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [messages, busy]);
+
+  // Focus the input when the panel opens.
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  const send = async (textOverride) => {
+    const text = (textOverride ?? input).trim();
+    if (!text || busy) return;
+    const next = [...messages, { role: 'user', text }];
+    setMessages(next);
+    setInput('');
+    setBusy(true);
+    setError(null);
+    try {
+      const reply = await generateConciergeReply({
+        messages: next,
+        items,
+        outfits,
+        styleProfile,
+        ownerFirstName,
+      });
+      setMessages((prev) => [...prev, { role: 'assistant', text: reply || '(no reply)' }]);
+    } catch (err) {
+      setError(err?.message || 'Something interrupted us. Try again?');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const retry = async () => {
+    // Re-send the last user message (the one that failed).
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+    if (!lastUser) return;
+    // Drop any trailing failed assistant placeholder if exists; messages
+    // already excludes it since we never added it on error.
+    setError(null);
+    setBusy(true);
+    try {
+      const reply = await generateConciergeReply({
+        messages,
+        items,
+        outfits,
+        styleProfile,
+        ownerFirstName,
+      });
+      setMessages((prev) => [...prev, { role: 'assistant', text: reply || '(no reply)' }]);
+    } catch (err) {
+      setError(err?.message || 'Still no luck — try again in a moment.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    send();
+  };
+
+  const onKeyDown = (e) => {
+    // Enter sends; Shift+Enter newlines (textarea default).
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
+
+  // Suggested first prompts — visible only at greeting time (no user
+  // turns yet) so the user has somewhere to start. Each is a single tap.
+  const STARTER_PROMPTS = [
+    'What should I wear today?',
+    'Help me pack for a 4-day trip.',
+    'Suggest something for a dinner out.',
+    'Which pieces have I worn least?',
+  ];
+
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex animate-in fade-in duration-200" onClick={onClose}>
+      {/* Scrim */}
+      <div className="absolute inset-0 bg-stone-950/40 backdrop-blur-sm" aria-hidden="true" />
+
+      {/* Slide-in panel from the right edge. On mobile this fills the
+          viewport; on tablet+ it sits as a 480-560px concierge desk. */}
+      <div
+        className="ml-auto relative w-full sm:w-[480px] lg:w-[560px] bg-[#F7F5F2] shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label="The Atelier Concierge"
+      >
+        {/* HEADER — brass-rule eyebrow + serif title + close */}
+        <header className="border-b border-stone-200/60 pt-safe">
+          <div className="px-6 py-5 sm:px-8 sm:py-6">
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="brass-rule" aria-hidden="true" />
+                  <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500 font-medium">The Concierge</span>
+                </div>
+                <h2 className="font-display text-2xl sm:text-3xl text-stone-900 tracking-tight leading-tight">
+                  Your private stylist
+                </h2>
+              </div>
+              <button onClick={onClose}
+                className="shrink-0 w-9 h-9 rounded-full text-stone-500 hover:text-stone-900 hover:bg-stone-200/70 flex items-center justify-center transition-colors"
+                aria-label="Close concierge">
+                <X size={18} strokeWidth={1.5} />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* MESSAGES — vertical scroll, two bubble styles */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-5">
+          {messages.map((m, i) => (
+            <ConciergeMessage key={i} role={m.role} text={m.text} />
+          ))}
+          {busy && (
+            <div className="flex items-center gap-2 text-stone-400 text-sm">
+              <span className="inline-flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '300ms' }} />
+              </span>
+              <span className="font-display italic text-stone-400">Thinking…</span>
+            </div>
+          )}
+          {error && (
+            <div className="bg-red-50 border border-red-200/70 rounded-2xl p-4">
+              <p className="text-sm text-red-900">{error}</p>
+              <button onClick={retry}
+                className="mt-2 text-[11px] tracking-widest uppercase text-red-700 hover:text-red-900">
+                Try again
+              </button>
+            </div>
+          )}
+          {messages.length === 1 && !busy && (
+            // Starter prompts on first open only. Lets the user start
+            // without typing — feels like a stylist offering options.
+            <div className="space-y-2 pt-2">
+              <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-3">Or pick a starting point</p>
+              {STARTER_PROMPTS.map((p) => (
+                <button key={p} onClick={() => send(p)}
+                  className="block w-full text-left px-4 py-3 rounded-2xl bg-white border border-stone-200/70 hover:border-brass-300 text-sm text-stone-700 hover:text-brass-700 transition-colors font-display italic">
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* INPUT — auto-grow textarea, enter to send */}
+        <form onSubmit={onSubmit}
+          className="border-t border-stone-200/60 p-4 sm:p-5 bg-white/60 backdrop-blur"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}>
+          <div className="flex items-end gap-2 max-w-3xl mx-auto">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              rows={1}
+              placeholder="Ask anything…"
+              disabled={busy}
+              className="flex-1 min-h-[44px] max-h-32 px-4 py-2.5 rounded-2xl border border-stone-300 focus:border-brass-400 focus:outline-none focus:ring-2 focus:ring-brass-300/40 bg-white text-sm text-stone-900 resize-none disabled:opacity-50"
+              style={{ fontSize: '16px' /* avoid iOS auto-zoom */ }}
+            />
+            <button type="submit"
+              disabled={busy || !input.trim()}
+              className="shrink-0 px-5 h-11 rounded-full bg-stone-900 text-white text-[11px] tracking-widest uppercase font-medium hover:bg-stone-700 disabled:opacity-30 disabled:hover:bg-stone-900 transition-colors">
+              Ask
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// Single chat bubble. The assistant's voice gets editorial treatment
+// (white card with brass-rule shoulder eyebrow); the client's voice is
+// quieter (dark pill aligned right). Whitespace-pre-line preserves the
+// bullet lists Gemini returns.
+function ConciergeMessage({ role, text }) {
+  if (role === 'assistant') {
+    return (
+      <div className="flex flex-col items-start max-w-[90%]">
+        <div className="flex items-center gap-2 mb-1.5 px-1">
+          <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
+          <span className="text-[9px] tracking-[0.28em] uppercase text-stone-500">Stylist</span>
+        </div>
+        <div className="bg-white rounded-2xl rounded-tl-md ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_12px_-6px_rgba(28,25,23,0.12)] px-5 py-4">
+          <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">{text}</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-end max-w-[85%] ml-auto">
+      <div className="bg-stone-900 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
+        <p className="text-sm leading-relaxed whitespace-pre-line">{text}</p>
+      </div>
+    </div>
   );
 }
 

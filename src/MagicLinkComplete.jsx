@@ -106,7 +106,7 @@ export default function MagicLinkComplete() {
         ) : (
           <>
             <p className="text-stone-500 text-sm tracking-wide mb-10 text-center max-w-sm">
-              Confirm the email you used at checkout to complete sign-in.
+              Confirm the email address this link was sent to.
             </p>
 
             <form onSubmit={handleSubmit} className="w-full max-w-sm flex flex-col gap-3">

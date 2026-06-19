@@ -1,6 +1,6 @@
 import { verifyLemonSqueezySignature } from '../lib/hmac.ts';
 import { getGoogleAccessToken, parseServiceAccount } from '../lib/google-auth.ts';
-import { findOrCreateUserByEmail, sendSignInLink } from '../lib/firebase-identity-toolkit.ts';
+import { findOrCreateUserByEmail, updateUserDisplayName, sendSignInLink } from '../lib/firebase-identity-toolkit.ts';
 import { upsertSubscription, upsertSubscriberAccess, isEventProcessed, markEventProcessed, type SubscriptionRecord } from '../lib/firestore.ts';
 
 interface Env {
@@ -87,6 +87,10 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const attrs = payload.data?.attributes;
   const subscriptionId = String(payload.data?.id ?? '');
   const email = attrs?.user_email;
+  // LS sends customer's full name as `user_name`; we use it as the Firebase
+  // Auth displayName so the app greeting reads "Good morning, Sibylle"
+  // instead of "Good morning, sibylle.moeller".
+  const userName: string | undefined = attrs?.user_name;
 
   if (!attrs || !subscriptionId || !email) {
     console.warn(`[webhook] rejected: missing required fields (subId=${subscriptionId}, hasAttrs=${!!attrs}, hasEmail=${!!email})`);
@@ -94,6 +98,25 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   }
 
   console.log(`[webhook] processing ${eventName} for email=${email} subId=${subscriptionId}`);
+
+  // Helper: provision the user AND backfill displayName if the existing user
+  // doesn't have one. New users get displayName at creation time via
+  // findOrCreateUserByEmail; existing users (pre-displayName-feature) get
+  // theirs set on the next subscription event of any kind.
+  async function findOrCreateUserWithName(em: string): Promise<{ uid: string; created: boolean }> {
+    const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, em, userName);
+    if (!user.created && userName && !user.hasDisplayName) {
+      try {
+        await updateUserDisplayName(token, env.FIREBASE_PROJECT_ID, user.uid, userName);
+        console.log(`[webhook] backfilled displayName for uid=${user.uid}`);
+      } catch (err: any) {
+        // Non-fatal — the user still gets access; greeting just falls back to
+        // the email-parsing logic in the app until next event.
+        console.warn(`[webhook] displayName backfill failed for uid=${user.uid}: ${err?.message || err}`);
+      }
+    }
+    return { uid: user.uid, created: user.created };
+  }
 
   const subscriptionRecord: SubscriptionRecord = {
     subscriptionId,
@@ -109,7 +132,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   try {
     switch (eventName) {
       case 'subscription_created': {
-        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        const user = await findOrCreateUserWithName(email);
         subscriptionRecord.userId = user.uid;
         console.log(`[webhook] ${user.created ? 'created' : 'found'} Firebase user uid=${user.uid}`);
         await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
@@ -121,7 +144,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       case 'subscription_updated':
       case 'subscription_resumed':
       case 'subscription_payment_success': {
-        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        const user = await findOrCreateUserWithName(email);
         subscriptionRecord.userId = user.uid;
         await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
         await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
@@ -129,7 +152,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
         break;
       }
       case 'subscription_cancelled': {
-        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        const user = await findOrCreateUserWithName(email);
         subscriptionRecord.userId = user.uid;
         subscriptionRecord.status = 'cancelled';
         subscriptionRecord.cancelledAt = new Date().toISOString();
@@ -140,7 +163,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       }
       case 'subscription_expired':
       case 'subscription_payment_failed': {
-        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        const user = await findOrCreateUserWithName(email);
         subscriptionRecord.userId = user.uid;
         subscriptionRecord.status = eventName === 'subscription_expired' ? 'expired' : 'past_due';
         await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);

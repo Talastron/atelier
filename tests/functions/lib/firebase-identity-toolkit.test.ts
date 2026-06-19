@@ -1,31 +1,76 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { findOrCreateUserByEmail, sendSignInLink } from '@functions/lib/firebase-identity-toolkit.ts';
+import { findOrCreateUserByEmail, updateUserDisplayName, sendSignInLink } from '@functions/lib/firebase-identity-toolkit.ts';
 
 describe('findOrCreateUserByEmail', () => {
   beforeEach(() => { vi.stubGlobal('fetch', vi.fn()); });
   afterEach(() => { vi.unstubAllGlobals(); });
 
-  it('returns existing user when lookup finds one', async () => {
+  it('returns existing user with hasDisplayName=true when set', async () => {
+    (fetch as any).mockResolvedValueOnce(
+      new Response(JSON.stringify({ users: [{ localId: 'existing-uid', email: 'a@b.com', displayName: 'Alice' }] }), { status: 200 })
+    );
+    const result = await findOrCreateUserByEmail('token', 'project', 'a@b.com');
+    expect(result).toEqual({ uid: 'existing-uid', email: 'a@b.com', created: false, hasDisplayName: true });
+  });
+
+  it('returns existing user with hasDisplayName=false when missing', async () => {
     (fetch as any).mockResolvedValueOnce(
       new Response(JSON.stringify({ users: [{ localId: 'existing-uid', email: 'a@b.com' }] }), { status: 200 })
     );
     const result = await findOrCreateUserByEmail('token', 'project', 'a@b.com');
-    expect(result).toEqual({ uid: 'existing-uid', email: 'a@b.com', created: false });
+    expect(result).toEqual({ uid: 'existing-uid', email: 'a@b.com', created: false, hasDisplayName: false });
   });
 
-  it('creates a new user when lookup returns no matches', async () => {
+  it('creates a new user without displayName when none provided', async () => {
     (fetch as any)
       .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ localId: 'new-uid' }), { status: 200 }));
 
     const result = await findOrCreateUserByEmail('token', 'project', 'a@b.com');
-    expect(result).toEqual({ uid: 'new-uid', email: 'a@b.com', created: true });
+    expect(result).toEqual({ uid: 'new-uid', email: 'a@b.com', created: true, hasDisplayName: false });
     expect(fetch).toHaveBeenCalledTimes(2);
+
+    // Verify the create body does NOT include displayName
+    const createBody = JSON.parse((fetch as any).mock.calls[1][1].body);
+    expect(createBody.displayName).toBeUndefined();
+  });
+
+  it('creates a new user with displayName when provided', async () => {
+    (fetch as any)
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ localId: 'new-uid' }), { status: 200 }));
+
+    const result = await findOrCreateUserByEmail('token', 'project', 'a@b.com', 'Alice Smith');
+    expect(result).toEqual({ uid: 'new-uid', email: 'a@b.com', created: true, hasDisplayName: true });
+
+    const createBody = JSON.parse((fetch as any).mock.calls[1][1].body);
+    expect(createBody.displayName).toBe('Alice Smith');
   });
 
   it('throws when lookup returns non-2xx', async () => {
     (fetch as any).mockResolvedValueOnce(new Response('boom', { status: 500 }));
     await expect(findOrCreateUserByEmail('token', 'project', 'a@b.com')).rejects.toThrow('Lookup failed');
+  });
+});
+
+describe('updateUserDisplayName', () => {
+  beforeEach(() => { vi.stubGlobal('fetch', vi.fn()); });
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('calls accounts:update with localId and displayName', async () => {
+    (fetch as any).mockResolvedValueOnce(new Response('{}', { status: 200 }));
+    await updateUserDisplayName('token', 'project', 'uid_1', 'Alice');
+
+    const call = (fetch as any).mock.calls[0];
+    expect(call[0]).toContain('accounts:update');
+    const body = JSON.parse(call[1].body);
+    expect(body.localId).toBe('uid_1');
+    expect(body.displayName).toBe('Alice');
+  });
+
+  it('throws when update returns non-2xx', async () => {
+    (fetch as any).mockResolvedValueOnce(new Response('not found', { status: 404 }));
+    await expect(updateUserDisplayName('token', 'project', 'uid_1', 'Alice')).rejects.toThrow('updateUserDisplayName failed');
   });
 });
 

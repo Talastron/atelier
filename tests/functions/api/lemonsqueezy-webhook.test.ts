@@ -10,7 +10,8 @@ vi.mock('@functions/lib/google-auth.ts', () => ({
   parseServiceAccount: vi.fn().mockReturnValue({ client_email: 'x', private_key: 'y' }),
 }));
 vi.mock('@functions/lib/firebase-identity-toolkit.ts', () => ({
-  findOrCreateUserByEmail: vi.fn().mockResolvedValue({ uid: 'uid_1', email: 'a@b.com', created: true }),
+  findOrCreateUserByEmail: vi.fn().mockResolvedValue({ uid: 'uid_1', email: 'a@b.com', created: true, hasDisplayName: true }),
+  updateUserDisplayName: vi.fn().mockResolvedValue(undefined),
   sendSignInLink: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@functions/lib/firestore.ts', () => ({
@@ -76,7 +77,8 @@ describe('lemonsqueezy-webhook onRequestPost', () => {
   it('on subscription_created: creates user, writes subscription + access, sends magic link', async () => {
     const response = await onRequestPost({ request: makeRequest(SUB_CREATED_EVENT), env: ENV } as any);
     expect(response.status).toBe(200);
-    expect(findOrCreateUserByEmail).toHaveBeenCalledWith('fake-token', 'project', 'a@b.com');
+    // 4th arg is the LS user_name → Firebase displayName. Test event omits it so it's undefined.
+    expect(findOrCreateUserByEmail).toHaveBeenCalledWith('fake-token', 'project', 'a@b.com', undefined);
     expect(upsertSubscription).toHaveBeenCalledWith(
       'fake-token',
       'project',
@@ -123,6 +125,23 @@ describe('lemonsqueezy-webhook onRequestPost', () => {
       'fake-token',
       'project',
       expect.objectContaining({ status: 'expired' })
+    );
+  });
+
+  it('passes LS user_name through as Firebase displayName', async () => {
+    const eventWithName = {
+      ...SUB_CREATED_EVENT,
+      data: {
+        ...SUB_CREATED_EVENT.data,
+        attributes: { ...SUB_CREATED_EVENT.data.attributes, user_name: 'Sibylle Moller-Sherwood' },
+      },
+    };
+    await onRequestPost({ request: makeRequest(eventWithName), env: ENV } as any);
+    expect(findOrCreateUserByEmail).toHaveBeenCalledWith(
+      'fake-token',
+      'project',
+      'a@b.com',
+      'Sibylle Moller-Sherwood'
     );
   });
 });

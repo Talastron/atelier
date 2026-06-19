@@ -1285,6 +1285,44 @@ Reply with the name only — no preamble, no explanation.`;
     .slice(0, 40);
 }
 
+// generateWearNarration — when the user logs a wear with a photo, ask
+// Gemini for ONE evocative memory line in the voice of a personal stylist
+// keeping a journal. Stored on wornPhotos[i].caption and rendered as an
+// italic pull quote in the Diary alongside the photo.
+//
+// Returns null on any failure — narration is purely additive flavour; if
+// the AI is unavailable or rate-limited, the photo just goes in without
+// a caption (no error surfaced to user).
+async function generateWearNarration({ outfit, intent = '', eventName = '', dateISO, itemNames = [] }) {
+  if (!isAIEnabled()) return null;
+  try {
+    const d = new Date(dateISO + 'T00:00:00');
+    const weekday = d.toLocaleDateString('en-GB', { weekday: 'long' });
+    const monthDay = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+    const pieces = itemNames.slice(0, 6).join(', ');
+    const prompt = `You are a personal stylist keeping a private journal for your client. Write ONE evocative memory line for today's wear — no more than 90 characters, no quotes, no preamble.
+
+The line should evoke the day's mood and how the look felt. Avoid generic praise ("looked great", "stunning"). Lean concrete: weather, occasion, a tactile note, a small observation. Match a tone of quiet luxury.
+
+Today: ${weekday} ${monthDay}
+Look: "${outfit?.name || 'Untitled'}"${intent ? ` (styled for ${intent})` : ''}${eventName ? ` · ${eventName}` : ''}
+Pieces: ${pieces || '—'}
+
+Examples of the tone wanted:
+- A bright Thursday, linen-light and unhurried.
+- A late lunch on the terrace; the navy did most of the work.
+- Soft city wear for a meeting that ran long but felt easy.
+- The kind of look that means business without saying so.
+
+Reply with the line only.`;
+    const result = await geminiText(prompt, { temperature: 0.85 });
+    if (!result) return null;
+    return result.trim().split('\n')[0].replace(/^["'`]+|["'`]+$/g, '').slice(0, 110);
+  } catch {
+    return null;
+  }
+}
+
 async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [] }) {
   if (!isAIEnabled()) throw new Error('AI is not configured.');
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
@@ -10954,7 +10992,12 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
           group.outfit = out;
           if (sched.eventName) group.eventName = sched.eventName;
           const photo = (out.wornPhotos || []).find((p) => p.date === group.date);
-          if (photo) group.photo = photo.image;
+          if (photo) {
+            group.photo = photo.image;
+            // AI wear narration — italic pull quote rendered next to the
+            // photo in the Diary. Generated when the photo is uploaded.
+            if (photo.caption) group.photoCaption = photo.caption;
+          }
         }
       }
     }
@@ -11174,16 +11217,31 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
 
                             <div className="min-w-0 space-y-3 pt-2">
                               {day.photo && (
-                                <button
-                                  type="button"
-                                  onClick={() => setLightboxPhoto({ src: day.photo, date: day.date })}
-                                  className="block w-full max-w-2xl group"
-                                  aria-label="View larger"
-                                >
-                                  <div className="aspect-[4/5] sm:aspect-[3/2] rounded-2xl overflow-hidden bg-stone-100 ring-1 ring-stone-200/60 shadow-[0_2px_8px_rgba(28,25,23,0.06),0_12px_32px_-12px_rgba(28,25,23,0.18)] group-hover:shadow-[0_4px_12px_rgba(28,25,23,0.08),0_20px_44px_-12px_rgba(28,25,23,0.24)] transition-shadow duration-300">
-                                    <img src={day.photo} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                                  </div>
-                                </button>
+                                <div className="max-w-2xl">
+                                  <button
+                                    type="button"
+                                    onClick={() => setLightboxPhoto({ src: day.photo, date: day.date, caption: day.photoCaption })}
+                                    className="block w-full group"
+                                    aria-label="View larger"
+                                  >
+                                    <div className="aspect-[4/5] sm:aspect-[3/2] rounded-2xl overflow-hidden bg-stone-100 ring-1 ring-stone-200/60 shadow-[0_2px_8px_rgba(28,25,23,0.06),0_12px_32px_-12px_rgba(28,25,23,0.18)] group-hover:shadow-[0_4px_12px_rgba(28,25,23,0.08),0_20px_44px_-12px_rgba(28,25,23,0.24)] transition-shadow duration-300">
+                                      <img src={day.photo} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                    </div>
+                                  </button>
+                                  {/* AI WEAR NARRATION — italic memory line
+                                      generated when the photo was uploaded.
+                                      Brass-rule eyebrow signals 'stylist's
+                                      note' so the user reads it as voice,
+                                      not auto-summary. */}
+                                  {day.photoCaption && (
+                                    <div className="mt-3 flex items-baseline gap-2.5">
+                                      <span className="inline-block w-4 h-px bg-brass-400 shrink-0 translate-y-2" aria-hidden="true" />
+                                      <p className="font-display italic text-stone-700 leading-relaxed text-sm sm:text-base">
+                                        {day.photoCaption}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
                               )}
 
                               <div className="flex gap-2 sm:gap-2.5 flex-wrap">
@@ -11241,11 +11299,18 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
             aria-label="Close photo">
             <X size={20} strokeWidth={1.5} />
           </button>
-          <img src={lightboxPhoto.src} alt="" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          <img src={lightboxPhoto.src} alt="" className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()} />
-          <p className="absolute bottom-4 left-0 right-0 text-center text-[10px] tracking-[0.3em] uppercase text-white/60">
-            {new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+          <div className="absolute bottom-6 left-0 right-0 text-center px-6 space-y-2">
+            {lightboxPhoto.caption && (
+              <p className="font-display italic text-white/90 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+                {lightboxPhoto.caption}
+              </p>
+            )}
+            <p className="text-[10px] tracking-[0.3em] uppercase text-white/60">
+              {new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -11568,11 +11633,18 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
             aria-label="Close photo">
             <X size={20} strokeWidth={1.5} />
           </button>
-          <img src={lightboxPhoto.src} alt="" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          <img src={lightboxPhoto.src} alt="" className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()} />
-          <p className="absolute bottom-4 left-0 right-0 text-center text-[10px] tracking-[0.3em] uppercase text-white/60">
-            {new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
+          <div className="absolute bottom-6 left-0 right-0 text-center px-6 space-y-2">
+            {lightboxPhoto.caption && (
+              <p className="font-display italic text-white/90 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto">
+                {lightboxPhoto.caption}
+              </p>
+            )}
+            <p className="text-[10px] tracking-[0.3em] uppercase text-white/60">
+              {new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
         </div>
       )}
     </div>,
@@ -11927,13 +11999,32 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const handleAddWornPhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !onSaveOutfit) return;
-    if (wornPhotos.length >= 6) { toast.show('6 photos max per look', { kind: 'error' }); return; }
+    if (wornPhotos.length >= 6) { toast.show('6 photos max per look', { kind: 'error', eyebrow: 'LIMIT' }); return; }
     setPhotoBusy(true);
     try {
       const dataUrl = await compressImageToDataUrl(file, { maxWidth: 700, maxBytes: 80_000, enhance: false });
-      const next = [...wornPhotos, { date: todayISO(), image: dataUrl }];
+      const today = todayISO();
+      // Save the photo immediately so the UI updates fast; then narrate
+      // in the background and patch the caption in once Gemini responds.
+      // If narration fails, the photo just sits without a caption — no
+      // error surfaced. AI is additive flavour, not a critical path.
+      const photoEntry = { date: today, image: dataUrl };
+      const next = [...wornPhotos, photoEntry];
       await onSaveOutfit({ ...outfit, wornPhotos: next });
-      toast.show('Photo added', { kind: 'success' });
+      toast.show('Photo added', { kind: 'success', eyebrow: 'CAPTURED' });
+      const itemNames = pieces.map((p) => p.name);
+      const sched = (typeof window !== 'undefined') ? null : null; // no schedule lookup in this scope
+      const caption = await generateWearNarration({
+        outfit,
+        intent: outfit?.intent || '',
+        eventName: '',
+        dateISO: today,
+        itemNames,
+      });
+      if (caption) {
+        const patched = next.map((p, i) => i === next.length - 1 ? { ...p, caption } : p);
+        await onSaveOutfit({ ...outfit, wornPhotos: patched });
+      }
     } catch (err) {
       toast.show(err?.message || 'Could not add photo', { kind: 'error' });
     } finally {

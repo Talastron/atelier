@@ -9,13 +9,16 @@
     "build": "pnpm -r build",
     "build:marketing": "pnpm --filter marketing build",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "jose": "^5.9.6"
   },
   "devDependencies": {
-    "prettier": "^3.4.2"
+    "@vitest/coverage-v8": "^4.0.0",
+    "prettier": "^3.4.2",
+    "vitest": "^4.0.0"
   },
   "engines": {
     "node": ">=20",

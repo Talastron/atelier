@@ -1737,8 +1737,22 @@ function getGreeting() {
 
 function firstName(user) {
   if (!user) return '';
+  // Best: Firebase Auth displayName (set by Google OAuth, or by the LS webhook
+  // for paid subscribers). Take the first word.
   if (user.displayName) return user.displayName.split(' ')[0];
-  if (user.email) return user.email.split('@')[0];
+  // Fallback for users without displayName (older subscribers, or anyone
+  // signed in via magic link before the webhook started writing displayName).
+  // Extract a sensible first name from the email local-part:
+  //   sibylle.moeller@gmail.com  → "Sibylle"
+  //   john_doe@example.com       → "John"
+  //   chris-smith@example.com    → "Chris"
+  //   jane@example.com           → "Jane"
+  if (user.email) {
+    const local = user.email.split('@')[0];
+    const firstChunk = local.split(/[._-]/)[0];
+    if (!firstChunk) return '';
+    return firstChunk.charAt(0).toUpperCase() + firstChunk.slice(1).toLowerCase();
+  }
   return '';
 }
 

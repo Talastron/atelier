@@ -1,8 +1,23 @@
 ---
+// apps/marketing/src/pages/pricing.astro
+//
+// "The Keys to Atelier" — the editorial home for the brand phrase.
+//
+// Structure:
+//   1. Hero — eyebrow, the brand-phrase headline, considered subhead, trial line
+//   2. Pricing cards — Monthly + Annual side by side, Annual visually featured
+//   3. What's inside — six short lines that justify the price by naming what
+//      membership actually unlocks (the Concierge, the Lookbook, etc.)
+//   4. Trust line — refund + cancel + VAT, set quietly at the base
+//
+// The hero takes a full first viewport (`min-height: 90vh`) so the brand
+// phrase has the room to land before any pricing pressure hits.
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import { BrassRule } from '@atelier/ui';
+import { PricingInsideList } from '../components/PricingInsideList.jsx';
+import { ChevronRight } from 'lucide-react';
 
 // Lemon Squeezy product URL (Atelier Membership — covers both Monthly & Annual variants).
 // The customer picks Monthly vs Annual on the LS-hosted checkout page.
@@ -13,69 +28,236 @@ const LS_CHECKOUT_URL = 'https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
 // 1809234 = Monthly, 1809222 = Annual
 ---
 
-<Base title="Pricing — Atelier">
+<Base title="The Keys to Atelier — Membership">
   <Nav />
-  <main
-    class="mx-auto"
-    style="max-width: var(--atelier-container-max); padding-top: 10rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
-  >
-    <div class="text-center mb-16">
-      <div class="flex items-center justify-center gap-3 mb-6">
-        <BrassRule client:load />
-        <p class="text-xs uppercase text-stone-500 font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow);">
-          Membership
-        </p>
-        <BrassRule client:load />
-      </div>
-      <h1
-        class="text-5xl md:text-6xl tracking-tight mb-6"
-        style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+  <main>
+    {/* ── Hero: The Keys to Atelier ────────────────────────────────── */}
+    <section
+      class="relative text-center flex flex-col items-center justify-center"
+      style="min-height: 90vh; padding-top: clamp(7rem, 12vw, 10rem); padding-bottom: clamp(3rem, 5vw, 5rem); padding-inline: var(--atelier-page-padding);"
+    >
+      {/* Soft brass atmosphere — same motif as the home hero, ties the
+          two pages together as one studio. */}
+      <div
+        aria-hidden="true"
+        class="absolute pointer-events-none"
+        style="top: 10%; left: 50%; transform: translateX(-50%); width: 60%; height: 50%; background: radial-gradient(ellipse at center, rgba(212, 179, 120, 0.07) 0%, transparent 65%);"
+      />
+
+      <div
+        class="relative w-full mx-auto"
+        style="max-width: var(--atelier-container-max);"
       >
-        One considered membership.
-      </h1>
-      <p class="text-stone-500 text-lg max-w-2xl mx-auto" style="line-height: var(--atelier-leading-body);">
-        Begin with a 14-day trial. No card required.
+        {/* Editorial mast */}
+        <div class="flex items-center justify-center gap-4 mb-6">
+          <BrassRule client:load />
+          <p
+            class="text-[10px] uppercase font-medium"
+            style="letter-spacing: 0.32em; color: var(--atelier-brass-600);"
+          >
+            Membership · MMXXVI
+          </p>
+          <BrassRule client:load />
+        </div>
+
+        {/* The brand-phrase headline. Period at the end so it lands like a
+            statement, not an invitation banner. */}
+        <h1
+          class="mx-auto"
+          style="font-family: var(--atelier-font-display); font-size: clamp(2.5rem, 6vw, 5.5rem); line-height: 1.02; letter-spacing: -0.015em; color: var(--atelier-stone-900); max-width: 14ch; margin-bottom: clamp(1.5rem, 2.5vw, 2rem);"
+        >
+          The <em style="font-weight: 400;">Keys</em> to Atelier.
+        </h1>
+
+        {/* Considered subhead — what membership actually means, written so
+            it reads as a letter from the studio rather than a pitch. */}
+        <p
+          class="mx-auto"
+          style="color: var(--atelier-stone-500); font-size: clamp(1.0625rem, 1.4vw, 1.25rem); line-height: 1.6; max-width: 54ch; margin-bottom: clamp(1.75rem, 2.5vw, 2.25rem);"
+        >
+          An invitation to the studio. A private stylist on call, your considered closet
+          finally on the page, and the small luxuries that turn a wardrobe into a practice.
+        </p>
+
+        {/* Trial line — small, factual, no card required */}
+        <p
+          class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full"
+          style="background: rgba(212, 179, 120, 0.12); border: 1px solid rgba(212, 179, 120, 0.3); color: var(--atelier-brass-600); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600;"
+        >
+          <span
+            aria-hidden="true"
+            style="width: 5px; height: 5px; border-radius: 50%; background: var(--atelier-brass-600);"
+          />
+          14-day trial · no card required
+        </p>
+
+        {/* Scroll cue toward the cards below */}
+        <div class="mt-12 flex flex-col items-center gap-2">
+          <span
+            class="text-[10px] uppercase"
+            style="letter-spacing: 0.3em; color: var(--atelier-stone-400);"
+          >
+            Choose your terms
+          </span>
+          <span
+            aria-hidden="true"
+            style="display: inline-block; width: 1px; height: 28px; background: linear-gradient(to bottom, var(--atelier-stone-300), transparent);"
+          />
+        </div>
+      </div>
+    </section>
+
+    {/* ── Pricing cards ─────────────────────────────────────────────── */}
+    <section
+      class="mx-auto"
+      style="max-width: 920px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem);"
+    >
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+        {/* ── Monthly ── flexible, no commitment */}
+        <article
+          class="relative p-8 md:p-10 flex flex-col"
+          style="background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 24px; box-shadow: 0 30px 70px -30px rgba(28, 25, 23, 0.12);"
+        >
+          <div class="mb-8">
+            <p
+              class="text-[10px] uppercase font-semibold mb-3"
+              style="letter-spacing: 0.28em; color: var(--atelier-stone-500);"
+            >
+              Monthly
+            </p>
+            <h2
+              class="mb-2"
+              style="font-family: var(--atelier-font-display); font-size: 1.625rem; color: var(--atelier-stone-900); letter-spacing: -0.005em;"
+            >
+              Flexible, no commitment.
+            </h2>
+            <p class="text-sm" style="color: var(--atelier-stone-500); line-height: 1.55;">
+              Pause, change your mind, come back. The studio is here whenever you are.
+            </p>
+          </div>
+
+          <div class="mb-8 flex items-baseline gap-2">
+            <span
+              style="font-family: var(--atelier-font-display); font-size: 3rem; line-height: 1; color: var(--atelier-stone-900);"
+            >
+              £9.99
+            </span>
+            <span class="text-sm" style="color: var(--atelier-stone-500);">/ month</span>
+          </div>
+
+          <a
+            href={LS_CHECKOUT_URL}
+            class="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98] mt-auto"
+            style="background: var(--atelier-stone-900); color: #ffffff; letter-spacing: 0.04em;"
+          >
+            Begin curating
+            <ChevronRight size={16} strokeWidth={1.75} client:load />
+          </a>
+        </article>
+
+        {/* ── Annual ── dark, featured. "The keys" recommended treatment.
+             Sits 4px higher than Monthly via translateY on md+. */}
+        <article
+          class="relative p-8 md:p-10 flex flex-col overflow-hidden md:-translate-y-1"
+          style="background: linear-gradient(160deg, var(--atelier-ink) 0%, #292524 100%); color: #ffffff; border-radius: 24px; box-shadow: 0 50px 120px -30px rgba(28, 25, 23, 0.5), 0 18px 50px -18px rgba(212, 179, 120, 0.18);"
+        >
+          {/* Featured ribbon */}
+          <div
+            class="absolute top-5 right-5 px-3 py-1 rounded-full text-[9px] uppercase font-semibold"
+            style="background: var(--atelier-brass-300); color: var(--atelier-stone-900); letter-spacing: 0.22em;"
+          >
+            The Keys
+          </div>
+
+          <div class="mb-8">
+            <p
+              class="text-[10px] uppercase font-semibold mb-3"
+              style="letter-spacing: 0.28em; color: var(--atelier-brass-300);"
+            >
+              Annual
+            </p>
+            <h2
+              class="mb-2"
+              style="font-family: var(--atelier-font-display); font-size: 1.625rem; color: #ffffff; letter-spacing: -0.005em;"
+            >
+              The considered choice.
+            </h2>
+            <p class="text-sm" style="color: rgba(255,255,255,0.65); line-height: 1.55;">
+              Two months saved, the year ahead settled. The way most members stay.
+            </p>
+          </div>
+
+          <div class="mb-2 flex items-baseline gap-2">
+            <span
+              style="font-family: var(--atelier-font-display); font-size: 3rem; line-height: 1; color: #ffffff;"
+            >
+              £95
+            </span>
+            <span class="text-sm" style="color: rgba(255,255,255,0.55);">/ year</span>
+          </div>
+          <p
+            class="text-[11px] mb-8"
+            style="color: var(--atelier-brass-300); letter-spacing: 0.06em;"
+          >
+            That's £7.92/month — save ~20%.
+          </p>
+
+          <a
+            href={LS_CHECKOUT_URL}
+            class="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98] mt-auto"
+            style="background: var(--atelier-brass-300); color: var(--atelier-stone-900); letter-spacing: 0.04em;"
+          >
+            Begin curating
+            <ChevronRight size={16} strokeWidth={1.75} client:load />
+          </a>
+        </article>
+      </div>
+    </section>
+
+    {/* ── What's inside the studio ──────────────────────────────────── */}
+    <section
+      class="mx-auto"
+      style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem);"
+    >
+      {/* Section header */}
+      <div class="text-center mb-12">
+        <div class="flex items-center justify-center gap-3 mb-4">
+          <BrassRule client:load />
+          <p
+            class="text-[10px] uppercase font-medium"
+            style="letter-spacing: 0.28em; color: var(--atelier-brass-600);"
+          >
+            Behind the keys
+          </p>
+          <BrassRule client:load />
+        </div>
+        <h2
+          class="mx-auto"
+          style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.1; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 22ch;"
+        >
+          What membership unlocks.
+        </h2>
+      </div>
+
+      {/* Two-column list of what's behind the keys. Lives in a React
+          component because Astro's static analyser can't resolve dynamic
+          icon imports inside a {map(...)} loop. */}
+      <PricingInsideList />
+
+    </section>
+
+    {/* ── Trust line — quiet, factual, at the base ─────────────────── */}
+    <div
+      class="mx-auto text-center"
+      style="max-width: 600px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 6vw, 5rem);"
+    >
+      <p
+        class="text-[11px] uppercase"
+        style="letter-spacing: 0.22em; color: var(--atelier-stone-400);"
+      >
+        30-day no-questions-asked refund · cancel anytime · VAT included where applicable
       </p>
     </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-      <article class="bg-white border border-stone-200/60 p-10 rounded-[2rem] smooth-shadow">
-        <h2 class="text-2xl mb-2" style="font-family: var(--atelier-font-display);">Monthly</h2>
-        <p class="text-stone-500 text-sm mb-8">Flexible, no commitment.</p>
-        <p class="text-4xl mb-8" style="font-family: var(--atelier-font-display);">
-          £9.99 <span class="text-base text-stone-500">/ month</span>
-        </p>
-        <a
-          href={LS_CHECKOUT_URL}
-          class="block text-center bg-stone-900 text-white px-8 py-4 rounded-full text-base font-medium hover:bg-stone-700 transition-all shadow-lg active:scale-95"
-        >
-          Start 14-day trial
-        </a>
-      </article>
-
-      <article class="bg-stone-900 text-white p-10 rounded-[2rem] shadow-2xl">
-        <div class="flex items-center gap-3 mb-2">
-          <h2 class="text-2xl" style="font-family: var(--atelier-font-display);">Annual</h2>
-          <span class="text-xs uppercase text-brass-300 font-medium" style="letter-spacing: var(--atelier-tracking-eyebrow);">
-            Best value
-          </span>
-        </div>
-        <p class="text-stone-400 text-sm mb-8">Save ~20% over monthly.</p>
-        <p class="text-4xl mb-8" style="font-family: var(--atelier-font-display);">
-          £95 <span class="text-base text-stone-400">/ year</span>
-        </p>
-        <a
-          href={LS_CHECKOUT_URL}
-          class="block text-center bg-brass-300 text-stone-900 px-8 py-4 rounded-full text-base font-medium hover:bg-brass-200 transition-all shadow-lg active:scale-95"
-        >
-          Start 14-day trial
-        </a>
-      </article>
-    </div>
-
-    <p class="text-center text-xs text-stone-400 mt-12" style="letter-spacing: 0.1em;">
-      30-day no-questions-asked refund · cancel anytime · VAT included where applicable
-    </p>
   </main>
   <Footer />
 </Base>

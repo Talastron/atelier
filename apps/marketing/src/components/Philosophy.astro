@@ -1,8 +1,22 @@
 ---
 // apps/marketing/src/components/Philosophy.astro
+//
+// The closing moment of the home page. This is the page's final argument:
+// after the hero, the demos, and the toolkit grid, the visitor lands here
+// to decide whether to step inside. Treated as an editorial dark card so
+// it reads as a chapter ending, not a sales banner.
+//
+// Two CTAs by design:
+//   - Primary  → /pricing (where "The Keys to Atelier" lives)
+//   - Secondary → EDIT_URL  (sign-in path for returning members, no friction)
+//
+// Replaces the prior "Buy less. Wear better." treatment, which (a) used
+// a generic fashion-industry headline rather than brand voice, and (b)
+// pointed the only CTA directly at the app login, sending unsubscribed
+// visitors into a sign-in wall instead of checkout.
 import { BrassRule } from '@atelier/ui';
 import { EDIT_URL } from '../config.ts';
-import { Sparkles } from 'lucide-react';
+import { ChevronRight, KeyRound } from 'lucide-react';
 ---
 
 <!-- Container constrains the dark card to the same 1280px width as Hero + Features. -->
@@ -11,46 +25,96 @@ import { Sparkles } from 'lucide-react';
   style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding);"
 >
   <section
-    class="text-white rounded-[3rem] relative overflow-hidden shadow-2xl"
-    style={`background-color: var(--atelier-ink); padding-block: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);`}
+    class="relative overflow-hidden rounded-[3rem]"
+    style={`background: linear-gradient(160deg, var(--atelier-ink) 0%, #292524 100%); color: #ffffff; padding-block: clamp(4rem, 7vw, 6rem); padding-inline: clamp(2rem, 5vw, 4rem); box-shadow: 0 60px 140px -40px rgba(28, 25, 23, 0.45);`}
   >
-    <div class="absolute -right-20 -bottom-20 opacity-[0.03] pointer-events-none">
-      <Sparkles size={400} strokeWidth={0.5} />
+    {/* Decorative key — large, low-opacity, anchored to bottom-right.
+        Reinforces the "Keys to Atelier" motif without competing with copy. */}
+    <div
+      aria-hidden="true"
+      class="absolute pointer-events-none"
+      style="right: -2rem; bottom: -3rem; opacity: 0.045; transform: rotate(-18deg);"
+    >
+      <KeyRound size={360} strokeWidth={0.6} client:load />
     </div>
 
-    <div class="max-w-3xl mx-auto text-center relative z-10">
-      <div class="flex items-center justify-center gap-3 mb-8">
+    {/* Soft brass glow behind the headline — gives the dark card warmth */}
+    <div
+      aria-hidden="true"
+      class="absolute pointer-events-none"
+      style="top: 0; left: 50%; transform: translateX(-50%); width: 60%; height: 50%; background: radial-gradient(ellipse at center, rgba(212, 179, 120, 0.08) 0%, transparent 70%);"
+    />
+
+    <div class="relative z-10 max-w-3xl mx-auto text-center">
+      {/* Editorial mast — same motif as the Hero and Pricing hero */}
+      <div class="flex items-center justify-center gap-4 mb-8">
         <BrassRule client:load />
         <span
-          class="text-[10px] uppercase text-brass-300 font-medium"
-          style="letter-spacing: var(--atelier-tracking-eyebrow);"
+          class="text-[10px] uppercase font-medium"
+          style="letter-spacing: 0.32em; color: var(--atelier-brass-300);"
         >
-          The Philosophy
+          An Invitation · MMXXVI
         </span>
         <BrassRule client:load />
       </div>
 
+      {/* Headline — short, declarative, brand-voice. Period at the end so
+          it lands as a statement of fact. */}
       <h2
-        class="text-4xl md:text-5xl lg:text-6xl mb-8"
-        style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display);"
+        class="mb-8"
+        style="font-family: var(--atelier-font-display); font-size: clamp(2.25rem, 5vw, 4rem); line-height: 1.02; letter-spacing: -0.015em; color: #ffffff;"
       >
-        Buy less. Wear better. Curate a collection that lasts a lifetime.
+        An <em style="font-weight: 400;">atelier</em> of your own.
       </h2>
 
+      {/* Considered subhead — written as a closing argument, not a pitch.
+          Three short clauses, each one a thing membership unlocks. */}
       <p
-        class="text-stone-400 text-lg md:text-xl max-w-2xl mx-auto mb-12"
-        style="line-height: var(--atelier-leading-body);"
+        class="mx-auto mb-8"
+        style="color: rgba(255,255,255,0.7); font-size: clamp(1rem, 1.3vw, 1.1875rem); line-height: 1.7; max-width: 48ch;"
       >
-        We believe that true style comes from understanding what you own. Stop losing
-        beautiful pieces in the back of the closet and start styling with intention.
+        A private stylist on call. Your considered closet, finally on the page.
+        The small luxuries that turn a wardrobe into a practice.
       </p>
 
-      <a
-        href={EDIT_URL}
-        class="bg-brass-300 text-stone-900 px-8 py-4 rounded-full text-base font-medium hover:bg-brass-200 transition-all shadow-lg active:scale-95 inline-flex items-center gap-2"
+      {/* Trial line — pill format, brass on dark, sits between the subhead
+          and the CTAs as a third-line trust signal. */}
+      <p
+        class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-10"
+        style="background: rgba(212, 179, 120, 0.12); border: 1px solid rgba(212, 179, 120, 0.25); color: var(--atelier-brass-300); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600;"
       >
-        Begin your curation
-      </a>
+        <span
+          aria-hidden="true"
+          style="width: 5px; height: 5px; border-radius: 50%; background: var(--atelier-brass-300);"
+        />
+        14-day trial · no card required
+      </p>
+
+      {/* Two CTAs — primary brass to /pricing (where the Keys live),
+          secondary ghost link to the app for returning members. */}
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a
+          href="/pricing"
+          class="inline-flex items-center gap-2 px-8 py-4 rounded-full text-base font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+          style="background: var(--atelier-brass-300); color: var(--atelier-stone-900); letter-spacing: 0.04em; box-shadow: 0 12px 32px -10px rgba(212, 179, 120, 0.45);"
+        >
+          Begin curating
+          <ChevronRight size={16} strokeWidth={1.75} client:load />
+        </a>
+        <a
+          href={EDIT_URL}
+          class="inline-flex items-center gap-2 px-6 py-3 text-sm transition-colors group"
+          style="color: rgba(255,255,255,0.7);"
+        >
+          Sign in
+          <span
+            class="transition-transform group-hover:translate-x-1"
+            style="color: var(--atelier-brass-300); display: inline-block;"
+          >
+            →
+          </span>
+        </a>
+      </div>
     </div>
   </section>
 </div>

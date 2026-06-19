@@ -1,39 +1,370 @@
 ---
 // apps/marketing/src/components/Footer.astro
+//
+// The closing chapter. Treated as the back cover of a book: a signature
+// artifact (the armoire sketch) on one side, the colophon on the other.
+//
+// Structure — three quiet movements:
+//   1. Masthead row — brand block + three nav columns + signature artifact
+//   2. Brass-rule divider
+//   3. Colophon — copyright + UK Companies Act 2006 statutory disclosure
+//
+// The signature artifact is the equivalent of Chanel's rue Cambon sketch:
+// a hand-drawn-style line illustration that gives the brand a "spiritual
+// home." For Atelier — a digital wardrobe — that home is the wardrobe
+// itself, rendered as a French armoire with doors slightly ajar. The
+// SVG below is a tasteful placeholder; eventual replacement with an
+// illustrator-drawn version should swap only the <svg> markup, leaving
+// the layout, address line, and surrounding chrome intact.
+//
+// Address line ("The Long Barn · Cobham · Surrey") uses Atelier's real
+// registered office in frontispiece form — three units of increasing
+// geography. The full statutory address (with postcode + Companies Act
+// disclosures) lives quietly in the colophon below.
 import { AtelierMark } from '@atelier/ui';
 import { EDIT_URL, SITE } from '../config.ts';
 
 const year = new Date().getFullYear();
+
+const sections = [
+  {
+    eyebrow: 'The House',
+    links: [
+      { label: 'About', href: '/about' },
+      { label: 'Journal', href: '/journal' },
+      { label: 'Pricing', href: '/pricing' },
+    ],
+  },
+  {
+    eyebrow: 'The Studio',
+    links: [
+      { label: 'Sign In', href: EDIT_URL },
+      { label: 'Open Studio', href: EDIT_URL },
+      { label: 'Manage subscription', href: 'https://myatelier.lemonsqueezy.com/billing', external: true },
+    ],
+  },
+  {
+    eyebrow: 'Support',
+    links: [
+      { label: SITE.supportEmail, href: `mailto:${SITE.supportEmail}` },
+      { label: 'Privacy', href: '/legal/privacy' },
+      { label: 'Terms', href: '/legal/terms' },
+    ],
+  },
+];
 ---
 
-<footer class="bg-cream border-t border-stone-200/60 py-16">
+<footer
+  class="border-t border-stone-200/60"
+  style="background: var(--atelier-cream);"
+>
   <div
     class="mx-auto"
     style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding);"
   >
-    <!-- Top row: logo + comprehensive link list -->
-    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-8 mb-8">
-      <a href="/" class="flex items-center gap-3">
-        <AtelierMark size={28} client:load />
-        <span class="font-display text-xl text-stone-900 tracking-tight">Atelier.</span>
-      </a>
+    {/* ── Movement 1: Masthead + Navigation + Signature ───────────────── */}
+    <div
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-x-10 gap-y-14 lg:gap-x-12"
+      style="padding-top: clamp(4rem, 7vw, 6rem); padding-bottom: clamp(2.5rem, 5vw, 4rem);"
+    >
+      {/* ── Brand block (lg: 3 cols) ─────────────────────────────────── */}
+      <div class="lg:col-span-3" style="max-width: 30ch;">
+        <a href="/" class="inline-flex items-center gap-3 group">
+          <AtelierMark size={44} client:load />
+          <span
+            class="text-[1.625rem] tracking-tight transition-colors group-hover:text-stone-700"
+            style="font-family: var(--atelier-font-display); color: var(--atelier-stone-900); letter-spacing: -0.005em;"
+          >
+            Atelier.
+          </span>
+        </a>
+        <p
+          class="mt-5"
+          style="color: var(--atelier-stone-500); font-size: 0.9375rem; line-height: 1.6;"
+        >
+          Quiet luxury for your wardrobe.
+        </p>
+        <div class="flex items-center gap-3 mt-7">
+          <span
+            aria-hidden="true"
+            style="display: inline-block; width: 24px; height: 1.5px; background: var(--atelier-brass-300);"
+          />
+          <p
+            class="text-[10px] uppercase font-medium"
+            style="letter-spacing: 0.28em; color: var(--atelier-stone-500);"
+          >
+            Volume I &middot; MMXXVI
+          </p>
+        </div>
+      </div>
 
-      <nav class="flex flex-wrap gap-x-6 gap-y-3 text-sm text-stone-500 font-medium">
-        <a href="/about" class="hover:text-stone-900 transition-colors">About</a>
-        <a href="/journal" class="hover:text-stone-900 transition-colors">Journal</a>
-        <a href="/pricing" class="hover:text-stone-900 transition-colors">Pricing</a>
-        <a href={EDIT_URL} class="hover:text-stone-900 transition-colors">Sign In</a>
-        <a href={`mailto:${SITE.supportEmail}`} class="hover:text-stone-900 transition-colors">Support</a>
-        <a href="/legal/privacy" class="hover:text-stone-900 transition-colors">Privacy</a>
-        <a href="/legal/terms" class="hover:text-stone-900 transition-colors">Terms</a>
+      {/* ── Navigation (lg: 6 cols, 3×2 internal) ────────────────────── */}
+      <nav
+        class="lg:col-span-6 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-10 lg:gap-12"
+        aria-label="Footer navigation"
+      >
+        {sections.map((section) => (
+          <div>
+            <h3
+              class="mb-5 text-[10px] uppercase font-semibold"
+              style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-900);"
+            >
+              {section.eyebrow}
+            </h3>
+            <ul class="flex flex-col gap-3">
+              {section.links.map((link) => (
+                <li>
+                  <a
+                    href={link.href}
+                    {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                    class="footer-link text-sm"
+                    style="line-height: 1.5;"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
+
+      {/* ── Signature artifact (lg: 3 cols) ──────────────────────────────
+           The armoire — Atelier's spiritual home, rendered as a hand-drawn
+           line illustration. Replaceable with a commissioned illustrator
+           drawing later; the layout below assumes ~140px wide × 220px tall.
+           On mobile, sits centered as a closing flourish. On desktop, sits
+           right-aligned as a signature seal. */}
+      <div
+        class="lg:col-span-3 flex flex-col items-center lg:items-end gap-4"
+      >
+        {/* Armoire SVG — single-stroke, brass keyholes, doors slightly ajar
+            with a hanger silhouette visible through the gap. */}
+        <svg
+          width="148"
+          height="232"
+          viewBox="0 0 148 232"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+          style="display: block;"
+        >
+          {/* Top moulding — small arch detail above the cornice */}
+          <path
+            d="M 28 22 Q 74 8 120 22"
+            fill="none"
+            stroke="var(--atelier-stone-500)"
+            stroke-width="1"
+            stroke-linecap="round"
+          />
+          {/* Cornice */}
+          <path
+            d="M 22 22 L 126 22 L 132 32 L 16 32 Z"
+            fill="none"
+            stroke="var(--atelier-stone-600)"
+            stroke-width="1.25"
+            stroke-linejoin="round"
+          />
+
+          {/* Body — main armoire box */}
+          <path
+            d="M 22 32 L 22 196 L 126 196 L 126 32"
+            fill="none"
+            stroke="var(--atelier-stone-700)"
+            stroke-width="1.25"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+
+          {/* Left door — closed flush */}
+          <rect
+            x="26"
+            y="38"
+            width="46"
+            height="152"
+            fill="none"
+            stroke="var(--atelier-stone-600)"
+            stroke-width="1"
+          />
+          {/* Left carved panel */}
+          <rect
+            x="34"
+            y="48"
+            width="30"
+            height="60"
+            fill="none"
+            stroke="var(--atelier-stone-400)"
+            stroke-width="0.8"
+          />
+          <rect
+            x="34"
+            y="116"
+            width="30"
+            height="64"
+            fill="none"
+            stroke="var(--atelier-stone-400)"
+            stroke-width="0.8"
+          />
+          {/* Left door handle + brass keyhole */}
+          <circle cx="66" cy="116" r="1.4" fill="var(--atelier-stone-600)" />
+          <circle cx="66" cy="116" r="0.6" fill="var(--atelier-brass-600)" />
+
+          {/* Right door — slightly ajar, rotated ~6° outward from its
+              right edge. Achieved by drawing the door already at an angle. */}
+          <g style="transform: rotate(-5deg); transform-origin: 122px 114px;">
+            <rect
+              x="76"
+              y="38"
+              width="46"
+              height="152"
+              fill="none"
+              stroke="var(--atelier-stone-600)"
+              stroke-width="1"
+            />
+            <rect
+              x="84"
+              y="48"
+              width="30"
+              height="60"
+              fill="none"
+              stroke="var(--atelier-stone-400)"
+              stroke-width="0.8"
+            />
+            <rect
+              x="84"
+              y="116"
+              width="30"
+              height="64"
+              fill="none"
+              stroke="var(--atelier-stone-400)"
+              stroke-width="0.8"
+            />
+            {/* Right door handle + brass keyhole */}
+            <circle cx="82" cy="116" r="1.4" fill="var(--atelier-stone-600)" />
+            <circle cx="82" cy="116" r="0.6" fill="var(--atelier-brass-600)" />
+          </g>
+
+          {/* Glimpse through the ajar door — a single hanger silhouette
+              with a tiny brass charm, echoing the AtelierMark. Drawn
+              behind the right door in pale stone so it reads as "inside". */}
+          <g opacity="0.55">
+            {/* Hanger hook */}
+            <path
+              d="M 81 60 Q 81 54 75 54 Q 70 54 70 60"
+              fill="none"
+              stroke="var(--atelier-stone-400)"
+              stroke-width="0.9"
+              stroke-linecap="round"
+            />
+            {/* Hanger triangle */}
+            <path
+              d="M 70 60 L 56 78 L 86 78 Z"
+              fill="none"
+              stroke="var(--atelier-stone-400)"
+              stroke-width="0.9"
+              stroke-linejoin="round"
+            />
+            {/* Brass charm dangling */}
+            <line
+              x1="70"
+              y1="78"
+              x2="70"
+              y2="86"
+              stroke="var(--atelier-brass-600)"
+              stroke-width="0.5"
+              stroke-linecap="round"
+            />
+            <circle cx="70" cy="88" r="1.4" fill="var(--atelier-brass-600)" />
+          </g>
+
+          {/* Base plinth */}
+          <path
+            d="M 18 196 L 130 196 L 126 206 L 22 206 Z"
+            fill="none"
+            stroke="var(--atelier-stone-600)"
+            stroke-width="1.25"
+            stroke-linejoin="round"
+          />
+
+          {/* Cabriole legs — small angled lines at the four corners */}
+          <path d="M 24 206 Q 22 216 26 222" fill="none" stroke="var(--atelier-stone-600)" stroke-width="1" stroke-linecap="round" />
+          <path d="M 124 206 Q 126 216 122 222" fill="none" stroke="var(--atelier-stone-600)" stroke-width="1" stroke-linecap="round" />
+          <path d="M 38 206 L 38 220" fill="none" stroke="var(--atelier-stone-500)" stroke-width="0.9" stroke-linecap="round" />
+          <path d="M 110 206 L 110 220" fill="none" stroke="var(--atelier-stone-500)" stroke-width="0.9" stroke-linecap="round" />
+
+          {/* Floor shadow — a single faint horizontal whisper */}
+          <line
+            x1="14"
+            y1="226"
+            x2="134"
+            y2="226"
+            stroke="var(--atelier-stone-300)"
+            stroke-width="0.6"
+            stroke-linecap="round"
+          />
+        </svg>
+
+        {/* Address line — frontispiece form. Three units, increasing
+            geography. The real registered office, set as a colophon
+            rather than a regulatory disclosure. */}
+        <div class="flex flex-col items-center lg:items-end gap-2">
+          <span
+            aria-hidden="true"
+            style="display: inline-block; width: 18px; height: 1.5px; background: var(--atelier-brass-300);"
+          />
+          <p
+            class="text-[10px] uppercase font-medium text-center lg:text-right"
+            style="letter-spacing: 0.32em; color: var(--atelier-stone-700); line-height: 1.8;"
+          >
+            The Long Barn<br />
+            Cobham<br />
+            Surrey
+          </p>
+        </div>
+      </div>
     </div>
 
-    <!-- Bottom row: copyright (separated by subtle rule) -->
-    <div class="border-t border-stone-200/60 pt-6">
-      <p class="text-xs text-stone-400 tracking-wider uppercase">
-        &copy; {year} Atelier. All rights reserved.
+    {/* ── Brass-rule divider ────────────────────────────────────────── */}
+    <div
+      aria-hidden="true"
+      style="height: 1px; background: linear-gradient(to right, transparent, var(--atelier-stone-200) 15%, var(--atelier-stone-200) 85%, transparent);"
+    />
+
+    {/* ── Movement 3: Colophon — copyright + statutory disclosure ───── */}
+    <div
+      class="flex flex-col md:flex-row md:items-baseline md:justify-between gap-4"
+      style="padding-top: 2rem; padding-bottom: 2.5rem;"
+    >
+      {/* Left: copyright + brand attribution */}
+      <p
+        class="text-[11px] uppercase"
+        style="letter-spacing: 0.22em; color: var(--atelier-stone-500); font-weight: 500;"
+      >
+        &copy; {year} Atelier &middot; A product of Talastron Ltd
+      </p>
+
+      {/* Right: statutory disclosure — single quiet paragraph with subtle
+          separators. The address line above carries the romance; this
+          line carries the legal weight, set as small print. */}
+      <p
+        class="text-[11px] md:text-right"
+        style="color: var(--atelier-stone-400); line-height: 1.7; max-width: 60ch;"
+      >
+        Talastron Ltd &middot; Registered in England &amp; Wales &middot; Company No. 15464691 &middot; VAT No. GB&nbsp;463&nbsp;5874&nbsp;58<br />
+        Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11&nbsp;3NE
       </p>
     </div>
   </div>
 </footer>
+
+<style>
+  /* CSS hover/focus replaces inline JS — keyboard-accessible and
+     respects reduced-motion preferences without re-implementation. */
+  .footer-link {
+    color: var(--atelier-stone-600);
+    transition: color 200ms ease;
+  }
+  .footer-link:hover,
+  .footer-link:focus-visible {
+    color: var(--atelier-stone-900);
+  }
+</style>

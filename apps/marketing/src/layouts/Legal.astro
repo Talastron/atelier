@@ -1,0 +1,124 @@
+---
+// apps/marketing/src/layouts/Legal.astro
+//
+// Layout for legal/policy pages (Privacy, Terms, Cookies, etc.). Provides
+// site chrome (Nav, Footer) plus comfortable prose typography optimized for
+// long-form reading. Separate from the journal's prose-atelier styles
+// (which use editorial flourishes like drop caps) — legal needs to be
+// quietly readable, not decorative.
+import Base from './Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  lastUpdated?: string;
+}
+
+const { title, lastUpdated } = Astro.props;
+---
+
+<Base title={title}>
+  <Nav />
+  <main
+    class="mx-auto"
+    style="max-width: 720px; padding-top: 9rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);"
+  >
+    <header class="mb-12">
+      <h1
+        class="tracking-tight text-stone-900"
+        style="font-family: var(--atelier-font-display); font-size: clamp(2.5rem, 5vw, 3.5rem); line-height: 1.05;"
+      >
+        {title}
+      </h1>
+      {lastUpdated && (
+        <p class="text-xs uppercase text-stone-400 mt-4" style="letter-spacing: 0.18em;">
+          Last updated: {lastUpdated}
+        </p>
+      )}
+    </header>
+
+    <article class="prose-legal">
+      <slot />
+    </article>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .prose-legal {
+    font-family: var(--atelier-font-sans);
+    color: var(--atelier-stone-700);
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  .prose-legal :global(h2) {
+    font-family: var(--atelier-font-display);
+    font-size: 1.75rem;
+    line-height: 1.2;
+    color: var(--atelier-stone-900);
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    letter-spacing: -0.005em;
+  }
+  .prose-legal :global(h3) {
+    font-family: var(--atelier-font-sans);
+    font-weight: 600;
+    font-size: 1.0625rem;
+    color: var(--atelier-stone-900);
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.01em;
+  }
+  .prose-legal :global(p) {
+    margin-bottom: 1.25rem;
+  }
+  .prose-legal :global(ul),
+  .prose-legal :global(ol) {
+    margin-bottom: 1.25rem;
+    padding-left: 1.5rem;
+  }
+  .prose-legal :global(li) {
+    margin-bottom: 0.5rem;
+  }
+  .prose-legal :global(ul) {
+    list-style-type: disc;
+  }
+  .prose-legal :global(ol) {
+    list-style-type: decimal;
+  }
+  .prose-legal :global(a) {
+    color: var(--atelier-stone-900);
+    text-decoration: underline;
+    text-decoration-color: var(--atelier-brass-300);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.2s;
+  }
+  .prose-legal :global(a:hover) {
+    text-decoration-color: var(--atelier-brass-600);
+  }
+  .prose-legal :global(strong) {
+    font-weight: 600;
+    color: var(--atelier-stone-900);
+  }
+  .prose-legal :global(em) {
+    font-style: italic;
+  }
+  .prose-legal :global(hr) {
+    border: 0;
+    border-top: 1px solid var(--atelier-stone-200);
+    margin: 3rem 0;
+  }
+  /* The "draft / starting point" disclaimer block — visible signal that
+     these aren't counsel-reviewed yet. Remove once a solicitor has signed
+     off and the disclaimer no longer applies. */
+  .prose-legal :global(.legal-draft-notice) {
+    background: var(--atelier-stone-50);
+    border-left: 3px solid var(--atelier-brass-300);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2.5rem;
+    font-size: 0.875rem;
+    color: var(--atelier-stone-600);
+  }
+</style>

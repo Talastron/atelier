@@ -1,20 +1,178 @@
 ---
-layout: ../../layouts/Base.astro
-title: Privacy Policy — Atelier
+layout: ../../layouts/Legal.astro
+title: Privacy Policy
+lastUpdated: 19 June 2026
 ---
 
-# Privacy Policy
+<div class="legal-draft-notice">
+This privacy policy is a structured starting point drafted for clarity and UK GDPR compliance. Before relying on it commercially with significant customer volume, please have it reviewed by a UK-qualified solicitor — particularly to confirm jurisdiction-specific language, your registered legal entity details, and any sector-specific requirements.
+</div>
 
-_Last updated: 18 June 2026_
+## Introduction
 
-This is a placeholder privacy policy. Replace before public launch with a policy reviewed by counsel.
+This privacy policy explains how Talastron Ltd (trading as **Atelier** — "**we**", "**us**", "**our**") collects, uses, and protects your personal data when you use our service at [myatelier.style](https://myatelier.style) and the application at [edit.myatelier.style](https://edit.myatelier.style) (together, the "**Service**").
 
-**What we collect:** account email, payment information (handled by our Merchant of Record, Lemon Squeezy),
-items you upload to your wardrobe, usage data sufficient to operate and improve the Service.
+We take your privacy seriously. Your wardrobe is a personal collection, and the data you entrust to us is treated with the same care.
 
-**What we don't do:** we do not sell your data. We do not share your wardrobe with anyone except via
-read-only share links you explicitly create.
+## Who we are
 
-**Where data lives:** Firebase (Google Cloud) for application data; Lemon Squeezy for payment data.
+Atelier is a product of **Talastron Ltd**, a private limited company registered in England & Wales.
 
-For questions or data requests, write to contact@myatelier.style.
+- **Company name**: Talastron Ltd
+- **Company number**: 15464691
+- **VAT number**: GB 463 5874 58
+- **Registered office**: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11 3NE, United Kingdom
+- **Previously known as**: Orion Data Analytics Ltd
+
+Talastron Ltd is the data controller responsible for your personal data when you use the Service. For all data-protection enquiries, contact us at [contact@myatelier.style](mailto:contact@myatelier.style).
+
+We are registered with the UK Information Commissioner's Office (ICO) as a data controller where required.
+
+## What personal data we collect
+
+We collect only the data we need to provide the Service:
+
+### Account data
+
+- **Email address** — required to create your account, sign you in, and contact you about your subscription.
+- **Display name** — your name as you choose to display it in the app; helps personalise the Service.
+- **Authentication metadata** — sign-in timestamps, sign-in method (Google, magic link), and an account identifier issued by Firebase Authentication.
+
+### Wardrobe content
+
+The personal data you choose to upload as you use the Service:
+
+- **Garment data** — items you add to your wardrobe (brand, category, colour, materials, cost, notes, photos).
+- **Wear logs** — when you record having worn an item.
+- **Outfits, lookbooks, and saved inspirations** — collections you create.
+- **Style profile** — answers you provide to the optional style quiz.
+- **Measurements** — body measurements you optionally provide for AI fitting context.
+
+You own this content. We do not share it, sell it, or use it to train external machine-learning models.
+
+### Payment data
+
+When you subscribe, payment is processed by our Merchant of Record, **Lemon Squeezy** (LemonSqueezy Inc., a Stripe company). We do not see, store, or have access to your full card details. We receive only:
+
+- Your subscription status (active, cancelled, expired, etc.)
+- The plan you chose (monthly or annual)
+- Renewal and cancellation timestamps
+- The last 4 digits of your card (for your reference in the customer portal)
+
+For Lemon Squeezy's own privacy practices, see their [privacy policy](https://www.lemonsqueezy.com/privacy).
+
+### Service usage data
+
+To operate and improve the Service, we collect:
+
+- **Diagnostic logs** — error reports and performance data (no personal content)
+- **Feature usage** — anonymised counts of how often features like AI styling are used
+- **AI usage limits** — per-browser counts of AI calls to enforce fair-use limits
+
+We do not use third-party advertising trackers, behavioural-profiling tools, or analytics scripts that share data with social media platforms.
+
+## How we use your data
+
+We use your personal data only for the following purposes:
+
+- To provide the Service — store your wardrobe, sign you in, render the app
+- To process your subscription and payments (via Lemon Squeezy)
+- To send transactional emails (sign-in links, receipts, important service notifications)
+- To provide AI features that operate on your own wardrobe (styling suggestions, item identification)
+- To enforce our Terms of Service and protect against fraud or abuse
+- To respond to your support requests
+- To meet our legal obligations (e.g., tax records, regulatory requests)
+
+We do **not** use your data for marketing emails unless you explicitly opt in, and we do not sell, rent, or share your personal data with third parties for their own purposes.
+
+## Legal basis for processing (UK GDPR)
+
+We process your personal data on the following legal bases:
+
+- **Performance of a contract** — most processing is necessary to provide the Service you've contracted with us
+- **Legitimate interests** — diagnostic logging, fraud prevention, service improvement
+- **Legal obligation** — tax records, responding to lawful requests from authorities
+- **Consent** — for any optional features that go beyond the above (you can withdraw consent at any time)
+
+## Third parties we use to operate the Service
+
+We use the following data processors. Each is contractually required to protect your data and use it only for the purposes we instruct:
+
+- **Google Firebase** (Google LLC / Google Ireland Limited) — authentication, database (Firestore), file storage, AI features (Gemini). Hosted on Google Cloud infrastructure.
+- **Lemon Squeezy** — payment processing as Merchant of Record.
+- **Cloudflare** (Cloudflare, Inc.) — DNS, CDN, content delivery for the marketing site.
+- **Microsoft 365** (Microsoft Corporation) — email infrastructure for our `contact@` mailbox.
+
+Each provider has its own privacy practices. Where your data is processed outside the UK or European Economic Area, we rely on appropriate safeguards (such as Standard Contractual Clauses) as required under UK GDPR.
+
+## Where your data is stored
+
+- **Wardrobe data** is stored in Firestore (Google Cloud). The data is hosted in Google's global infrastructure; the specific region is configured by us at project setup.
+- **Photos** are stored in Firebase Storage (Google Cloud).
+- **Authentication data** is held by Firebase Authentication (Google Cloud).
+- **Payment data** is held by Lemon Squeezy in their own systems.
+
+We do not maintain our own database servers.
+
+## How long we keep your data
+
+- **While your subscription is active**: we retain your data so you can continue using the Service.
+- **After cancellation**: your account remains accessible for the remainder of your paid period. After that, we retain your data for **30 days** in case you wish to resubscribe and resume where you left off, then permanently delete it unless you've requested otherwise.
+- **Trash bin**: items you delete from your wardrobe are soft-deleted for 30 days (recoverable from the Trash view), then permanently removed.
+- **Email logs**: transactional email metadata (e.g., delivery confirmations) is retained for up to 90 days for troubleshooting.
+- **Payment records**: retained as required by UK tax law (typically 6 years).
+
+## Your rights under UK GDPR
+
+You have the following rights regarding your personal data:
+
+- **Right of access** — request a copy of the personal data we hold about you
+- **Right to rectification** — correct inaccurate or incomplete data (most can be updated directly within the app)
+- **Right to erasure** — request deletion of your personal data ("right to be forgotten")
+- **Right to data portability** — receive your data in a structured, machine-readable format
+- **Right to object** — to processing based on legitimate interests
+- **Right to restrict processing** — temporarily limit how we use your data
+- **Right to withdraw consent** — where processing is based on consent
+- **Right not to be subject to automated decision-making** — including profiling that has legal effects
+
+To exercise any of these rights, email [contact@myatelier.style](mailto:contact@myatelier.style). We will respond within one month.
+
+You also have the right to lodge a complaint with the UK Information Commissioner's Office at [ico.org.uk](https://ico.org.uk).
+
+## Cookies and similar technologies
+
+The Service uses a minimal set of technical cookies and browser storage required for:
+
+- Maintaining your sign-in session (Firebase Authentication)
+- Remembering app preferences (local browser settings)
+- Enforcing AI usage rate limits (local storage of call timestamps)
+
+We do not use advertising cookies, tracking pixels, or analytics services that share data with third parties.
+
+## Children's data
+
+The Service is not intended for use by anyone under the age of 16. We do not knowingly collect personal data from children. If you believe a child has provided us with personal data, please contact us and we will delete it.
+
+## Security
+
+We take appropriate technical and organisational measures to protect your personal data, including:
+
+- Encryption in transit (HTTPS / TLS) for all data
+- Encryption at rest for all data stored in Firebase
+- Role-based access controls (Firestore Security Rules) that strictly limit data access to authorised accounts
+- Cryptographic signature verification on all payment webhooks
+- Multi-factor authentication options for administrators
+
+No system can guarantee absolute security, but we work to minimise risk and respond promptly to any incident.
+
+## Changes to this policy
+
+We may update this privacy policy from time to time. Material changes will be communicated via email to active subscribers and posted prominently on this page. The "last updated" date at the top reflects when changes were last made.
+
+## How to contact us
+
+For any privacy questions, data requests, or concerns, please contact:
+
+**Email**: [contact@myatelier.style](mailto:contact@myatelier.style)
+
+We aim to respond to all data-protection enquiries within five working days.

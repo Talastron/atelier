@@ -1,0 +1,60 @@
+---
+// Preview sandbox — the actual Atelier studio, replicated as an interactive
+// React component, wrapped in a custom DeviceFrame so the marketing page
+// reads as "this is the app" rather than "look at these clothes."
+// Click sidebar nav items to switch views. Click pills inside views to drive
+// the demos. Not linked from nav. Reachable at /preview.
+
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { BrassRule } from '@atelier/ui';
+import { DeviceFrame } from '../components/preview/DeviceFrame.jsx';
+import { StudioFrame } from '../components/preview/StudioFrame.jsx';
+---
+
+<Base title="The app — Atelier" description="An interactive look at the Atelier studio.">
+  <Nav />
+  <main style="padding-top: 9rem; padding-block-end: var(--atelier-section-padding-y); padding-inline: var(--atelier-page-padding);">
+
+    {/* Page intro */}
+    <div class="mx-auto text-center mb-10" style="max-width: var(--atelier-prose-max);">
+      <div class="flex items-center justify-center gap-3 mb-5">
+        <BrassRule client:load />
+        <p class="text-[10px] uppercase font-semibold" style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-brass-600);">
+          The studio
+        </p>
+        <BrassRule client:load />
+      </div>
+      <h1
+        class="text-4xl md:text-5xl mx-auto mb-5"
+        style="font-family: var(--atelier-font-display); line-height: var(--atelier-leading-display); color: var(--atelier-stone-900); max-width: 22ch;"
+      >
+        <em style="font-weight: 400;">This</em> is what you sign in to.
+      </h1>
+      <p
+        class="text-stone-500"
+        style="line-height: var(--atelier-leading-body); max-width: 56ch; margin-inline: auto;"
+      >
+        Click anywhere in the sidebar to switch views. Click anywhere inside a view to drive the demo.
+        Everything below the browser bar is real React, with sample data, running in your browser.
+      </p>
+    </div>
+
+    {/* The device frame containing the live, interactive app */}
+    <div style="max-width: 1280px; margin-inline: auto; padding-inline: var(--atelier-page-padding);">
+      <DeviceFrame url="edit.myatelier.style/studio" client:load>
+        <StudioFrame client:load />
+      </DeviceFrame>
+    </div>
+
+    {/* Bottom band */}
+    <div class="text-center mt-16">
+      <p class="text-xs uppercase" style="letter-spacing: var(--atelier-tracking-eyebrow); color: var(--atelier-stone-500);">
+        Coming next: Today tile · Travel capsule · Lookbook view
+      </p>
+    </div>
+
+  </main>
+  <Footer />
+</Base>

@@ -1,18 +1,127 @@
 ---
 // apps/marketing/src/pages/index.astro
+// Each landing section sized to fit a single viewport without scrolling.
+// Hero + auto-shuffling outfit row, then Concierge spotlight (top-aligned
+// copy + demo), then Suggest-a-Look spotlight (centered, tight copy).
+
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Philosophy from '../components/Philosophy.astro';
-import { Hero } from '../components/Hero.jsx';
+import { Hero } from '../components/landing/Hero.jsx';
+import { ConciergeDemo } from '../components/landing/ConciergeDemo.jsx';
+import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
 import { Features } from '../components/Features.jsx';
-import { EDIT_URL } from '../config.ts';
+import { BrassRule } from '@atelier/ui';
 ---
 
-<Base title="Atelier — The quiet luxury of a beautifully organised wardrobe">
+<Base title="Atelier — An AI stylist that knows your wardrobe">
   <Nav />
   <main>
-    <Hero editUrl={EDIT_URL} client:load />
+    {/* ── Hero ──────────────────────────────────────────────────────── */}
+    <Hero client:load />
+
+    {/* ── Section 2: Meet the Concierge ─────────────────────────────── */}
+    <section
+      style="background: var(--atelier-stone-50); min-height: 100vh; display: flex; align-items: center; padding-block: clamp(3rem, 6vw, 5rem); padding-inline: var(--atelier-page-padding);"
+    >
+      <div
+        class="mx-auto grid lg:grid-cols-[5fr_7fr] gap-8 lg:gap-12 items-start w-full"
+        style="max-width: var(--atelier-container-max);"
+      >
+        {/* Copy column — top-aligned with the demo */}
+        <div class="text-left lg:pt-2">
+          <div class="flex items-center gap-3 mb-5">
+            <BrassRule client:load />
+            <p
+              class="text-[10px] uppercase font-medium"
+              style="letter-spacing: 0.28em; color: var(--atelier-brass-600);"
+            >
+              Meet The Concierge
+            </p>
+          </div>
+          <h2
+            class="mb-5"
+            style="font-family: var(--atelier-font-display); font-size: clamp(2rem, 3.5vw, 3.25rem); line-height: 1.05; color: var(--atelier-stone-900); letter-spacing: -0.01em; max-width: 18ch;"
+          >
+            A <em style="font-weight: 400;">private stylist</em> on call.
+          </h2>
+          <p
+            class="mb-6"
+            style="font-size: clamp(0.95rem, 1.1vw, 1.0625rem); line-height: 1.6; color: var(--atelier-stone-600); max-width: 48ch;"
+          >
+            The Concierge has read every piece in your wardrobe, every wear you've logged, every
+            look you've saved. Ask it what to wear, what's missing, what to pack. It answers from
+            <em>your</em> closet.
+          </p>
+
+          <ul class="flex flex-col gap-2.5" style="max-width: 44ch;">
+            {[
+              'Knows your wardrobe like a stylist who has worked with you for years',
+              'Sees the weather, your calendar, what is in the wash',
+              'Writes considered briefs, not generic suggestions',
+            ].map((line) => (
+              <li style="display: flex; align-items: flex-start; gap: 14px;">
+                <span
+                  aria-hidden="true"
+                  style="width: 6px; height: 6px; border-radius: 50%; background: var(--atelier-brass-300); flex-shrink: 0; margin-top: 0.65em;"
+                />
+                <span style="color: var(--atelier-stone-700); font-size: 0.95rem; line-height: 1.55;">
+                  {line}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Live auto-play demo */}
+        <div class="flex justify-center lg:justify-end">
+          <ConciergeDemo client:visible />
+        </div>
+      </div>
+    </section>
+
+    {/* ── Section 3: Suggest a Look (modal demo) ────────────────────── */}
+    <section
+      style="background: var(--atelier-cream); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-block: clamp(2.5rem, 5vw, 4rem); padding-inline: var(--atelier-page-padding);"
+    >
+      <div
+        class="mx-auto w-full"
+        style="max-width: var(--atelier-container-max);"
+      >
+        {/* Header — tightened to fit on one screen with the demo */}
+        <div class="text-center mb-8">
+          <div class="flex items-center justify-center gap-3 mb-4">
+            <BrassRule client:load />
+            <p
+              class="text-[10px] uppercase font-medium"
+              style="letter-spacing: 0.28em; color: var(--atelier-brass-600);"
+            >
+              The Daily Brief
+            </p>
+            <BrassRule client:load />
+          </div>
+          <h2
+            class="mx-auto mb-3"
+            style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.75rem); line-height: 1.05; color: var(--atelier-stone-900); letter-spacing: -0.01em; max-width: 22ch;"
+          >
+            Tap once. <em style="font-weight: 400;">Get styled</em> for today.
+          </h2>
+          <p
+            class="mx-auto"
+            style="font-size: clamp(0.9rem, 1.1vw, 1rem); line-height: 1.6; color: var(--atelier-stone-500); max-width: 50ch;"
+          >
+            The Concierge composes a head-to-toe outfit from your wardrobe in seconds, with the
+            stylist's reasoning attached.
+          </p>
+        </div>
+
+        {/* Live auto-play modal demo */}
+        <SuggestALookDemo client:visible />
+      </div>
+    </section>
+
+    {/* ── Existing Features + Philosophy preserved ──────────────────── */}
     <Features client:visible />
     <Philosophy />
   </main>

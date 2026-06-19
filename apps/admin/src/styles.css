@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/* Atelier brand tokens — minimal subset for admin. Mirrors the values
+   exported from @atelier/design-tokens in the marketing site so the
+   operator surface feels of-a-piece with the rest of the brand. */
+@theme {
+  --color-cream: #F7F5F2;
+  --color-ink: #1c1917;
+  --color-brass-300: #D4B378;
+  --color-brass-600: #B0853A;
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+}
+
+/* CSS custom properties — used inline by the AdminAiUsage component
+   so the brand palette is available even outside Tailwind classes. */
+:root {
+  --atelier-cream: #F7F5F2;
+  --atelier-ink: #1c1917;
+  --atelier-stone-50: #fafaf9;
+  --atelier-stone-100: #f5f5f4;
+  --atelier-stone-200: #e7e5e4;
+  --atelier-stone-300: #d6d3d1;
+  --atelier-stone-400: #a8a29e;
+  --atelier-stone-500: #78716c;
+  --atelier-stone-600: #57534e;
+  --atelier-stone-700: #44403c;
+  --atelier-stone-800: #292524;
+  --atelier-stone-900: #1c1917;
+  --atelier-brass-200: #E8CFA0;
+  --atelier-brass-300: #D4B378;
+  --atelier-brass-600: #B0853A;
+  --atelier-font-display: 'Playfair Display', Georgia, serif;
+  --atelier-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background: var(--atelier-cream);
+  color: var(--atelier-stone-900);
+  font-family: var(--atelier-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}

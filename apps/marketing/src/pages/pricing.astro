@@ -79,7 +79,8 @@ const LS_CHECKOUT_URL = 'https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
           finally on the page, and the small luxuries that turn a wardrobe into a practice.
         </p>
 
-        {/* Trial line — small, factual, no card required */}
+        {/* Trial line — small, factual. Lemon Squeezy collects card details
+            at checkout, so we don't claim otherwise. */}
         <p
           class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full"
           style="background: rgba(212, 179, 120, 0.12); border: 1px solid rgba(212, 179, 120, 0.3); color: var(--atelier-brass-600); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600;"
@@ -88,22 +89,8 @@ const LS_CHECKOUT_URL = 'https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
             aria-hidden="true"
             style="width: 5px; height: 5px; border-radius: 50%; background: var(--atelier-brass-600);"
           />
-          14-day trial · no card required
+          14-day trial
         </p>
-
-        {/* Scroll cue toward the cards below */}
-        <div class="mt-12 flex flex-col items-center gap-2">
-          <span
-            class="text-[10px] uppercase"
-            style="letter-spacing: 0.3em; color: var(--atelier-stone-400);"
-          >
-            Choose your terms
-          </span>
-          <span
-            aria-hidden="true"
-            style="display: inline-block; width: 1px; height: 28px; background: linear-gradient(to bottom, var(--atelier-stone-300), transparent);"
-          />
-        </div>
       </div>
     </section>
 

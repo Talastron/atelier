@@ -48,22 +48,39 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const eventId = request.headers.get('X-Event-Id') || '';
 
   const valid = await verifyLemonSqueezySignature(rawBody, signature, env.LEMONSQUEEZY_WEBHOOK_SECRET);
-  if (!valid) return new Response('invalid signature', { status: 401 });
+  if (!valid) {
+    console.warn(`[webhook] rejected: invalid HMAC signature (event_id=${eventId || 'none'})`);
+    return new Response('invalid signature', { status: 401 });
+  }
 
   let payload: any;
   try {
     payload = JSON.parse(rawBody);
   } catch {
+    console.warn('[webhook] rejected: body is not valid JSON');
     return new Response('invalid json', { status: 400 });
   }
 
   const eventName: string = payload.meta?.event_name;
-  if (!eventName) return new Response('missing event_name', { status: 400 });
+  if (!eventName) {
+    console.warn('[webhook] rejected: missing meta.event_name');
+    return new Response('missing event_name', { status: 400 });
+  }
 
-  const sa = parseServiceAccount(env.FIREBASE_ADMIN_SERVICE_ACCOUNT);
-  const token = await getGoogleAccessToken(sa, SCOPES);
+  console.log(`[webhook] received event=${eventName} id=${eventId || 'none'}`);
+
+  let sa;
+  let token;
+  try {
+    sa = parseServiceAccount(env.FIREBASE_ADMIN_SERVICE_ACCOUNT);
+    token = await getGoogleAccessToken(sa, SCOPES);
+  } catch (err: any) {
+    console.error(`[webhook] auth setup failed: ${err?.message || err}`);
+    return new Response('auth setup failed', { status: 500 });
+  }
 
   if (eventId && (await isEventProcessed(token, env.FIREBASE_PROJECT_ID, eventId))) {
+    console.log(`[webhook] event ${eventId} already processed — skipping`);
     return new Response('already processed', { status: 200 });
   }
 
@@ -72,8 +89,11 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
   const email = attrs?.user_email;
 
   if (!attrs || !subscriptionId || !email) {
+    console.warn(`[webhook] rejected: missing required fields (subId=${subscriptionId}, hasAttrs=${!!attrs}, hasEmail=${!!email})`);
     return new Response('missing required fields', { status: 400 });
   }
+
+  console.log(`[webhook] processing ${eventName} for email=${email} subId=${subscriptionId}`);
 
   const subscriptionRecord: SubscriptionRecord = {
     subscriptionId,
@@ -86,47 +106,61 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     cancelledAt: attrs.cancelled ? new Date().toISOString() : undefined,
   };
 
-  switch (eventName) {
-    case 'subscription_created': {
-      const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
-      subscriptionRecord.userId = user.uid;
-      await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      await sendSignInLink(token, env.FIREBASE_PROJECT_ID, email, `${env.EDIT_URL}/auth`);
-      break;
+  try {
+    switch (eventName) {
+      case 'subscription_created': {
+        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        subscriptionRecord.userId = user.uid;
+        console.log(`[webhook] ${user.created ? 'created' : 'found'} Firebase user uid=${user.uid}`);
+        await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        await sendSignInLink(token, env.FIREBASE_PROJECT_ID, email, `${env.EDIT_URL}/auth`);
+        console.log(`[webhook] sent magic-link email to ${email}`);
+        break;
+      }
+      case 'subscription_updated':
+      case 'subscription_resumed':
+      case 'subscription_payment_success': {
+        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        subscriptionRecord.userId = user.uid;
+        await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        console.log(`[webhook] updated subscription for uid=${user.uid} status=${subscriptionRecord.status}`);
+        break;
+      }
+      case 'subscription_cancelled': {
+        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        subscriptionRecord.userId = user.uid;
+        subscriptionRecord.status = 'cancelled';
+        subscriptionRecord.cancelledAt = new Date().toISOString();
+        await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        console.log(`[webhook] cancelled subscription for uid=${user.uid} access until=${subscriptionRecord.currentPeriodEnd}`);
+        break;
+      }
+      case 'subscription_expired':
+      case 'subscription_payment_failed': {
+        const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
+        subscriptionRecord.userId = user.uid;
+        subscriptionRecord.status = eventName === 'subscription_expired' ? 'expired' : 'past_due';
+        await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
+        console.log(`[webhook] ${eventName} for uid=${user.uid} — access revoked`);
+        break;
+      }
+      default:
+        console.log(`[webhook] unhandled event type: ${eventName}`);
     }
-    case 'subscription_updated':
-    case 'subscription_resumed':
-    case 'subscription_payment_success': {
-      const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
-      subscriptionRecord.userId = user.uid;
-      await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      break;
-    }
-    case 'subscription_cancelled': {
-      const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
-      subscriptionRecord.userId = user.uid;
-      subscriptionRecord.status = 'cancelled';
-      subscriptionRecord.cancelledAt = new Date().toISOString();
-      await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      break;
-    }
-    case 'subscription_expired':
-    case 'subscription_payment_failed': {
-      const user = await findOrCreateUserByEmail(token, env.FIREBASE_PROJECT_ID, email);
-      subscriptionRecord.userId = user.uid;
-      subscriptionRecord.status = eventName === 'subscription_expired' ? 'expired' : 'past_due';
-      await upsertSubscription(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      await upsertSubscriberAccess(token, env.FIREBASE_PROJECT_ID, subscriptionRecord);
-      break;
-    }
-    default:
-      console.log(`Unhandled LS event: ${eventName}`);
+  } catch (err: any) {
+    // Log full context so Cloudflare real-time logs can be used to debug
+    // without resending the webhook. Rethrow so Cloudflare returns 500 and
+    // LS retries (idempotent: next attempt with same event_id is a no-op).
+    console.error(`[webhook] failed processing ${eventName} for ${email}: ${err?.message || err}`);
+    throw err;
   }
 
   if (eventId) await markEventProcessed(token, env.FIREBASE_PROJECT_ID, eventId);
 
+  console.log(`[webhook] ok event=${eventName} id=${eventId || 'none'}`);
   return new Response('ok', { status: 200 });
 }

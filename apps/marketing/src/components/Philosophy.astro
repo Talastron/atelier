@@ -16,7 +16,7 @@
 // visitors into a sign-in wall instead of checkout.
 import { BrassRule } from '@atelier/ui';
 import { EDIT_URL } from '../config.ts';
-import { ChevronRight, KeyRound } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 ---
 
 <!-- Container constrains the dark card to the same 1280px width as Hero + Features. -->
@@ -28,14 +28,98 @@ import { ChevronRight, KeyRound } from 'lucide-react';
     class="relative overflow-hidden rounded-[3rem]"
     style={`background: linear-gradient(160deg, var(--atelier-ink) 0%, #292524 100%); color: #ffffff; padding-block: clamp(4rem, 7vw, 6rem); padding-inline: clamp(2rem, 5vw, 4rem); box-shadow: 0 60px 140px -40px rgba(28, 25, 23, 0.45);`}
   >
-    {/* Decorative key — large, low-opacity, anchored to bottom-right.
-        Reinforces the "Keys to Atelier" motif without competing with copy. */}
+    {/* Decorative skeleton key — hand-drawn SVG that matches the footer
+        armoire's line-illustration vocabulary: variable stroke weights,
+        brass-coloured centre accent, antique two-tier bit. Anchored to
+        bottom-right at low opacity so it reinforces the "Keys to Atelier"
+        motif without competing with copy. */}
     <div
       aria-hidden="true"
       class="absolute pointer-events-none"
-      style="right: -2rem; bottom: -3rem; opacity: 0.045; transform: rotate(-18deg);"
+      style="right: -2rem; bottom: -3rem; opacity: 0.08; transform: rotate(-18deg);"
     >
-      <KeyRound size={360} strokeWidth={0.6} client:load />
+      <svg
+        width="360"
+        height="360"
+        viewBox="0 0 280 280"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+      >
+        {/* Bow — outer ornate ring */}
+        <circle
+          cx="140"
+          cy="82"
+          r="46"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="1.6"
+        />
+        {/* Bow — inner detail circle */}
+        <circle
+          cx="140"
+          cy="82"
+          r="31"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="0.9"
+        />
+        {/* Quatrefoil petals around the bow — north, east, south, west */}
+        <g
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="0.9"
+          stroke-linecap="round"
+        >
+          <path d="M 140 36 C 130 50, 130 62, 140 68 C 150 62, 150 50, 140 36 Z" />
+          <path d="M 186 82 C 172 72, 160 72, 154 82 C 160 92, 172 92, 186 82 Z" />
+          <path d="M 140 128 C 130 114, 130 102, 140 96 C 150 102, 150 114, 140 128 Z" />
+          <path d="M 94 82 C 108 72, 120 72, 126 82 C 120 92, 108 92, 94 82 Z" />
+        </g>
+        {/* Brass centre — the "keyhole" indicator, same brass tone as the
+            armoire's keyhole accents in the footer */}
+        <circle cx="140" cy="82" r="5.5" fill="#D4B378" />
+        <circle cx="140" cy="82" r="2" fill="#1c1917" />
+
+        {/* Shaft connecting bow to bit */}
+        <line
+          x1="140"
+          y1="128"
+          x2="140"
+          y2="230"
+          stroke="#ffffff"
+          stroke-width="1.6"
+          stroke-linecap="round"
+        />
+        {/* Decorative double-band on the shaft (the antique "collar") */}
+        <line
+          x1="126"
+          y1="162"
+          x2="154"
+          y2="162"
+          stroke="#ffffff"
+          stroke-width="0.9"
+          stroke-linecap="round"
+        />
+        <line
+          x1="126"
+          y1="168"
+          x2="154"
+          y2="168"
+          stroke="#ffffff"
+          stroke-width="0.9"
+          stroke-linecap="round"
+        />
+
+        {/* Bit — vintage two-tier ward pattern (the teeth at the end) */}
+        <path
+          d="M 140 198 L 168 198 L 168 210 L 152 210 L 152 222 L 172 222 L 172 232 L 140 232"
+          fill="none"
+          stroke="#ffffff"
+          stroke-width="1.6"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+      </svg>
     </div>
 
     {/* Soft brass glow behind the headline — gives the dark card warmth */}

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
 import MagicLinkComplete from './MagicLinkComplete.jsx';
-import { auth, isSignInWithEmailLink } from './firebase.js';
+import { auth, isSignInWithEmailLink, isDemoMode } from './firebase.js';
 
 // Mobile viewport fix: pin --app-vh to the actual visible pixel height so
 // position:fixed bottom-anchored elements (bottom nav) sit above iOS Safari's
@@ -26,7 +26,10 @@ if (window.visualViewport) {
 // Auth query params. We render the completion view instead of the main App
 // so the user can confirm their email and complete sign-in. After success,
 // MagicLinkComplete redirects to / which loads App with the signed-in user.
-const isMagicLink = isSignInWithEmailLink(auth, window.location.href);
+//
+// Demo mode short-circuits this — we never want to evaluate the magic link
+// for a visitor exploring with ?demo=1 (no auth involved at all).
+const isMagicLink = !isDemoMode && isSignInWithEmailLink(auth, window.location.href);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

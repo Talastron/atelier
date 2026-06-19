@@ -15,6 +15,7 @@ import {
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
 import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
+import { SEED_WARDROBE } from './seedWardrobe.js';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -525,7 +526,7 @@ Respond ONLY with valid JSON in this exact shape:
 
 Confidence reflects how strongly the available wardrobe matches the intent (100 = perfect fit, 50 = workable but not ideal, low = thin matches).`;
 
-  const text = await geminiText(prompt, { temperature, jsonMode: true });
+  const text = await geminiText(prompt, { temperature, jsonMode: true }, 'suggest-look');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
   if (!parsed.itemIds?.length) throw new Error('Gemini could not compose a look from this wardrobe');
@@ -575,7 +576,7 @@ Respond ONLY with valid JSON in this exact shape:
   "confidence": 0
 }`;
 
-  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true });
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true }, 'identify-item');
   if (!text) throw new Error('Gemini returned no response');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
@@ -612,7 +613,7 @@ Respond ONLY with valid JSON in this exact shape:
   "notes": "anything else worth keeping, or empty"
 }`;
 
-  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.1, jsonMode: true });
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.1, jsonMode: true }, 'analyze-label');
   if (!text) throw new Error('Gemini returned no response');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
@@ -643,7 +644,7 @@ Respond ONLY with valid JSON in this exact shape:
   ]
 }`;
 
-  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true });
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true }, 'analyze-receipt');
   if (!text) throw new Error('Gemini returned no response');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
@@ -713,7 +714,7 @@ Respond ONLY with valid JSON in this exact shape:
   "recommendations": [{"piece": "string", "why": "string"}]
 }`;
 
-  const text = await geminiText(prompt, { temperature: 0.5, jsonMode: true });
+  const text = await geminiText(prompt, { temperature: 0.5, jsonMode: true }, 'wardrobe-gap');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
   return parsed;
@@ -749,7 +750,7 @@ Respond ONLY with valid JSON in this exact shape:
   "summary": "one elegant sentence describing the overall look"
 }`;
 
-  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.4, jsonMode: true });
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.4, jsonMode: true }, 'inspiration-analysis');
   if (!text) throw new Error('Gemini returned no analysis');
   return JSON.parse(text);
 }
@@ -1277,7 +1278,7 @@ Examples of the tone wanted:
 - "Brass & Wool"
 
 Reply with the name only — no preamble, no explanation.`;
-  const result = await geminiText(prompt, { temperature: 0.9 });
+  const result = await geminiText(prompt, { temperature: 0.9 }, 'name-look');
   return (result || '')
     .trim()
     .split('\n')[0]
@@ -1315,7 +1316,7 @@ Examples of the tone wanted:
 - The kind of look that means business without saying so.
 
 Reply with the line only.`;
-    const result = await geminiText(prompt, { temperature: 0.85 });
+    const result = await geminiText(prompt, { temperature: 0.85 }, 'narrate-day');
     if (!result) return null;
     return result.trim().split('\n')[0].replace(/^["'`]+|["'`]+$/g, '').slice(0, 110);
   } catch {
@@ -1394,7 +1395,7 @@ When asked anything else (critique, packing, advice), reply in 1-3 short paragra
 
   const prompt = `${systemBlock}\n\n──────\n\n${conversationBlock}\n\nSTYLIST:`;
 
-  const reply = await geminiText(prompt, { temperature: 0.75 });
+  const reply = await geminiText(prompt, { temperature: 0.75 }, 'concierge');
   return (reply || '').trim();
 }
 
@@ -1448,7 +1449,7 @@ UK English. Warm, observational, specific. No platitudes. No bullet points.
 Data:
 ${lines.join('\n')}`;
 
-  const text = await geminiText(prompt, { temperature: 0.7 });
+  const text = await geminiText(prompt, { temperature: 0.7 }, 'manifesto');
   if (!text) throw new Error('Gemini returned no response');
   return text.trim();
 }
@@ -1472,7 +1473,7 @@ Recent wears: ${recent}
 Respond with the sentence only, no quotes.`;
 
   try {
-    const text = await geminiText(prompt, { temperature: 0.8 });
+    const text = await geminiText(prompt, { temperature: 0.8 }, 'narrate-wear');
     return (text || '').trim();
   } catch { return ''; }
 }
@@ -1595,7 +1596,7 @@ Respond ONLY with valid JSON in this exact shape:
   "summary": "one short paragraph"
 }`;
 
-  const text = await geminiText(prompt, { temperature: 0.6, jsonMode: true });
+  const text = await geminiText(prompt, { temperature: 0.6, jsonMode: true }, 'travel-capsule');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
   if (!Array.isArray(parsed.days) || parsed.days.length === 0) throw new Error('Gemini could not compose a capsule.');
@@ -2339,6 +2340,15 @@ function DigitalWardrobe() {
   const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  // Demo mode: ?demo=1 in the URL spins up an interactive marketing demo
+  // pre-loaded with the SEED_WARDROBE capsule. No auth, no Firestore writes,
+  // no cross-contamination with a real user's data. Lives entirely in local
+  // React state; a "Reset demo" button restores the seed capsule. Used by
+  // the atelier-website marketing site to let prospects try the app cold.
+  const [demoMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('demo') === '1';
+  });
   const [items, setItems] = useState([]);
   const [measurements, setMeasurements] = useState(INITIAL_MEASUREMENTS);
   const [shops, setShops] = useState([]);
@@ -2425,6 +2435,17 @@ function DigitalWardrobe() {
     });
   }, []);
 
+  // Demo mode bootstrap. Skips Firestore entirely — populates items from the
+  // local SEED_WARDROBE capsule and forces auth as ready so the auth gate
+  // falls through to the main app. Outfits/inspirations/etc stay empty so
+  // visitors can experience the "blank lookbook" + AI flows from scratch.
+  useEffect(() => {
+    if (!demoMode) return;
+    setItems(SEED_WARDROBE.map((it) => ({ ...it })));  // clone so user edits don't mutate the import
+    setLoading(false);
+    setAuthReady(true);
+  }, [demoMode]);
+
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -2498,11 +2519,25 @@ function DigitalWardrobe() {
   }, [isOwner]);
 
   const handleAddItem = async (newItem) => {
+    if (demoMode) {
+      // Local-state only; visitor's changes evaporate on refresh / reset.
+      setItems((prev) => {
+        const exists = prev.some((i) => i.id === newItem.id);
+        return exists ? prev.map((i) => (i.id === newItem.id ? newItem : i)) : [...prev, newItem];
+      });
+      return;
+    }
     if (!user) return;
     await setDoc(doc(userItemsRef(user.uid), newItem.id), newItem);
   };
   const handleBulkUpdateItems = async (ids, partial) => {
-    if (!user || !ids.length) return;
+    if (!ids.length) return;
+    if (demoMode) {
+      setItems((prev) => prev.map((it) => (ids.includes(it.id) ? { ...it, ...partial } : it)));
+      toast.show(`Updated ${ids.length} item${ids.length === 1 ? '' : 's'}`, { kind: 'success' });
+      return;
+    }
+    if (!user) return;
     const batch = writeBatch(db);
     for (const id of ids) {
       const item = items.find((i) => i.id === id);
@@ -2533,9 +2568,14 @@ function DigitalWardrobe() {
     toast.show(`${newItems.length} item${newItems.length === 1 ? '' : 's'} added from receipt`, { kind: 'success' });
   };
   const handleDeleteItem = async (id) => {
-    if (!user) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
+    if (demoMode) {
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, deletedAt: new Date().toISOString() } : i)));
+      toast.show('Moved to Trash · restore from Profile', { kind: 'default' });
+      return;
+    }
+    if (!user) return;
     // Soft delete: 30-day grace period (restorable from Profile → Trash).
     await setDoc(doc(userItemsRef(user.uid), id), { ...item, deletedAt: new Date().toISOString() });
     toast.show('Moved to Trash · restore from Profile', { kind: 'default' });
@@ -2617,6 +2657,14 @@ function DigitalWardrobe() {
     })();
   }, [user, items.length]);
   const handleSaveOutfit = async (outfit) => {
+    if (demoMode) {
+      setOutfits((prev) => {
+        const exists = prev.some((o) => o.id === outfit.id);
+        return exists ? prev.map((o) => (o.id === outfit.id ? outfit : o)) : [...prev, outfit];
+      });
+      if (!outfit.capsule) toast.show('Look saved · sign up to keep it', { kind: 'success' });
+      return;
+    }
     if (!user) return;
     await setDoc(doc(userOutfitsRef(user.uid), outfit.id), outfit);
     // Capsule generator handles its own summary toast — don't spam per-look here.
@@ -2625,6 +2673,10 @@ function DigitalWardrobe() {
     }
   };
   const handleDeleteOutfit = async (id) => {
+    if (demoMode) {
+      setOutfits((prev) => prev.filter((o) => o.id !== id));
+      return;
+    }
     if (!user) return;
     await deleteDoc(doc(userOutfitsRef(user.uid), id));
   };
@@ -2635,7 +2687,15 @@ function DigitalWardrobe() {
   // and destination needs their order updated too. Trade-off: N writes per
   // drag, but N is usually small (≤30 lookbook entries for most users).
   const handleReorderOutfits = async (orderedIds) => {
-    if (!user || !Array.isArray(orderedIds)) return;
+    if (!Array.isArray(orderedIds)) return;
+    if (demoMode) {
+      setOutfits((prev) => {
+        const indexById = new Map(orderedIds.map((id, idx) => [id, idx]));
+        return prev.map((o) => (indexById.has(o.id) ? { ...o, order: indexById.get(o.id) } : o));
+      });
+      return;
+    }
+    if (!user) return;
     try {
       await Promise.all(orderedIds.map((id, idx) => {
         const o = outfits.find((x) => x.id === id);
@@ -3126,13 +3186,52 @@ function DigitalWardrobe() {
 
       {!authReady ? (
         <FullScreenLoader label="Opening your Atelier" />
-      ) : !user ? (
+      ) : !user && !demoMode ? (
         <SignInScreen onSignIn={signInWithGoogle} />
-      ) : accessDenied ? (
+      ) : accessDenied && !demoMode ? (
         <AccessDeniedScreen user={user} onSignOut={signOutUser} />
       ) : (
         <div className="flex font-sans text-stone-900 overflow-hidden bg-[#F7F5F2] w-full"
              style={{ height: 'var(--app-vh, 100dvh)' }}>
+          {demoMode && (
+            // Editorial pill banner pinned to the top of the viewport. Visible
+            // only while the visitor is exploring with ?demo=1; survives every
+            // tab and modal because it's fixed and z-50.
+            <div className="fixed top-0 inset-x-0 z-50 pointer-events-none px-4"
+                 style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
+              <div className="mx-auto max-w-3xl pointer-events-auto">
+                <div className="glass-panel rounded-full shadow-sm px-4 sm:px-5 py-2 flex items-center justify-between gap-3 text-[11px] sm:text-xs">
+                  <div className="flex items-center gap-2 sm:gap-2.5 text-stone-600 min-w-0">
+                    <span className="font-display italic text-stone-900 text-sm sm:text-base leading-none shrink-0">Demo</span>
+                    <span className="hidden sm:inline text-stone-400">·</span>
+                    <span className="hidden sm:inline truncate">A sample wardrobe to play with — nothing saves</span>
+                  </div>
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setItems(SEED_WARDROBE.map((it) => ({ ...it })));
+                        setOutfits([]);
+                        setInspirations([]);
+                        setAiHistory([]);
+                        setSchedules({});
+                        toast.show('Demo wardrobe restored', { kind: 'default' });
+                      }}
+                      className="text-stone-500 hover:text-stone-900 transition-colors uppercase tracking-[0.18em]"
+                    >
+                      Reset
+                    </button>
+                    <a
+                      href="/"
+                      className="bg-stone-900 text-white px-3 sm:px-3.5 py-1.5 rounded-full uppercase tracking-[0.18em] hover:bg-stone-700 transition-colors whitespace-nowrap"
+                    >
+                      Sign up
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
             {/* Logo block height + this margin is tuned so the first nav pill
                 (Wardrobe) sits at the same Y as the search bar in the main
@@ -3186,16 +3285,16 @@ function DigitalWardrobe() {
                 // #F7F5F2 sidebar (stone-100 was invisible against #F7F5F2).
                 className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-stone-200/70 transition-colors duration-200 group"
               >
-                {user.photoURL ? (
+                {user?.photoURL ? (
                   <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full ring-2 ring-stone-100 shrink-0" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-base shrink-0">
-                    {(user.displayName || user.email || '?').charAt(0).toUpperCase()}
+                    {(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-stone-900 truncate">{user.displayName || 'Account'}</p>
-                  <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
+                  <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
+                  <p className="text-[11px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
                 </div>
                 <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500 transition-colors shrink-0" strokeWidth={1.5} />
               </button>
@@ -4309,8 +4408,8 @@ function MobileFAB({ onTap, onLongPress }) {
       <button
         type="button"
         onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerLeave={onPointerCancel}
         onPointerCancel={onPointerCancel}
         onContextMenu={(e) => e.preventDefault()}
         className={`w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all duration-200 active:scale-90 hover:scale-105 ring-4 ${holdActive ? 'ring-brass-300 scale-105' : 'ring-[#F7F5F2]'}`}
@@ -4325,13 +4424,20 @@ function MobileFAB({ onTap, onLongPress }) {
         }}
         aria-label="Add item — press and hold to open Concierge"
       >
-        {/* Hanger glyph — silhouette only, no rect/charm. Stroke is doubled
-            vs the full AtelierMark so it has icon weight at this scale. */}
-        <svg width="30" height="30" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        {/* Full sentinel inside the FAB — hanger silhouette + brass charm,
+            sized at 48px so it fills ~75% of the 64px FAB (was 30px which
+            felt lost). Charm dimensions are scaled up relative to the brand
+            mark (line stroke 5 vs 1.5, dot r=12 vs 5) because the original
+            details are sub-pixel at icon scale; the proportions are tuned
+            so the charm reads as a deliberate pendant, not a stray dot.
+            The dark rect is skipped — the FAB IS the ink ground. */}
+        <svg width="48" height="48" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <g fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round">
             <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110" />
             <path d="M 128 110 L 62 184 L 194 184 Z" />
           </g>
+          <line x1="128" y1="184" x2="128" y2="206" stroke="#D4B378" strokeWidth="5" strokeLinecap="round" />
+          <circle cx="128" cy="216" r="12" fill="#D4B378" />
         </svg>
       </button>
     </div>
@@ -13861,6 +13967,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
           </div>
         </div>
       )}
+
     </div>
   );
 }

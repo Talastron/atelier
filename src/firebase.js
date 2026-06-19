@@ -42,6 +42,14 @@ if (missing.length) {
   );
 }
 
+// Demo mode: visitors at ?demo=1 never authenticate or hit Firestore. We still
+// have to call initializeApp (a few transitive imports reach `app`) but we
+// skip the side-effects: no App Check / reCAPTCHA load (= less network noise
+// + no exposure of the reCAPTCHA site key), no auth state subscription, no
+// Firestore connection. Keeps the demo network-quiet and harder to abuse.
+export const isDemoMode = typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('demo') === '1';
+
 export const app = initializeApp(firebaseConfig);
 
 // ─── App Check ───────────────────────────────────────────────────────────
@@ -56,7 +64,7 @@ if (import.meta.env.DEV) {
   // eslint-disable-next-line no-undef
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
 }
-if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
+if (!isDemoMode && import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   try {
     initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
@@ -65,7 +73,7 @@ if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   } catch (err) {
     console.warn('[firebase] App Check init failed — AI features will be unavailable:', err?.message);
   }
-} else {
+} else if (!isDemoMode) {
   console.warn(
     '[firebase] No VITE_RECAPTCHA_SITE_KEY configured. App Check is disabled — ' +
     'AI features will fail until you set up reCAPTCHA v3. See README for steps.'

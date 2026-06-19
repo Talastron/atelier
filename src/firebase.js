@@ -9,7 +9,22 @@ import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  // authDomain is intentionally hardcoded (not env-driven) and set to the app's
+  // own custom domain rather than <project>.firebaseapp.com.
+  //
+  // Why: Safari's Intelligent Tracking Prevention (ITP) blocks third-party
+  // cookies. With authDomain=firebaseapp.com (different origin from the app at
+  // edit.myatelier.style), the Firebase Auth cookies set during Google sign-in's
+  // redirect flow are treated as third-party and silently dropped. The auth
+  // SUCCEEDS at Google's end but the SDK can't read the resulting session,
+  // causing the "sign in → bounce back to sign-in screen" loop on mobile
+  // Safari (and increasingly other browsers tightening cross-origin cookies).
+  //
+  // Using edit.myatelier.style as authDomain makes Firebase Auth a FIRST-PARTY
+  // origin to the app. Cookies persist normally. Works in all browsers,
+  // including private/incognito modes. The cost: edit.myatelier.style must
+  // be in Firebase Auth's authorized domains (it is — added during Phase 1B).
+  authDomain: 'edit.myatelier.style',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,

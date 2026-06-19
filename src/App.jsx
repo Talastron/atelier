@@ -3340,6 +3340,28 @@ function DigitalWardrobe() {
             </button>
           )}
 
+          {/* MOBILE SENTINEL PILL — floating top-left. The hanger mark is
+              the brand's anchor on desktop (sidebar header); on mobile,
+              the bottom nav was carrying the wayfinding burden alone and
+              the brand disappeared entirely once signed in. This pill
+              restores it and doubles as the Concierge entry point — the
+              flagship AI feature has no other mobile surface (it's an
+              overlay, not a destination tab). Mirrors the profile pill
+              opposite: same size, same atTop fade, same safe-area inset.
+              Uses drop-shadow (CSS filter) so the shadow follows the
+              mark's rounded-square corners rather than a square box. */}
+          <button
+            type="button"
+            onClick={() => setIsConciergeOpen(true)}
+            className={`lg:hidden fixed top-0 left-3 z-40 mt-3 w-10 h-10 p-0 border-0 bg-transparent flex items-center justify-center drop-shadow-lg active:scale-90 transition-all duration-200 ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+            aria-label="Open Atelier Concierge"
+            aria-hidden={!atTop}
+            tabIndex={atTop ? 0 : -1}
+          >
+            <AtelierMark size={40} />
+          </button>
+
           {/* MOBILE PROFILE PILL — floating top-right. The Diary now lives
               as a tab inside Lookbook (where it belongs conceptually —
               outfits + when they were worn), so the matching top-left
@@ -14138,8 +14160,17 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
             <p className="font-display text-xl text-stone-900 truncate">{user.displayName || 'Signed in'}</p>
             <p className="text-stone-500 text-xs tracking-wide mt-1 truncate">{user.email}</p>
           </div>
-          <button onClick={signOutUser} className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors">
-            <LogOut size={14} strokeWidth={1.5} /> Sign out
+          {/* Icon-only on mobile (label would crowd the small account card),
+              full pill with label on sm+. The icon alone is universally
+              understood for sign-out (door-with-arrow) so this stays
+              accessible without a label. */}
+          <button
+            onClick={signOutUser}
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors shrink-0"
+            aria-label="Sign out"
+          >
+            <LogOut size={14} strokeWidth={1.5} />
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       )}

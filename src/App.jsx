@@ -3125,7 +3125,7 @@ function DigitalWardrobe() {
       `}</style>
 
       {!authReady ? (
-        <FullScreenLoader label="Opening your atelier" />
+        <FullScreenLoader label="Opening your Atelier" />
       ) : !user ? (
         <SignInScreen onSignIn={signInWithGoogle} />
       ) : accessDenied ? (
@@ -3340,28 +3340,6 @@ function DigitalWardrobe() {
             </button>
           )}
 
-          {/* MOBILE SENTINEL PILL — floating top-left. The hanger mark is
-              the brand's anchor on desktop (sidebar header); on mobile,
-              the bottom nav was carrying the wayfinding burden alone and
-              the brand disappeared entirely once signed in. This pill
-              restores it and doubles as the Concierge entry point — the
-              flagship AI feature has no other mobile surface (it's an
-              overlay, not a destination tab). Mirrors the profile pill
-              opposite: same size, same atTop fade, same safe-area inset.
-              Uses drop-shadow (CSS filter) so the shadow follows the
-              mark's rounded-square corners rather than a square box. */}
-          <button
-            type="button"
-            onClick={() => setIsConciergeOpen(true)}
-            className={`lg:hidden fixed top-0 left-3 z-40 mt-3 w-10 h-10 p-0 border-0 bg-transparent flex items-center justify-center drop-shadow-lg active:scale-90 transition-all duration-200 ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
-            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
-            aria-label="Open Atelier Concierge"
-            aria-hidden={!atTop}
-            tabIndex={atTop ? 0 : -1}
-          >
-            <AtelierMark size={40} />
-          </button>
-
           {/* MOBILE PROFILE PILL — floating top-right. The Diary now lives
               as a tab inside Lookbook (where it belongs conceptually —
               outfits + when they were worn), so the matching top-left
@@ -3393,15 +3371,10 @@ function DigitalWardrobe() {
             <div className="grid grid-cols-5 max-w-lg mx-auto py-1 items-center">
               <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
               <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <div className="flex justify-center -mt-7">
-                <button onClick={() => setIsAddItemModalOpen(true)}
-                  className="w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all active:scale-90 hover:scale-105 ring-4 ring-[#F7F5F2]"
-                  style={{ boxShadow: '0 10px 30px -8px rgba(28, 25, 23, 0.45)' }}
-                  aria-label="Add item"
-                >
-                  <Plus size={26} strokeWidth={1.5} />
-                </button>
-              </div>
+              <MobileFAB
+                onTap={() => setIsAddItemModalOpen(true)}
+                onLongPress={() => setIsConciergeOpen(true)}
+              />
               <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
               <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
             </div>
@@ -4085,12 +4058,16 @@ function SignInScreen({ onSignIn }) {
     }
   };
 
+  // Layout: on mobile, top-anchor the content (py-12 + items-center) so the
+  // form is always visible without scrolling. On sm+, vertically center as
+  // before. justify-center on a min-h-screen flex broke on mobile when the
+  // keyboard opened — content scrolled off-screen.
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] px-6 font-sans">
+    <div className="min-h-screen flex flex-col items-center bg-[#F7F5F2] px-6 py-12 sm:py-0 sm:justify-center font-sans">
       <div className="mb-8"><AtelierMark size={88} /></div>
       <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier.</h1>
-      <p className="text-stone-500 text-sm tracking-wide mb-12 text-center max-w-sm">
-        Your private digital wardrobe. Sign in to access your collection from any device.
+      <p className="text-stone-500 text-sm tracking-wide mb-10 text-center max-w-sm">
+        Your private digital wardrobe.
       </p>
 
       {mode === 'sent' ? (
@@ -4134,22 +4111,25 @@ function SignInScreen({ onSignIn }) {
           </button>
         </form>
       ) : (
-        <>
+        // w-full max-w-sm on the wrapper makes both buttons fill the same
+        // width so the Google button doesn't visibly shrink when its text
+        // changes from "Sign in with Google" to "Signing in…".
+        <div className="w-full max-w-sm flex flex-col items-center gap-6">
           <button
             onClick={handleGoogle}
             disabled={busy}
-            className="bg-stone-900 text-white px-10 py-4 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg disabled:opacity-50"
+            className="w-full bg-stone-900 text-white px-10 py-4 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg disabled:opacity-50"
           >
             {busy ? 'Signing in…' : 'Sign in with Google'}
           </button>
           <button
             type="button"
             onClick={() => { setMode('emailForm'); setError(null); }}
-            className="mt-6 text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
           >
             Or sign in with email
           </button>
-        </>
+        </div>
       )}
 
       {error && <p className="mt-6 text-xs text-red-700 max-w-sm text-center leading-relaxed">{error}</p>}
@@ -4229,6 +4209,132 @@ function MobileNavItem({ icon: Icon, label, id, activeTab, setTab, onScrollTop }
       <span className={`text-[10px] tracking-wide transition-colors ${isActive ? 'text-stone-900 font-medium' : 'text-stone-400'}`}>{label}</span>
       {isActive && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-stone-900" />}
     </button>
+  );
+}
+
+// Mobile bottom-nav FAB — central button with two gestures:
+//   • Tap    → onTap()        (default: open the Add-Item modal)
+//   • Hold   → onLongPress()  (default: open the Atelier Concierge)
+//
+// The double action lets a single button serve both flagship paths
+// (capture a new piece / consult the AI stylist) without crowding the
+// nav. Discoverability comes from three sources:
+//   1. The 5th onboarding step explicitly teaches the gesture.
+//   2. A mid-press tooltip appears after ~180ms of holding, confirming
+//      what releasing now would do. This self-teaches the long-press
+//      to anyone who naturally tries holding it later.
+//   3. Haptic buzz at the trigger moment (navigator.vibrate) — on
+//      Android, makes the gesture feel intentional.
+const FAB_LONG_PRESS_MS = 550;
+const FAB_MOVE_THRESHOLD_PX = 12; // iOS HIG drag threshold — below this is jitter
+function MobileFAB({ onTap, onLongPress }) {
+  const [holdActive, setHoldActive] = useState(false);
+  const longPressTimer = React.useRef(null);
+  const tooltipTimer = React.useRef(null);
+  const triggered = React.useRef(false);
+  const moved = React.useRef(false);
+  const startX = React.useRef(0);
+  const startY = React.useRef(0);
+
+  const cleanup = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+    if (tooltipTimer.current)   { clearTimeout(tooltipTimer.current);   tooltipTimer.current   = null; }
+    setHoldActive(false);
+  };
+
+  const onPointerDown = (e) => {
+    // Mouse: only react to primary button.
+    if (e.button !== undefined && e.button !== 0) return;
+
+    // setPointerCapture is the FIX for the broken hold gesture: without
+    // it, the tiniest subpixel finger jitter during touch fires
+    // `pointerleave` and kills the timer before 550ms. Capturing binds
+    // all further pointer events (move/up/cancel) to THIS element
+    // regardless of finger position. A real drag is still caught by the
+    // distance check in onPointerMove below.
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* old browsers */ }
+
+    triggered.current = false;
+    moved.current = false;
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+
+    // Delay the tooltip slightly so a normal tap doesn't flash it.
+    tooltipTimer.current = setTimeout(() => {
+      if (!triggered.current && !moved.current) setHoldActive(true);
+    }, 180);
+
+    longPressTimer.current = setTimeout(() => {
+      triggered.current = true;
+      try { navigator.vibrate?.(20); } catch { /* iOS Safari ignores; that's fine */ }
+      cleanup();
+      onLongPress?.();
+    }, FAB_LONG_PRESS_MS);
+  };
+
+  const onPointerMove = (e) => {
+    if (!longPressTimer.current) return;
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
+    if (Math.hypot(dx, dy) > FAB_MOVE_THRESHOLD_PX) {
+      moved.current = true;
+      cleanup();
+    }
+  };
+
+  const onPointerUp = (e) => {
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    const fired = triggered.current;
+    const wasMoved = moved.current;
+    cleanup();
+    if (!fired && !wasMoved) onTap?.();
+  };
+
+  const onPointerCancel = (e) => {
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
+    moved.current = true;
+    cleanup();
+  };
+
+  return (
+    <div className="flex justify-center -mt-7 relative">
+      {/* Mid-press tooltip — brass label confirming the gesture. */}
+      {holdActive && (
+        <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-150 z-10">
+          <div className="text-[10px] tracking-[0.25em] uppercase text-stone-900 bg-brass-100 ring-1 ring-brass-300 px-3 py-1.5 rounded-full shadow-md font-medium">
+            Hold for Concierge ✦
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerCancel}
+        onPointerCancel={onPointerCancel}
+        onContextMenu={(e) => e.preventDefault()}
+        className={`w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all duration-200 active:scale-90 hover:scale-105 ring-4 ${holdActive ? 'ring-brass-300 scale-105' : 'ring-[#F7F5F2]'}`}
+        style={{
+          boxShadow: '0 10px 30px -8px rgba(28, 25, 23, 0.45)',
+          // Disables iOS Safari's long-press callout (the "copy / share" menu)
+          // and the double-tap-zoom delay so our gesture feels native-native.
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+          touchAction: 'manipulation',
+        }}
+        aria-label="Add item — press and hold to open Concierge"
+      >
+        {/* Hanger glyph — silhouette only, no rect/charm. Stroke is doubled
+            vs the full AtelierMark so it has icon weight at this scale. */}
+        <svg width="30" height="30" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110" />
+            <path d="M 128 110 L 62 184 L 194 184 Z" />
+          </g>
+        </svg>
+      </button>
+    </div>
   );
 }
 
@@ -15061,17 +15167,26 @@ const ONBOARD_STEPS = [
   { title: 'Style with AI', body: 'In the Styling Studio, drag pieces into slots or let Gemini compose a look for an intent ("dinner date", "office day"). A/B compare two suggestions, refine in plain English, save the winner.', cta: 'Open Styling Studio', target: 'outfits' },
   { title: 'Plan, pack, and wear', body: 'Use the Calendar to schedule outfits per day, switch to range mode to plan a trip, and generate a deduped packing list. Log wears in one tap; the data feeds Insights.', cta: 'See the calendar', target: 'outfits' },
   { title: 'Insights & gaps', body: 'Best/worst cost-per-wear, your most-worn pieces, what your wardrobe is missing. Tap "Analyse my wardrobe" for a Gemini-written audit of strengths and gaps.', cta: 'Open Insights', target: 'insights' },
+  // The mobile FAB is a double-action button — this step is the primary
+  // discovery vehicle for the long-press gesture. Re-tour-shows once after
+  // the localStorage key bump below; thereafter the in-gesture tooltip
+  // ("Hold for Concierge ✦") self-teaches anyone who tries the hold.
+  { title: 'A button with two minds', body: 'On mobile, the hanger button at the centre of the bottom bar has two roles. Tap it to add a piece to your wardrobe. Press and hold for about half a second to summon Atelier Concierge — a private AI stylist that already knows everything you own.' },
 ];
 function OnboardingTour({ onJumpTo }) {
+  // Versioned key — bumped from atelier-onboard-done → -v2 so existing
+  // users see the refreshed tour (step 5 introduces the mobile FAB long-
+  // press gesture which they have no other way to discover).
+  const STORAGE_KEY = 'atelier-onboard-done-v2';
   const [step, setStep] = useState(() => {
-    try { return localStorage.getItem('atelier-onboard-done') === '1' ? -1 : 0; }
+    try { return localStorage.getItem(STORAGE_KEY) === '1' ? -1 : 0; }
     catch { return -1; }
   });
   if (step < 0 || step >= ONBOARD_STEPS.length) return null;
   const s = ONBOARD_STEPS[step];
   const last = step === ONBOARD_STEPS.length - 1;
   const finish = () => {
-    try { localStorage.setItem('atelier-onboard-done', '1'); } catch { /* noop */ }
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch { /* noop */ }
     setStep(-1);
   };
   const jump = () => { finish(); onJumpTo?.(s.target); };
@@ -15099,9 +15214,14 @@ function OnboardingTour({ onJumpTo }) {
             Skip
           </button>
           <div className="flex gap-2">
-            <button onClick={jump} className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-500">
-              {s.cta} ↗
-            </button>
+            {/* Some steps (e.g. the FAB-gesture intro) have no target tab to
+                jump to — the lesson is about the bottom-nav button itself.
+                In that case we hide the jump CTA so the user just hits Next/Done. */}
+            {s.target && s.cta && (
+              <button onClick={jump} className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-200 text-stone-800 hover:border-stone-500">
+                {s.cta} ↗
+              </button>
+            )}
             <button onClick={() => last ? finish() : setStep((s) => s + 1)}
               className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700">
               {last ? 'Done' : 'Next'}

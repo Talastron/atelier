@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged,
   isSignInWithEmailLink, signInWithEmailLink,
 } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
@@ -63,7 +63,38 @@ export const db = initializeFirestore(app, {
 });
 
 const googleProvider = new GoogleAuthProvider();
-export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+
+// Sign in with Google.
+//
+// Try popup first — smooth in-page experience on desktop with popups enabled.
+// If the browser blocks the popup (incognito mode, mobile Safari, strict
+// ad-blockers, or stricter cross-window policies), fall back to a full-page
+// redirect. signInWithRedirect navigates away from the app; after Google
+// auth completes the user lands back here and onAuthStateChanged fires with
+// the signed-in user — no extra handling needed in the app code.
+//
+// The fallback covers:
+//   auth/popup-blocked            — browser blocked the popup pre-emptively
+//   auth/popup-closed-by-user     — user closed the popup before completing
+//   auth/cancelled-popup-request  — multiple popups raced; happens on double-click
+export const signInWithGoogle = async () => {
+  try {
+    return await signInWithPopup(auth, googleProvider);
+  } catch (err) {
+    const fallbackCodes = [
+      'auth/popup-blocked',
+      'auth/popup-closed-by-user',
+      'auth/cancelled-popup-request',
+    ];
+    if (fallbackCodes.includes(err?.code)) {
+      // Returns void (the navigation away kills the promise chain), so the
+      // caller's `await` never resolves — the page just navigates.
+      return signInWithRedirect(auth, googleProvider);
+    }
+    throw err;
+  }
+};
+
 export const signOutUser = () => signOut(auth);
 export { onAuthStateChanged, isSignInWithEmailLink, signInWithEmailLink };
 

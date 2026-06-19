@@ -12,6 +12,7 @@ import { Hero } from '../components/landing/Hero.jsx';
 import { ConciergeDemo } from '../components/landing/ConciergeDemo.jsx';
 import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
 import { InvestmentLens } from '../components/landing/InvestmentLens.jsx';
+import { TravelCapsuleDemo } from '../components/landing/TravelCapsuleDemo.jsx';
 import { Features } from '../components/Features.jsx';
 import { BrassRule } from '@atelier/ui';
 ---
@@ -124,6 +125,9 @@ import { BrassRule } from '@atelier/ui';
 
     {/* ── Section 4: The Investment Lens — stats spread ─────────────── */}
     <InvestmentLens client:visible />
+
+    {/* ── Section 5: Travel Capsule — auto-rotating destinations ────── */}
+    <TravelCapsuleDemo client:visible />
 
     {/* ── Existing Features + Philosophy preserved ──────────────────── */}
     <Features client:visible />

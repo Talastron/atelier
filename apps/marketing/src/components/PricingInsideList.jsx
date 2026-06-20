@@ -1,49 +1,57 @@
 import React from 'react';
-import { MessageCircle, Shirt, Wand2, BookOpen, Layers, BarChart3 } from 'lucide-react';
 
 /**
  * The "Behind the keys" list on /pricing — six short rows that name what
- * membership unlocks. Lives in React rather than Astro frontmatter because
- * Astro's static analyser can't resolve dynamically-destructured icon
- * components inside a {INSIDE.map(...)} loop (it only sees the direct
- * imports). Solving it once here keeps the icons declarative in the data.
+ * membership unlocks. Composed as a printed table-of-contents: each item
+ * carries a Roman numeral set in display serif italic, the title baseline-
+ * aligned with the numeral, and a single sentence beneath. Brass hairlines
+ * separate rows so the list reads as part of the same editorial grammar
+ * as the rest of /pricing rather than a SaaS feature-icon block.
  *
  * Order mirrors the studio sidebar — Concierge first as the headline
  * feature, then the spaces you'll live in, then the quieter background
  * tools (Insights, Manifesto).
+ *
+ * Lives in React rather than Astro frontmatter as a leftover from when
+ * the list used dynamically-destructured Lucide icons (Astro's static
+ * analyser couldn't resolve them inside a .map(...) loop). The icons are
+ * gone now; the component stays in React for symmetry with siblings.
  */
 const INSIDE = [
   {
-    icon: MessageCircle,
     title: 'The Concierge',
     line: 'A private stylist who has read every piece you own, every wear you logged, every look you saved.',
   },
   {
-    icon: Shirt,
     title: 'The Wardrobe',
     line: 'Every piece accounted for. Brand, colour, material, cost, and every time you reached for it.',
   },
   {
-    icon: Wand2,
     title: 'Suggest a Look',
     line: 'One tap and the Concierge composes a head-to-toe outfit from your wardrobe, with the reasoning attached.',
   },
   {
-    icon: BookOpen,
     title: 'The Lookbook',
     line: 'Editorial outfits composed, saved, and revisited. A private archive of how you dress.',
   },
   {
-    icon: Layers,
     title: 'Packing Capsules',
     line: 'A destination, a forecast, and a capsule pulled from your existing closet — built in seconds.',
   },
   {
-    icon: BarChart3,
     title: 'Insights & Manifesto',
     line: 'True cost per wear, the gaps in your collection, and a private brief of your true aesthetic.',
   },
 ];
+
+// Roman numerals, with the trailing period that signals chapter-mark
+// rather than digital ordered-list. Magazines punctuate; UIs strip it.
+const ROMAN = ['I.', 'II.', 'III.', 'IV.', 'V.', 'VI.'];
+
+// Brass hairline — matches the inner border-rule on the pricing cards
+// (rgba(212, 179, 120, 0.22)), so the list reads as part of the same
+// printed series rather than a stone-grey utility table.
+const HAIRLINE = '1px solid rgba(212, 179, 120, 0.22)';
 
 export function PricingInsideList() {
   return (
@@ -51,36 +59,35 @@ export function PricingInsideList() {
       className="mx-auto grid grid-cols-1 md:grid-cols-2"
       style={{ maxWidth: 880, gap: 0 }}
     >
-      {INSIDE.map(({ icon: Icon, title, line }, i) => {
+      {INSIDE.map(({ title, line }, i) => {
         // Last two items on desktop need a bottom rule too so the list
         // closes cleanly. On mobile the single-column rules handle it.
         const isLastTwoOnDesktop = i >= INSIDE.length - 2;
         return (
           <li
             key={title}
-            className="flex items-start gap-4 py-5"
+            className="flex items-baseline gap-5 py-6"
             style={{
-              borderTop: '1px solid var(--atelier-stone-200)',
-              borderBottom: isLastTwoOnDesktop
-                ? '1px solid var(--atelier-stone-200)'
-                : 'none',
+              borderTop: HAIRLINE,
+              borderBottom: isLastTwoOnDesktop ? HAIRLINE : 'none',
             }}
           >
+            {/* Roman numeral — display serif italic, brass, fixed width so
+                every title aligns on the same x-axis. The :is selector on
+                width keeps Concierge ('I.') and Insights ('VI.') in column. */}
             <span
-              className="flex items-center justify-center flex-shrink-0"
+              className="flex-shrink-0 text-right"
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: 'rgba(212, 179, 120, 0.08)',
-                border: '1px solid rgba(212, 179, 120, 0.2)',
+                width: 32,
+                fontFamily: 'var(--atelier-font-display)',
+                fontStyle: 'italic',
+                fontSize: '1.0625rem',
+                color: 'var(--atelier-brass-600)',
+                letterSpacing: '0.02em',
+                fontWeight: 400,
               }}
             >
-              <Icon
-                size={16}
-                strokeWidth={1.6}
-                style={{ color: 'var(--atelier-brass-600)' }}
-              />
+              {ROMAN[i]}
             </span>
             <div className="min-w-0">
               <h3
@@ -90,6 +97,7 @@ export function PricingInsideList() {
                   fontSize: '1.0625rem',
                   color: 'var(--atelier-stone-900)',
                   letterSpacing: '-0.005em',
+                  lineHeight: 1.2,
                 }}
               >
                 {title}
@@ -97,7 +105,7 @@ export function PricingInsideList() {
               <p
                 style={{
                   fontSize: '0.875rem',
-                  lineHeight: 1.55,
+                  lineHeight: 1.6,
                   color: 'var(--atelier-stone-600)',
                 }}
               >

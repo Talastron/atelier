@@ -320,16 +320,25 @@ import { PrinciplesPanel } from '../components/PrinciplesPanel.jsx';
     </section>
 
     {/* ── 5.5 The Maker — founder presence ──────────────────────────
-        Small section putting a name (and eventually a portrait) to
-        Atelier. Closes the trust gap that every premium brand closes
-        by attaching a human — Aesop has Paphitis, Loewe has Anderson,
-        Atelier has Sibylle.
-        Portrait slot left empty for now; can be filled with an
-        ink-line illustration or a small black-and-white photograph
-        when ready. */}
+        Two-column on desktop: framed photo on the left, first-person
+        founder copy on the right. Stacks on mobile. The photo carries
+        the same vellum-card vocabulary as the Founding card on
+        /pricing — white matte, brass border-rule, brass corner
+        ornaments — so the brand mark frames the founder consistently
+        with how it frames the founding offer. Photo is B&W via CSS
+        filter (grayscale + slight contrast bump) for editorial tone;
+        reversible if colour is preferred later. Closes the trust gap
+        every premium brand closes by attaching a human — Aesop has
+        Paphitis, Loewe has Anderson, Atelier has Sibylle.
+
+        TODO when ready: commission a real Chanel-style architectural
+        line drawing of The Long Barn from a luxury illustrator (Etsy
+        has many — search 'single-line architectural illustration
+        commission'). Place it as a small brand mark somewhere in
+        this section, beside or beneath the signature line. */}
     <section
       class="mx-auto"
-      style="max-width: 760px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem);"
+      style="max-width: 1080px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem);"
     >
       <div class="flex items-center gap-3 mb-6">
         <BrassRule client:load />
@@ -342,26 +351,88 @@ import { PrinciplesPanel } from '../components/PrinciplesPanel.jsx';
       </div>
       <RevealOnScroll client:visible>
         <h2
-          class="mb-8"
-          style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 24ch;"
+          class="mb-10"
+          style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 26ch;"
         >
-          Atelier is composed by <em style="font-weight: 400;">Sibylle Sherwood</em>.
+          Atelier is composed by <em style="font-weight: 400;">Sibylle Möller-Sherwood</em>.
         </h2>
       </RevealOnScroll>
-      <div
-        class="space-y-6 mb-8"
-        style="font-size: 1.0625rem; line-height: 1.75; color: var(--atelier-stone-700);"
-      >
-        <p>
-          Working from a converted barn in Cobham, Surrey, with the help of a
-          small team and a great deal of cashmere. The studio is built piece by
-          piece, in the same spirit Atelier asks of its members — slowly,
-          considered, with attention paid to what already exists.
-        </p>
-        <p>
-          Atelier is privately held and self-funded. There is no investor in
-          the closet. The product is the business.
-        </p>
+
+      {/* Two-column: framed photo (left on desktop) + prose (right) */}
+      <div class="grid grid-cols-1 md:grid-cols-[minmax(0,360px)_1fr] gap-10 md:gap-14 items-start mb-10">
+        {/* Photo column — vellum-card frame matching the Founding card
+            on /pricing. White matte (14px padding), inner brass border-
+            rule, four brass corner ornaments. The photo itself is B&W
+            via CSS filter for editorial tone. */}
+        <RevealOnScroll client:visible>
+          <figure style="margin: 0;">
+            <div
+              style="position: relative; padding: 14px; background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 4px; box-shadow: 0 30px 70px -30px rgba(28, 25, 23, 0.18), 0 8px 20px -8px rgba(28, 25, 23, 0.08);"
+            >
+              <img
+                src="/about/sibylle.png"
+                alt="Sibylle Möller-Sherwood, founder of Atelier"
+                loading="lazy"
+                style="display: block; width: 100%; height: auto; filter: grayscale(0.9) contrast(1.05); border-radius: 2px; position: relative; z-index: 0;"
+              />
+              {/* Brass border-rule — sits on the white matte between the
+                  photo edge and the outer card edge */}
+              <div
+                aria-hidden="true"
+                style="position: absolute; inset: 6px; border: 1px solid rgba(212, 179, 120, 0.4); pointer-events: none; border-radius: 2px; z-index: 1;"
+              />
+              {/* Brass corner ornaments — same vocabulary as the Founding
+                  card on /pricing and the Manifesto certificate */}
+              <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; top: 2px; left: 2px; z-index: 2;" />
+              <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; top: 2px; right: 2px; z-index: 2;" />
+              <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; bottom: 2px; left: 2px; z-index: 2;" />
+              <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; bottom: 2px; right: 2px; z-index: 2;" />
+            </div>
+            <figcaption
+              style="margin-top: 1rem; text-align: center; font-family: var(--atelier-font-display); font-style: italic; font-size: 0.875rem; color: var(--atelier-stone-500); letter-spacing: 0.02em;"
+            >
+              Sibylle Möller-Sherwood · MMXXVI
+            </figcaption>
+          </figure>
+        </RevealOnScroll>
+
+        {/* Prose column — first-person founder voice. Four paragraphs:
+            credentials as character; personal fashion background; origin
+            moment (the husband's question); studio + business status. */}
+        <div
+          class="space-y-6"
+          style="font-size: 1.0625rem; line-height: 1.75; color: var(--atelier-stone-700);"
+        >
+          <p>
+            My profession is technology. Twenty-nine years of it. Most
+            recently as a Head of Data and Systems, latterly through my own
+            studio Talastron, founded in 2024. Microsoft platforms, data
+            systems, the steady work of getting large systems to behave: that
+            has been my craft for as long as I've had one.
+          </p>
+          <p>
+            Atelier began at the other end of my life. I have always loved
+            fashion and, when I could afford it, invested in pieces meant to
+            last. The wardrobe I've quietly built over the years was not one
+            I wanted to replace each season.
+          </p>
+          <p>
+            The studio you are looking at started with my husband asking
+            what I'd like for my summer wardrobe. The honest answer was that
+            I needed to look through what I already owned before I could
+            say. I could not. Not properly. That gap, between a closet of
+            carefully-chosen pieces and a head that couldn't quite see them
+            all at once, turned out to be a tool that didn't yet exist. So I
+            built one. For myself first. Then for the friends I showed it
+            to. Now for anyone who, like me, wants less, used better.
+          </p>
+          <p>
+            The studio sits in a converted barn in Cobham, Surrey, run with
+            the help of a small team and a great deal of cashmere. We are
+            privately held and self-funded. No investor in the closet. The
+            product is the business.
+          </p>
+        </div>
       </div>
 
       {/* Hand-signed name as a flourish — typeset in italic display

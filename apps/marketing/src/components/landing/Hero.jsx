@@ -1077,7 +1077,7 @@ export function Hero() {
               color: 'var(--atelier-brass-600)',
             }}
           >
-            The Atelier Studio · MMXXVI
+            Atelier · est. MMXXVI
           </p>
           <span
             aria-hidden="true"
@@ -1090,13 +1090,12 @@ export function Hero() {
           />
         </div>
 
-        {/* Kicker — small italic line above the headline that disambiguates
-            the product category immediately. Without it, first-time visitors
-            spend 2-3 seconds parsing "AI stylist / wardrobe" and could
-            mistake Atelier for a clothing brand or a styling service. The
-            kicker tells them "this is software" before they read anything
-            else. Set in stone-500 italic display serif so it reads as
-            editorial subtitle rather than utility caption. */}
+        {/* Kicker — explicit category signpost. The kicker is the only
+            place "AI" needs to appear above the fold; once it has done its
+            disambiguation job, the headline is free to be poetic ('read
+            your wardrobe') without first-time visitors mistaking Atelier
+            for a styling agency. Set in stone-500 italic display serif so
+            it reads as editorial subtitle rather than utility caption. */}
         <p
           className="mx-auto italic"
           style={{
@@ -1107,7 +1106,7 @@ export function Hero() {
             letterSpacing: '0.005em',
           }}
         >
-          A digital studio for your wardrobe.
+          AI styling for the wardrobe you already own.
         </p>
 
         {/* Headline */}
@@ -1123,8 +1122,8 @@ export function Hero() {
             marginBottom: 'clamp(1.25rem, 2vw, 1.75rem)',
           }}
         >
-          An AI stylist that knows{' '}
-          <em style={{ fontWeight: 400 }}>what's actually in</em> your wardrobe.
+          A stylist who has{' '}
+          <em style={{ fontWeight: 400 }}>read your wardrobe</em>.
         </h1>
 
         {/* Subhead */}
@@ -1138,8 +1137,8 @@ export function Hero() {
             marginBottom: 'clamp(1.75rem, 2.5vw, 2.25rem)',
           }}
         >
-          Atelier reads every piece you own, every wear you log, every look you save, and styles
-          you from your closet, not someone else's.
+          Every piece you own, every wear you log, every look you save —
+          composed into outfits the day you need them.
         </p>
 
         {/* CTAs */}

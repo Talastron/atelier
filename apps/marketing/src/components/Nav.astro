@@ -24,6 +24,16 @@ const NAV_LINKS = [
   { label: 'Journal', href: '/journal' },
   { label: 'Pricing', href: '/pricing' },
 ];
+
+// Active-link detection — strip trailing slash off Astro.url.pathname so '/about'
+// and '/about/' both match the same link. The brass hairline is drawn statically
+// on whichever link the visitor is currently sitting on; on hover, links draw
+// the same hairline from centre outward (see .desktop-nav-link::after below).
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => {
+  if (href === '/') return currentPath === '/';
+  return currentPath === href || currentPath.startsWith(`${href}/`);
+};
 ---
 
 <nav class="fixed top-0 left-0 right-0 z-50 bg-cream/90 backdrop-blur-md border-b border-stone-200/60">
@@ -31,29 +41,44 @@ const NAV_LINKS = [
     class="mx-auto h-20 flex items-center justify-between gap-6"
     style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding);"
   >
-    {/* Logo */}
-    <a href="/" class="flex items-center gap-3 shrink-0">
+    {/* Logo — hanger mark + wordmark + editorial kicker on desktop. The kicker
+        ('est. MMXXVI') hangs to the right of 'Atelier.' at baseline, like a
+        typeset signature on a printed masthead. Hidden on mobile to keep the
+        constrained top bar uncluttered. */}
+    <a href="/" class="flex items-baseline gap-3 shrink-0">
       <AtelierMark size={32} client:load />
-      <span class="font-display text-2xl tracking-tight">Atelier.</span>
+      <span class="font-display text-2xl tracking-tight" style="line-height: 1;">Atelier.</span>
+      <span
+        class="hidden md:inline-block italic font-display"
+        style="font-size: 0.6875rem; color: var(--atelier-stone-500); letter-spacing: 0.05em; line-height: 1;"
+      >
+        est. MMXXVI
+      </span>
     </a>
 
-    {/* Desktop nav links (md+) */}
-    <div class="hidden md:flex items-center gap-8 text-sm font-medium text-stone-600">
+    {/* Desktop nav links (md+) — each carries a brass hairline beneath that
+        draws statically on the active page and from centre outward on hover.
+        Same micro-interaction as the mobile overlay, ported to desktop so
+        brass appears in the bar at all times (previously the bar had no brass
+        — the brand's signature accent was missing from its most-seen surface). */}
+    <div class="hidden md:flex items-center gap-8 text-sm font-medium">
       {NAV_LINKS.map((link) => (
-        <a href={link.href} class="hover:text-stone-900 transition-colors">{link.label}</a>
+        <a
+          href={link.href}
+          class:list={['desktop-nav-link', { 'is-active': isActive(link.href) }]}
+        >
+          {link.label}
+        </a>
       ))}
     </div>
 
-    {/* Right cluster */}
+    {/* Right cluster — one CTA only on desktop. The previous 'Sign In' +
+        'Open Studio' duo was the most SaaS-coded pattern on the site
+        (standard Stripe/Linear/Notion header). 'Open Studio' covers both
+        new and returning users; the app's auth handles both states. The
+        mobile overlay still surfaces 'Sign in to your studio' as a
+        secondary link, since the overlay has the room for it. */}
     <div class="flex items-center gap-4 shrink-0">
-      {/* Sign In (desktop only) */}
-      <a
-        href={EDIT_URL}
-        class="hidden md:block text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors"
-      >
-        Sign In
-      </a>
-
       {/* Open Studio CTA (desktop only — hidden on mobile to give the hamburger
           full prominence and keep the bar uncluttered) */}
       <a
@@ -188,6 +213,39 @@ const NAV_LINKS = [
 </div>
 
 <style>
+  /* Desktop nav links — brass hairline beneath each. Static on the active
+     page (so visitors always know where they are); draws from centre outward
+     on hover (matching the mobile-overlay micro-interaction). Same timing
+     function as the mobile version — keeps the site's hover vocabulary
+     consistent across breakpoints. */
+  .desktop-nav-link {
+    position: relative;
+    display: inline-block;
+    padding-bottom: 0.45rem;
+    color: var(--atelier-stone-600);
+    transition: color 200ms ease;
+  }
+  .desktop-nav-link:hover,
+  .desktop-nav-link.is-active {
+    color: var(--atelier-stone-900);
+  }
+  .desktop-nav-link::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 0;
+    height: 1.5px;
+    background: var(--atelier-brass-600);
+    transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .desktop-nav-link:hover::after,
+  .desktop-nav-link:focus-visible::after,
+  .desktop-nav-link.is-active::after {
+    width: 70%;
+  }
+
   /* Mobile menu overlay — fades in/out, locked invisible until [data-open=true] */
   #mobile-menu {
     visibility: hidden;

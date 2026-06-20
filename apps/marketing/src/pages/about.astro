@@ -352,9 +352,9 @@ import { PrinciplesPanel } from '../components/PrinciplesPanel.jsx';
       <RevealOnScroll client:visible>
         <h2
           class="mb-10"
-          style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 26ch;"
+          style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900);"
         >
-          Atelier is composed by <em style="font-weight: 400;">Sibylle Möller-Sherwood</em>.
+          Atelier is composed by<br /><em style="font-weight: 400;">Sibylle Möller-Sherwood</em>.
         </h2>
       </RevealOnScroll>
 
@@ -407,12 +407,13 @@ import { PrinciplesPanel } from '../components/PrinciplesPanel.jsx';
             Technology has been my profession for the whole of my working
             life: twenty years of building systems as a project and product
             manager. Most recently as a Head of Data and Systems, latterly
-            through my own studio Talastron, founded in 2024. Microsoft
-            platforms, data systems, the steady work of getting large systems
-            to behave: that has been my craft for as long as I've had one.
+            through Talastron, the AI consultancy and software practice I
+            founded in 2024. Microsoft platforms, data systems, the steady
+            work of getting large systems to behave: that has been my craft
+            for as long as I've had one.
           </p>
           <p>
-            Atelier began at the other end of my life. I have always loved
+            Atelier is the other half of my life. I have always loved
             fashion and, when I could afford it, invested in pieces meant to
             last. The wardrobe I've quietly built over the years was not one
             I wanted to replace each season.
@@ -436,22 +437,31 @@ import { PrinciplesPanel } from '../components/PrinciplesPanel.jsx';
         </div>
       </div>
 
-      {/* Hand-signed name as a flourish — typeset in italic display
-          serif rather than a real signature for now. */}
-      <div class="flex items-center gap-4">
-        <span
-          aria-hidden="true"
-          style="display: inline-block; width: 32px; height: 1.5px; background: var(--atelier-brass-300);"
-        />
-        <p
-          class="italic"
-          style="font-family: var(--atelier-font-display); font-size: 1.25rem; color: var(--atelier-stone-700); letter-spacing: -0.005em;"
-        >
-          — Sibylle
-        </p>
+      {/* Hand-signed name — Pinyon Script (a copperplate-style script font
+          loaded via Google Fonts in Base.astro). Replaces the previous
+          typeset italic '— Sibylle' with a proper signature flourish.
+          'Billie' is what friends and colleagues call her; the H2 above
+          carries the formal 'Sibylle Möller-Sherwood', so the reader's
+          eye lands on the formal name first and the intimate one at
+          sign-off — same flow as a personal letter from the studio. The
+          small-caps line beneath captions the formal-vs-personal duality. */}
+      <div class="flex items-end justify-between gap-6 flex-wrap pt-2">
+        <div class="flex flex-col gap-1.5">
+          <p
+            style="font-family: 'Pinyon Script', cursive; font-size: clamp(2.75rem, 4.5vw, 3.5rem); color: var(--atelier-stone-700); line-height: 1; letter-spacing: 0.01em;"
+          >
+            Billie
+          </p>
+          <p
+            class="text-[10px] uppercase"
+            style="letter-spacing: 0.32em; color: var(--atelier-stone-500); font-weight: 600;"
+          >
+            Sibylle on the masthead
+          </p>
+        </div>
         <a
           href="mailto:contact@myatelier.style"
-          class="text-[11px] uppercase ml-auto transition-colors hover:text-stone-900"
+          class="text-[11px] uppercase transition-colors hover:text-stone-900"
           style="letter-spacing: 0.28em; color: var(--atelier-stone-500); font-weight: 500;"
         >
           Letters →

@@ -214,12 +214,11 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
             {' '}— applied at checkout.
           </p>
 
-          {/* CTA — sharp 2px corner matches the cards' radius; rounded-full
-              was reading as a SaaS pill, undermining the printed-card feel. */}
+          {/* CTA */}
           <a
             href={LS_FOUNDING_URL}
-            class="inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-            style="background: var(--atelier-brass-300); color: var(--atelier-stone-900); letter-spacing: 0.04em; box-shadow: 0 12px 32px -10px rgba(212, 179, 120, 0.4); border-radius: 2px;"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full text-base font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
+            style="background: var(--atelier-brass-300); color: var(--atelier-stone-900); letter-spacing: 0.04em; box-shadow: 0 12px 32px -10px rgba(212, 179, 120, 0.4);"
           >
             Claim a founding key
             <ChevronRight size={16} strokeWidth={1.75} client:load />
@@ -311,8 +310,8 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
 
           <a
             href={LS_CHECKOUT_URL}
-            class="relative inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98] mt-auto"
-            style="background: var(--atelier-stone-900); color: #ffffff; letter-spacing: 0.04em; border-radius: 2px;"
+            class="relative inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98] mt-auto"
+            style="background: var(--atelier-stone-900); color: #ffffff; letter-spacing: 0.04em;"
           >
             Begin curating
             <ChevronRight size={16} strokeWidth={1.75} client:load />
@@ -386,8 +385,8 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
 
           <a
             href={LS_CHECKOUT_URL}
-            class="relative inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98] mt-auto"
-            style="background: var(--atelier-brass-300); color: var(--atelier-stone-900); letter-spacing: 0.04em; border-radius: 2px;"
+            class="relative inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98] mt-auto"
+            style="background: var(--atelier-brass-300); color: var(--atelier-stone-900); letter-spacing: 0.04em;"
           >
             Begin curating
             <ChevronRight size={16} strokeWidth={1.75} client:load />

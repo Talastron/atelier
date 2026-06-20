@@ -35,7 +35,25 @@ import { AtelierMark } from '@atelier/ui';
 import { EDIT_URL, SITE } from '../config.ts';
 import { ArrowUp } from 'lucide-react';
 
-const year = new Date().getFullYear();
+// Convert the current year to Roman numerals so the copyright line reads
+// in the same vocabulary as the rest of the site (MMXXVI in the nav kicker,
+// closing mastheads, the Footer's own 'Volume I · MMXXVI' eyebrow). Dynamic
+// rather than hardcoded so it auto-updates on January 1st.
+function toRoman(num: number): string {
+  const vals = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+  const syms = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
+  let n = num;
+  let out = '';
+  for (let i = 0; i < vals.length; i += 1) {
+    while (n >= vals[i]) {
+      out += syms[i];
+      n -= vals[i];
+    }
+  }
+  return out;
+}
+
+const year = toRoman(new Date().getFullYear());
 
 const sections = [
   {

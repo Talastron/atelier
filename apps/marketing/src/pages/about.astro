@@ -27,6 +27,7 @@ import { RevealOnScroll } from '../components/RevealOnScroll.jsx';
 import { StudioChronicle } from '../components/StudioChronicle.jsx';
 import { PrinciplesPanel } from '../components/PrinciplesPanel.jsx';
 import { ChapterIndex } from '../components/ChapterIndex.jsx';
+import { SignatureDraw } from '../components/SignatureDraw.jsx';
 import SectionOrnament from '../components/SectionOrnament.astro';
 ---
 
@@ -507,17 +508,20 @@ import SectionOrnament from '../components/SectionOrnament.astro';
         </div>
       </div>
 
-      {/* Hand-signed name — real signature image at /about/sibylle-signature.png.
-          Cropped from a calligraphic 'Sibylle' generated for the brand, the
-          white background made transparent so it sits on the cream page as
-          if signed directly on the paper. Sized via height (clamp) so it
-          scales with viewport without distorting. Letters CTA balances on
-          the right. */}
+      {/* Hand-signed name — real signature image at /about/sibylle-signature.png,
+          revealed via a clip-path draw animation as the section enters view.
+          The visual effect is "a hand drawing the signature left-to-right at
+          ~2.5s, with a short pause before drawing starts" — not a true
+          stroke-by-stroke draw (would need SVG paths) but the closest
+          approximation possible with the existing PNG.
+
+          Letters CTA balances on the right. */}
       <div class="flex items-end justify-between gap-6 flex-wrap pt-2">
-        <img
+        <SignatureDraw
+          client:visible
           src="/about/sibylle-signature.png"
           alt="Sibylle Möller-Sherwood, signed"
-          style="display: block; height: clamp(4.5rem, 6vw, 5rem); width: auto;"
+          style={{ display: 'block', height: 'clamp(4.5rem, 6vw, 5rem)', width: 'auto' }}
         />
         <a
           href="mailto:contact@myatelier.style"

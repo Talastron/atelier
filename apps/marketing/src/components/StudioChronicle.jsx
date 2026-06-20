@@ -29,7 +29,13 @@ const ENTRIES = [
 ];
 
 export function StudioChronicle() {
-  const listRef = useRef(null);
+  // Observe the section element (always visible) rather than one of the
+  // ol lists (one is display:none per viewport). Previously the ref was
+  // on the desktop ol; on mobile that ol is display:none so the observer
+  // never fired, `revealed` stayed false, and the mobile entries rendered
+  // at opacity 0 — appearing empty. The section is the always-visible
+  // wrapper that works for both layouts.
+  const sectionRef = useRef(null);
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -38,7 +44,7 @@ export function StudioChronicle() {
       setRevealed(true);
       return;
     }
-    const el = listRef.current;
+    const el = sectionRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -55,6 +61,7 @@ export function StudioChronicle() {
 
   return (
     <section
+      ref={sectionRef}
       id="chronicle"
       style={{
         maxWidth: 1080,
@@ -137,7 +144,6 @@ export function StudioChronicle() {
           SectionOrnament and the closing masthead — recurring brand
           mark across the page. */}
       <ol
-        ref={listRef}
         className="hidden md:grid"
         style={{
           gridTemplateColumns: `repeat(${ENTRIES.length}, 1fr)`,

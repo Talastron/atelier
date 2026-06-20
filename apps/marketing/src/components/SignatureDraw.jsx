@@ -55,7 +55,6 @@ export function SignatureDraw({ src, alt, style = {} }) {
       ref={ref}
       src={src}
       alt={alt}
-      loading="lazy"
       style={{
         ...style,
         // clip-path inset(top right bottom left) — when right is 100%,

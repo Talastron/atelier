@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Sticky chapter index for /about. Fixed to the right side of the
- * viewport on desktop, vertically centred. Shows the seven chapter
- * Roman numerals; the currently-visible chapter is marked with a
- * brass hairline that extends and reveals the chapter title on hover
- * or when active.
+ * Sticky chapter index for any long editorial page. Fixed to the right
+ * side of the viewport on desktop, vertically centred. Shows the chapter
+ * Roman numerals; the currently-visible chapter is marked with a brass
+ * hairline that extends and reveals the chapter title on hover or when
+ * active.
  *
  * Tracks the active chapter via IntersectionObserver with a rootMargin
  * that treats a section as "active" when its top is in the upper-third
@@ -13,13 +13,16 @@ import { useEffect, useState } from 'react';
  * scrolls; the chapter that's currently being read is the highlighted one.
  *
  * Hidden on mobile (lg:hidden) — there's no room for a sidebar and the
- * page is short enough on a phone that the chapter numerals in-page do
+ * pages are short enough on a phone that in-page chapter numerals do
  * the navigation work themselves.
  *
  * Clicking a chapter scroll-jumps smoothly to it.
+ *
+ * Takes a `chapters` prop so different pages can supply different lists.
+ * Defaults to the /about chapters for backward compatibility.
  */
 
-const CHAPTERS = [
+const ABOUT_CHAPTERS = [
   { id: 'question', label: 'Where we began', numeral: 'I' },
   { id: 'practice', label: 'The Practice', numeral: 'II' },
   { id: 'chronicle', label: 'The Chronicle', numeral: 'III' },
@@ -29,7 +32,8 @@ const CHAPTERS = [
   { id: 'maker', label: 'The Maker', numeral: 'VII' },
 ];
 
-export function ChapterIndex() {
+export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
+  const CHAPTERS = chapters;
   const [activeId, setActiveId] = useState(CHAPTERS[0].id);
 
   useEffect(() => {

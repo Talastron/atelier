@@ -39,10 +39,13 @@ import SectionOrnament from '../components/SectionOrnament.astro';
       class="relative text-center flex flex-col items-center justify-center"
       style="min-height: 88vh; padding-top: clamp(7rem, 12vw, 10rem); padding-bottom: clamp(3rem, 5vw, 5rem); padding-inline: var(--atelier-page-padding);"
     >
-      {/* Soft brass atmosphere — same motif as the home and pricing heroes */}
+      {/* Soft brass atmosphere — same motif as the home and pricing heroes,
+          with a slow 12-second pulse so the page feels alive without being
+          distracting. Honours prefers-reduced-motion via the @media rule
+          in the page's <style> block. */}
       <div
         aria-hidden="true"
-        class="absolute pointer-events-none"
+        class="absolute pointer-events-none hero-atmosphere"
         style="top: 10%; left: 50%; transform: translateX(-50%); width: 60%; height: 50%; background: radial-gradient(ellipse at center, rgba(212, 179, 120, 0.07) 0%, transparent 65%);"
       />
 
@@ -77,6 +80,14 @@ import SectionOrnament from '../components/SectionOrnament.astro';
           with the same care a fashion house gives a collection.
         </p>
 
+        {/* Hero opening ornament — mirrors the closing masthead at the page
+            foot. The same brass-rule + lozenge + brass-rule composition that
+            closes the page also opens it; the publication is bookended. */}
+        <div class="flex items-center justify-center gap-4 mt-14" aria-hidden="true">
+          <span style="display: inline-block; width: 32px; height: 1px; background: var(--atelier-brass-300);"></span>
+          <span style="display: inline-block; width: 5px; height: 5px; background: var(--atelier-brass-600); transform: rotate(45deg);"></span>
+          <span style="display: inline-block; width: 32px; height: 1px; background: var(--atelier-brass-300);"></span>
+        </div>
       </div>
     </section>
 
@@ -520,12 +531,17 @@ import SectionOrnament from '../components/SectionOrnament.astro';
 
     <SectionOrnament />
 
-    {/* ── 6. Closing — invitation to the studio ────────────────────── */}
+    {/* ── 6. Closing — invitation to the studio ──────────────────────
+        Final composition, not a standard CTA. Larger italic display H2
+        with the brand-phrase italic flourish, brass-edged dark CTA with
+        a brass glow on hover (matching the studio-cta pattern on the
+        Nav). Sits after the masthead-style opening ornament so the
+        section feels like the last page-turn of a printed publication. */}
     <section
       class="mx-auto"
-      style="max-width: 720px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(5rem, 8vw, 7rem); text-align: center;"
+      style="max-width: 720px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(5rem, 8vw, 7rem); padding-top: clamp(1rem, 2vw, 1.5rem); text-align: center;"
     >
-      <div class="flex items-center justify-center gap-3 mb-6">
+      <div class="flex items-center justify-center gap-3 mb-8">
         <BrassRule client:load />
         <p
           class="text-[10px] uppercase font-medium"
@@ -537,22 +553,22 @@ import SectionOrnament from '../components/SectionOrnament.astro';
       </div>
       <RevealOnScroll client:visible>
         <h2
-          class="mx-auto mb-6"
-          style="font-family: var(--atelier-font-display); font-size: clamp(1.875rem, 3.5vw, 2.75rem); line-height: 1.1; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 22ch;"
+          class="mx-auto mb-8"
+          style="font-family: var(--atelier-font-display); font-size: clamp(2.25rem, 4.5vw, 3.75rem); line-height: 1.05; letter-spacing: -0.015em; color: var(--atelier-stone-900); max-width: 18ch;"
         >
-          Step inside the studio.
+          Step inside the <em style="font-weight: 400;">studio</em>.
         </h2>
       </RevealOnScroll>
       <p
-        class="mx-auto mb-8"
-        style="font-size: 1rem; line-height: 1.65; color: var(--atelier-stone-500); max-width: 50ch;"
+        class="mx-auto mb-10 italic"
+        style="font-family: var(--atelier-font-display); font-size: clamp(1.0625rem, 1.4vw, 1.25rem); line-height: 1.55; color: var(--atelier-stone-500); max-width: 44ch;"
       >
         Begin with a fourteen-day trial. Read your own manifesto inside.
       </p>
       <a
         href="/pricing"
-        class="inline-flex items-center gap-2 px-8 py-4 rounded-full text-base font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-        style="background: var(--atelier-stone-900); color: #ffffff; letter-spacing: 0.04em; box-shadow: 0 12px 32px -10px rgba(28, 25, 23, 0.3);"
+        class="closing-cta inline-flex items-center gap-2 px-10 py-4 rounded-full text-base font-semibold active:scale-[0.98]"
+        style="background: var(--atelier-stone-900); color: #ffffff; letter-spacing: 0.04em;"
       >
         Find the keys
         <ChevronRight size={16} strokeWidth={1.75} client:load />
@@ -739,6 +755,35 @@ import SectionOrnament from '../components/SectionOrnament.astro';
     font-size: 0.8125rem;
     color: var(--atelier-brass-600);
     letter-spacing: 0.04em;
+  }
+
+  /* Hero atmosphere — slow brass pulse so the radial gradient breathes
+     gently. 12s cycle, very subtle (opacity 0.7-1.0, scale 1.0-1.06).
+     Disabled for prefers-reduced-motion. */
+  @keyframes hero-brass-pulse {
+    0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    50%      { opacity: 0.7; transform: translateX(-50%) scale(1.06); }
+  }
+  .hero-atmosphere {
+    animation: hero-brass-pulse 12s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-atmosphere { animation: none; }
+  }
+
+  /* Closing CTA — dark anchor button with brass-glow shadow on hover,
+     matching the studio-cta pattern in the Nav. At rest: standard dark
+     shadow. On hover: brass glow blooms beneath, surfacing the brand
+     accent on intent without changing the button's ink colour. Closes
+     the page on a moment, not a generic transition. */
+  .closing-cta {
+    box-shadow: 0 12px 32px -10px rgba(28, 25, 23, 0.3);
+    transition: box-shadow 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 100ms ease, opacity 200ms ease;
+  }
+  .closing-cta:hover {
+    box-shadow:
+      0 14px 36px -10px rgba(212, 179, 120, 0.45),
+      0 12px 32px -10px rgba(28, 25, 23, 0.25);
   }
 </style>
 

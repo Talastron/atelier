@@ -20,6 +20,18 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import { BrassRule } from '@atelier/ui';
 import { PricingInsideList } from '../components/PricingInsideList.jsx';
+import { ChapterIndex } from '../components/ChapterIndex.jsx';
+
+// Chapter index supplied to <ChapterIndex /> on this page. Four
+// chapters matching the four numbered sections below: the founding
+// tier, the public price cards, what's inside a membership, and the
+// market-comparison ledger.
+const PRICING_CHAPTERS = [
+  { id: 'founding', label: 'Founding', numeral: 'I' },
+  { id: 'public-price', label: 'The Public Price', numeral: 'II' },
+  { id: 'inside-studio', label: 'Inside the Studio', numeral: 'III' },
+  { id: 'comparison', label: 'By Comparison', numeral: 'IV' },
+];
 import { ChevronRight } from 'lucide-react';
 
 // Lemon Squeezy product URL (Atelier Membership — covers both Monthly & Annual variants).
@@ -51,6 +63,7 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
 
 <Base title="The Keys to Atelier — Membership">
   <Nav />
+  <ChapterIndex chapters={PRICING_CHAPTERS} client:load />
   <main>
     {/* ── Hero: The Keys to Atelier ────────────────────────────────── */}
     <section
@@ -126,9 +139,11 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
         line, otherwise customer #101 sees a checkout with the discount
         silently dropped. */}
     <section
+      id="founding"
       class="mx-auto"
-      style="max-width: 720px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(3rem, 5vw, 4rem);"
+      style="max-width: 720px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(3rem, 5vw, 4rem); scroll-margin-top: 6rem;"
     >
+      <p class="chapter-numeral" style="text-align: center;">I</p>
       <article
         class="relative"
         style="background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 4px; padding: clamp(2rem, 4vw, 3rem) clamp(1.75rem, 3.5vw, 2.75rem); box-shadow: 0 50px 120px -30px rgba(28, 25, 23, 0.12), 0 18px 40px -16px rgba(28, 25, 23, 0.08);"
@@ -257,9 +272,11 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
 
     {/* ── Pricing cards ─────────────────────────────────────────────── */}
     <section
+      id="public-price"
       class="mx-auto"
-      style="max-width: 920px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem);"
+      style="max-width: 920px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem); scroll-margin-top: 6rem;"
     >
+      <p class="chapter-numeral" style="text-align: center; margin-bottom: 1.5rem;">II</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
         {/* ── Monthly ── flexible, no commitment.
              Vellum vocabulary — same brass-rule frame as the Founding card
@@ -399,11 +416,13 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
 
     {/* ── What's inside the studio ──────────────────────────────────── */}
     <section
+      id="inside-studio"
       class="mx-auto"
-      style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem);"
+      style="max-width: var(--atelier-container-max); padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem); scroll-margin-top: 6rem;"
     >
       {/* Section header */}
       <div class="text-center mb-12">
+        <p class="chapter-numeral">III</p>
         <div class="flex items-center justify-center gap-3 mb-4">
           <BrassRule client:load />
           <p
@@ -437,9 +456,11 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
         aside rather than a comparison table; magazine-style ledger
         rather than a SaaS feature matrix. */}
     <section
+      id="comparison"
       class="mx-auto"
-      style="max-width: 720px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem);"
+      style="max-width: 720px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem); scroll-margin-top: 6rem;"
     >
+      <p class="chapter-numeral" style="text-align: center;">IV</p>
       <div class="text-center mb-10">
         <div class="flex items-center justify-center gap-3 mb-4">
           <BrassRule client:load />
@@ -594,5 +615,19 @@ const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
     height: 5px;
     background: var(--atelier-brass-600);
     border-radius: 1px;
+  }
+
+  /* Chapter numeral above each section eyebrow — italic display serif,
+     brass, matching the .chapter-numeral pattern on /about. Pages
+     scope their styles separately in Astro so this class is repeated
+     here rather than imported. */
+  .chapter-numeral {
+    font-family: var(--atelier-font-display);
+    font-style: italic;
+    font-size: clamp(1.5rem, 2.2vw, 1.875rem);
+    color: var(--atelier-brass-600);
+    line-height: 1;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 0.02em;
   }
 </style>

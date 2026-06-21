@@ -3342,6 +3342,7 @@ function DigitalWardrobe() {
                       scheduleOutfit={handleScheduleOutfit}
                       aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
                       styleProfile={summariseStyleProfile(measurements)}
+                      measurements={measurements}
                       onCreateLookbook={handleShareLookbook}
                       editOutfit={editingOutfit}
                       onEditDone={() => setEditingOutfit(null)}
@@ -3367,6 +3368,7 @@ function DigitalWardrobe() {
                       scheduleOutfit={handleScheduleOutfit}
                       aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
                       styleProfile={summariseStyleProfile(measurements)}
+                      measurements={measurements}
                       onCreateLookbook={handleShareLookbook}
                       onReorderOutfits={handleReorderOutfits}
                       initialTab={lookbookInitialTab}
@@ -8949,7 +8951,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   );
 }
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed }) {
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -9786,6 +9788,18 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   ))}
                 </div>
               </div>
+              <details className="mt-2 ml-7">
+                <summary className="cursor-pointer text-xs uppercase tracking-widest text-stone-500 hover:text-stone-300">
+                  Why this?
+                </summary>
+                <WhyThisPanel
+                  weather={(() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })()}
+                  season={(() => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter'; })()}
+                  styleProfile={measurements}
+                  temperature={aiTemperature}
+                  itemCount={items.filter(it => it.status === 'owned').length}
+                />
+              </details>
             </div>
           )}
 

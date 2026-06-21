@@ -6,7 +6,7 @@ import {
 } from 'firebase/auth';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  collection, doc, addDoc, setDoc, serverTimestamp, increment,
+  collection, doc, addDoc, setDoc, getDoc, serverTimestamp, increment,
 } from 'firebase/firestore';
 import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 
@@ -305,6 +305,100 @@ function recordCall() {
   writeCallLog(log);
 }
 
+// ─── Per-user daily Concierge cap ────────────────────────────────────────
+// Firestore-backed daily call count per signed-in user. Two reasons this
+// matters more than the client-side localStorage limiter above:
+//
+//   1. Project-wide protection at multi-user scale. Firebase AI Logic
+//      quotas (RPM / RPD / TPM) are PROJECT-WIDE, not per-user. Without
+//      a per-user cap, a single user's runaway browser (or a deliberate
+//      abuser) can drain the project's RPD allocation, blocking AI for
+//      EVERY other user. This cap means each user's blast radius is
+//      capped at USER_DAILY_CAP — predictable, fair, billable.
+//
+//   2. Unit economics. At ~£0.0016 per call blended Gemini 2.5 Flash
+//      pricing, USER_DAILY_CAP = 75 means worst-case £0.12/user/day,
+//      or ~£43/user/year. Well under the £79 founding-tier revenue
+//      after Lemon Squeezy fees + VAT. Without a cap, a power user
+//      doing 500+ calls/day could wipe their entire subscription
+//      margin in a single month.
+//
+// Hydrated once at auth-state-change from the existing aiUsageMonthly
+// rollup doc (which logAiUsage already writes). No extra Firestore
+// reads per AI call — count lives in module memory after first load,
+// kept in sync by local increments. Worst case after a fresh login the
+// in-memory count is stale by a few calls (if user had calls from
+// another session same day); that's acceptable slop.
+const USER_DAILY_CAP = 75;
+let _userDailyCount = null;        // null = not hydrated yet → fail-open
+let _userDailyCountDate = null;    // YYYY-MM-DD this count was scoped to
+let _userDailyCountUid = null;     // uid the count belongs to
+
+function localISODate(d) {
+  // UTC date — matches what we write to byDay.{key} in the rollup, and
+  // matches Google's quota reset window (midnight UTC).
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+async function loadUserDailyCount() {
+  const user = auth.currentUser;
+  if (!user?.uid) { _userDailyCount = 0; _userDailyCountUid = null; return; }
+  const today = localISODate(new Date());
+  const monthKey = today.slice(0, 7);
+  try {
+    const snap = await getDoc(doc(db, 'users', user.uid, 'aiUsageMonthly', monthKey));
+    const data = snap.data() || {};
+    _userDailyCount = data.byDay?.[today] || 0;
+    _userDailyCountDate = today;
+    _userDailyCountUid = user.uid;
+  } catch (err) {
+    // Failed read (offline, rules, etc.) — fail open with 0 count so a
+    // logging glitch doesn't lock the user out entirely.
+    console.warn('[ai-cap] could not load daily count:', err?.message || err);
+    _userDailyCount = 0;
+    _userDailyCountDate = today;
+    _userDailyCountUid = user.uid;
+  }
+}
+
+// Hydrate on every auth state change. Re-hydrates when user signs out + in,
+// or switches accounts (incognito test pattern).
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    _userDailyCount = null;
+    _userDailyCountDate = null;
+    _userDailyCountUid = null;
+    return;
+  }
+  loadUserDailyCount();
+});
+
+function checkUserDailyCap() {
+  const user = auth.currentUser;
+  if (!user?.uid) return; // demo / unsigned — fail open, client-side cap handles burst protection
+  // Roll over at UTC midnight without needing another Firestore read
+  const today = localISODate(new Date());
+  if (_userDailyCountDate && _userDailyCountDate !== today) {
+    _userDailyCount = 0;
+    _userDailyCountDate = today;
+  }
+  // Different user logged in than we hydrated — re-hydrate next call
+  if (_userDailyCountUid && _userDailyCountUid !== user.uid) {
+    _userDailyCount = null;
+    _userDailyCountUid = null;
+    loadUserDailyCount(); // fire-and-forget, fail open this call
+    return;
+  }
+  if (_userDailyCount === null) return; // not hydrated yet → fail open
+  if (_userDailyCount >= USER_DAILY_CAP) {
+    throw new Error(`You've used today's Concierge allocation (${USER_DAILY_CAP} compositions). It resets at midnight UTC.`);
+  }
+}
+
+function recordUserCall() {
+  if (_userDailyCount !== null) _userDailyCount += 1;
+}
+
 // ─── Friendly error mapping ──────────────────────────────────────────────
 // Gemini SDK errors are dumped as raw HTTP/JSON strings — not what we want
 // to put in a toast. This maps the common failure modes to one-sentence
@@ -426,6 +520,12 @@ async function logAiUsage({ feature, model, hasVision, inputTokens, outputTokens
     // 2. Monthly rollup. setDoc with merge:true deep-merges and applies
     //    FieldValue.increment at any nesting depth, so the byFeature map
     //    builds up correctly across calls.
+    //
+    //    byDay.{YYYY-MM-DD} is also incremented — this is what the
+    //    per-user daily cap (checkUserDailyCap) reads back on hydration
+    //    after a fresh sign-in. Without this field the cap can't be
+    //    enforced across browser sessions.
+    const todayKey = localISODate(now);
     await setDoc(
       doc(db, 'users', uid, 'aiUsageMonthly', monthKey),
       {
@@ -440,6 +540,9 @@ async function logAiUsage({ feature, model, hasVision, inputTokens, outputTokens
             outputTokens: increment(outputTokens),
             estCostUsd: increment(estCostUsd),
           },
+        },
+        byDay: {
+          [todayKey]: increment(1),
         },
         updatedAt: serverTimestamp(),
       },
@@ -474,7 +577,8 @@ function isConfigError(err) {
 // 'suggest-look'). Defaults to 'unlabeled' so existing call sites keep
 // working; pass the real label to enable per-feature cost breakdown.
 export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
-  checkRateLimit();  // throws with friendly message if exceeded
+  checkRateLimit();      // per-browser burst limit
+  checkUserDailyCap();   // per-user daily cap (Firestore-backed)
   try {
     const modelName = opts.model || 'gemini-2.5-flash';
     const ai = getAiSafe();
@@ -486,8 +590,9 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
       },
     });
     const result = await model.generateContent(prompt);
-    recordCall();  // record only on successful API reach — config errors
-                   // throw before this and don't burn rate-limit budget
+    recordCall();        // record only on successful API reach — config
+                         // errors throw before this and don't burn budget
+    recordUserCall();    // increment the per-user in-memory counter
     const text = result.response.text();
 
     // Track usage (fire-and-forget — no await, no rejection bubble)
@@ -515,6 +620,7 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
 // `feature`: short identifier for usage tracking.
 export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature = 'unlabeled') {
   checkRateLimit();
+  checkUserDailyCap();
   try {
     const ai = getAiSafe();
     const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -532,7 +638,8 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
       prompt,
       { inlineData: { mimeType, data } },
     ]);
-    recordCall();  // record only on successful API reach
+    recordCall();        // record only on successful API reach
+    recordUserCall();    // increment per-user in-memory counter
     const text = result.response.text();
 
     // Track usage. Vision adds non-trivial image tokens — Gemini's

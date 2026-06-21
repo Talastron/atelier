@@ -1,0 +1,119 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permanent owners — never lose access even if `/allowlist/...` is empty.
+    // Owners can invite/revoke others from inside the app.
+    // Most friends should go through /allowlist (managed in the app UI), not
+    // here. This list must match VITE_OWNER_EMAILS in your .env.local so the
+    // app's UI knows to show you the Invite panel.
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'sibylle.sherwood@gmail.com',
+          'martin.sherwood@gmail.com'
+        ];
+    }
+
+    // Invited friends — owners manage this from inside the app (no redeploy needed).
+    function isInvited() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email));
+    }
+
+    // Paid customers via Lemon Squeezy. The /subscriberAccess/{uid} doc is
+    // written by the LS webhook handler (in the atelier-website repo). It's a
+    // denormalized index of /subscriptions/{lsSubId}, keyed by Firebase uid so
+    // rules can do a direct lookup (rules can't query collections).
+    //
+    // Access is allowed while the subscription is active OR cancelled-but-not-yet-expired
+    // (standard SaaS "access until end of paid period" semantics).
+    function hasActiveSubscription() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/subscriberAccess/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/subscriberAccess/$(request.auth.uid)).data.status == 'active'
+          || (
+            get(/databases/$(database)/documents/subscriberAccess/$(request.auth.uid)).data.status == 'cancelled'
+            && get(/databases/$(database)/documents/subscriberAccess/$(request.auth.uid)).data.currentPeriodEnd > request.time
+          )
+        );
+    }
+
+    function canSignIn() {
+      return isOwner() || isInvited() || hasActiveSubscription();
+    }
+
+    // Each user (owner, invited, or subscriber) gets a private subtree at
+    // /users/{uid}/...  Cross-user access is denied.
+    //
+    // Covers (non-exhaustive): items/, outfits/, inspirations/, schedule/,
+    // profile/measurements, aiUsage/, aiUsageMonthly/, concierge/{threadId}.
+    match /users/{uid}/{document=**} {
+      allow read, write: if canSignIn() && request.auth.uid == uid;
+    }
+
+    // AI usage — per-call audit log + monthly rollups. Users can write their
+    // own (the geminiText/geminiTextVision wrappers in src/firebase.js append
+    // to these on every call). Owners can read across all users for the
+    // admin spend dashboard.
+    //
+    // The {path=**} wildcard form is REQUIRED for Firestore collection group
+    // queries to work — without it, `collectionGroup(db, 'aiUsageMonthly')`
+    // fails with permission-denied even for owners. The per-user wildcard
+    // /users/{uid}/{document=**} above keeps user-self read/write working.
+    match /{path=**}/aiUsage/{callId} {
+      allow read: if isOwner();
+    }
+    match /{path=**}/aiUsageMonthly/{monthKey} {
+      allow read: if isOwner();
+    }
+
+    // Allowlist: owners can read & manage; an invited user can read just their own
+    // entry (so the app can confirm "yes, you're in" without leaking the whole list).
+    match /allowlist/{email} {
+      allow read: if isOwner() || (request.auth != null && request.auth.token.email == email);
+      allow write: if isOwner();
+    }
+
+    // SubscriberAccess: written ONLY by the webhook (using Firebase Admin auth,
+    // which bypasses these rules). Owners can read for admin/support purposes;
+    // a subscriber can read their own entry so the app can show subscription
+    // status / billing info.
+    match /subscriberAccess/{uid} {
+      allow read: if isOwner() || (request.auth != null && request.auth.uid == uid);
+      allow write: if false;
+    }
+
+    // Subscriptions: canonical Lemon Squeezy subscription records, keyed by
+    // LS subscription ID. Only owners can read (for admin/support); the user's
+    // own access flag lives in /subscriberAccess instead. Writes are admin-only.
+    match /subscriptions/{lsSubId} {
+      allow read: if isOwner();
+      allow write: if false;
+    }
+
+    // Processed webhook events: internal idempotency log. Never readable client-side.
+    match /processed_webhook_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Public shared looks: anyone with the link can READ. Only signed-in users
+    // (owner, invited, or active subscriber) can create. The share doc embeds
+    // a snapshot of the outfit so it stays viewable even if the user later
+    // edits or deletes the original — no cross-doc reads from public traffic.
+    match /public/{shareId} {
+      allow read: if true;
+      allow create, update: if canSignIn();
+      allow delete: if canSignIn();
+    }
+
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -4512,6 +4512,51 @@ function MobileFAB({ onTap, onLongPress }) {
 
 // ─── Daily Brief: "Tap once. Get styled for today." ───────────────────────
 
+// Progressive status cycler — gives the user the impression of staged work
+// during a single ~3-5s Gemini call. Compositions feel faster when you see
+// the stylist "thinking" through it. Cycles every 1.2s and stops at the
+// final stage (the call usually returns before reaching it).
+const COMPOSE_STAGES = [
+  'Reading your wardrobe…',
+  'Checking the day…',
+  'Considering colour & cohesion…',
+  'Composing the look…',
+];
+function useComposingStage(active) {
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    if (!active) { setStage(0); return; }
+    let i = 0;
+    const id = setInterval(() => {
+      i = Math.min(i + 1, COMPOSE_STAGES.length - 1);
+      setStage(i);
+      if (i === COMPOSE_STAGES.length - 1) clearInterval(id);
+    }, 1200);
+    return () => clearInterval(id);
+  }, [active]);
+  return COMPOSE_STAGES[stage];
+}
+
+function ComposingPlaceholder({ title = 'The Daily Brief', stage }) {
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-6">
+      <p className="text-sm uppercase tracking-widest text-stone-500">{title}</p>
+      <div className="mt-2 flex items-center gap-2 text-stone-700">
+        {/* Spinner — pure CSS, no SVG dependency */}
+        <span
+          aria-hidden="true"
+          className="inline-block h-4 w-4 rounded-full border-2 border-stone-300 border-t-stone-700 animate-spin"
+        />
+        <p className="text-sm italic text-stone-700">{stage}</p>
+      </div>
+      <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-5 animate-pulse">
+        {[0,1,2,3,4].map(i => <div key={i} className="aspect-square rounded-lg bg-stone-200" />)}
+      </div>
+      <p className="mt-3 text-xs text-stone-400">This usually takes a few seconds.</p>
+    </div>
+  );
+}
+
 function WhyThisPanel({ weather, season, styleProfile, temperature, itemCount }) {
   const tempLabel = temperature <= 0.4 ? 'Safe' : temperature >= 0.9 ? 'Surprise' : 'Balanced';
   return (
@@ -4622,17 +4667,14 @@ function DailyBriefCard({
     );
   }
 
-  // Loading state
-  if (loading && !brief) {
-    return (
-      <div className="rounded-2xl border border-stone-200 bg-stone-50 p-6 animate-pulse">
-        <p className="text-sm uppercase tracking-widest text-stone-400">The Daily Brief</p>
-        <div className="mt-3 h-7 w-3/4 rounded bg-stone-200" />
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          {[0,1,2,3].map(i => <div key={i} className="aspect-square rounded-lg bg-stone-200" />)}
-        </div>
-      </div>
-    );
+  // Loading state — shown for BOTH first-compose and "Compose another".
+  // Previously this only fired when !brief, so a re-compose would leave the
+  // old card visible with just a button-text change ("Composing…") — no
+  // visible feedback that anything was happening. Now we always swap to the
+  // composing placeholder with progressive status messages.
+  const composingStage = useComposingStage(loading);
+  if (loading) {
+    return <ComposingPlaceholder title="The Daily Brief" stage={composingStage} />;
   }
 
   // Error state

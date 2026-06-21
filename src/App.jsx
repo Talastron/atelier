@@ -17,6 +17,7 @@ import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, ge
 import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex } from './dailyBrief';
+import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -3542,6 +3543,7 @@ function DigitalWardrobe() {
               styleProfile={summariseStyleProfile(measurements)}
               measurements={measurements}
               ownerFirstName={(user?.displayName || '').split(' ')[0] || ''}
+              user={user}
             />
           )}
 
@@ -12439,7 +12441,7 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
 //   • error flag if a reply fails (offers retry of last user message)
 //   • input controlled with submit-on-enter (shift+enter = new line)
 //   • auto-scrolls to bottom on new messages
-function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName }) {
+function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user }) {
   useEscapeKey(onClose);
 
   // Time-of-day greeting — sets the tone before the user even types.
@@ -12455,11 +12457,27 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   }, [ownerFirstName]);
 
   const [messages, setMessages] = useState(() => [{ role: 'assistant', text: greeting }]);
+  const [hydrated, setHydrated] = useState(false);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const scrollRef = React.useRef(null);
   const textareaRef = React.useRef(null);
+
+  // Hydrate persisted thread from Firestore on mount. If there is a saved
+  // thread, restore it; otherwise the greeting-only initial state stands.
+  useEffect(() => {
+    if (!user?.uid) { setHydrated(true); return; }
+    let cancelled = false;
+    (async () => {
+      const { messages: saved } = await loadCurrentThread();
+      if (!cancelled) {
+        if (saved.length > 0) setMessages(saved);
+        setHydrated(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll the chat to the bottom whenever messages change.
   useEffect(() => {
@@ -12476,8 +12494,9 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   const send = async (textOverride) => {
     const text = (textOverride ?? input).trim();
     if (!text || busy) return;
-    const next = [...messages, { role: 'user', text }];
+    const next = [...messages, { role: 'user', text, ts: new Date().toISOString() }];
     setMessages(next);
+    await saveCurrentThread(next);
     setInput('');
     setBusy(true);
     setError(null);
@@ -12489,7 +12508,9 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         styleProfile,
         ownerFirstName,
       });
-      setMessages((prev) => [...prev, { role: 'assistant', text: reply || '(no reply)' }]);
+      const withReply = [...next, { role: 'assistant', text: reply || '(no reply)', ts: new Date().toISOString() }];
+      setMessages(withReply);
+      await saveCurrentThread(withReply);
     } catch (err) {
       setError(err?.message || 'Something interrupted us. Try again?');
     } finally {
@@ -12513,7 +12534,9 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         styleProfile,
         ownerFirstName,
       });
-      setMessages((prev) => [...prev, { role: 'assistant', text: reply || '(no reply)' }]);
+      const withReply = [...messages, { role: 'assistant', text: reply || '(no reply)', ts: new Date().toISOString() }];
+      setMessages(withReply);
+      await saveCurrentThread(withReply);
     } catch (err) {
       setError(err?.message || 'Still no luck — try again in a moment.');
     } finally {
@@ -12575,6 +12598,19 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
                 <X size={18} strokeWidth={1.5} />
               </button>
             </div>
+            {messages.length > 1 && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!window.confirm('Clear the conversation? This cannot be undone.')) return;
+                  setMessages([{ role: 'assistant', text: greeting }]);
+                  await clearCurrentThread();
+                }}
+                className="text-xs uppercase tracking-widest text-stone-400 hover:text-stone-700"
+              >
+                New thread
+              </button>
+            )}
           </div>
         </header>
 

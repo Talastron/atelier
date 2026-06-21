@@ -113,10 +113,19 @@ if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
     //   4. App Check enforcement on Firebase AI Logic isn't toggled on
     // The probe error message routes the user to the right Console page.
     getAppCheckToken(_appCheck, false).then(
-      () => console.info('%c[App Check] ✓ token issued successfully — AI is ready', 'color: #0a7; font-weight: bold;'),
+      () => {
+        console.info('%c[App Check] ✓ token issued successfully — AI is ready', 'color: #0a7; font-weight: bold;');
+        // Late-mounting UI (e.g. AppCheckDevBanner) can subscribe to this.
+        try { window.dispatchEvent(new CustomEvent('atelier:appcheck:ok')); } catch { /* swallow */ }
+      },
       (err) => {
         const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || '<project-id>';
         const origin = typeof window !== 'undefined' ? window.location.origin : '<unknown>';
+        // Remember the failure so a banner mounting AFTER this event still sees it.
+        try { window.__atelierAppCheckFailed = true; } catch { /* swallow */ }
+        try {
+          window.dispatchEvent(new CustomEvent('atelier:appcheck:failed', { detail: { message: err?.message || String(err) } }));
+        } catch { /* swallow */ }
         console.error(
           `%c[App Check] ✗ token request failed%c\n  ${err?.message || err}\n\n` +
           `Origin: ${origin}\n\n` +
@@ -444,6 +453,21 @@ async function logAiUsage({ feature, model, hasVision, inputTokens, outputTokens
   }
 }
 
+// Errors that indicate a CONFIG issue (not a real Gemini attempt) — these
+// should NOT count toward the rate limit, since the call never reached the
+// Gemini API. Without this, a misconfigured App Check causes the auto-compose
+// to burn the user's 10/min budget in seconds, locking them out even AFTER
+// they fix the config.
+function isConfigError(err) {
+  const msg = String(err?.message || err || '').toLowerCase();
+  return msg.includes('app check') || msg.includes('app-check')
+      || msg.includes('not configured') || msg.includes('not enabled')
+      || msg.includes('ai logic')
+      || /\b(401|403)\b/.test(msg) // pre-mapped HTTP status codes
+      || msg.includes('permission') || msg.includes('forbidden')
+      || msg.includes('unauthenticated') || msg.includes('unauthorized');
+}
+
 // Plain text generation. Returns the model's response string.
 // `opts`: { temperature, jsonMode, model }
 // `feature`: short identifier for usage tracking (e.g. 'concierge',
@@ -451,8 +475,6 @@ async function logAiUsage({ feature, model, hasVision, inputTokens, outputTokens
 // working; pass the real label to enable per-feature cost breakdown.
 export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
   checkRateLimit();  // throws with friendly message if exceeded
-  recordCall();      // record BEFORE the call so failed attempts also count
-                     // (prevents a runaway loop of failures from looking "free")
   try {
     const modelName = opts.model || 'gemini-2.5-flash';
     const ai = getAiSafe();
@@ -464,6 +486,8 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
       },
     });
     const result = await model.generateContent(prompt);
+    recordCall();  // record only on successful API reach — config errors
+                   // throw before this and don't burn rate-limit budget
     const text = result.response.text();
 
     // Track usage (fire-and-forget — no await, no rejection bubble)
@@ -480,6 +504,9 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
 
     return text;
   } catch (err) {
+    // Real API failures (timeout, 5xx, safety reject) still count — prevents
+    // a buggy loop from looking "free". Config errors do NOT count.
+    if (!isConfigError(err)) recordCall();
     throw mapGeminiError(err);
   }
 }
@@ -488,7 +515,6 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
 // `feature`: short identifier for usage tracking.
 export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature = 'unlabeled') {
   checkRateLimit();
-  recordCall();
   try {
     const ai = getAiSafe();
     const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -506,6 +532,7 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
       prompt,
       { inlineData: { mimeType, data } },
     ]);
+    recordCall();  // record only on successful API reach
     const text = result.response.text();
 
     // Track usage. Vision adds non-trivial image tokens — Gemini's
@@ -526,6 +553,7 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
 
     return text;
   } catch (err) {
+    if (!isConfigError(err)) recordCall();
     throw mapGeminiError(err);
   }
 }

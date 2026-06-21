@@ -19,6 +19,7 @@ import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
 import { useSubscriptionStatus } from './subscriptionStatus';
+import AppCheckDevBanner from './AppCheckDevBanner.jsx';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -2371,7 +2372,12 @@ export default function DigitalWardrobeRoot() {
   if (shareId) {
     return <ToastProvider><PublicShareView shareId={shareId} /></ToastProvider>;
   }
-  return <ToastProvider><DigitalWardrobe /></ToastProvider>;
+  return (
+    <ToastProvider>
+      <AppCheckDevBanner />
+      <DigitalWardrobe />
+    </ToastProvider>
+  );
 }
 
 function DigitalWardrobe() {
@@ -4545,14 +4551,16 @@ function DailyBriefCard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [whyOpen, setWhyOpen] = useState(false);
+  // autoFailed: true when auto-compose hit a config error (App Check, rate
+  // limit, AI Logic disabled). When true, render a manual-trigger empty state
+  // instead of returning null. The manual click goes through composeAnother
+  // which surfaces errors loudly via the error state.
+  const [autoFailed, setAutoFailed] = useState(false);
 
   // Auto-compose on first mount of the day if we have enough items and AI is on.
-  // Errors here are quietly swallowed — the card auto-fires without user intent,
-  // so a config issue (App Check token unregistered, AI Logic disabled, rate
-  // limit hit) should NOT pollute the wardrobe view on every page load.
-  // Manual clicks on "Try again" / "Compose another" still surface errors
-  // (see composeAnother below) so the user sees feedback when they explicitly
-  // ask for one.
+  // Errors here are quietly swallowed (no scary banner on every page load) —
+  // but we flip autoFailed so the card stays visible with a manual-trigger
+  // empty state instead of disappearing.
   useEffect(() => {
     if (brief) return;
     if (!isAiEnabled) return;
@@ -4561,6 +4569,7 @@ function DailyBriefCard({
     (async () => {
       setLoading(true);
       setError(null);
+      setAutoFailed(false);
       try {
         const out = await onGenerateOutfit({
           intent: 'a considered look for today',
@@ -4571,9 +4580,8 @@ function DailyBriefCard({
         const saved = writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
         setBrief(saved);
       } catch (err) {
-        // Silent on auto-fire — log to console only so a config issue surfaces
-        // in DevTools without showing a scary banner on every wardrobe open.
         console.warn('[daily-brief] auto-compose skipped:', err?.message || err);
+        if (!cancelled) setAutoFailed(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -4638,6 +4646,28 @@ function DailyBriefCard({
           className="mt-3 rounded-full border border-stone-300 px-4 py-1.5 text-sm hover:bg-stone-50"
         >
           Try again
+        </button>
+      </div>
+    );
+  }
+
+  // Auto-fire failed silently (e.g. App Check misconfigured). Show a friendly
+  // empty state with a manual trigger — the manual click goes through
+  // composeAnother which surfaces any error loudly via the error state above.
+  if (!brief && autoFailed) {
+    return (
+      <div className="rounded-2xl border border-stone-200 bg-white p-6">
+        <p className="text-sm uppercase tracking-widest text-stone-500">The Daily Brief</p>
+        <h3 className="mt-2 text-xl font-serif text-stone-900">Ready when you are.</h3>
+        <p className="mt-2 text-sm text-stone-600">
+          Tap below to compose today's outfit from your wardrobe.
+        </p>
+        <button
+          type="button"
+          onClick={composeAnother}
+          className="mt-3 rounded-full bg-stone-900 px-4 py-2 text-sm text-white hover:bg-stone-700"
+        >
+          Compose today's brief
         </button>
       </div>
     );

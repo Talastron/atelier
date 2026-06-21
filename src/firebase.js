@@ -322,34 +322,34 @@ function mapGeminiError(err) {
 
   if (lower.includes('429') || lower.includes('rate_limit') || lower.includes('quota')) {
     if (lower.includes('per day') || lower.includes('perday')) {
-      return new Error(`AI hit today's project-wide request limit. It resets at midnight UTC.${retryHint}`);
+      return new Error(`Atelier has hit today's Concierge request limit. It resets at midnight UTC.${retryHint}`);
     }
-    return new Error(`AI is at its rate limit right now.${retryHint || ' Try again in a moment.'}`);
+    return new Error(`The Concierge is at its rate limit right now.${retryHint || ' Try again in a moment.'}`);
   }
   if (lower.includes('503') || lower.includes('unavailable')) {
-    return new Error('AI is briefly offline. Try again in a moment.');
+    return new Error('The Concierge is briefly offline. Try again in a moment.');
   }
   if (lower.includes('app check') || lower.includes('app-check')) {
     return new Error('Could not verify the app with Firebase. Try refreshing the page.');
   }
   if (lower.includes('not configured') || lower.includes('ai logic') || lower.includes('not enabled')) {
-    return new Error('AI is not enabled for this Firebase project. Owner needs to enable Firebase AI Logic.');
+    return new Error('Concierge is not yet set up for this Firebase project. Owner needs to enable Firebase AI Logic.');
   }
   if (lower.includes('permission') || lower.includes('403') || lower.includes('forbidden')) {
-    return new Error('AI access denied. Check Firebase App Check and AI Logic configuration.');
+    return new Error('Concierge access denied. Check Firebase App Check and AI Logic configuration.');
   }
   if (lower.includes('model') && (lower.includes('not found') || lower.includes('404') || lower.includes('deprecated'))) {
-    return new Error('The AI model is unavailable — it may have been deprecated. Update may be needed.');
+    return new Error('The Concierge model is unavailable — it may have been deprecated. Update may be needed.');
   }
   if (lower.includes('network') || lower.includes('failed to fetch') || lower.includes('fetch failed') || lower.includes('offline')) {
-    return new Error('Network error reaching AI. Check your connection and try again.');
+    return new Error('Network error reaching the Concierge. Check your connection and try again.');
   }
   if (lower.includes('safety') || lower.includes('blocked')) {
-    return new Error("Gemini's safety filter rejected this request. Try rephrasing or a different image.");
+    return new Error("The Concierge's safety filter rejected this request. Try rephrasing or a different image.");
   }
-  // Fallback — pass through but prefix so the user knows it's an AI error.
-  if (msg && msg.length < 200) return new Error(`AI error: ${msg}`);
-  return new Error('AI failed unexpectedly. Try again, or refresh the page.');
+  // Fallback — pass through but prefix so the user knows it's a Concierge error.
+  if (msg && msg.length < 200) return new Error(`Concierge error: ${msg}`);
+  return new Error('The Concierge failed unexpectedly. Try again, or refresh the page.');
 }
 
 // ─── AI usage tracking ──────────────────────────────────────────────────

@@ -11810,8 +11810,13 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
     }
   };
 
+  // Print just the packing list (not the whole app UI). The .travel-print-target
+  // div below is normally `display:none`; @media print injected via the modal
+  // makes it visible while hiding everything else. Replaces the previous
+  // window.print() which rendered the entire app including the sidebar.
   const handlePrint = () => {
-    window.print();
+    // Tiny delay so the print stylesheet has applied before the dialog opens.
+    setTimeout(() => window.print(), 50);
   };
 
   const apply = async () => {
@@ -12203,6 +12208,91 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
               ✓ {exportToast}
             </div>
           )}
+
+          {/* PRINT-ONLY rendering. Normally display:none. The @media print
+              block below hides every other element on the page (sidebar,
+              modal chrome, the page behind, the modal itself) and only
+              shows this clean packing-list block, full-width on a white
+              page. The user's previous Print attempt captured the whole
+              app UI — this isolates the output to just the list, with
+              checkboxes, usage counts and category grouping. */}
+          {stage === 'done' && plan?.days?.length > 0 && (() => {
+            const { entries } = buildPackingList();
+            if (entries.length === 0) return null;
+            const CATEGORY_ORDER = ['Outerwear', 'Tops', 'Bottoms', 'Dresses', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+            const byCat = new Map();
+            for (const e of entries) {
+              const cat = e.piece.category || 'Other';
+              if (!byCat.has(cat)) byCat.set(cat, []);
+              byCat.get(cat).push(e);
+            }
+            const orderedCats = [
+              ...CATEGORY_ORDER.filter((c) => byCat.has(c)),
+              ...[...byCat.keys()].filter((c) => !CATEGORY_ORDER.includes(c)),
+            ];
+            const destName = `${forecast?.name || ''}${forecast?.country ? ', ' + forecast.country : ''}`.trim();
+            const startLabel = new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            const endLabel = new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            return (
+              <>
+                <style>{`
+                  @media print {
+                    body * { visibility: hidden !important; }
+                    .travel-print-target, .travel-print-target * { visibility: visible !important; }
+                    .travel-print-target {
+                      position: fixed !important;
+                      top: 0 !important;
+                      left: 0 !important;
+                      right: 0 !important;
+                      width: 100% !important;
+                      background: white !important;
+                      color: black !important;
+                      padding: 2rem !important;
+                      font-family: Georgia, 'Times New Roman', serif !important;
+                      z-index: 999999 !important;
+                    }
+                    @page { margin: 1.5cm; size: A4; }
+                  }
+                `}</style>
+                <div className="travel-print-target" style={{ display: 'none' }} aria-hidden="true">
+                  <h1 style={{ fontSize: '24pt', marginBottom: '0.25rem' }}>Packing List</h1>
+                  {destName && <p style={{ fontSize: '14pt', color: '#555', marginBottom: '0.25rem' }}>{destName}</p>}
+                  <p style={{ fontSize: '11pt', color: '#666', marginBottom: '1.5rem' }}>
+                    {startLabel} &rarr; {endLabel} &middot; {plan.days.length} day{plan.days.length === 1 ? '' : 's'} &middot; {entries.length} piece{entries.length === 1 ? '' : 's'}
+                  </p>
+                  {orderedCats.map((cat) => {
+                    const list = byCat.get(cat);
+                    return (
+                      <section key={cat} style={{ marginBottom: '1.25rem', breakInside: 'avoid' }}>
+                        <h2 style={{ fontSize: '12pt', textTransform: 'uppercase', letterSpacing: '0.15em', borderBottom: '1px solid #999', paddingBottom: '0.25rem', marginBottom: '0.5rem' }}>
+                          {cat} <span style={{ color: '#888', fontWeight: 'normal' }}>&middot; {list.length}</span>
+                        </h2>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                          {list.map(({ piece: p, dayCount }) => (
+                            <li key={p.id} style={{ padding: '4pt 0', display: 'flex', alignItems: 'baseline', borderBottom: '1px dotted #ddd' }}>
+                              <span style={{ display: 'inline-block', width: '12pt', height: '12pt', border: '1pt solid #333', marginRight: '8pt', flexShrink: 0 }} aria-hidden="true"></span>
+                              <span style={{ flex: 1, fontSize: '11pt' }}>
+                                {p.brand && <span style={{ color: '#666', marginRight: '4pt' }}>{p.brand}</span>}
+                                <span style={{ color: '#000' }}>{p.name || p.category}</span>
+                              </span>
+                              {dayCount > 1 && (
+                                <span style={{ color: '#666', fontSize: '9pt', fontStyle: 'italic', marginLeft: '8pt' }}>
+                                  &times; {dayCount} days
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    );
+                  })}
+                  <p style={{ marginTop: '2rem', fontSize: '8pt', color: '#888', textAlign: 'center', fontStyle: 'italic' }}>
+                    Composed by Atelier &middot; printed {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+              </>
+            );
+          })()}
 
           {/* WARDROBE PICKER — opens when the user taps "+ Add" on a day card.
               Shows owned items grouped by category. Tapping an item adds it

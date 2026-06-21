@@ -1537,12 +1537,19 @@ async function fetchTravelForecast(query, startISO, endISO) {
   // fetch real forecast for the portion inside the window and synthesize
   // "seasonal estimate" placeholders for the rest. The capsule generator below
   // tells Gemini to fall back to typical climate for those days.
+  //
+  // Date math note: use local-date components, NEVER toISOString().slice(0,10).
+  // Date#toISOString returns UTC, so in any timezone west of UTC (or east
+  // during DST), local-midnight converts to "the previous day, 23:00 UTC" and
+  // slicing yields the wrong calendar date. This caused trips starting Friday
+  // to render as starting Thursday for UK summer (BST = UTC+1) users.
+  const localISODate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const FORECAST_WINDOW_DAYS = 14; // conservative; Open-Meteo nominally serves 16
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const horizon = new Date(today);
   horizon.setDate(horizon.getDate() + FORECAST_WINDOW_DAYS);
-  const horizonISO = horizon.toISOString().slice(0, 10);
+  const horizonISO = localISODate(horizon);
 
   const startD = new Date(startISO + 'T00:00:00');
   const endD = new Date(endISO + 'T00:00:00');
@@ -1576,9 +1583,11 @@ async function fetchTravelForecast(query, startISO, endISO) {
   }
 
   // Build the full trip-day array, mixing real forecast with estimates.
+  // Use localISODate (see note above) — toISOString here would shift each
+  // day to the previous calendar date in UTC+N timezones.
   const daily = [];
   for (let cur = new Date(startD); cur <= endD; cur.setDate(cur.getDate() + 1)) {
-    const iso = cur.toISOString().slice(0, 10);
+    const iso = localISODate(cur);
     const real = realDaily.find((r) => r.date === iso);
     daily.push(real || { date: iso, estimated: true });
   }
@@ -11516,8 +11525,22 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
     onClose?.();
   };
 
+  // Guard the backdrop close — three states that should NOT silently dismiss:
+  //   - forecasting / generating: a Concierge call is in flight, dismissing
+  //     would burn tokens and confuse the user when the result lands "nowhere".
+  //   - done with a plan: the user spent ~10s waiting for a travel capsule;
+  //     a stray tap outside the modal shouldn't erase it. Require confirm.
+  // Closing via the explicit X / Discard / Save buttons always works.
+  const handleBackdropClick = () => {
+    if (stage === 'forecasting' || stage === 'generating') return; // in-flight — ignore
+    if (stage === 'done' && plan) {
+      if (!window.confirm('Discard this travel capsule?')) return;
+    }
+    onClose?.();
+  };
+
   return createPortal(
-    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
+    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={handleBackdropClick}>
       <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div>
@@ -11645,6 +11668,82 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                   );
                 })}
               </div>
+
+              {/* PACKING LIST — deduped union of every piece across every day,
+                  grouped by category. The day-by-day cards above tell you
+                  WHAT to wear; this tells you WHAT TO PUT IN THE SUITCASE. */}
+              {(() => {
+                // Collect every unique item id used across all days, preserving
+                // insertion order so the first-day items appear first.
+                const seen = new Set();
+                const uniqueIds = [];
+                for (const day of plan.days) {
+                  for (const id of (day.itemIds || [])) {
+                    if (seen.has(id)) continue;
+                    seen.add(id);
+                    uniqueIds.push(id);
+                  }
+                }
+                const packPieces = uniqueIds
+                  .map((id) => items.find((i) => i.id === id))
+                  .filter(Boolean);
+                if (packPieces.length === 0) return null;
+                // Group by category in this order so the list reads like a
+                // packing routine: clothes first, then shoes, then carry-ons.
+                const CATEGORY_ORDER = ['Outerwear', 'Tops', 'Bottoms', 'Dresses', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+                const byCategory = new Map();
+                for (const p of packPieces) {
+                  const cat = p.category || 'Other';
+                  if (!byCategory.has(cat)) byCategory.set(cat, []);
+                  byCategory.get(cat).push(p);
+                }
+                const orderedCats = [
+                  ...CATEGORY_ORDER.filter((c) => byCategory.has(c)),
+                  ...[...byCategory.keys()].filter((c) => !CATEGORY_ORDER.includes(c)),
+                ];
+                return (
+                  <div className="bg-white border border-stone-200 rounded-2xl p-5">
+                    <div className="flex items-baseline justify-between mb-4">
+                      <div>
+                        <p className="text-[10px] tracking-widest uppercase text-stone-500">The Packing List</p>
+                        <h3 className="text-lg font-display text-stone-900 mt-0.5">{packPieces.length} piece{packPieces.length === 1 ? '' : 's'} for {plan.days.length} day{plan.days.length === 1 ? '' : 's'}</h3>
+                      </div>
+                      <p className="text-[10px] tracking-wider uppercase text-stone-400">
+                        {(packPieces.length / Math.max(plan.days.length, 1)).toFixed(1)}× per day
+                      </p>
+                    </div>
+                    <div className="space-y-4">
+                      {orderedCats.map((cat) => {
+                        const list = byCategory.get(cat);
+                        return (
+                          <div key={cat}>
+                            <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 mb-2">
+                              {cat} <span className="text-stone-300">·</span> <span className="text-stone-400">{list.length}</span>
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {list.map((p) => (
+                                <div key={p.id} className="flex flex-col items-center w-20" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
+                                  <div className="w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200">
+                                    {itemImages(p)[0] ? (
+                                      <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 text-[10px] text-stone-600 text-center truncate w-full leading-tight">{p.name || p.brand || p.category}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-4 text-[10px] text-stone-400 italic">
+                      Tip: tap "Save & schedule all" to add these outfits to your calendar — the packing list is available from the diary anytime.
+                    </p>
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>

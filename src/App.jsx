@@ -3325,7 +3325,7 @@ function DigitalWardrobe() {
                 // position:sticky for descendants (they end up scoped to this
                 // wrapper instead of the main scroll ancestor). Fade-in only.
                 <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
-                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} />}
+                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
                       mode="studio"
@@ -4478,6 +4478,7 @@ function DailyBriefCard({
   onGenerateOutfit,
   onSaveOutfit,
   onLogOutfitWear,
+  onOpenOutfit,
   isAiEnabled,
 }) {
   const uid = user?.uid || 'anon';
@@ -4631,16 +4632,19 @@ function DailyBriefCard({
 
       <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-5">
         {briefItems.map(it => (
-          <div
+          <button
             key={it.id}
-            className="aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-50"
+            type="button"
+            onClick={() => onOpenOutfit?.(brief)}
+            className="aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-50 hover:border-stone-400 transition-colors"
+            aria-label={`Open ${it.name} in Studio`}
           >
             {(it.images?.[0] || it.imageUrl) ? (
               <img src={it.images?.[0] || it.imageUrl} alt={it.name} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">{it.category}</div>
             )}
-          </div>
+          </button>
         ))}
       </div>
 
@@ -5157,7 +5161,7 @@ function sortWardrobeItems(items, sortBy) {
   return arr.sort((a, b) => favBoost(a, b) || comparator(a, b));
 }
 
-function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge }) {
+function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge, onOpenBrief }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const enterSelectMode = (firstId = null) => {
@@ -5513,6 +5517,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           }}
           onSaveOutfit={onSaveOutfit}
           onLogOutfitWear={onLogOutfitWear}
+          onOpenOutfit={onOpenBrief}
         />
         <TodayTile
           items={items}
@@ -5881,6 +5886,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           }}
           onSaveOutfit={onSaveOutfit}
           onLogOutfitWear={onLogOutfitWear}
+          onOpenOutfit={onOpenBrief}
         />
 
         <TodayTile

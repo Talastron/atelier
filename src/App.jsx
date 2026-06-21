@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2
+  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -1627,11 +1627,12 @@ Destination: ${destination}
 Daily forecast:
 ${forecastLines}
 
-${hasEstimated ? `Some days fall beyond the 14-day forecast window. For those, draw on your knowledge of typical climate at ${destination} in the given month (e.g. "Lisbon in October is mild, often 15-22°C with occasional rain") and infer a sensible temperature range and weather. Apply the same WEATHER-DRIVEN RULES below to the inferred range. State the inferred range in that day's reasoning line so the user can see the call was made deliberately.\n\n` : ''}${styleProfile ? `${styleProfile}\n\n` : ''}Packing rules:
-- Compose ONE outfit per forecast day (every date above).
+${hasEstimated ? `Some days fall beyond the 14-day forecast window. For those, draw on your knowledge of typical climate at ${destination} in the given month (e.g. "Lisbon in October is mild, often 15-22°C with occasional rain") and infer a sensible temperature range and weather. Apply the same WEATHER-DRIVEN RULES below to the inferred range. State the inferred range in that day's reasoning line. THESE DAYS REQUIRE THE SAME FULL OUTFIT — do NOT skip them or return fewer items just because the forecast is inferred.\n\n` : ''}${styleProfile ? `${styleProfile}\n\n` : ''}Packing rules (NON-NEGOTIABLE):
+- Compose ONE outfit per forecast day (every date above) — never skip a day, never return an empty itemIds array.
+- Each day's itemIds MUST be drawn from the "Available items" list below. NEVER invent IDs. If you're not sure, pick the closest match from the list.
+- Each outfit needs AT MINIMUM: top + bottom + shoes, OR dress + shoes. Aim for 4-7 pieces total per day (add outerwear / bag / accessories / jewellery to complete the look).
 - Reuse pieces across days where it makes sense — that's the point of a capsule. Aim to keep TOTAL distinct pieces under 1.5× the number of days.
 - Each outfit follows the standard slot rules: at most one item per category, dresses replace tops+bottoms.
-- Skip a slot rather than force a wrong item.
 - A short reasoning line per day (max 12 words) that mentions the day's temperature range so the user can see the call was made deliberately.
 - One summary line about the overall capsule choices that mentions the destination's overall climate.
 
@@ -1655,10 +1656,76 @@ Respond ONLY with valid JSON in this exact shape:
   "summary": "one short paragraph"
 }`;
 
-  const text = await geminiText(prompt, { temperature: 0.6, jsonMode: true }, 'travel-capsule');
+  // Lowered from 0.6 → 0.4 — capsules need consistency more than creativity.
+  // The previous temperature led to sparse / hallucinated itemIds.
+  const text = await geminiText(prompt, { temperature: 0.4, jsonMode: true }, 'travel-capsule');
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
   if (!Array.isArray(parsed.days) || parsed.days.length === 0) throw new Error('The Concierge could not compose a capsule.');
+  // Filter each day's itemIds to only those that actually exist in the wardrobe.
+  // Gemini occasionally hallucinates IDs; we render based on resolvable items
+  // anyway, but stripping the bad IDs now means the UI's "empty day" detection
+  // is accurate and reroll prompts have clean state to work from.
+  const validIds = new Set(items.map((i) => i.id));
+  parsed.days = parsed.days.map((d) => ({
+    ...d,
+    itemIds: (Array.isArray(d.itemIds) ? d.itemIds : []).filter((id) => validIds.has(id)),
+  }));
+  return parsed;
+}
+
+// Reroll just one day of an existing travel capsule. Used by the per-day
+// Reroll button in TravelPlannerModal. We re-prompt with the full wardrobe
+// context but ONLY the one day's forecast, and ask for a single fresh outfit.
+// The caller merges the result into the existing plan.
+async function regenerateTravelDayWithGemini({ items, destination, dayInfo, otherDayPieceIds = [], styleProfile = '' }) {
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
+  if (!items.length) throw new Error('Add some owned items first.');
+
+  const summarize = (i) =>
+    `${i.id}|${i.name}|${i.brand || '?'}|${i.category}${i.subCategory ? '/' + i.subCategory : ''}` +
+    `${i.favorite ? '|★FAVOURITE' : ''}` +
+    `|styles=${itemStyles(i).join(',') || '-'}` +
+    `|colors=${itemColors(i).join(',') || '-'}` +
+    `|seasons=${itemSeasons(i).join(',') || 'any'}` +
+    `|materials=${itemMaterials(i).join(',') || '-'}`;
+
+  const isEstimated = !!dayInfo.estimated;
+  const monthName = new Date(dayInfo.date + 'T00:00:00').toLocaleDateString('en-GB', { month: 'long' });
+  const forecastLine = isEstimated
+    ? `(beyond 14-day forecast — use typical ${monthName} climate at ${destination})`
+    : `${dayInfo.tmin}-${dayInfo.tmax}°C · ${weatherLabel(dayInfo.code)}`;
+
+  const otherPieces = otherDayPieceIds.length > 0
+    ? `\nPieces already used on OTHER days of this trip (prefer reusing these to keep the capsule tight): ${otherDayPieceIds.join(', ')}\n`
+    : '';
+
+  const prompt = `You are recomposing ONE day of an existing travel capsule.
+
+Destination: ${destination}
+Date: ${dayInfo.date}
+Forecast: ${forecastLine}
+${otherPieces}
+${styleProfile ? `${styleProfile}\n\n` : ''}Rules:
+- Return exactly ONE outfit for this single date.
+- itemIds MUST be drawn from the "Available items" list below. NEVER invent IDs.
+- Minimum: top + bottom + shoes, OR dress + shoes. Aim for 4-7 pieces.
+- Apply the same WEATHER-DRIVEN RULES (same temperature thresholds as a full capsule prompt).
+- Reasoning line ≤ 12 words, mention the temperature range.
+- Compose something DIFFERENT from the last attempt — fresh combination, not the same pieces.
+
+Available items (id|name|brand|category|attributes):
+${items.map(summarize).join('\n')}
+
+Respond ONLY with valid JSON in this exact shape:
+{ "date": "${dayInfo.date}", "itemIds": ["id1", "id2"], "reasoning": "string" }`;
+
+  const text = await geminiText(prompt, { temperature: 0.6, jsonMode: true }, 'travel-capsule');
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
+  const validIds = new Set(items.map((i) => i.id));
+  parsed.itemIds = (Array.isArray(parsed.itemIds) ? parsed.itemIds : []).filter((id) => validIds.has(id));
+  if (parsed.itemIds.length === 0) throw new Error('The Concierge could not compose this day — try again.');
   return parsed;
 }
 
@@ -11480,6 +11547,10 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
   const [forecast, setForecast] = useState(null);
   const [plan, setPlan] = useState(null);
   const [error, setError] = useState(null);
+  // Per-day reroll state — { 'YYYY-MM-DD': true } while a single day is being
+  // regenerated. Keeps the rest of the plan interactive during the call.
+  const [rerollingDay, setRerollingDay] = useState({});
+  const [exportToast, setExportToast] = useState(null);
   const toast = useToast();
   const days = Math.floor((new Date(endISO) - new Date(startISO)) / 86_400_000) + 1;
 
@@ -11505,6 +11576,116 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
       setError(e?.message || 'Failed.');
       setStage('error');
     }
+  };
+
+  // Reroll a single day's outfit. Calls the partial-regen helper, then merges
+  // the new day back into the plan in-place. Other days untouched. Keeps the
+  // user from waiting for a full ~10s recompose when only one day is off.
+  const rerollDay = async (dayIso) => {
+    if (!plan || rerollingDay[dayIso]) return;
+    const dayInfo = forecast?.daily?.find((d) => d.date === dayIso);
+    if (!dayInfo) return;
+    // Collect itemIds used on OTHER days so the prompt encourages reuse.
+    const otherIds = new Set();
+    for (const d of plan.days) {
+      if (d.date === dayIso) continue;
+      for (const id of (d.itemIds || [])) otherIds.add(id);
+    }
+    setRerollingDay((m) => ({ ...m, [dayIso]: true }));
+    try {
+      const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
+      const fresh = await regenerateTravelDayWithGemini({
+        items: owned,
+        destination: `${forecast.name}${forecast.country ? ', ' + forecast.country : ''}`,
+        dayInfo,
+        otherDayPieceIds: Array.from(otherIds),
+        styleProfile,
+      });
+      setPlan((prev) => ({
+        ...prev,
+        days: prev.days.map((d) => d.date === dayIso ? { ...d, itemIds: fresh.itemIds, reasoning: fresh.reasoning } : d),
+      }));
+    } catch (err) {
+      toast.show(err?.message || 'Reroll failed.', { kind: 'error' });
+    } finally {
+      setRerollingDay((m) => {
+        const next = { ...m };
+        delete next[dayIso];
+        return next;
+      });
+    }
+  };
+
+  // Build packing list with usage counts. Used by the result UI AND by the
+  // export functions. Returns { items: [{piece, dayCount}], totalPieces }.
+  const buildPackingList = () => {
+    if (!plan?.days?.length) return { entries: [], totalPieces: 0 };
+    const counts = new Map(); // id → { piece, dayCount, firstDayIndex }
+    plan.days.forEach((day, dayIdx) => {
+      for (const id of (day.itemIds || [])) {
+        const piece = items.find((i) => i.id === id);
+        if (!piece) continue;
+        if (!counts.has(id)) counts.set(id, { piece, dayCount: 0, firstDayIndex: dayIdx });
+        counts.get(id).dayCount += 1;
+      }
+    });
+    // Sort by dayCount desc (backbone pieces first), then first-appearance,
+    // then category for stable grouping.
+    const entries = [...counts.values()].sort((a, b) => {
+      if (b.dayCount !== a.dayCount) return b.dayCount - a.dayCount;
+      return a.firstDayIndex - b.firstDayIndex;
+    });
+    return { entries, totalPieces: entries.length };
+  };
+
+  // Format the packing list as plain text suitable for Notes / email / SMS.
+  // Grouped by category, with usage counts. The user said: "where do I then
+  // EXPORT the actual travel list" — this is one of two export paths.
+  const formatPackingListAsText = () => {
+    if (!plan?.days?.length) return '';
+    const { entries } = buildPackingList();
+    if (entries.length === 0) return '';
+    const destName = `${forecast?.name || ''}${forecast?.country ? ', ' + forecast.country : ''}`.trim();
+    const startLabel = new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const endLabel = new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const header = `Packing list — ${destName || 'trip'}\n${startLabel} → ${endLabel} (${plan.days.length} day${plan.days.length === 1 ? '' : 's'}, ${entries.length} piece${entries.length === 1 ? '' : 's'})\n`;
+    const CATEGORY_ORDER = ['Outerwear', 'Tops', 'Bottoms', 'Dresses', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+    const byCat = new Map();
+    for (const e of entries) {
+      const cat = e.piece.category || 'Other';
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat).push(e);
+    }
+    const orderedCats = [
+      ...CATEGORY_ORDER.filter((c) => byCat.has(c)),
+      ...[...byCat.keys()].filter((c) => !CATEGORY_ORDER.includes(c)),
+    ];
+    const body = orderedCats.map((cat) => {
+      const list = byCat.get(cat);
+      const lines = list.map((e) => {
+        const label = `${e.piece.brand ? e.piece.brand + ' · ' : ''}${e.piece.name || e.piece.category}`;
+        const usage = e.dayCount > 1 ? ` (× ${e.dayCount} days)` : '';
+        return `  [ ] ${label}${usage}`;
+      });
+      return `\n${cat} (${list.length})\n${lines.join('\n')}`;
+    }).join('\n');
+    return `${header}${body}\n`;
+  };
+
+  const handleCopyAsText = async () => {
+    const text = formatPackingListAsText();
+    if (!text) { toast.show('Nothing to copy yet.', { kind: 'error' }); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      setExportToast('Packing list copied to clipboard');
+      setTimeout(() => setExportToast(null), 2500);
+    } catch {
+      toast.show('Could not copy — your browser blocked clipboard access.', { kind: 'error' });
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const apply = async () => {
@@ -11632,87 +11813,117 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                 {plan.days.map((d, idx) => {
                   const fcDay = forecast?.daily?.find((f) => f.date === d.date);
                   const pieces = (d.itemIds || []).map((id) => items.find((i) => i.id === id)).filter(Boolean);
+                  const isRerolling = !!rerollingDay[d.date];
+                  const isEmpty = pieces.length === 0;
+                  const isSparse = pieces.length > 0 && pieces.length < 3;
                   return (
-                    <div key={idx} className="bg-white border border-stone-200 rounded-2xl p-4">
+                    <div key={idx} className={`bg-white border rounded-2xl p-4 ${isEmpty ? 'border-amber-200 bg-amber-50/30' : 'border-stone-200'}`}>
                       <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
                         <p className="text-sm font-medium text-stone-900">
                           {new Date(d.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
                         </p>
-                        {fcDay && !fcDay.estimated && (
-                          <span className="text-[10px] tracking-wider uppercase text-stone-500">
-                            {fcDay.tmin}-{fcDay.tmax}°C · {weatherLabel(fcDay.code)}
-                          </span>
-                        )}
-                        {fcDay?.estimated && (
-                          <span className="text-[10px] tracking-wider uppercase text-stone-400 italic">
-                            Seasonal estimate
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {fcDay && !fcDay.estimated && (
+                            <span className="text-[10px] tracking-wider uppercase text-stone-500">
+                              {fcDay.tmin}-{fcDay.tmax}°C · {weatherLabel(fcDay.code)}
+                            </span>
+                          )}
+                          {fcDay?.estimated && (
+                            <span className="text-[10px] tracking-wider uppercase text-stone-400 italic">
+                              Seasonal estimate
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => rerollDay(d.date)}
+                            disabled={isRerolling}
+                            className="text-[10px] tracking-wider uppercase text-stone-500 hover:text-stone-900 border border-stone-300 hover:border-stone-500 rounded-full px-2 py-0.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Compose this day again"
+                          >
+                            {isRerolling ? 'Rerolling…' : '↻ Reroll'}
+                          </button>
+                        </div>
                       </div>
-                      {/* Outfit thumbnails — enlarged from w-12 (~48px) to
-                          w-20 (~80px) so the user can actually SEE the
-                          composition, not just colour swatches. Flex-wrap
-                          so longer outfits flow onto a second row instead
-                          of horizontal-scrolling out of sight. */}
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {pieces.map((p) => (
-                          <div key={p.id} className="flex-none w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
-                            {itemImages(p)[0] ? (
-                              <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
-                            )}
+
+                      {isRerolling ? (
+                        <div className="flex flex-wrap gap-2 mb-3 animate-pulse">
+                          {[0,1,2,3,4].map((j) => (
+                            <div key={j} className="flex-none w-20 aspect-[3/4] rounded-lg bg-stone-200" />
+                          ))}
+                        </div>
+                      ) : isEmpty ? (
+                        <div className="py-4 text-center">
+                          <p className="text-sm text-amber-900 font-medium">Couldn't compose this day.</p>
+                          <p className="text-xs text-amber-800/70 mt-1 mb-3">
+                            The Concierge didn't return enough matching pieces — try the Reroll button above.
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {pieces.map((p) => (
+                              <div key={p.id} className="flex-none w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
+                                {itemImages(p)[0] ? (
+                                  <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                      {d.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed">{d.reasoning}</p>}
+                          {isSparse && (
+                            <p className="text-[10px] text-amber-700 italic mb-2">
+                              Sparse outfit ({pieces.length} piece{pieces.length === 1 ? '' : 's'}) — Reroll for a fuller composition.
+                            </p>
+                          )}
+                          {d.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed">{d.reasoning}</p>}
+                        </>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
               {/* PACKING LIST — deduped union of every piece across every day,
-                  grouped by category. The day-by-day cards above tell you
-                  WHAT to wear; this tells you WHAT TO PUT IN THE SUITCASE. */}
+                  with usage counts so the user sees which pieces are the
+                  capsule backbone (× 4-5 days) vs supporting one-offs.
+                  Sorted by usage descending — backbone first. */}
               {(() => {
-                // Collect every unique item id used across all days, preserving
-                // insertion order so the first-day items appear first.
-                const seen = new Set();
-                const uniqueIds = [];
-                for (const day of plan.days) {
-                  for (const id of (day.itemIds || [])) {
-                    if (seen.has(id)) continue;
-                    seen.add(id);
-                    uniqueIds.push(id);
-                  }
-                }
-                const packPieces = uniqueIds
-                  .map((id) => items.find((i) => i.id === id))
-                  .filter(Boolean);
-                if (packPieces.length === 0) return null;
+                const { entries } = buildPackingList();
+                if (entries.length === 0) return null;
                 // Group by category in this order so the list reads like a
                 // packing routine: clothes first, then shoes, then carry-ons.
                 const CATEGORY_ORDER = ['Outerwear', 'Tops', 'Bottoms', 'Dresses', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
                 const byCategory = new Map();
-                for (const p of packPieces) {
-                  const cat = p.category || 'Other';
+                for (const e of entries) {
+                  const cat = e.piece.category || 'Other';
                   if (!byCategory.has(cat)) byCategory.set(cat, []);
-                  byCategory.get(cat).push(p);
+                  // Within each category, entries are already sorted by usage
+                  // desc because we iterate the pre-sorted entries list.
+                  byCategory.get(cat).push(e);
                 }
                 const orderedCats = [
                   ...CATEGORY_ORDER.filter((c) => byCategory.has(c)),
                   ...[...byCategory.keys()].filter((c) => !CATEGORY_ORDER.includes(c)),
                 ];
+                const backbone = entries.filter((e) => e.dayCount >= 3).length;
                 return (
                   <div className="bg-white border border-stone-200 rounded-2xl p-5">
-                    <div className="flex items-baseline justify-between mb-4">
+                    <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
                       <div>
                         <p className="text-[10px] tracking-widest uppercase text-stone-500">The Packing List</p>
-                        <h3 className="text-lg font-display text-stone-900 mt-0.5">{packPieces.length} piece{packPieces.length === 1 ? '' : 's'} for {plan.days.length} day{plan.days.length === 1 ? '' : 's'}</h3>
+                        <h3 className="text-lg font-display text-stone-900 mt-0.5">{entries.length} piece{entries.length === 1 ? '' : 's'} for {plan.days.length} day{plan.days.length === 1 ? '' : 's'}</h3>
                       </div>
-                      <p className="text-[10px] tracking-wider uppercase text-stone-400">
-                        {(packPieces.length / Math.max(plan.days.length, 1)).toFixed(1)}× per day
-                      </p>
+                      <div className="text-right">
+                        <p className="text-[10px] tracking-wider uppercase text-stone-400">
+                          {(entries.length / Math.max(plan.days.length, 1)).toFixed(1)}× per day
+                        </p>
+                        {backbone > 0 && (
+                          <p className="text-[10px] tracking-wider uppercase text-emerald-700 mt-0.5">
+                            {backbone} backbone piece{backbone === 1 ? '' : 's'}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-4">
                       {orderedCats.map((cat) => {
@@ -11723,14 +11934,19 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                               {cat} <span className="text-stone-300">·</span> <span className="text-stone-400">{list.length}</span>
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              {list.map((p) => (
-                                <div key={p.id} className="flex flex-col items-center w-20" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
-                                  <div className="w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200">
+                              {list.map(({ piece: p, dayCount }) => (
+                                <div key={p.id} className="flex flex-col items-center w-20" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category} — worn ${dayCount} day${dayCount === 1 ? '' : 's'}`}>
+                                  <div className="relative w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200">
                                     {itemImages(p)[0] ? (
                                       <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                                     ) : (
                                       <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
                                     )}
+                                    {/* Usage badge — backbone pieces (3+) get emerald;
+                                        supporting pieces (1-2) get neutral. */}
+                                    <span className={`absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${dayCount >= 3 ? 'bg-emerald-600 text-white' : 'bg-stone-800/85 text-white'}`}>
+                                      × {dayCount}
+                                    </span>
                                   </div>
                                   <p className="mt-1 text-[10px] text-stone-600 text-center truncate w-full leading-tight">{p.name || p.brand || p.category}</p>
                                 </div>
@@ -11741,23 +11957,42 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                       })}
                     </div>
                     <p className="mt-4 text-[10px] text-stone-400 italic">
-                      Tip: tap "Save & schedule all" to add these outfits to your calendar — the packing list is available from the diary anytime.
+                      Green badges mark backbone pieces (worn 3+ days). Use Copy or Print below to take this list with you.
                     </p>
                   </div>
                 );
               })()}
             </>
           )}
+          {exportToast && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[110] bg-emerald-700 text-white px-4 py-2 rounded-full text-sm shadow-lg">
+              ✓ {exportToast}
+            </div>
+          )}
         </div>
 
         {stage === 'done' && (
-          <div className="px-6 py-4 border-t border-stone-200/60 bg-white shrink-0 flex gap-2 justify-end">
-            <button onClick={() => { setPlan(null); setStage('input'); }} className="text-xs tracking-wider uppercase px-4 py-2 rounded-full text-stone-500 hover:text-stone-900">
-              Discard
-            </button>
-            <button onClick={apply} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 flex items-center gap-2">
-              <Calendar size={14} strokeWidth={1.5} /> Save & schedule all
-            </button>
+          <div className="px-6 py-4 border-t border-stone-200/60 bg-white shrink-0 flex gap-2 justify-between flex-wrap">
+            <div className="flex gap-2">
+              <button onClick={handleCopyAsText} type="button"
+                className="text-[10px] tracking-wider uppercase px-3 py-2 rounded-full border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-1.5"
+                title="Copy the packing list as plain text — paste into Notes, email, or SMS">
+                <Copy size={12} strokeWidth={1.5} /> Copy list
+              </button>
+              <button onClick={handlePrint} type="button"
+                className="text-[10px] tracking-wider uppercase px-3 py-2 rounded-full border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-1.5"
+                title="Open the browser print dialog — save as PDF or print on paper">
+                <Printer size={12} strokeWidth={1.5} /> Print / PDF
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { setPlan(null); setStage('input'); }} className="text-xs tracking-wider uppercase px-4 py-2 rounded-full text-stone-500 hover:text-stone-900">
+                Discard
+              </button>
+              <button onClick={apply} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 flex items-center gap-2">
+                <Calendar size={14} strokeWidth={1.5} /> Save & schedule all
+              </button>
+            </div>
           </div>
         )}
       </div>

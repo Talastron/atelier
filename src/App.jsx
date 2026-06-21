@@ -1599,7 +1599,7 @@ async function fetchTravelForecast(query, startISO, endISO) {
 // Gemini: compose a per-day outfit capsule from the user's wardrobe for a
 // travel forecast. Returns { days: [{date, outfitId, itemIds, reasoning}],
 // summary }. Uses itemIds the user already owns; doesn't invent items.
-async function generateTravelCapsuleWithGemini({ items, destination, daily, styleProfile = '', tripType = 'vacation', activities = [] }) {
+async function generateTravelCapsuleWithGemini({ items, destination, daily, styleProfile = '', tripType = 'vacation', activities = [], specificPlaces = '' }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!items.length) throw new Error('Add some owned items first.');
 
@@ -1635,11 +1635,32 @@ ${activities.some((a) => a.id === 'beach') ? '  - At least 1-2 days should featu
 `
     : '';
 
+  // Specific-places block — user's free-text input goes verbatim. Far more
+  // powerful than generic chips because it lets them name venues, events,
+  // and contexts the chips can't capture.
+  const specificPlacesBlock = specificPlaces
+    ? `Specific places, events, or occasions the user mentioned:
+"${specificPlaces}"
+Honour each one — if a Vatican / temple / mosque visit is mentioned, ensure modest cover-up options (long sleeves, covered shoulders/knees). If a wedding or formal event is named, allocate one polished occasion look. If a specific restaurant or club is named, treat that day's outfit as the evening look. If a hike or beach club is named, dress for the specific activity.
+
+`
+    : '';
+
+  // Cultural-awareness instruction — relies on Gemini's general knowledge of
+  // destination-specific dress norms. Activates even when specificPlaces is
+  // empty.
+  const culturalAwarenessBlock = `Cultural / destination awareness:
+- Consider any dress norms specific to ${destination} (e.g. covered shoulders for religious sites in Italy / Greece / SE Asia, modest dress in Gulf states, swimwear etiquette beyond the beach, layering for variable mountain weather).
+- Factor in seasonal events / festivals at the destination during these dates if you're confident they're happening (don't invent events).
+- If the destination has signature evening venues / scene (cocktail bars in Mykonos, fado in Lisbon, izakaya in Tokyo) and an evening activity is selected, lean into the local register.
+
+`;
+
   const prompt = `You are a personal stylist packing a travel capsule from the user's wardrobe.
 
 Destination: ${destination}
 Trip type: ${tripTypeLabel}
-${activitiesBlock}Daily forecast:
+${activitiesBlock}${specificPlacesBlock}${culturalAwarenessBlock}Daily forecast:
 ${forecastLines}
 
 ${hasEstimated ? `Some days fall beyond the 14-day forecast window. For those, draw on your knowledge of typical climate at ${destination} in the given month (e.g. "Lisbon in October is mild, often 15-22°C with occasional rain") and infer a sensible temperature range and weather. Apply the same WEATHER-DRIVEN RULES below to the inferred range. State the inferred range in that day's reasoning line. THESE DAYS REQUIRE THE SAME FULL OUTFIT — do NOT skip them or return fewer items just because the forecast is inferred.\n\n` : ''}${styleProfile ? `${styleProfile}\n\n` : ''}Packing rules (NON-NEGOTIABLE):
@@ -1693,7 +1714,7 @@ Respond ONLY with valid JSON in this exact shape:
 // Reroll button in TravelPlannerModal. We re-prompt with the full wardrobe
 // context but ONLY the one day's forecast, and ask for a single fresh outfit.
 // The caller merges the result into the existing plan.
-async function regenerateTravelDayWithGemini({ items, destination, dayInfo, otherDayPieceIds = [], styleProfile = '', tripType = 'vacation', activities = [] }) {
+async function regenerateTravelDayWithGemini({ items, destination, dayInfo, otherDayPieceIds = [], styleProfile = '', tripType = 'vacation', activities = [], specificPlaces = '' }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!items.length) throw new Error('Add some owned items first.');
 
@@ -1719,12 +1740,16 @@ async function regenerateTravelDayWithGemini({ items, destination, dayInfo, othe
   const activitiesNote = activities.length > 0
     ? `Trip activities (the recomposed day must fit alongside these): ${activities.map((a) => a.label).join(', ')}.\n`
     : '';
+  const specificPlacesNote = specificPlaces
+    ? `Specific places / events on this trip: "${specificPlaces}". If THIS day's date plausibly matches one of those (e.g. the wedding day, the Vatican day), dress for it specifically.\n`
+    : '';
+  const culturalNote = `Consider dress norms specific to ${destination} when relevant (modest cover-up for religious sites, climate-appropriate fabrics, evening register for known scene venues).\n`;
 
   const prompt = `You are recomposing ONE day of an existing travel capsule.
 
 Destination: ${destination}
 Trip type: ${tripTypeLabel}
-${activitiesNote}Date: ${dayInfo.date}
+${activitiesNote}${specificPlacesNote}${culturalNote}Date: ${dayInfo.date}
 Forecast: ${forecastLine}
 ${otherPieces}
 ${styleProfile ? `${styleProfile}\n\n` : ''}Rules:
@@ -11603,6 +11628,12 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
   const [destination, setDestination] = useState('');
   const [tripType, setTripType] = useState('vacation'); // vacation | business | mixed
   const [activities, setActivities] = useState(() => new Set());
+  // Free-text "specific places, events, or occasions" — passed verbatim into
+  // the Concierge prompt. Powerful because it lets the user be destination-
+  // specific in a way generic chips can't (e.g. "Vatican visit, wedding in
+  // Trastevere, beach day at Sperlonga"). Goes alongside the cultural-
+  // awareness instruction in the prompt itself.
+  const [specificPlaces, setSpecificPlaces] = useState('');
   const [stage, setStage] = useState('input'); // input | forecasting | generating | done | error
   const [forecast, setForecast] = useState(null);
   const [plan, setPlan] = useState(null);
@@ -11631,6 +11662,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
         styleProfile,
         tripType,
         activities: [...activities].map((id) => TRAVEL_ACTIVITIES.find((a) => a.id === id)).filter(Boolean),
+        specificPlaces: specificPlaces.trim(),
       });
       setPlan(result);
       setStage('done');
@@ -11664,6 +11696,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
         styleProfile,
         tripType,
         activities: [...activities].map((id) => TRAVEL_ACTIVITIES.find((a) => a.id === id)).filter(Boolean),
+        specificPlaces: specificPlaces.trim(),
       });
       setPlan((prev) => ({
         ...prev,
@@ -11877,6 +11910,27 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Specific places / events — free-text. Goes verbatim into the
+                  Concierge prompt. Far more powerful than generic chips
+                  because it lets the user be destination-specific (Vatican,
+                  Trastevere wedding, Tate Modern, Sperlonga beach day). */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+                  Specific places or events <span className="text-stone-400 normal-case tracking-normal">(optional — be as concrete as you like)</span>
+                </label>
+                <textarea
+                  value={specificPlaces}
+                  onChange={(e) => setSpecificPlaces(e.target.value)}
+                  rows={2}
+                  placeholder="e.g. Vatican visit, wedding in Trastevere, cocktails at La Vincianella, hike to Sperlonga…"
+                  className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none resize-none"
+                  style={{ fontSize: '16px' /* avoid iOS auto-zoom */ }}
+                />
+                <p className="text-[10px] text-stone-400 italic leading-relaxed">
+                  Atelier also factors in cultural dress norms for the destination — covered shoulders for religious sites, modest hemlines where appropriate, climate-specific cover-ups.
+                </p>
               </div>
 
               <button type="submit" disabled={!destination.trim()}

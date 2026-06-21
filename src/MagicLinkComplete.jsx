@@ -7,22 +7,6 @@ import { auth, signInWithEmailLink } from './firebase.js';
 // click), so we just prompt for it.
 const EMAIL_STORAGE_KEY = 'atelier.signInEmail';
 
-// AtelierMark — duplicated from App.jsx so this component stands alone
-// without dragging in the full App imports. Same SVG, same colors.
-function AtelierMark({ size = 88 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="256" height="256" fill="#1c1917" rx="56" />
-      <g fill="none" stroke="#F7F5F2" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110" />
-        <path d="M 128 110 L 62 184 L 194 184 Z" />
-      </g>
-      <line x1="128" y1="184" x2="128" y2="206" stroke="#D4B378" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
-      <circle cx="128" cy="212" r="5" fill="#D4B378" />
-    </svg>
-  );
-}
-
 /**
  * Completes a Firebase Auth magic-link sign-in.
  *
@@ -98,8 +82,20 @@ export default function MagicLinkComplete() {
         body { background-color: #F7F5F2; }
       `}</style>
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] px-6 font-sans">
-        <div className="mb-8"><AtelierMark size={88} /></div>
-        <h1 className="text-5xl font-display font-medium tracking-wide mb-3 text-stone-900">Atelier.</h1>
+        {/* Animated wax-seal lockup — replaces the static stacked mark +
+            wordmark. This page is single-visit per email-link click, so the
+            5s play-once reveal lands exactly when the user is dwelling on
+            "you're in" before the redirect to /. Native is 480×160 cream-
+            background; displayed at 360×120 for a substantial welcome
+            without over-claiming the page. */}
+        <img
+          src="/brand/atelier-logo-animated.gif"
+          alt="Atelier"
+          width={360}
+          height={120}
+          className="mb-6 select-none"
+          draggable={false}
+        />
 
         {busy && !error ? (
           <p className="text-stone-500 text-sm tracking-wide mt-4">Signing you in…</p>

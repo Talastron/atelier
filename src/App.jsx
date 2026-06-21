@@ -3241,7 +3241,7 @@ function DigitalWardrobe() {
                 rounded to mb-16 (4rem) for the cleanest visual baseline. */}
             <div className="flex items-center gap-3 mb-16">
               <AtelierMark size={42} />
-              <h1 className="text-3xl font-display font-medium tracking-wide">Atelier.</h1>
+              <h1 className="text-3xl font-display font-medium tracking-wide">Atelier<span className="text-[#D4B378]">.</span></h1>
             </div>
 
             {/* Editorial eyebrow + brass rule above the nav — mirrors the
@@ -4164,7 +4164,7 @@ function SignInScreen({ onSignIn }) {
   return (
     <div className="min-h-screen flex flex-col items-center bg-[#F7F5F2] px-6 py-12 sm:py-0 sm:justify-center font-sans">
       <div className="mb-8"><AtelierMark size={88} /></div>
-      <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier.</h1>
+      <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier<span className="text-[#D4B378]">.</span></h1>
       <p className="text-stone-500 text-sm tracking-wide mb-10 text-center max-w-sm">
         Your private digital wardrobe.
       </p>
@@ -14975,7 +14975,7 @@ function PublicShareView({ shareId }) {
           <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <AtelierMark size={36} />
-              <span className="font-display text-2xl">Atelier.</span>
+              <span className="font-display text-2xl">Atelier<span className="text-[#D4B378]">.</span></span>
             </div>
             <a href="/" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900">Visit</a>
           </div>
@@ -15061,7 +15061,7 @@ function PublicShareView({ shareId }) {
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <AtelierMark size={36} />
-            <span className="font-display text-2xl">Atelier.</span>
+            <span className="font-display text-2xl">Atelier<span className="text-[#D4B378]">.</span></span>
           </div>
           <a href="/" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900">Visit</a>
         </div>

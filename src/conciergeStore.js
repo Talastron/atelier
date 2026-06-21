@@ -10,7 +10,7 @@
 //     createdAt: serverTimestamp,
 //     updatedAt: serverTimestamp,
 //     messages: [
-//       { role: 'client' | 'stylist', text: string, ts: ISO string }
+//       { role: 'user' | 'assistant', text: string, ts: ISO string }
 //     ]
 //   }
 //
@@ -18,6 +18,11 @@
 // at 1 MiB; at ~500 chars/turn that is ~2000 turns — far more than any human
 // conversation. If we ever approach the cap we'll move to a subcollection
 // of message docs; for now array-on-doc is simpler and gives atomic snapshots.
+//
+// Firestore rules: the path /users/{uid}/concierge/{threadId} is covered by
+// the existing wildcard rule `match /users/{uid}/{document=**}` (deployed
+// version of firestore.rules — not in this open-source tree, see
+// firestore.rules.example for the template). No new rule deploy needed.
 
 import { db, auth } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';

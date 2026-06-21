@@ -468,7 +468,7 @@ function summariseStyleProfile(measurements) {
 
 async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null }) {
   if (!isAIEnabled()) {
-    throw new Error('AI is not configured. Add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local to enable Gemini outfit suggestions.');
+    throw new Error('Concierge is not yet set up. Add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local to enable styling.');
   }
   if (!items.length) throw new Error('Add some items first.');
 
@@ -532,8 +532,8 @@ Confidence reflects how strongly the available wardrobe matches the intent (100 
 
   const text = await geminiText(prompt, { temperature, jsonMode: true }, 'suggest-look');
   let parsed;
-  try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
-  if (!parsed.itemIds?.length) throw new Error('Gemini could not compose a look from this wardrobe');
+  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
+  if (!parsed.itemIds?.length) throw new Error('The Concierge could not compose a look from this wardrobe');
   return parsed;
 }
 
@@ -546,7 +546,7 @@ Confidence reflects how strongly the available wardrobe matches the intent (100 
 // Returns a draft suitable for pre-filling the Add Item form. The single
 // highest-leverage import path — one tap, one photo, form ready.
 async function identifyItemWithGemini({ imageDataUrl, knownBrands = [] }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const knownMaterials = MATERIALS.filter((m) => m !== 'Other').join(', ');
   const knownColors = (typeof COLOR_FAMILIES !== 'undefined' ? COLOR_FAMILIES : []).join(', ');
   const knownStyles = (typeof STYLES !== 'undefined' ? STYLES : []).join(', ');
@@ -581,14 +581,14 @@ Respond ONLY with valid JSON in this exact shape:
 }`;
 
   const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true }, 'identify-item');
-  if (!text) throw new Error('Gemini returned no response');
+  if (!text) throw new Error('The Concierge did not respond');
   let parsed;
-  try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
+  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
   return parsed;
 }
 
 async function analyzeLabelWithGemini({ imageDataUrl }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const knownMaterials = MATERIALS.filter((m) => m !== 'Other').join(', ');
   const knownColors = (typeof COLOR_FAMILIES !== 'undefined' ? COLOR_FAMILIES : []).join(', ');
 
@@ -618,9 +618,9 @@ Respond ONLY with valid JSON in this exact shape:
 }`;
 
   const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.1, jsonMode: true }, 'analyze-label');
-  if (!text) throw new Error('Gemini returned no response');
+  if (!text) throw new Error('The Concierge did not respond');
   let parsed;
-  try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
+  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
   return parsed;
 }
 
@@ -628,7 +628,7 @@ Respond ONLY with valid JSON in this exact shape:
 // confirmation. Returns the same { brand, purchasedDate, purchasedFrom, items }
 // shape as the text-based parseReceiptText, so the modal flow stays unified.
 async function analyzeReceiptImageWithGemini({ imageDataUrl }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const prompt = `You are reading a clothing-purchase receipt or order confirmation screenshot.
 
 Extract:
@@ -649,9 +649,9 @@ Respond ONLY with valid JSON in this exact shape:
 }`;
 
   const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true }, 'analyze-receipt');
-  if (!text) throw new Error('Gemini returned no response');
+  if (!text) throw new Error('The Concierge did not respond');
   let parsed;
-  try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
+  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
   if (!Array.isArray(parsed.items) || parsed.items.length === 0) throw new Error('No items found in this image.');
   return parsed;
 }
@@ -661,7 +661,7 @@ Respond ONLY with valid JSON in this exact shape:
 // what's missing, and the 3 highest-leverage additions to buy next.
 // Returns { strengths, gaps, recommendations, missingPieces }.
 async function analyzeWardrobeGapsWithGemini({ items, inspirations = [] }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const owned = items.filter((i) => i.status === 'owned');
   if (owned.length === 0) throw new Error('Add some owned items first.');
 
@@ -720,14 +720,14 @@ Respond ONLY with valid JSON in this exact shape:
 
   const text = await geminiText(prompt, { temperature: 0.5, jsonMode: true }, 'wardrobe-gap');
   let parsed;
-  try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
+  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
   return parsed;
 }
 
 // Gemini Vision: analyze an inspiration outfit photo and cross-reference against
 // the user's wardrobe. Returns garments visible, matching items, and gaps.
 async function analyzeInspirationWithGemini({ imageDataUrl, items }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!imageDataUrl) throw new Error('No image to analyze.');
 
   const wardrobeSummary = items.slice(0, 100).map((i) =>
@@ -755,7 +755,7 @@ Respond ONLY with valid JSON in this exact shape:
 }`;
 
   const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.4, jsonMode: true }, 'inspiration-analysis');
-  if (!text) throw new Error('Gemini returned no analysis');
+  if (!text) throw new Error('The Concierge could not analyse this photo');
   return JSON.parse(text);
 }
 
@@ -1258,7 +1258,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
 }
 
 async function generateOutfitNameWithGemini(picked, intent) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!picked || picked.length === 0) throw new Error('Pick at least one piece first.');
   const itemList = picked
     .map((p) => [p.brand, p.category, p.subCategory, p.name].filter(Boolean).join(' '))
@@ -1337,7 +1337,7 @@ Reply with the line only.`;
 // Returns the assistant's reply text. Throws on AI failure so the
 // caller can surface a graceful error in the chat thread.
 async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '' }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
 
   // Compress the wardrobe into a per-category inventory line. Cap at
   // ~60 pieces per category to keep the prompt under budget for very
@@ -1404,7 +1404,7 @@ When asked anything else (critique, packing, advice), reply in 1-3 short paragra
 }
 
 async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [] }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
   if (owned.length < 5) throw new Error('Add at least a few items first.');
 
@@ -1454,7 +1454,7 @@ Data:
 ${lines.join('\n')}`;
 
   const text = await geminiText(prompt, { temperature: 0.7 }, 'manifesto');
-  if (!text) throw new Error('Gemini returned no response');
+  if (!text) throw new Error('The Concierge did not respond');
   return text.trim();
 }
 
@@ -1591,7 +1591,7 @@ async function fetchTravelForecast(query, startISO, endISO) {
 // travel forecast. Returns { days: [{date, outfitId, itemIds, reasoning}],
 // summary }. Uses itemIds the user already owns; doesn't invent items.
 async function generateTravelCapsuleWithGemini({ items, destination, daily, styleProfile = '' }) {
-  if (!isAIEnabled()) throw new Error('AI is not configured.');
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!items.length) throw new Error('Add some owned items first.');
 
   const summarize = (i) =>
@@ -1648,8 +1648,8 @@ Respond ONLY with valid JSON in this exact shape:
 
   const text = await geminiText(prompt, { temperature: 0.6, jsonMode: true }, 'travel-capsule');
   let parsed;
-  try { parsed = JSON.parse(text); } catch { throw new Error('Gemini returned invalid JSON'); }
-  if (!Array.isArray(parsed.days) || parsed.days.length === 0) throw new Error('Gemini could not compose a capsule.');
+  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
+  if (!Array.isArray(parsed.days) || parsed.days.length === 0) throw new Error('The Concierge could not compose a capsule.');
   return parsed;
 }
 
@@ -2910,7 +2910,7 @@ function DigitalWardrobe() {
       const sourceItems = item.status === 'wishlist' && !owned.find((i) => i.id === item.id)
         ? [item, ...owned]
         : owned;
-      if (sourceItems.length < 3) throw new Error('Add a few more owned pieces first — AI styling needs at least 3 items to work with.');
+      if (sourceItems.length < 3) throw new Error('Add a few more owned pieces first — styling needs at least 3 items to work with.');
       const month = new Date().getMonth();
       const season = month >= 2 && month <= 4 ? 'Spring'
         : month >= 5 && month <= 7 ? 'Summer'
@@ -2926,7 +2926,7 @@ function DigitalWardrobe() {
       });
       setStyleSuggestion(result);
     } catch (err) {
-      setStyleError(err?.message || 'AI styling failed.');
+      setStyleError(err?.message || 'Styling failed.');
     } finally {
       setStyleBusy(false);
     }
@@ -3005,7 +3005,7 @@ function DigitalWardrobe() {
       });
       setVarySuggestion(result);
     } catch (err) {
-      setVaryError(err?.message || 'AI styling failed.');
+      setVaryError(err?.message || 'Styling failed.');
     } finally {
       setVaryBusy(false);
     }
@@ -4946,7 +4946,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
       });
       setSuggestion(result);
     } catch (e) {
-      setError(e?.message || 'AI is offline right now.');
+      setError(e?.message || 'The Concierge is offline right now.');
     } finally {
       setBusy(false);
     }
@@ -4997,7 +4997,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
             className="w-full text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
             <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Composing…' : 'Suggest a look'}
           </button>
-          {!isAIEnabled() && <span className="text-[10px] tracking-widest uppercase text-stone-400 text-center">AI needs a Gemini key</span>}
+          {!isAIEnabled() && <span className="text-[10px] tracking-widest uppercase text-stone-400 text-center">Concierge needs setup</span>}
           {error && <span className="text-[10px] text-brass-300 text-center">{error}</span>}
         </div>
       )}
@@ -5247,7 +5247,7 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
           }
           if (c.kind === 'inspo-unanalysed') {
             return <Row key={i} icon={<Bookmark size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
-              title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with AI"
+              title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with the Concierge"
               onClick={() => onOpenInspirationTab ? onOpenInspirationTab() : onOpenInspiration?.(c.inspiration.id)} />;
           }
           return null;
@@ -6282,7 +6282,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   const [scanSummary, setScanSummary] = useState(null);
   const handleScanLabel = async (file) => {
     if (!file) return;
-    if (!isAIEnabled()) { setError('Label scanning needs Gemini configured (VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic).'); return; }
+    if (!isAIEnabled()) { setError('Label scanning needs the Concierge configured (add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic).'); return; }
     setIsLoading(true); setError(null); setScanSummary(null);
     try {
       const dataUrl = await compressImageToDataUrl(file, { maxWidth: 1400, maxBytes: 600_000, enhance: false });
@@ -6351,7 +6351,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   // seasons, description pre-filled. The single biggest import accelerator.
   const handleIdentifyItem = async (file) => {
     if (!file) return;
-    if (!isAIEnabled()) { setError('Identify needs Gemini configured (VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic).'); return; }
+    if (!isAIEnabled()) { setError('Identify needs the Concierge configured (add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic).'); return; }
     setIsLoading(true); setError(null);
     try {
       const dataUrl = await compressImageToDataUrl(file, { maxWidth: 1200, maxBytes: 350_000, enhance: false });
@@ -6678,7 +6678,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                 <label className="group relative flex flex-col items-center justify-center p-5 sm:p-6 bg-stone-900 border border-stone-900 rounded-2xl cursor-pointer hover:bg-stone-700 transition-all col-span-2 sm:col-span-3 text-center">
                   <span className="absolute top-2 right-2 text-[9px] tracking-widest uppercase text-brass-300 font-medium">Fastest</span>
                   <Sparkles size={26} strokeWidth={1} className="mb-2 text-brass-300 group-hover:scale-110 transition-transform duration-300" />
-                  <span className="font-display text-base sm:text-lg text-white">Identify with AI</span>
+                  <span className="font-display text-base sm:text-lg text-white">Identify with Concierge</span>
                   <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase">Snap any item · category, brand, colours, name — auto-filled</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handleIdentifyInput} className="hidden" />
                 </label>
@@ -8626,7 +8626,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
   const handleImageFile = async (file) => {
     if (!file) return;
     if (!isAIEnabled()) {
-      setError('Image receipts need Gemini configured — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local.');
+      setError('Image receipts need the Concierge configured — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local.');
       return;
     }
     setBusy(true); setError(null);
@@ -9610,7 +9610,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       setCurrentOutfit(next);
       setAiNote(result.reasoning || 'AI-styled look ready');
       setAiConfidence(typeof result.confidence === 'number' ? result.confidence : null);
-      toast.show(refine ? 'Refined' : 'AI styled this look', { kind: 'success' });
+      toast.show(refine ? 'Refined' : 'Styled by the Concierge', { kind: 'success' });
       // Save to AI prompt history
       if (saveAIHistory) {
         try {
@@ -9887,12 +9887,12 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           <button onClick={handleAIStyle} disabled={aiBusy || abComparing || !isAIEnabled()}
             className="w-full px-4 py-3.5 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 font-medium">
             <Sparkles size={14} strokeWidth={1.5} />
-            {aiBusy ? 'Styling…' : isAIEnabled() ? 'AI Style' : 'AI — setup'}
+            {aiBusy ? 'Styling…' : isAIEnabled() ? 'Style with Concierge' : 'Concierge — setup'}
           </button>
           <div className="flex items-center justify-center gap-4 text-[11px] tracking-widest uppercase">
             <button onClick={handleQuickStyle} disabled={aiBusy || abComparing}
               className="text-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50 inline-flex items-center gap-1.5">
-              <Wand2 size={11} strokeWidth={1.5} /> Quick (no AI)
+              <Wand2 size={11} strokeWidth={1.5} /> Quick pick
             </button>
             {isAIEnabled() && (
               <>
@@ -9985,7 +9985,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
 
           {!isAIEnabled() && (
             <p className="text-[10px] text-stone-400 tracking-wide italic">
-              AI styling uses Google's Gemini (free tier). Add <code>VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic</code> to <code>.env.local</code> from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">aistudio.google.com</a> to enable.
+              Atelier styling needs the Concierge configured. Add <code>VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic</code> to <code>.env.local</code> from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">aistudio.google.com</a> to enable.
             </p>
           )}
         </div>
@@ -10158,7 +10158,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                           type="button"
                           onClick={handleSuggestName}
                           disabled={suggestingName}
-                          title="Suggest a name with AI"
+                          title="Suggest a name with the Concierge"
                           className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:opacity-50"
                         >
                           <Sparkles size={10} strokeWidth={1.75} className={suggestingName ? 'animate-pulse text-amber-500' : 'text-amber-500'} />
@@ -10459,7 +10459,7 @@ function AIProgressModal({ open, stage, title = 'Putting together your outfit' }
           <span className="w-2 h-2 rounded-full bg-stone-700 animate-bounce" style={{ animationDelay: '150ms' }} />
           <span className="w-2 h-2 rounded-full bg-stone-500 animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
-        <p className="text-[10px] text-stone-400 tracking-widest uppercase mt-6">Powered by Gemini</p>
+        <p className="text-[10px] text-stone-400 tracking-widest uppercase mt-6">Composed by Atelier</p>
       </div>
     </div>,
     document.body
@@ -10493,7 +10493,7 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
           <Bookmark size={48} strokeWidth={1} className="mb-6 text-stone-300" />
           <p className="font-display text-2xl text-stone-700">Save looks you love</p>
           <p className="text-sm text-stone-500 mt-3 max-w-md">
-            Paste a Pinterest, Instagram or magazine URL — or upload a screenshot. Atelier's AI identifies the garments and finds matches in your wardrobe.
+            Paste a Pinterest, Instagram or magazine URL — or upload a screenshot. The Concierge identifies the garments and finds matches in your wardrobe.
           </p>
         </div>
       ) : (
@@ -10530,7 +10530,7 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
               </button>
             )}
             {filter === 'unanalysed' && unanalysed.length > 0 && (
-              <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2 w-full sm:w-auto">Tap any to analyse with AI</span>
+              <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2 w-full sm:w-auto">Tap any to analyse with the Concierge</span>
             )}
           </div>
 
@@ -10678,7 +10678,7 @@ function AddInspirationModal({ onClose, onSave }) {
           {step === 'choose' && (
             <>
               <p className="text-stone-500 text-sm leading-relaxed">
-                Save looks you love from anywhere — Pinterest, Instagram, magazine sites, or your camera roll. Later you can have Gemini analyse the look and find matches in your wardrobe.
+                Save looks you love from anywhere — Pinterest, Instagram, magazine sites, or your camera roll. Later you can have the Concierge analyse the look and find matches in your wardrobe.
               </p>
               <form onSubmit={handleFromUrl} className="space-y-3">
                 <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase">Import via URL</label>
@@ -10833,14 +10833,14 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
             {!inspiration.analysis && (
               <div className="bg-stone-900 text-white rounded-2xl p-5 lg:p-6">
                 <h2 className="font-display text-xl mb-3 flex items-center gap-2">
-                  <Sparkles size={16} strokeWidth={1.5} className="text-brass-300" /> Analyse with AI
+                  <Sparkles size={16} strokeWidth={1.5} className="text-brass-300" /> Analyse with Concierge
                 </h2>
                 <p className="text-stone-300 text-sm mb-5 leading-relaxed">
-                  Gemini will identify the garments in this look and cross-reference against your wardrobe to find matches and gaps.
+                  The Concierge will identify the garments in this look and cross-reference against your wardrobe to find matches and gaps.
                 </p>
                 <button onClick={handleAnalyze} disabled={analyzing || !isAIEnabled()}
                   className="bg-white text-stone-900 px-5 py-3 rounded-full text-sm font-medium hover:bg-stone-100 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2">
-                  <Sparkles size={14} strokeWidth={1.5} /> {analyzing ? 'Analysing…' : isAIEnabled() ? 'Analyse this look' : 'AI not configured'}
+                  <Sparkles size={14} strokeWidth={1.5} /> {analyzing ? 'Analysing…' : isAIEnabled() ? 'Analyse this look' : 'Concierge not set up'}
                 </button>
                 {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
               </div>
@@ -10849,7 +10849,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
             {inspiration.analysis && (
               <>
                 <div className="bg-stone-50 border border-stone-200 rounded-2xl p-5">
-                  <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold mb-3">AI summary</h2>
+                  <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold mb-3">Concierge summary</h2>
                   <p className="text-stone-800 italic leading-relaxed">{inspiration.analysis.summary}</p>
                   <button onClick={handleAnalyze} disabled={analyzing} className="mt-4 text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors inline-flex items-center gap-1.5">
                     <Sparkles size={11} strokeWidth={1.5} /> {analyzing ? 'Re-analysing…' : 'Re-analyse'}
@@ -11008,9 +11008,9 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
     return (
       <div className="py-20 flex flex-col items-center justify-center text-center bg-white/50 border border-dashed border-stone-300 rounded-3xl px-6">
         <Sparkles size={40} strokeWidth={1} className="mb-6 text-stone-300" />
-        <p className="font-display text-2xl text-stone-700">No AI history yet</p>
+        <p className="font-display text-2xl text-stone-700">No Concierge history yet</p>
         <p className="text-sm text-stone-500 mt-3 max-w-md">
-          Every AI-styled look gets saved here automatically. Re-apply, favourite, or remove past suggestions.
+          Every Concierge-styled look gets saved here automatically. Re-apply, favourite, or remove past suggestions.
         </p>
       </div>
     );
@@ -11337,7 +11337,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                   onClick={() => setTravelOpen(true)}
                   className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  <Wand2 size={14} strokeWidth={1.5} /> Plan with AI
+                  <Wand2 size={14} strokeWidth={1.5} /> Plan with Concierge
                 </button>
               )}
               <button
@@ -11522,7 +11522,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
         <div className="flex justify-between items-start px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Travel capsule</p>
-            <h3 className="text-xl font-display text-stone-900 mt-1">Plan {days} day{days === 1 ? '' : 's'} with AI</h3>
+            <h3 className="text-xl font-display text-stone-900 mt-1">Plan {days} day{days === 1 ? '' : 's'} with Concierge</h3>
           </div>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
             <X size={18} strokeWidth={1.5} />
@@ -11533,7 +11533,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
           {stage === 'input' && (
             <form onSubmit={run} className="space-y-4">
               <p className="text-stone-500 text-sm leading-relaxed">
-                Type a destination — anywhere in the world. Atelier will fetch the forecast for {new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → {new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} and let Gemini build a per-day capsule from your wardrobe.
+                Type a destination — anywhere in the world. Atelier will fetch the forecast for {new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → {new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} and let the Concierge build a per-day capsule from your wardrobe.
               </p>
               <input
                 value={destination}
@@ -11547,15 +11547,44 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                 Fetch forecast & compose
               </button>
               <p className="text-[10px] text-stone-400 leading-relaxed">
-                Forecast is via Open-Meteo for the first ~14 days. Days beyond that use seasonal climate for the destination. Capsule is generated by Gemini and uses items you already own.
+                Forecast is via Open-Meteo for the first ~14 days. Days beyond that use seasonal climate for the destination. Composed by the Concierge from items you already own.
               </p>
             </form>
           )}
 
           {(stage === 'forecasting' || stage === 'generating') && (
-            <div className="flex flex-col items-center gap-4 py-10 text-stone-500 text-sm">
-              <div className="w-8 h-8 border-2 border-stone-300 border-t-stone-900 rounded-full animate-spin" />
-              <p>{stage === 'forecasting' ? `Fetching forecast for ${destination}…` : 'Gemini is composing your capsule…'}</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-stone-700 text-sm">
+                <div className="w-5 h-5 border-2 border-stone-300 border-t-stone-900 rounded-full animate-spin shrink-0" />
+                <p className="italic">
+                  {stage === 'forecasting'
+                    ? `Fetching forecast for ${destination}…`
+                    : `The Concierge is composing ${days} day${days === 1 ? '' : 's'} from your wardrobe…`}
+                </p>
+              </div>
+              {/* Skeleton day cards — gives the user a sense of the shape of
+                  the result that's coming, not just a blank spinner. */}
+              <div className="space-y-3">
+                {Array.from({ length: Math.min(days, 5) }).map((_, idx) => (
+                  <div key={idx} className="bg-white border border-stone-200 rounded-2xl p-4 animate-pulse">
+                    <div className="flex items-baseline justify-between mb-3">
+                      <div className="h-3 w-24 rounded bg-stone-200" />
+                      <div className="h-3 w-16 rounded bg-stone-100" />
+                    </div>
+                    <div className="flex gap-2">
+                      {[0,1,2,3,4].map((j) => (
+                        <div key={j} className="flex-none w-20 aspect-[3/4] rounded-lg bg-stone-200" />
+                      ))}
+                    </div>
+                    <div className="mt-3 h-2 w-3/4 rounded bg-stone-100" />
+                  </div>
+                ))}
+                {days > 5 && (
+                  <p className="text-center text-[10px] tracking-widest uppercase text-stone-400">
+                    +{days - 5} more day{days - 5 === 1 ? '' : 's'}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -11595,14 +11624,23 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                           </span>
                         )}
                       </div>
-                      <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-2">
+                      {/* Outfit thumbnails — enlarged from w-12 (~48px) to
+                          w-20 (~80px) so the user can actually SEE the
+                          composition, not just colour swatches. Flex-wrap
+                          so longer outfits flow onto a second row instead
+                          of horizontal-scrolling out of sight. */}
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {pieces.map((p) => (
-                          <div key={p.id} className="flex-none w-12 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100">
-                            {itemImages(p)[0] && <img src={itemImages(p)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                          <div key={p.id} className="flex-none w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
+                            {itemImages(p)[0] ? (
+                              <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
+                            )}
                           </div>
                         ))}
                       </div>
-                      {d.reasoning && <p className="text-[11px] text-stone-500 italic leading-relaxed">{d.reasoning}</p>}
+                      {d.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed">{d.reasoning}</p>}
                     </div>
                   );
                 })}
@@ -11679,7 +11717,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
                 <span className="text-xs text-stone-400 tracking-wide">Pairing your wardrobe…</span>
               </div>
               <p className="text-sm text-stone-400 leading-relaxed">
-                Gemini is looking for pieces in your wardrobe that complement {sourceItem.brand ? `the ${sourceItem.brand} ` : 'this '}{sourceItem.category?.toLowerCase() || 'piece'} — colour, style, season.
+                The Concierge is looking for pieces in your wardrobe that complement {sourceItem.brand ? `the ${sourceItem.brand} ` : 'this '}{sourceItem.category?.toLowerCase() || 'piece'} — colour, style, season.
               </p>
             </div>
           ) : error ? (
@@ -13338,7 +13376,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               {onVary && isAIEnabled() && (
                 <button onClick={onVary}
                   className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-brass-300 text-stone-900 hover:bg-brass-200 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap font-medium"
-                  title="Spin a variation of this look with AI">
+                  title="Spin a variation of this look with the Concierge">
                   <Wand2 size={15} strokeWidth={1.5} />
                   <span className="hidden md:inline">Vary look</span>
                 </button>
@@ -13774,7 +13812,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
   const toast = useToast();
 
   const run = async () => {
-    if (!isAIEnabled()) { setState({ status: 'error', data: null, error: 'AI is not configured — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic.' }); return; }
+    if (!isAIEnabled()) { setState({ status: 'error', data: null, error: 'Concierge is not yet set up — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic.' }); return; }
     setState({ status: 'running', data: null, error: null });
     try {
       const data = await analyzeWardrobeGapsWithGemini({ items, inspirations });
@@ -13791,11 +13829,11 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-600 font-medium">AI audit</span>
+            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-600 font-medium">Concierge audit</span>
           </div>
           <h3 className="font-display text-xl md:text-2xl text-stone-900">Gap analysis &amp; recommendations</h3>
           <p className="text-stone-500 text-sm mt-2 leading-relaxed max-w-xl">
-            Gemini reviews the shape of your wardrobe — categories, colours, styles, seasons — and tells you what's strong, what's missing, and what would unlock the most outfits.
+            The Concierge reviews the shape of your wardrobe — categories, colours, styles, seasons — and tells you what's strong, what's missing, and what would unlock the most outfits.
           </p>
         </div>
         {state.status !== 'running' && (
@@ -14662,11 +14700,11 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-medium">A private brief, by AI</span>
+            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-medium">A private brief, by the Concierge</span>
           </div>
           <h3 className="font-display text-2xl md:text-3xl text-white">Style manifesto</h3>
           <p className="text-stone-400 text-sm leading-relaxed max-w-xl mt-3">
-            Gemini reads your most-worn pieces, outfit pairings, and saved inspirations — and writes a private three-paragraph brief of your aesthetic. Refresh when your taste shifts.
+            The Concierge reads your most-worn pieces, outfit pairings, and saved inspirations — and writes a private three-paragraph brief of your aesthetic. Refresh when your taste shifts.
           </p>
         </div>
         <button onClick={run} disabled={busy} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 flex items-center gap-2 shrink-0 font-medium">
@@ -14738,7 +14776,7 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
         <div className="min-w-0">
           <h3 className="font-display text-xl md:text-2xl text-stone-900">Style profile</h3>
           <p className="text-stone-500 text-sm leading-relaxed max-w-xl mt-2">
-            Tell the AI how you actually dress. Every Gemini suggestion (Today tile, Styling Studio, Travel packing) gets sharper when these are set.
+            Tell the Concierge how you actually dress. Every suggestion (Today tile, Styling Studio, Travel packing) gets sharper when these are set.
           </p>
         </div>
         <span className={`text-[10px] tracking-widest uppercase ${populated ? 'text-emerald-700' : 'text-brass-600'}`}>
@@ -15105,7 +15143,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
           </div>
 
           <div>
-            <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">AI styling temperament</label>
+            <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Concierge temperament</label>
             <div className="flex flex-wrap gap-2">
               {[
                 { v: 'safe', label: 'Safe', sub: 'Consistent' },
@@ -15893,15 +15931,15 @@ function maybeFireOpenNotifications({ items, outfits, schedules }) {
 // 4-screen first-run walkthrough. Shown once, persisted via localStorage flag.
 // "Show me" links jump the user to the relevant tab and dismiss the tour.
 const ONBOARD_STEPS = [
-  { title: 'Build your wardrobe', body: 'Add pieces by photo, by pasting a product link, by scanning a care label, or by importing a receipt. Tag colours, materials and styles so the AI gets sharper over time.', cta: 'Add an item', target: 'wardrobe' },
-  { title: 'Style with AI', body: 'In the Styling Studio, drag pieces into slots or let Gemini compose a look for an intent ("dinner date", "office day"). A/B compare two suggestions, refine in plain English, save the winner.', cta: 'Open Styling Studio', target: 'outfits' },
+  { title: 'Build your wardrobe', body: 'Add pieces by photo, by pasting a product link, by scanning a care label, or by importing a receipt. Tag colours, materials and styles so the Concierge gets sharper over time.', cta: 'Add an item', target: 'wardrobe' },
+  { title: 'Style with the Concierge', body: 'In the Styling Studio, drag pieces into slots or let the Concierge compose a look for an intent ("dinner date", "office day"). A/B compare two suggestions, refine in plain English, save the winner.', cta: 'Open Styling Studio', target: 'outfits' },
   { title: 'Plan, pack, and wear', body: 'Use the Calendar to schedule outfits per day, switch to range mode to plan a trip, and generate a deduped packing list. Log wears in one tap; the data feeds Insights.', cta: 'See the calendar', target: 'outfits' },
-  { title: 'Insights & gaps', body: 'Best/worst cost-per-wear, your most-worn pieces, what your wardrobe is missing. Tap "Analyse my wardrobe" for a Gemini-written audit of strengths and gaps.', cta: 'Open Insights', target: 'insights' },
+  { title: 'Insights & gaps', body: 'Best/worst cost-per-wear, your most-worn pieces, what your wardrobe is missing. Tap "Analyse my wardrobe" for a Concierge-written audit of strengths and gaps.', cta: 'Open Insights', target: 'insights' },
   // The mobile FAB is a double-action button — this step is the primary
   // discovery vehicle for the long-press gesture. Re-tour-shows once after
   // the localStorage key bump below; thereafter the in-gesture tooltip
   // ("Hold for Concierge ✦") self-teaches anyone who tries the hold.
-  { title: 'A button with two minds', body: 'On mobile, the hanger button at the centre of the bottom bar has two roles. Tap it to add a piece to your wardrobe. Press and hold for about half a second to summon Atelier Concierge — a private AI stylist that already knows everything you own.' },
+  { title: 'A button with two minds', body: 'On mobile, the hanger button at the centre of the bottom bar has two roles. Tap it to add a piece to your wardrobe. Press and hold for about half a second to summon Atelier Concierge — your private stylist that already knows everything you own.' },
 ];
 function OnboardingTour({ onJumpTo }) {
   // Versioned key — bumped from atelier-onboard-done → -v2 so existing

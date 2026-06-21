@@ -9794,7 +9794,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   Why this?
                 </summary>
                 <WhyThisPanel
-                  weather={(() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })()}
+                  weather={(() => { try { return JSON.parse(localStorage.getItem('atelier-weather-v2') || 'null')?.data; } catch { return null; } })()}
                   season={(() => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter'; })()}
                   styleProfile={measurements}
                   temperature={aiTemperature}
@@ -12580,7 +12580,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
             .slice(0, 3)
             .map(it => it.name)
             .join(', ');
-          const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
+          const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather-v2') || 'null')?.data; } catch { return null; } })();
           const currentSeason = (() => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter'; })();
           const paletteLabel = measurements?.stylePalette;
           return (

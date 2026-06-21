@@ -16,6 +16,7 @@ import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
 import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
+import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex } from './dailyBrief';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -4444,7 +4445,247 @@ function MobileFAB({ onTap, onLongPress }) {
   );
 }
 
-// Home-screen tile: condenses today/tomorrow into a single actionable card.
+// ─── Daily Brief: "Tap once. Get styled for today." ───────────────────────
+
+function WhyThisPanel({ weather, season, styleProfile, temperature, itemCount }) {
+  const tempLabel = temperature <= 0.4 ? 'Safe' : temperature >= 0.9 ? 'Surprise' : 'Balanced';
+  return (
+    <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700">
+      <p className="mb-2 text-xs uppercase tracking-widest text-stone-500">What the Concierge saw</p>
+      <ul className="space-y-1">
+        <li>· {itemCount} owned, in-wardrobe pieces</li>
+        {weather && (
+          <li>· {weather.temp != null ? `${Math.round(weather.temp)}°C` : 'no forecast'} · {season}</li>
+        )}
+        {styleProfile?.styleFormality && <li>· Formality: {styleProfile.styleFormality}</li>}
+        {styleProfile?.stylePalette && <li>· Palette: {styleProfile.stylePalette}</li>}
+        <li>· Temperature: {tempLabel}</li>
+      </ul>
+      <p className="mt-2 text-xs italic text-stone-500">
+        Composed from your closet. Your data stays with you.
+      </p>
+    </div>
+  );
+}
+
+function DailyBriefCard({
+  user,
+  items,
+  measurements,
+  weather,
+  season,
+  aiTemperature,
+  onGenerateOutfit,
+  onSaveOutfit,
+  onLogOutfitWear,
+  isAiEnabled,
+}) {
+  const uid = user?.uid || 'anon';
+  const [brief, setBrief] = useState(() => readDailyBrief(uid));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [whyOpen, setWhyOpen] = useState(false);
+
+  // Auto-compose on first mount of the day if we have enough items and AI is on.
+  useEffect(() => {
+    if (brief) return;
+    if (!isAiEnabled) return;
+    if ((items?.length ?? 0) < 5) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const out = await onGenerateOutfit({
+          intent: 'a considered look for today',
+          temperature: aiTemperature,
+          slotIndex: 0,
+        });
+        if (cancelled) return;
+        const saved = writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
+        setBrief(saved);
+      } catch (err) {
+        if (!cancelled) setError(err?.message || "Could not compose today's brief.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [uid, isAiEnabled, items?.length]); // deliberately omit weather/profile — first-of-day shot uses whatever's current
+
+  async function composeAnother() {
+    setLoading(true);
+    setError(null);
+    try {
+      const slot = nextSlotIndex(uid);
+      const out = await onGenerateOutfit({
+        intent: 'a different considered look for today',
+        temperature: aiTemperature,
+        slotIndex: slot,
+        previous: brief,
+      });
+      const saved = writeDailyBrief(uid, { ...out, intent: 'a different considered look for today', slotIndex: slot });
+      setBrief(saved);
+    } catch (err) {
+      setError(err?.message || 'Could not compose another brief.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Empty state — wardrobe too small to compose
+  if ((items?.length ?? 0) < 5) {
+    return (
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 text-stone-700">
+        <p className="text-sm uppercase tracking-widest text-stone-500">The Daily Brief</p>
+        <h3 className="mt-2 text-xl font-serif">Add a few more pieces, and the brief begins.</h3>
+        <p className="mt-2 text-sm text-stone-600">
+          The Concierge composes today's outfit once your wardrobe has at least five pieces.
+        </p>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (loading && !brief) {
+    return (
+      <div className="rounded-2xl border border-stone-200 bg-stone-50 p-6 animate-pulse">
+        <p className="text-sm uppercase tracking-widest text-stone-400">The Daily Brief</p>
+        <div className="mt-3 h-7 w-3/4 rounded bg-stone-200" />
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          {[0,1,2,3].map(i => <div key={i} className="aspect-square rounded-lg bg-stone-200" />)}
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !brief) {
+    return (
+      <div className="rounded-2xl border border-stone-200 bg-white p-6">
+        <p className="text-sm uppercase tracking-widest text-stone-500">The Daily Brief</p>
+        <p className="mt-2 text-sm text-stone-700">{error}</p>
+        <button
+          onClick={composeAnother}
+          className="mt-3 rounded-full border border-stone-300 px-4 py-1.5 text-sm hover:bg-stone-50"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!brief) return null;
+
+  const briefItems = (brief.itemIds || [])
+    .map(id => items.find(it => it.id === id))
+    .filter(Boolean);
+
+  const handleWearThis = async () => {
+    if (!brief.itemIds?.length) return;
+    // Build a minimal outfit object and log wear for all pieces (mirrors TodayTile pattern)
+    const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const outfit = {
+      id: `db-${uid}-${Date.now()}`,
+      name: `Daily Brief · ${today}`,
+      itemIds: brief.itemIds,
+      createdAt: new Date().toISOString(),
+      reasoning: brief.reasoning || '',
+      intent: brief.intent || 'today',
+    };
+    try {
+      if (onSaveOutfit) await onSaveOutfit(outfit);
+      if (onLogOutfitWear) await onLogOutfitWear(outfit, todayISO(), '');
+      clearDailyBrief(uid);
+      setBrief(null);
+    } catch { /* best-effort */ }
+  };
+
+  const handleSaveAsLook = async () => {
+    if (!brief.itemIds?.length) return;
+    const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const outfit = {
+      id: `db-${uid}-${Date.now()}`,
+      name: `Daily Brief · ${today}`,
+      itemIds: brief.itemIds,
+      createdAt: new Date().toISOString(),
+      reasoning: brief.reasoning || '',
+      intent: brief.intent || 'today',
+      confidence: brief.confidence,
+    };
+    try {
+      if (onSaveOutfit) await onSaveOutfit(outfit);
+    } catch { /* best-effort */ }
+  };
+
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white p-6">
+      <div className="flex items-baseline justify-between">
+        <p className="text-sm uppercase tracking-widest text-stone-500">The Daily Brief</p>
+        <p className="text-xs text-stone-400">{brief.confidence ?? '—'}% confidence</p>
+      </div>
+      <h3 className="mt-2 text-2xl font-serif text-stone-900">
+        Styled for today.
+      </h3>
+      <p className="mt-2 text-sm italic text-stone-700">{brief.reasoning}</p>
+
+      <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-5">
+        {briefItems.map(it => (
+          <div
+            key={it.id}
+            className="aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-50"
+          >
+            {(it.images?.[0] || it.imageUrl) ? (
+              <img src={it.images?.[0] || it.imageUrl} alt={it.name} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">{it.category}</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={() => setWhyOpen(o => !o)}
+        className="mt-3 text-xs uppercase tracking-widest text-stone-500 underline-offset-4 hover:underline"
+      >
+        {whyOpen ? 'Hide reasoning' : 'Why this?'}
+      </button>
+      {whyOpen && (
+        <WhyThisPanel
+          weather={weather}
+          season={season}
+          styleProfile={measurements}
+          temperature={aiTemperature}
+          itemCount={items?.length ?? 0}
+        />
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          onClick={handleWearThis}
+          className="rounded-full bg-stone-900 px-4 py-2 text-sm text-white hover:bg-stone-800"
+        >
+          Wear this
+        </button>
+        <button
+          onClick={composeAnother}
+          disabled={loading}
+          className="rounded-full border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50 disabled:opacity-50"
+        >
+          {loading ? 'Composing…' : 'Compose another'}
+        </button>
+        <button
+          onClick={handleSaveAsLook}
+          className="rounded-full border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50"
+        >
+          Save as a Look
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Home-screen tile: condenses today/tomorrow into a single actionable card.
 // Three states surface:
 //   - Tomorrow has a planned outfit → show it; tap to open.
 //   - No plan but Gemini available → "Suggest a look" CTA; result has accept/skip/regen.
@@ -4958,6 +5199,11 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   const [weather, setWeather] = useState(null);
   useEffect(() => { fetchTodaysWeather().then(setWeather); }, []);
   const weatherSeasons = weatherToSeasons(weather);
+  // Current season for the Daily Brief (local date, same logic as OutfitBuilder).
+  const currentSeason = (() => {
+    const m = new Date().getMonth();
+    return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter';
+  })();
 
   // Recommendation factors in weather when available — prefers items whose
   // seasons match the day's temperature band.
@@ -5246,6 +5492,28 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           mobile (was rendering at the bottom, which felt buried). Keeps the
           most useful daily actions one tap away without burying search. */}
       <div className="lg:hidden space-y-4">
+        <DailyBriefCard
+          user={user}
+          items={items.filter(it => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged')}
+          measurements={measurements}
+          weather={weather}
+          season={currentSeason}
+          aiTemperature={aiTemperature}
+          isAiEnabled={isAIEnabled()}
+          onGenerateOutfit={async ({ intent, temperature, previous }) => {
+            return generateOutfitWithGemini({
+              items,
+              intent,
+              weather,
+              season: currentSeason,
+              styleProfile: summariseStyleProfile(measurements),
+              temperature,
+              previousOutfit: previous ? (previous.itemIds || []).map(id => items.find(it => it.id === id)).filter(Boolean) : null,
+            });
+          }}
+          onSaveOutfit={onSaveOutfit}
+          onLogOutfitWear={onLogOutfitWear}
+        />
         <TodayTile
           items={items}
           outfits={outfits}
@@ -5592,6 +5860,29 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so this column no longer needs its own sticky bar. Cards flow
           naturally and scroll with the page. */}
       <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 flex-col gap-3 lg:pr-1 lg:pb-6">
+        <DailyBriefCard
+          user={user}
+          items={items.filter(it => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged')}
+          measurements={measurements}
+          weather={weather}
+          season={currentSeason}
+          aiTemperature={aiTemperature}
+          isAiEnabled={isAIEnabled()}
+          onGenerateOutfit={async ({ intent, temperature, previous }) => {
+            return generateOutfitWithGemini({
+              items,
+              intent,
+              weather,
+              season: currentSeason,
+              styleProfile: summariseStyleProfile(measurements),
+              temperature,
+              previousOutfit: previous ? (previous.itemIds || []).map(id => items.find(it => it.id === id)).filter(Boolean) : null,
+            });
+          }}
+          onSaveOutfit={onSaveOutfit}
+          onLogOutfitWear={onLogOutfitWear}
+        />
+
         <TodayTile
           items={items}
           outfits={outfits}

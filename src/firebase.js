@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken } from 'firebase/app-check';
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged,
   isSignInWithEmailLink, signInWithEmailLink, sendSignInLinkToEmail,
@@ -60,21 +60,79 @@ export const app = initializeApp(firebaseConfig);
 // Local dev: set `self.FIREBASE_APPCHECK_DEBUG_TOKEN = true` in DevTools
 // before page load, copy the printed debug token, and paste it into the
 // Firebase Console → App Check → Manage debug tokens. See README.
+// Dev: use a STABLE debug token (UUID stored in localStorage) instead of `= true`
+// which generates a new random token each page load. With a stable token, you
+// register it ONCE in Firebase Console → App Check → Manage debug tokens and it
+// works forever — no more "AI broke after I cleared cookies" mystery.
+//
+// Why this matters: Firebase's `= true` shortcut tells the SDK to mint a fresh
+// token at startup and print it to console. That token must be registered in
+// the Console to be accepted. If the token is random per session, every fresh
+// browser/incognito/cleared-state needs re-registration. A stable token in
+// localStorage is registered once and survives.
 if (import.meta.env.DEV) {
+  const DEBUG_TOKEN_KEY = 'atelier.appCheckDebugToken';
+  let debugToken = null;
+  try { debugToken = localStorage.getItem(DEBUG_TOKEN_KEY); } catch { /* private mode */ }
+  if (!debugToken) {
+    debugToken = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `dev-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    try { localStorage.setItem(DEBUG_TOKEN_KEY, debugToken); } catch { /* swallow */ }
+  }
   // eslint-disable-next-line no-undef
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || '<project-id>';
+  console.info(
+    `%c[App Check] Debug token (stable, reused across reloads):%c\n  ${debugToken}\n\n` +
+    `Register ONCE at: https://console.firebase.google.com/project/${projectId}/appcheck/apps\n` +
+    `  → click your web app → ⋮ → Manage debug tokens → Add\n`,
+    'font-weight: bold; color: #0a7;',
+    'font-family: monospace; color: #444;'
+  );
 }
+
 // App Check stays ENABLED in demo mode — reCAPTCHA v3 site keys are public by
 // design (they ride in every page's DOM), and without an App Check token the
 // Gemini calls in the demo Concierge would fail. The existing per-browser
 // rate limiter (200 AI calls/day, see RATE_LIMIT_KEY below) is what protects
 // the project from demo abuse, not hiding App Check.
+let _appCheck = null;
 if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   try {
-    initializeAppCheck(app, {
+    _appCheck = initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
       isTokenAutoRefreshEnabled: true,
     });
+
+    // Active probe — surfaces config issues IMMEDIATELY at startup instead of
+    // waiting for the first AI call to fail. The most common 403 causes are:
+    //   1. Dev debug token not registered (dev only — see message above)
+    //   2. reCAPTCHA v3 key not enrolled in Firebase Console App Check
+    //   3. reCAPTCHA key's allowed domains don't include this origin
+    //   4. App Check enforcement on Firebase AI Logic isn't toggled on
+    // The probe error message routes the user to the right Console page.
+    getAppCheckToken(_appCheck, false).then(
+      () => console.info('%c[App Check] ✓ token issued successfully — AI is ready', 'color: #0a7; font-weight: bold;'),
+      (err) => {
+        const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || '<project-id>';
+        const origin = typeof window !== 'undefined' ? window.location.origin : '<unknown>';
+        console.error(
+          `%c[App Check] ✗ token request failed%c\n  ${err?.message || err}\n\n` +
+          `Origin: ${origin}\n\n` +
+          `Check each of these in order (most common first):\n` +
+          (import.meta.env.DEV
+            ? `  1. Did you register the debug token above in Firebase Console?\n     https://console.firebase.google.com/project/${projectId}/appcheck/apps\n`
+            : `  1. Is your production domain registered for the reCAPTCHA v3 key?\n     • Firebase Console: https://console.firebase.google.com/project/${projectId}/appcheck/apps → your web app → check the site key\n     • reCAPTCHA admin: https://www.google.com/recaptcha/admin → your key → "Allowed domains" must include "${new URL(origin).hostname}"\n`) +
+          `  2. Is App Check enforcement enabled for Firebase AI Logic?\n     https://console.firebase.google.com/project/${projectId}/appcheck/apis\n     (toggle "Firebase AI Logic" to Enforced, or temporarily Unenforced while debugging)\n` +
+          `  3. Is the reCAPTCHA v3 site key in .env.local the SAME one shown in App Check → Apps → Web → your app?\n` +
+          `     Currently using: ${(import.meta.env.VITE_RECAPTCHA_SITE_KEY || '').slice(0, 12)}…\n` +
+          `  4. Has the Firebase project been migrated to the new App Check setup? If your project is old, you may need to re-enroll the web app.\n`,
+          'color: #c00; font-weight: bold;',
+          'color: #444;'
+        );
+      }
+    );
   } catch (err) {
     console.warn('[firebase] App Check init failed — AI features will be unavailable:', err?.message);
   }

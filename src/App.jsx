@@ -1527,21 +1527,59 @@ async function fetchTravelForecast(query, startISO, endISO) {
   const g = await geo.json();
   const loc = g.results?.[0];
   if (!loc) throw new Error('Place not found — try a different name.');
-  const fc = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}` +
-    `&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto` +
-    `&start_date=${startISO}&end_date=${endISO}`
-  );
-  if (!fc.ok) throw new Error('Could not fetch forecast — Open-Meteo only goes 16 days out.');
-  const j = await fc.json();
-  const d = j.daily;
-  if (!d?.time?.length) throw new Error('No forecast returned for that range.');
-  const daily = d.time.map((date, i) => ({
-    date,
-    tmax: Math.round(d.temperature_2m_max[i]),
-    tmin: Math.round(d.temperature_2m_min[i]),
-    code: d.weathercode[i],
-  }));
+
+  // Open-Meteo's forecast endpoint covers today + ~16 days. Trips planned more
+  // than two weeks ahead are common, so instead of failing the whole call,
+  // fetch real forecast for the portion inside the window and synthesize
+  // "seasonal estimate" placeholders for the rest. The capsule generator below
+  // tells Gemini to fall back to typical climate for those days.
+  const FORECAST_WINDOW_DAYS = 14; // conservative; Open-Meteo nominally serves 16
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const horizon = new Date(today);
+  horizon.setDate(horizon.getDate() + FORECAST_WINDOW_DAYS);
+  const horizonISO = horizon.toISOString().slice(0, 10);
+
+  const startD = new Date(startISO + 'T00:00:00');
+  const endD = new Date(endISO + 'T00:00:00');
+  if (endD < startD) throw new Error('End date is before start date.');
+
+  const tripStartsBeyondHorizon = startD > horizon;
+  const fetchEndISO = endD <= horizon ? endISO : horizonISO;
+
+  let realDaily = [];
+  if (!tripStartsBeyondHorizon) {
+    const fc = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}` +
+      `&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto` +
+      `&start_date=${startISO}&end_date=${fetchEndISO}`
+    );
+    if (fc.ok) {
+      const j = await fc.json();
+      const d = j.daily;
+      if (d?.time?.length) {
+        realDaily = d.time.map((date, i) => ({
+          date,
+          tmax: Math.round(d.temperature_2m_max[i]),
+          tmin: Math.round(d.temperature_2m_min[i]),
+          code: d.weathercode[i],
+          estimated: false,
+        }));
+      }
+    }
+    // Soft failure: if Open-Meteo errors for the in-window portion, fall back
+    // to all-estimated rather than blocking the user. The capsule still works.
+  }
+
+  // Build the full trip-day array, mixing real forecast with estimates.
+  const daily = [];
+  for (let cur = new Date(startD); cur <= endD; cur.setDate(cur.getDate() + 1)) {
+    const iso = cur.toISOString().slice(0, 10);
+    const real = realDaily.find((r) => r.date === iso);
+    daily.push(real || { date: iso, estimated: true });
+  }
+  if (daily.length === 0) throw new Error('No dates in the selected range.');
+
   return { lat: loc.latitude, lon: loc.longitude, name: loc.name, country: loc.country, daily };
 }
 
@@ -1560,7 +1598,15 @@ async function generateTravelCapsuleWithGemini({ items, destination, daily, styl
     `|seasons=${itemSeasons(i).join(',') || 'any'}` +
     `|materials=${itemMaterials(i).join(',') || '-'}`;
 
-  const forecastLines = daily.map((d) => `- ${d.date}: ${d.tmin}-${d.tmax}°C · ${weatherLabel(d.code)}`).join('\n');
+  const forecastLines = daily.map((d) => {
+    if (d.estimated) {
+      const monthName = new Date(d.date + 'T00:00:00').toLocaleDateString('en-GB', { month: 'long' });
+      return `- ${d.date}: (beyond 14-day forecast — use typical ${monthName} climate at the destination)`;
+    }
+    return `- ${d.date}: ${d.tmin}-${d.tmax}°C · ${weatherLabel(d.code)}`;
+  }).join('\n');
+
+  const hasEstimated = daily.some((d) => d.estimated);
 
   const prompt = `You are a personal stylist packing a travel capsule from the user's wardrobe.
 
@@ -1568,7 +1614,7 @@ Destination: ${destination}
 Daily forecast:
 ${forecastLines}
 
-${styleProfile ? `${styleProfile}\n\n` : ''}Packing rules:
+${hasEstimated ? `Some days fall beyond the 14-day forecast window. For those, draw on your knowledge of typical climate at ${destination} in the given month (e.g. "Lisbon in October is mild, often 15-22°C with occasional rain") and infer a sensible temperature range and weather. Apply the same WEATHER-DRIVEN RULES below to the inferred range. State the inferred range in that day's reasoning line so the user can see the call was made deliberately.\n\n` : ''}${styleProfile ? `${styleProfile}\n\n` : ''}Packing rules:
 - Compose ONE outfit per forecast day (every date above).
 - Reuse pieces across days where it makes sense — that's the point of a capsule. Aim to keep TOTAL distinct pieces under 1.5× the number of days.
 - Each outfit follows the standard slot rules: at most one item per category, dresses replace tops+bottoms.
@@ -11049,7 +11095,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                 Fetch forecast & compose
               </button>
               <p className="text-[10px] text-stone-400 leading-relaxed">
-                Forecast is via Open-Meteo (free, no API key). Capsule is generated by Gemini and uses items you already own. Dates beyond ~16 days out won't have a forecast yet.
+                Forecast is via Open-Meteo for the first ~14 days. Days beyond that use seasonal climate for the destination. Capsule is generated by Gemini and uses items you already own.
               </p>
             </form>
           )}
@@ -11086,9 +11132,14 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                         <p className="text-sm font-medium text-stone-900">
                           {new Date(d.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
                         </p>
-                        {fcDay && (
+                        {fcDay && !fcDay.estimated && (
                           <span className="text-[10px] tracking-wider uppercase text-stone-500">
                             {fcDay.tmin}-{fcDay.tmax}°C · {weatherLabel(fcDay.code)}
+                          </span>
+                        )}
+                        {fcDay?.estimated && (
+                          <span className="text-[10px] tracking-wider uppercase text-stone-400 italic">
+                            Seasonal estimate
                           </span>
                         )}
                       </div>

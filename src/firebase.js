@@ -64,7 +64,12 @@ if (import.meta.env.DEV) {
   // eslint-disable-next-line no-undef
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
 }
-if (!isDemoMode && import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
+// App Check stays ENABLED in demo mode — reCAPTCHA v3 site keys are public by
+// design (they ride in every page's DOM), and without an App Check token the
+// Gemini calls in the demo Concierge would fail. The existing per-browser
+// rate limiter (200 AI calls/day, see RATE_LIMIT_KEY below) is what protects
+// the project from demo abuse, not hiding App Check.
+if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   try {
     initializeAppCheck(app, {
       provider: new ReCaptchaV3Provider(import.meta.env.VITE_RECAPTCHA_SITE_KEY),
@@ -73,7 +78,7 @@ if (!isDemoMode && import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   } catch (err) {
     console.warn('[firebase] App Check init failed — AI features will be unavailable:', err?.message);
   }
-} else if (!isDemoMode) {
+} else {
   console.warn(
     '[firebase] No VITE_RECAPTCHA_SITE_KEY configured. App Check is disabled — ' +
     'AI features will fail until you set up reCAPTCHA v3. See README for steps.'

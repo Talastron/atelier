@@ -11350,8 +11350,9 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                 </button>
               )}
               <button
-                disabled={!rangeEnd || plannedDays === 0}
+                disabled={!rangeEnd}
                 onClick={() => setPackingOpen(true)}
+                title={plannedDays === 0 ? 'Plan outfits first — the modal will show you how' : `Aggregate ${plannedDays} planned outfit${plannedDays === 1 ? '' : 's'} into a packing list`}
                 className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-white text-stone-900 hover:bg-stone-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Generate packing list
@@ -11449,6 +11450,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
           schedules={schedules}
           outfits={outfits}
           items={items}
+          onPlanWithConcierge={isAIEnabled() ? () => { setPackingOpen(false); setTravelOpen(true); } : null}
           onClose={() => setPackingOpen(false)}
         />
       )}
@@ -13213,20 +13215,24 @@ function LookbookNamerModal({ count, busy, onCancel, onCreate }) {
   );
 }
 
-function PackingListModal({ startISO, endISO, schedules, outfits, items, onClose }) {
+function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanWithConcierge, onClose }) {
   useEscapeKey(onClose);
   const startLabel = new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   const endLabel = new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   const dayCount = Math.floor((new Date(endISO) - new Date(startISO)) / 86_400_000) + 1;
 
   // Walk every day in range, collect scheduled outfits, expand to pieces,
-  // dedupe by item id, group by category.
+  // dedupe by item id, group by category. Date math note: read local
+  // year/month/day instead of toISOString().slice(0, 10) — see
+  // fetchTravelForecast for the same fix; toISOString shifts to UTC and
+  // BST dates would round down to the previous day.
+  const localISODate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const dayList = [];
   const seen = new Map();
   for (let i = 0; i < dayCount; i++) {
     const d = new Date(startISO + 'T00:00:00');
     d.setDate(d.getDate() + i);
-    const iso = d.toISOString().slice(0, 10);
+    const iso = localISODate(d);
     const sched = schedules[iso];
     const outfit = sched ? outfits.find((o) => o.id === sched.outfitId) : null;
     const pieces = outfit ? resolveOutfitItems(outfit, items) : [];
@@ -13261,7 +13267,23 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onClose
 
         <div className="p-5 sm:p-8 flex-1 min-h-0 overflow-y-auto print:overflow-visible print:flex-none">
           {totalPieces === 0 ? (
-            <p className="text-stone-500 text-sm italic">No outfits planned in this range yet — go back and plan some looks first.</p>
+            <div className="text-center py-8">
+              <p className="font-display text-2xl text-stone-900 mb-2">No outfits planned for this trip yet.</p>
+              <p className="text-sm text-stone-600 mb-6 max-w-md mx-auto">
+                The packing list aggregates every piece across every day of your trip. To get one, plan the outfits first — either with the Concierge in one go, or by scheduling looks day by day.
+              </p>
+              {onPlanWithConcierge && (
+                <button
+                  onClick={onPlanWithConcierge}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-stone-900 text-white text-sm hover:bg-stone-700 transition-colors"
+                >
+                  <Wand2 size={14} strokeWidth={1.5} /> Plan {dayCount} day{dayCount === 1 ? '' : 's'} with Concierge
+                </button>
+              )}
+              <p className="text-xs text-stone-400 mt-4">
+                Or close this, tap a day in the calendar above, and assign a saved look.
+              </p>
+            </div>
           ) : (
             <div className="space-y-8">
               {orderedCategories.map((cat) => (

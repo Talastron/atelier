@@ -10378,13 +10378,18 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             </SortableContext>
           </DndContext>
           )}
-          {selectMode && selectedOutfits.size > 0 && (
+          {selectMode && selectedOutfits.size > 0 && createPortal(
             // Top-pinned action bar — was previously bottom-pinned but users
-            // missed it because their eyes were on the items they were
-            // selecting, not the bottom of the viewport. Top placement keeps
-            // it in the natural reading-flow path. Includes an explicit
-            // Cancel so escape-from-select-mode is one tap, not a guess.
-            <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 bg-stone-900 text-white rounded-full shadow-2xl ring-2 ring-stone-900/20 flex items-center gap-2 px-3 py-2 animate-in slide-in-from-top-4 duration-200 max-w-[calc(100vw-1rem)]">
+            // missed it (attention on the items being clicked, not the bar
+            // far below). Now portaled into document.body so it ACTUALLY
+            // tracks viewport scroll: `position: fixed` is hijacked by any
+            // ancestor with `transform`/`filter`/`backdrop-filter`, becoming
+            // relative to that ancestor instead of the viewport. The
+            // lookbook view sits inside such a parent (animation/blur), so
+            // the toolbar would otherwise scroll with the page. Portaling to
+            // body sidesteps the entire ancestor chain.
+            <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] bg-stone-900 text-white rounded-full shadow-2xl ring-2 ring-stone-900/20 flex items-center gap-2 px-3 py-2 animate-in slide-in-from-top-4 duration-200 max-w-[calc(100vw-1rem)]"
+              style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}>
               <span className="text-xs px-3 shrink-0 font-medium">{selectedOutfits.size} selected</span>
               {onCreateLookbook && selectedOutfits.size >= 2 && (
                 <button onClick={() => setLookbookNamerOpen(true)}
@@ -10406,7 +10411,8 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                 aria-label="Exit select mode">
                 Cancel
               </button>
-            </div>
+            </div>,
+            document.body
           )}
           {lookbookNamerOpen && (
             <LookbookNamerModal

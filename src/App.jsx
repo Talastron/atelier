@@ -18,6 +18,7 @@ import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutU
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
+import { useSubscriptionStatus } from './subscriptionStatus';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -2427,6 +2428,7 @@ function DigitalWardrobe() {
   const openOutfit = openOutfitId ? outfits.find((o) => o.id === openOutfitId) : null;
 
   const isOwner = !!(user?.email && OWNER_EMAILS.includes(user.email.toLowerCase()));
+  const subStatus = useSubscriptionStatus(user);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
@@ -3316,6 +3318,11 @@ function DigitalWardrobe() {
                   paddingTop: 'env(safe-area-inset-top, 0px)',
                   paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)',
                 }}>
+            {subStatus.kind === 'subscriber' && subStatus.isTrial && subStatus.daysRemaining !== null && subStatus.daysRemaining <= 3 && (
+              <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+                Your trial ends in {subStatus.daysRemaining} day{subStatus.daysRemaining === 1 ? '' : 's'}. <a href="https://myatelier.style/pricing" className="underline">Keep your keys.</a>
+              </div>
+            )}
             <div className="p-4 sm:p-6 lg:p-12 max-w-6xl mx-auto min-h-full w-full lg:pb-0">
               {loading ? (
                 <WardrobeSkeleton />
@@ -3394,6 +3401,7 @@ function DigitalWardrobe() {
                       onRestoreItem={handleRestoreItem}
                       onHardDeleteItem={handleHardDeleteItem}
                       onUpdateItem={handleAddItem}
+                      subStatus={subStatus}
                     />
                   )}
                   {activeTab === 'shops' && (
@@ -14675,7 +14683,40 @@ function downloadJson(filename, payload) {
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
 }
 
-function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem }) {
+function SubscriptionPill({ state }) {
+  if (state.loading) return <p className="mt-2 text-sm text-stone-400">Checking…</p>;
+  if (state.kind === 'owner') {
+    return <p className="mt-2 text-sm text-stone-700">Founder access · no renewal.</p>;
+  }
+  if (state.kind === 'invited') {
+    return <p className="mt-2 text-sm text-stone-700">Invited member · access granted by the owner.</p>;
+  }
+  if (state.kind === 'subscriber') {
+    const planLabel = state.plan === 'founding' ? 'Founding member' : state.plan === 'annual' ? 'Annual' : state.plan === 'monthly' ? 'Monthly' : 'Member';
+    if (state.isTrial) {
+      return (
+        <p className="mt-2 text-sm text-stone-700">
+          {planLabel} · trial · {state.daysRemaining ?? '—'} day{state.daysRemaining === 1 ? '' : 's'} remaining.
+        </p>
+      );
+    }
+    if (state.status === 'cancelled') {
+      return (
+        <p className="mt-2 text-sm text-stone-700">
+          {planLabel} · cancelled · access until {state.currentPeriodEnd?.toLocaleDateString() || '—'}.
+        </p>
+      );
+    }
+    return (
+      <p className="mt-2 text-sm text-stone-700">
+        {planLabel} · active · renews {state.currentPeriodEnd?.toLocaleDateString() || '—'}.
+      </p>
+    );
+  }
+  return <p className="mt-2 text-sm text-stone-400">Membership status unavailable.</p>;
+}
+
+function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus }) {
   const currency = measurements?.currency || 'GBP';
   const aiTempPreset = measurements?.aiTemperaturePreset || 'balanced';
   const setCurrency = (v) => saveMeasurements({ ...measurements, currency: v });
@@ -14759,6 +14800,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
           <div className="min-w-0 flex-1">
             <p className="font-display text-xl text-stone-900 truncate">{user.displayName || 'Signed in'}</p>
             <p className="text-stone-500 text-xs tracking-wide mt-1 truncate">{user.email}</p>
+            {isOwner && subStatus && <SubscriptionPill state={subStatus} />}
           </div>
           {/* Icon-only on mobile (label would crowd the small account card),
               full pill with label on sm+. The icon alone is universally
@@ -14783,7 +14825,8 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
       {!isOwner && (
         <div id="profile-subscription" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <h3 className="font-display text-2xl text-stone-900 mb-2">Membership</h3>
-          <p className="text-stone-500 text-sm leading-relaxed mb-6">
+          {subStatus && <SubscriptionPill state={subStatus} />}
+          <p className="text-stone-500 text-sm leading-relaxed mb-6 mt-4">
             Update your payment method, view past invoices, change plan, or cancel — all through your secure customer portal.
           </p>
           <a

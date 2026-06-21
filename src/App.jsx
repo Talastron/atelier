@@ -3540,6 +3540,7 @@ function DigitalWardrobe() {
               items={liveItems}
               outfits={outfits}
               styleProfile={summariseStyleProfile(measurements)}
+              measurements={measurements}
               ownerFirstName={(user?.displayName || '').split(' ')[0] || ''}
             />
           )}
@@ -12430,7 +12431,7 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
 //   • error flag if a reply fails (offers retry of last user message)
 //   • input controlled with submit-on-enter (shift+enter = new line)
 //   • auto-scrolls to bottom on new messages
-function AtelierConcierge({ onClose, items, outfits, styleProfile, ownerFirstName }) {
+function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName }) {
   useEscapeKey(onClose);
 
   // Time-of-day greeting — sets the tone before the user even types.
@@ -12568,6 +12569,37 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, ownerFirstNam
             </div>
           </div>
         </header>
+
+        {/* CONTEXT CAPSULE — what the Concierge actually knows about you */}
+        {(() => {
+          const ownedCount = items.filter(it => it.status === 'owned' && !it.deletedAt).length;
+          const savedLooksCount = outfits?.length ?? 0;
+          const mostWornNames = [...items.filter(it => it.status === 'owned' && !it.deletedAt)]
+            .sort((a, b) => itemWearCount(b) - itemWearCount(a))
+            .filter(it => itemWearCount(it) > 0)
+            .slice(0, 3)
+            .map(it => it.name)
+            .join(', ');
+          const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
+          const currentSeason = (() => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter'; })();
+          const paletteLabel = measurements?.stylePalette;
+          return (
+            <div className="border-b border-stone-200 bg-stone-50 px-4 py-2">
+              <details>
+                <summary className="cursor-pointer text-[10px] uppercase tracking-widest text-stone-500 hover:underline">
+                  What the Concierge knows
+                </summary>
+                <ul className="mt-2 space-y-0.5 text-xs text-stone-600">
+                  <li>· {ownedCount} pieces in your wardrobe</li>
+                  <li>· {savedLooksCount} saved looks</li>
+                  <li>· Most-worn: {mostWornNames || '—'}</li>
+                  {weather && <li>· {weather.temp != null ? `${Math.round(weather.temp)}°C` : 'no forecast'} · {currentSeason}</li>}
+                  {paletteLabel && <li>· Palette: {paletteLabel}</li>}
+                </ul>
+              </details>
+            </div>
+          );
+        })()}
 
         {/* MESSAGES — vertical scroll, two bubble styles */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-5">

@@ -4488,6 +4488,12 @@ function DailyBriefCard({
   const [whyOpen, setWhyOpen] = useState(false);
 
   // Auto-compose on first mount of the day if we have enough items and AI is on.
+  // Errors here are quietly swallowed — the card auto-fires without user intent,
+  // so a config issue (App Check token unregistered, AI Logic disabled, rate
+  // limit hit) should NOT pollute the wardrobe view on every page load.
+  // Manual clicks on "Try again" / "Compose another" still surface errors
+  // (see composeAnother below) so the user sees feedback when they explicitly
+  // ask for one.
   useEffect(() => {
     if (brief) return;
     if (!isAiEnabled) return;
@@ -4506,7 +4512,9 @@ function DailyBriefCard({
         const saved = writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
         setBrief(saved);
       } catch (err) {
-        if (!cancelled) setError(err?.message || "Could not compose today's brief.");
+        // Silent on auto-fire — log to console only so a config issue surfaces
+        // in DevTools without showing a scary banner on every wardrobe open.
+        console.warn('[daily-brief] auto-compose skipped:', err?.message || err);
       } finally {
         if (!cancelled) setLoading(false);
       }

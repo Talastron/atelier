@@ -40,7 +40,7 @@ const INSIDE = [
   },
   {
     title: 'Insights & Manifesto',
-    line: 'True cost per wear. The gaps in your collection. A private brief of your aesthetic, refreshed each season.',
+    line: 'True cost per wear. The gaps in your collection. A private brief of your aesthetic, refreshed at your pace.',
   },
 ];
 

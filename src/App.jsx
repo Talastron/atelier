@@ -14460,6 +14460,13 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
   const manifesto = measurements?.styleManifesto || '';
   const generatedAt = measurements?.styleManifestoAt || null;
 
+  // 90-day seasonal nudge: compute age of the current manifesto so we can
+  // show a quiet inline prompt to refresh when it's been more than a season.
+  const manifestoAgeDays = generatedAt
+    ? Math.floor((Date.now() - new Date(generatedAt).getTime()) / (24 * 3600 * 1000))
+    : null;
+  const manifestoStale = manifesto && manifestoAgeDays !== null && manifestoAgeDays >= 90;
+
   const run = async () => {
     setBusy(true); setError(null);
     try {
@@ -14495,6 +14502,19 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
       </div>
 
       {error && <p className="relative z-10 mt-4 text-sm text-red-200 bg-red-950/40 border border-red-900/40 px-4 py-3 rounded-xl">{error}</p>}
+
+      {manifestoStale && (
+        <div className="relative z-10 mt-5 mb-1 rounded-lg border border-stone-600 bg-stone-800 px-4 py-2 text-sm text-stone-300">
+          Your manifesto is {Math.floor(manifestoAgeDays / 30)} months old. A fresh reading?{' '}
+          <button
+            type="button"
+            onClick={run}
+            className="font-medium underline hover:no-underline"
+          >
+            Refresh it
+          </button>
+        </div>
+      )}
 
       {manifesto && (
         <div className="relative z-10 mt-6 bg-[#F7F5F2] text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] whitespace-pre-line font-display italic">

@@ -1599,7 +1599,7 @@ async function fetchTravelForecast(query, startISO, endISO) {
 // Gemini: compose a per-day outfit capsule from the user's wardrobe for a
 // travel forecast. Returns { days: [{date, outfitId, itemIds, reasoning}],
 // summary }. Uses itemIds the user already owns; doesn't invent items.
-async function generateTravelCapsuleWithGemini({ items, destination, daily, styleProfile = '' }) {
+async function generateTravelCapsuleWithGemini({ items, destination, daily, styleProfile = '', tripType = 'vacation', activities = [] }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!items.length) throw new Error('Add some owned items first.');
 
@@ -1621,10 +1621,25 @@ async function generateTravelCapsuleWithGemini({ items, destination, daily, styl
 
   const hasEstimated = daily.some((d) => d.estimated);
 
+  // Trip-context block — shapes the wardrobe to the actual purpose.
+  // A "vacation" with no activities still gets generic-leisure styling;
+  // adding activities (beach, hiking, dinner, business) pulls specific
+  // requirements into the capsule.
+  const tripTypeLabel = tripType === 'business' ? 'BUSINESS' : tripType === 'mixed' ? 'MIXED (business + leisure)' : 'VACATION (leisure)';
+  const activitiesBlock = activities.length > 0
+    ? `Planned activities (the capsule MUST accommodate these):
+${activities.map((a) => `  - ${a.label} — ${a.hint}`).join('\n')}
+
+Activity-driven rules:
+${activities.some((a) => a.id === 'beach') ? '  - At least 1-2 days should feature swimwear; include cover-ups and sandals.\n' : ''}${activities.some((a) => a.id === 'dinner' || a.id === 'cocktails' || a.id === 'formal') ? '  - At least one day per 3 days needs an evening-polished look (dress or smart separates).\n' : ''}${activities.some((a) => a.id === 'business') ? '  - Include at least one blazer / smart trouser combination, polished shoes.\n' : ''}${activities.some((a) => a.id === 'hiking') ? '  - Include a hiking-appropriate day: sturdy closed shoes, weather-appropriate outerwear, durable bottoms.\n' : ''}${activities.some((a) => a.id === 'sport') ? '  - Pack sportswear for at least the days where it makes sense.\n' : ''}${activities.some((a) => a.id === 'formal') ? '  - Include one occasion look — the formal event day should be a distinct outfit from regular dinner.\n' : ''}
+`
+    : '';
+
   const prompt = `You are a personal stylist packing a travel capsule from the user's wardrobe.
 
 Destination: ${destination}
-Daily forecast:
+Trip type: ${tripTypeLabel}
+${activitiesBlock}Daily forecast:
 ${forecastLines}
 
 ${hasEstimated ? `Some days fall beyond the 14-day forecast window. For those, draw on your knowledge of typical climate at ${destination} in the given month (e.g. "Lisbon in October is mild, often 15-22°C with occasional rain") and infer a sensible temperature range and weather. Apply the same WEATHER-DRIVEN RULES below to the inferred range. State the inferred range in that day's reasoning line. THESE DAYS REQUIRE THE SAME FULL OUTFIT — do NOT skip them or return fewer items just because the forecast is inferred.\n\n` : ''}${styleProfile ? `${styleProfile}\n\n` : ''}Packing rules (NON-NEGOTIABLE):
@@ -1678,7 +1693,7 @@ Respond ONLY with valid JSON in this exact shape:
 // Reroll button in TravelPlannerModal. We re-prompt with the full wardrobe
 // context but ONLY the one day's forecast, and ask for a single fresh outfit.
 // The caller merges the result into the existing plan.
-async function regenerateTravelDayWithGemini({ items, destination, dayInfo, otherDayPieceIds = [], styleProfile = '' }) {
+async function regenerateTravelDayWithGemini({ items, destination, dayInfo, otherDayPieceIds = [], styleProfile = '', tripType = 'vacation', activities = [] }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!items.length) throw new Error('Add some owned items first.');
 
@@ -1700,10 +1715,16 @@ async function regenerateTravelDayWithGemini({ items, destination, dayInfo, othe
     ? `\nPieces already used on OTHER days of this trip (prefer reusing these to keep the capsule tight): ${otherDayPieceIds.join(', ')}\n`
     : '';
 
+  const tripTypeLabel = tripType === 'business' ? 'BUSINESS' : tripType === 'mixed' ? 'MIXED (business + leisure)' : 'VACATION (leisure)';
+  const activitiesNote = activities.length > 0
+    ? `Trip activities (the recomposed day must fit alongside these): ${activities.map((a) => a.label).join(', ')}.\n`
+    : '';
+
   const prompt = `You are recomposing ONE day of an existing travel capsule.
 
 Destination: ${destination}
-Date: ${dayInfo.date}
+Trip type: ${tripTypeLabel}
+${activitiesNote}Date: ${dayInfo.date}
 Forecast: ${forecastLine}
 ${otherPieces}
 ${styleProfile ? `${styleProfile}\n\n` : ''}Rules:
@@ -11406,24 +11427,44 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
               </p>
               <p className="text-[10px] tracking-wider uppercase text-stone-400 mt-1">{days} day{days === 1 ? '' : 's'} · {plannedDays} planned</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {onSaveOutfit && isAIEnabled() && (
+            <div className="flex gap-2 flex-wrap items-center">
+              {/* ONE button. Outfits + packing list + iteration + export all
+                  live inside this flow now. The old standalone "Generate
+                  packing list" was redundant for the common case (most users
+                  want the Concierge to plan, not to aggregate manually-
+                  scheduled outfits). For the rare aggregate-from-schedule
+                  case, the planner's empty-state still surfaces it. */}
+              {onSaveOutfit && isAIEnabled() ? (
                 <button
                   disabled={!rangeEnd}
                   onClick={() => setTravelOpen(true)}
                   className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  <Wand2 size={14} strokeWidth={1.5} /> Plan with Concierge
+                  <Wand2 size={14} strokeWidth={1.5} /> Plan this trip
+                </button>
+              ) : (
+                // AI disabled: only the manual packing-list path is available.
+                <button
+                  disabled={!rangeEnd || plannedDays === 0}
+                  onClick={() => setPackingOpen(true)}
+                  title={plannedDays === 0 ? 'Schedule outfits to these dates first' : `Aggregate ${plannedDays} planned outfit${plannedDays === 1 ? '' : 's'} into a packing list`}
+                  className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-white text-stone-900 hover:bg-stone-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Generate packing list
                 </button>
               )}
-              <button
-                disabled={!rangeEnd}
-                onClick={() => setPackingOpen(true)}
-                title={plannedDays === 0 ? 'Plan outfits first — the modal will show you how' : `Aggregate ${plannedDays} planned outfit${plannedDays === 1 ? '' : 's'} into a packing list`}
-                className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-white text-stone-900 hover:bg-stone-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Generate packing list
-              </button>
+              {/* Quiet secondary affordance — preserves the "I already
+                  scheduled outfits, just show me the packing list" path
+                  without competing with the primary action. */}
+              {onSaveOutfit && isAIEnabled() && plannedDays > 0 && (
+                <button
+                  onClick={() => setPackingOpen(true)}
+                  className="text-[10px] tracking-widest uppercase text-stone-400 hover:text-stone-100 underline-offset-4 hover:underline"
+                  title={`View packing list from ${plannedDays} already-scheduled outfit${plannedDays === 1 ? '' : 's'}`}
+                >
+                  Or view list from existing schedule
+                </button>
+              )}
             </div>
           </div>
         );
@@ -11540,9 +11581,28 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
 // day of the range. Saves each as a "Trip · Date" outfit + schedules it. After
 // it runs, the user can immediately tap "Generate packing list" right next to
 // this button to get the deduped list.
+// Activities the user can multi-select. Each carries an implicit wardrobe
+// requirement that the Concierge prompt teaches Gemini to honour — e.g.
+// "Beach / pool" means swimwear belongs in the capsule. The chips are
+// ordered roughly by frequency on a generic trip.
+const TRAVEL_ACTIVITIES = [
+  { id: 'sightseeing', label: 'Sightseeing / walking', hint: 'comfortable shoes, layerable' },
+  { id: 'dinner', label: 'Dinner / restaurants', hint: 'at least one polished evening look' },
+  { id: 'beach', label: 'Beach / pool', hint: 'swimwear, cover-ups, sandals' },
+  { id: 'cocktails', label: 'Cocktails / nightlife', hint: 'evening dress or smart separates' },
+  { id: 'business', label: 'Business meetings', hint: 'blazer, smart trousers, polished shoes' },
+  { id: 'gallery', label: 'Gallery / museum', hint: 'considered, easy-on-feet' },
+  { id: 'hiking', label: 'Hiking / outdoors', hint: 'sturdy shoes, weather-appropriate outerwear' },
+  { id: 'formal', label: 'Wedding / formal event', hint: 'one occasion look' },
+  { id: 'sport', label: 'Sport / gym', hint: 'sportswear' },
+  { id: 'family', label: 'Family time / casual', hint: 'easy, machine-washable' },
+];
+
 function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleOutfit, styleProfile, onClose }) {
   useEscapeKey(onClose);
   const [destination, setDestination] = useState('');
+  const [tripType, setTripType] = useState('vacation'); // vacation | business | mixed
+  const [activities, setActivities] = useState(() => new Set());
   const [stage, setStage] = useState('input'); // input | forecasting | generating | done | error
   const [forecast, setForecast] = useState(null);
   const [plan, setPlan] = useState(null);
@@ -11569,6 +11629,8 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
         destination: `${fc.name}${fc.country ? ', ' + fc.country : ''}`,
         daily: fc.daily,
         styleProfile,
+        tripType,
+        activities: [...activities].map((id) => TRAVEL_ACTIVITIES.find((a) => a.id === id)).filter(Boolean),
       });
       setPlan(result);
       setStage('done');
@@ -11600,6 +11662,8 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
         dayInfo,
         otherDayPieceIds: Array.from(otherIds),
         styleProfile,
+        tripType,
+        activities: [...activities].map((id) => TRAVEL_ACTIVITIES.find((a) => a.id === id)).filter(Boolean),
       });
       setPlan((prev) => ({
         ...prev,
@@ -11737,23 +11801,90 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 
         <div className="p-6 flex-1 min-h-0 overflow-y-auto space-y-5">
           {stage === 'input' && (
-            <form onSubmit={run} className="space-y-4">
+            <form onSubmit={run} className="space-y-5">
               <p className="text-stone-500 text-sm leading-relaxed">
-                Type a destination — anywhere in the world. Atelier will fetch the forecast for {new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → {new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} and let the Concierge build a per-day capsule from your wardrobe.
+                Type a destination — anywhere in the world. Atelier will fetch the forecast for {new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → {new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} and let the Concierge build a per-day capsule from your wardrobe — tailored to where you're going and what you'll be doing there.
               </p>
-              <input
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="e.g. Lisbon, Edinburgh, Marrakech…"
-                className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none"
-                autoFocus
-              />
+
+              {/* Destination */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">Destination</label>
+                <input
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="e.g. Lisbon, Edinburgh, Marrakech…"
+                  className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none"
+                  autoFocus
+                />
+              </div>
+
+              {/* Trip type — three mutually-exclusive chips. */}
+              <div className="space-y-2">
+                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">Trip type</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { id: 'vacation', label: 'Vacation' },
+                    { id: 'business', label: 'Business' },
+                    { id: 'mixed', label: 'Mixed' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTripType(t.id)}
+                      className={`px-4 py-2 rounded-full text-xs transition-colors border ${
+                        tripType === t.id
+                          ? 'bg-stone-900 text-white border-stone-900'
+                          : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Activities — multi-select chips. The selected set is read at
+                  submit time and passed into the Concierge prompt so the
+                  composition honours them (e.g. beach → swimwear in capsule). */}
+              <div className="space-y-2">
+                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+                  Activities <span className="text-stone-400 normal-case tracking-normal">(optional — pick any that apply)</span>
+                </label>
+                <div className="flex gap-1.5 flex-wrap">
+                  {TRAVEL_ACTIVITIES.map((a) => {
+                    const selected = activities.has(a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => {
+                          setActivities((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(a.id)) next.delete(a.id);
+                            else next.add(a.id);
+                            return next;
+                          });
+                        }}
+                        title={a.hint}
+                        className={`px-3 py-1.5 rounded-full text-[11px] transition-colors border ${
+                          selected
+                            ? 'bg-brass-300 text-stone-900 border-brass-400'
+                            : 'bg-white text-stone-600 border-stone-300 hover:border-stone-500'
+                        }`}
+                      >
+                        {selected && <span className="mr-1">✓</span>}{a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <button type="submit" disabled={!destination.trim()}
                 className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 disabled:opacity-50">
-                Fetch forecast & compose
+                Compose this trip
               </button>
               <p className="text-[10px] text-stone-400 leading-relaxed">
-                Forecast is via Open-Meteo for the first ~14 days. Days beyond that use seasonal climate for the destination. Composed by the Concierge from items you already own.
+                Forecast via Open-Meteo for the first ~14 days. Days beyond use seasonal climate. The Concierge composes outfits + a packing list from your wardrobe and the activities you selected — iterate per day, export, or save & schedule.
               </p>
             </form>
           )}

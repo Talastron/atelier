@@ -11642,6 +11642,12 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
   // regenerated. Keeps the rest of the plan interactive during the call.
   const [rerollingDay, setRerollingDay] = useState({});
   const [exportToast, setExportToast] = useState(null);
+  // Per-day amend state. When non-null, the WardrobePicker opens for that
+  // day. Selecting a piece adds it to the day's itemIds; clicking the X on
+  // any thumbnail removes that piece. Packing list updates automatically
+  // because buildPackingList() reads from `plan`.
+  const [addingToDay, setAddingToDay] = useState(null);
+  const [pickerCategory, setPickerCategory] = useState('All');
   const toast = useToast();
   const days = Math.floor((new Date(endISO) - new Date(startISO)) / 86_400_000) + 1;
 
@@ -11711,6 +11717,29 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
         return next;
       });
     }
+  };
+
+  // Add or remove a piece from one day in the plan. Both update `plan` in
+  // place, which automatically rebuilds the packing list (counts + sort) on
+  // the next render. addPieceToDay deduplicates so repeated clicks are safe.
+  const addPieceToDay = (dayIso, itemId) => {
+    setPlan((prev) => ({
+      ...prev,
+      days: prev.days.map((d) => d.date === dayIso
+        ? { ...d, itemIds: Array.from(new Set([...(d.itemIds || []), itemId])) }
+        : d
+      ),
+    }));
+    setAddingToDay(null);
+  };
+  const removePieceFromDay = (dayIso, itemId) => {
+    setPlan((prev) => ({
+      ...prev,
+      days: prev.days.map((d) => d.date === dayIso
+        ? { ...d, itemIds: (d.itemIds || []).filter((id) => id !== itemId) }
+        : d
+      ),
+    }));
   };
 
   // Build packing list with usage counts. Used by the result UI AND by the
@@ -12047,14 +12076,34 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                         <>
                           <div className="flex flex-wrap gap-2 mb-3">
                             {pieces.map((p) => (
-                              <div key={p.id} className="flex-none w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
+                              <div key={p.id} className="relative flex-none w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200 group" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
                                 {itemImages(p)[0] ? (
                                   <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                                 ) : (
                                   <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
                                 )}
+                                {/* Remove button — always visible on mobile (tap target),
+                                    opacity-on-hover on desktop. Small X badge in top-left. */}
+                                <button
+                                  type="button"
+                                  onClick={() => removePieceFromDay(d.date, p.id)}
+                                  aria-label={`Remove ${p.name || p.category} from ${d.date}`}
+                                  className="absolute top-1 left-1 w-5 h-5 rounded-full bg-stone-900/85 text-white flex items-center justify-center text-xs hover:bg-red-600 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                                >
+                                  <X size={12} strokeWidth={2.5} />
+                                </button>
                               </div>
                             ))}
+                            {/* Add-piece tile — opens the wardrobe picker scoped to this day. */}
+                            <button
+                              type="button"
+                              onClick={() => { setAddingToDay(d.date); setPickerCategory('All'); }}
+                              className="flex-none w-20 aspect-[3/4] rounded-lg border-2 border-dashed border-stone-300 hover:border-stone-700 hover:bg-stone-50 flex flex-col items-center justify-center gap-1 text-stone-500 hover:text-stone-900 transition-colors"
+                              title="Add a piece from your wardrobe to this day"
+                            >
+                              <Plus size={20} strokeWidth={1.5} />
+                              <span className="text-[9px] uppercase tracking-wider">Add</span>
+                            </button>
                           </div>
                           {isSparse && (
                             <p className="text-[10px] text-amber-700 italic mb-2">
@@ -12154,6 +12203,98 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
               ✓ {exportToast}
             </div>
           )}
+
+          {/* WARDROBE PICKER — opens when the user taps "+ Add" on a day card.
+              Shows owned items grouped by category. Tapping an item adds it
+              to that day's itemIds + closes the picker. The pieces already on
+              that day are dimmed so the user doesn't double-add. */}
+          {addingToDay && (() => {
+            const currentDayIds = new Set((plan?.days?.find((dd) => dd.date === addingToDay)?.itemIds) || []);
+            const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
+            const PICKER_CATS = ['All', 'Outerwear', 'Tops', 'Bottoms', 'Dresses', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+            const filtered = pickerCategory === 'All' ? owned : owned.filter((i) => (i.category || 'Other') === pickerCategory);
+            return (
+              <div className="fixed inset-0 z-[105] bg-stone-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6" onClick={() => setAddingToDay(null)}>
+                <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl overflow-hidden shadow-2xl flex flex-col max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+                  <div className="px-5 py-4 border-b border-stone-200 flex justify-between items-start shrink-0">
+                    <div>
+                      <p className="text-[10px] tracking-widest uppercase text-stone-500">Add a piece</p>
+                      <h3 className="text-base font-medium text-stone-900 mt-0.5">
+                        to {new Date(addingToDay + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+                      </h3>
+                    </div>
+                    <button onClick={() => setAddingToDay(null)} className="p-1.5 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
+                      <X size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                  <div className="px-5 py-3 border-b border-stone-200 shrink-0 overflow-x-auto">
+                    <div className="flex gap-1.5 min-w-max">
+                      {PICKER_CATS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setPickerCategory(c)}
+                          className={`px-3 py-1.5 rounded-full text-[11px] whitespace-nowrap transition-colors border ${
+                            pickerCategory === c
+                              ? 'bg-stone-900 text-white border-stone-900'
+                              : 'bg-white text-stone-600 border-stone-300 hover:border-stone-500'
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-h-0 overflow-y-auto p-5">
+                    {filtered.length === 0 ? (
+                      <p className="text-center text-sm text-stone-500 italic py-8">No items in this category yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                        {filtered.map((p) => {
+                          const alreadyAdded = currentDayIds.has(p.id);
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              disabled={alreadyAdded}
+                              onClick={() => addPieceToDay(addingToDay, p.id)}
+                              className={`group text-left rounded-lg overflow-hidden ring-1 transition-all ${
+                                alreadyAdded
+                                  ? 'ring-emerald-300 opacity-50 cursor-not-allowed'
+                                  : 'ring-stone-200 hover:ring-stone-900 hover:scale-[1.02] cursor-pointer'
+                              }`}
+                              title={alreadyAdded ? 'Already added to this day' : `Add ${p.name || p.category}`}
+                            >
+                              <div className="relative aspect-[3/4] bg-stone-100">
+                                {itemImages(p)[0] ? (
+                                  <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
+                                )}
+                                {alreadyAdded && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-emerald-700/20">
+                                    <span className="bg-emerald-700 text-white text-[10px] uppercase tracking-widest px-2 py-1 rounded-full">✓ Added</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="p-1.5">
+                                <p className="text-[10px] text-stone-900 truncate leading-tight">{p.name || p.brand || p.category}</p>
+                                {p.brand && p.name && <p className="text-[9px] text-stone-500 truncate leading-tight">{p.brand}</p>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-5 py-3 border-t border-stone-200 bg-stone-50 shrink-0 flex justify-between items-center">
+                    <p className="text-[10px] text-stone-500">{filtered.length} piece{filtered.length === 1 ? '' : 's'} · {currentDayIds.size} already on this day</p>
+                    <button onClick={() => setAddingToDay(null)} type="button" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 px-3 py-1">Done</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {stage === 'done' && (

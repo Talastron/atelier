@@ -20,7 +20,7 @@
 // directory), adjust the field names here. The hook structure stays the same.
 
 import { useEffect, useState } from 'react';
-import { db, auth } from './firebase';
+import { db } from './firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 const OWNER_EMAILS = (import.meta.env.VITE_OWNER_EMAILS || '')

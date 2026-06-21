@@ -10651,8 +10651,11 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
                 <ChevronRight size={11} strokeWidth={1.5} className="-mr-0.5" />
               </button>
             )}
-            {filter === 'unanalysed' && unanalysed.length > 0 && (
-              <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2 w-full sm:w-auto">Tap any to analyse with the Concierge</span>
+            {unanalysed.length > 0 && (
+              <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2 w-full sm:w-auto">
+                <Sparkles size={11} strokeWidth={1.5} className="inline -mt-0.5 mr-1 text-brass-400" />
+                Tap any card to analyse it with the Concierge
+              </span>
             )}
           </div>
 
@@ -10682,8 +10685,11 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
                         <Sparkles size={10} strokeWidth={2} className="text-brass-300" /> Analysed
                       </span>
                     ) : (
-                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-brass-300 text-stone-900 text-[10px] tracking-widest uppercase rounded-full inline-flex items-center gap-1 font-medium">
-                        <Sparkles size={10} strokeWidth={2} /> Analyse
+                      // Animate-pulse + arrow makes the badge read as a CTA
+                      // rather than a passive status label — the user knows to
+                      // tap the card to trigger analysis in the detail view.
+                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-brass-300 text-stone-900 text-[10px] tracking-widest uppercase rounded-full inline-flex items-center gap-1 font-medium shadow-md animate-pulse">
+                        <Sparkles size={10} strokeWidth={2} /> Tap to analyse
                       </span>
                     )}
                   </div>
@@ -13577,9 +13583,10 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
                   setMessages([{ role: 'assistant', text: greeting }]);
                   await clearCurrentThread();
                 }}
-                className="text-xs uppercase tracking-widest text-stone-400 hover:text-stone-700"
+                className="inline-flex items-center gap-1.5 text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 border border-stone-300 hover:border-stone-500 bg-white hover:bg-stone-50 rounded-full px-3 py-1.5 transition-colors"
+                title="Clear this conversation and start over"
               >
-                New thread
+                <Plus size={11} strokeWidth={2} className="rotate-45" /> New thread
               </button>
             )}
           </div>

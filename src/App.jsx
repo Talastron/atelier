@@ -4592,6 +4592,7 @@ function DailyBriefCard({
   isAiEnabled,
 }) {
   const uid = user?.uid || 'anon';
+  const toast = useToast();
   const [brief, setBrief] = useState(() => readDailyBrief(uid));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -4601,6 +4602,14 @@ function DailyBriefCard({
   // instead of returning null. The manual click goes through composeAnother
   // which surfaces errors loudly via the error state.
   const [autoFailed, setAutoFailed] = useState(false);
+  // Action busy/done states. Both buttons fire async writes to Firestore — we
+  // need to disable them while in flight AND show confirmation after success,
+  // otherwise users double-tap and end up with duplicate outfits. Reset
+  // whenever the brief itself changes (compose another), since the new brief
+  // hasn't been saved/worn yet.
+  const [saveState, setSaveState] = useState('idle'); // idle | saving | saved
+  const [wearState, setWearState] = useState('idle'); // idle | wearing | done
+  useEffect(() => { setSaveState('idle'); setWearState('idle'); }, [brief?.savedAt]);
 
   // Auto-compose on first mount of the day if we have enough items and AI is on.
   // Errors here are quietly swallowed (no scary banner on every page load) —
@@ -4723,7 +4732,8 @@ function DailyBriefCard({
 
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
-    // Build a minimal outfit object and log wear for all pieces (mirrors TodayTile pattern)
+    if (wearState !== 'idle') return; // already in flight or done — block double-tap
+    setWearState('wearing');
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
       id: `db-${uid}-${Date.now()}`,
@@ -4736,13 +4746,23 @@ function DailyBriefCard({
     try {
       if (onSaveOutfit) await onSaveOutfit(outfit);
       if (onLogOutfitWear) await onLogOutfitWear(outfit, todayISO(), '');
-      clearDailyBrief(uid);
-      setBrief(null);
-    } catch { /* best-effort */ }
+      setWearState('done');
+      toast?.show?.(`Logged today's wear · ${briefItems.length} pieces`, { kind: 'success' });
+      // Slight delay so the user sees confirmation before the card disappears
+      setTimeout(() => {
+        clearDailyBrief(uid);
+        setBrief(null);
+      }, 700);
+    } catch (err) {
+      setWearState('idle');
+      toast?.show?.(err?.message || 'Could not log wear.', { kind: 'error' });
+    }
   };
 
   const handleSaveAsLook = async () => {
     if (!brief.itemIds?.length) return;
+    if (saveState !== 'idle') return; // already saved (or saving) — prevent dupes
+    setSaveState('saving');
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
       id: `db-${uid}-${Date.now()}`,
@@ -4755,7 +4775,12 @@ function DailyBriefCard({
     };
     try {
       if (onSaveOutfit) await onSaveOutfit(outfit);
-    } catch { /* best-effort */ }
+      setSaveState('saved');
+      toast?.show?.('Saved to your Lookbook', { kind: 'success' });
+    } catch (err) {
+      setSaveState('idle');
+      toast?.show?.(err?.message || 'Could not save.', { kind: 'error' });
+    }
   };
 
   return (
@@ -4805,12 +4830,15 @@ function DailyBriefCard({
 
       <div className="mt-4 flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={handleWearThis}
-          className="rounded-full bg-stone-900 px-4 py-2 text-sm text-white hover:bg-stone-800"
+          disabled={wearState !== 'idle'}
+          className="rounded-full bg-stone-900 px-4 py-2 text-sm text-white hover:bg-stone-800 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Wear this
+          {wearState === 'wearing' ? 'Logging…' : wearState === 'done' ? '✓ Logged' : 'Wear this'}
         </button>
         <button
+          type="button"
           onClick={composeAnother}
           disabled={loading}
           className="rounded-full border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50 disabled:opacity-50"
@@ -4818,10 +4846,16 @@ function DailyBriefCard({
           {loading ? 'Composing…' : 'Compose another'}
         </button>
         <button
+          type="button"
           onClick={handleSaveAsLook}
-          className="rounded-full border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50"
+          disabled={saveState !== 'idle'}
+          className={`rounded-full border px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed ${
+            saveState === 'saved'
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+              : 'border-stone-300 hover:bg-stone-50 disabled:opacity-60'
+          }`}
         >
-          Save as a Look
+          {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? '✓ Saved to Lookbook' : 'Save as a Look'}
         </button>
       </div>
     </div>
@@ -10345,8 +10379,13 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           </DndContext>
           )}
           {selectMode && selectedOutfits.size > 0 && (
-            <div className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-30 bg-stone-900 text-white rounded-full shadow-2xl flex items-center gap-2 px-3 py-2 animate-in slide-in-from-bottom-4 duration-200 max-w-[calc(100vw-1rem)]">
-              <span className="text-xs px-3 shrink-0">{selectedOutfits.size} selected</span>
+            // Top-pinned action bar — was previously bottom-pinned but users
+            // missed it because their eyes were on the items they were
+            // selecting, not the bottom of the viewport. Top placement keeps
+            // it in the natural reading-flow path. Includes an explicit
+            // Cancel so escape-from-select-mode is one tap, not a guess.
+            <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 bg-stone-900 text-white rounded-full shadow-2xl ring-2 ring-stone-900/20 flex items-center gap-2 px-3 py-2 animate-in slide-in-from-top-4 duration-200 max-w-[calc(100vw-1rem)]">
+              <span className="text-xs px-3 shrink-0 font-medium">{selectedOutfits.size} selected</span>
               {onCreateLookbook && selectedOutfits.size >= 2 && (
                 <button onClick={() => setLookbookNamerOpen(true)}
                   className="px-4 py-2 rounded-full bg-white text-stone-900 hover:bg-stone-100 text-xs font-medium transition-colors inline-flex items-center gap-1.5 shrink-0">
@@ -10361,6 +10400,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                 setSelectMode(false); setSelectedOutfits(new Set());
               }} className="px-4 py-2 rounded-full bg-red-600 hover:bg-red-700 text-xs font-medium transition-colors inline-flex items-center gap-1.5 shrink-0">
                 <Trash2 size={12} strokeWidth={1.5} /> Delete
+              </button>
+              <button onClick={() => { setSelectMode(false); setSelectedOutfits(new Set()); }}
+                className="px-3 py-2 rounded-full text-xs text-stone-300 hover:text-white transition-colors shrink-0"
+                aria-label="Exit select mode">
+                Cancel
               </button>
             </div>
           )}

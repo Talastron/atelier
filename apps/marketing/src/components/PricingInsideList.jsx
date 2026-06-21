@@ -20,11 +20,11 @@ import React from 'react';
 const INSIDE = [
   {
     title: 'The Concierge',
-    line: 'A private stylist who has read every piece you own, every wear you logged, every look you saved.',
+    line: 'A private stylist who knows everything in your wardrobe and how you have worn it.',
   },
   {
     title: 'The Wardrobe',
-    line: 'Every piece accounted for. Brand, colour, material, cost, and every time you reached for it.',
+    line: 'Every piece accounted for: brand, colour, material, cost, and the days you wore it.',
   },
   {
     title: 'Suggest a Look',
@@ -32,15 +32,15 @@ const INSIDE = [
   },
   {
     title: 'The Lookbook',
-    line: 'Editorial outfits composed, saved, and revisited. A private archive of how you dress.',
+    line: 'Editorial outfits saved and revisited. A private archive of how you dress.',
   },
   {
     title: 'Packing Capsules',
-    line: 'A destination, a forecast, and a capsule pulled from your existing closet — built in seconds.',
+    line: 'A destination and a forecast become a capsule pulled from your closet. Built in seconds.',
   },
   {
     title: 'Insights & Manifesto',
-    line: 'True cost per wear, the gaps in your collection, and a private brief of your true aesthetic.',
+    line: 'True cost per wear. The gaps in your collection. A private brief of your aesthetic, refreshed each season.',
   },
 ];
 

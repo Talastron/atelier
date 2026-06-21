@@ -35,6 +35,16 @@ export function SignatureDraw({ src, alt, style = {} }) {
     }
     const el = ref.current;
     if (!el) return;
+    // Walk up to find a layout-bearing ancestor (img.closest works on
+    // any selector; here we want the nearest real layout box). Reason:
+    // Chrome's IntersectionObserver computes visible area honouring
+    // clip-path — the img starts with clip-path: inset(0 100% 0 0)
+    // (zero visible area) so it would ALWAYS report intersectionRatio
+    // 0 and the observer would never fire. Also, el.parentElement
+    // returns the Astro hydration wrapper (<astro-island>) which has
+    // display: contents and a zero-size bounding rect. We need the
+    // nearest section/figure/div that has real layout.
+    const target = el.closest('section') || el.parentElement || el;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -46,7 +56,7 @@ export function SignatureDraw({ src, alt, style = {} }) {
       },
       { threshold: 0.4 }
     );
-    observer.observe(el);
+    observer.observe(target);
     return () => observer.disconnect();
   }, []);
 

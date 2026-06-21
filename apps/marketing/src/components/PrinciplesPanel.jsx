@@ -21,17 +21,17 @@ const PRINCIPLES = [
   {
     roman: 'N°. I',
     title: 'Your wardrobe is your data.',
-    line: 'Your collection, your wears, your manifesto — they belong to you and to no one else. We will not sell it, rent it, or train external models on it.',
+    line: 'Your collection, your wears, your manifesto: they belong to you. We won’t sell them, rent them, or use them to train anyone else’s model.',
   },
   {
     roman: 'N°. II',
     title: 'The aim is not to acquire more.',
-    line: 'Atelier sells nothing else. No affiliate links, no marketplace, no promoted pieces. The studio works in your favour because it has no other interest to serve.',
+    line: 'Atelier sells nothing else. No affiliate links, no marketplace, no promoted pieces. The studio works in your favour because there is nothing else to serve.',
   },
   {
     roman: 'N°. III',
     title: 'Restraint is a feature.',
-    line: "No notifications begging you back. No streaks, no gamification, no growth-team confetti. The studio is here when you arrive and quiet when you don't.",
+    line: "No notifications begging you back. No streaks, no gamification, no growth-team confetti. The studio is here when you arrive, quiet when you don't.",
   },
 ];
 

@@ -21,6 +21,7 @@ import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import ManifestoArtefact from '../components/ManifestoArtefact.astro';
+import ClosingMasthead from '../components/ClosingMasthead.astro';
 import { BrassRule } from '@atelier/ui';
 import { ChevronRight } from 'lucide-react';
 ---
@@ -310,6 +311,9 @@ import { ChevronRight } from 'lucide-react';
         <ChevronRight size={16} strokeWidth={1.75} client:load />
       </a>
     </section>
+
+    {/* Site-wide closing masthead. */}
+    <ClosingMasthead />
   </main>
   <Footer />
 </Base>

@@ -8,6 +8,7 @@ import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Philosophy from '../components/Philosophy.astro';
+import ClosingMasthead from '../components/ClosingMasthead.astro';
 import { Hero } from '../components/landing/Hero.jsx';
 import { ConciergeDemo } from '../components/landing/ConciergeDemo.jsx';
 import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
@@ -170,6 +171,10 @@ import { BrassRule } from '@atelier/ui';
 
     {/* ── Closing CTA ────────────────────────────────────────────────── */}
     <Philosophy />
+
+    {/* Site-wide closing masthead — same brand imprint that closes
+        /about, /pricing, and both journal pages. */}
+    <ClosingMasthead />
   </main>
   <Footer />
 </Base>

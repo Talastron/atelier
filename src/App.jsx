@@ -3318,11 +3318,13 @@ function DigitalWardrobe() {
     const meta = ITEM_CONDITIONS.find((c) => c.key === condition);
     toast.show(meta ? `${item.name} · ${meta.shortcut}` : 'Updated', { kind: 'success', duration: 1800 });
   };
-  const handleLogWear = async (item, dateISO = todayISO()) => {
+  const handleLogWear = async (item, dateISO = todayISO(), occasion = '') => {
     if (!user) return;
     const history = itemWearHistory(item);
     if (history.includes(dateISO)) return; // already logged for this date
-    await handleAddItem({ ...item, wearHistory: [...history, dateISO].sort() });
+    const occasions = { ...itemWearOccasions(item) };
+    if (occasion && occasion.trim()) occasions[dateISO] = occasion.trim();
+    await handleAddItem({ ...item, wearHistory: [...history, dateISO].sort(), wearOccasions: occasions });
     const newCount = history.length + 1;
     const cpw = itemCostPerWear({ ...item, wearHistory: [...history, dateISO] });
     haptic('success');
@@ -3336,7 +3338,9 @@ function DigitalWardrobe() {
     const history = itemWearHistory(item).filter((d) => d !== dateISO);
     const notes = { ...itemWearNotes(item) };
     delete notes[dateISO];
-    await handleAddItem({ ...item, wearHistory: history, wearNotes: notes });
+    const occasions = { ...itemWearOccasions(item) };
+    delete occasions[dateISO];
+    await handleAddItem({ ...item, wearHistory: history, wearNotes: notes, wearOccasions: occasions });
   };
   const handleMarkCared = async (item) => {
     if (!user) return;
@@ -3347,7 +3351,7 @@ function DigitalWardrobe() {
   // Cascade a single wear-log across every item in an outfit. One batch write,
   // optional shared verdict written to each item's wearNotes. Skips items
   // already logged for that date (idempotent if user taps twice).
-  const handleLogOutfitWear = async (outfit, dateISO = todayISO(), verdict = '') => {
+  const handleLogOutfitWear = async (outfit, dateISO = todayISO(), verdict = '', occasion = '') => {
     if (!user || !outfit) return;
     const pieces = resolveOutfitItems(outfit, items);
     if (pieces.length === 0) return;
@@ -3359,10 +3363,14 @@ function DigitalWardrobe() {
       const notes = { ...itemWearNotes(p) };
       const v = (verdict || '').trim();
       if (v) notes[dateISO] = v;
+      const occasions = { ...itemWearOccasions(p) };
+      const occ = (occasion || '').trim();
+      if (occ) occasions[dateISO] = occ;
       batch.set(doc(userItemsRef(user.uid), p.id), {
         ...p,
         wearHistory: [...hist, dateISO].sort(),
         wearNotes: notes,
+        wearOccasions: occasions,
       });
       touched++;
     }
@@ -3384,6 +3392,14 @@ function DigitalWardrobe() {
     const trimmed = (note || '').trim();
     if (trimmed) notes[dateISO] = trimmed; else delete notes[dateISO];
     await handleAddItem({ ...item, wearNotes: notes });
+  };
+
+  const handleSetWearOccasion = async (item, dateISO, occasion) => {
+    if (!user) return;
+    const occasions = { ...itemWearOccasions(item) };
+    const trimmed = (occasion || '').trim();
+    if (trimmed) occasions[dateISO] = trimmed; else delete occasions[dateISO];
+    await handleAddItem({ ...item, wearOccasions: occasions });
   };
 
   return (
@@ -3904,7 +3920,7 @@ function DigitalWardrobe() {
               onExport={() => handleExportOutfit(openOutfit)}
               onVary={() => handleVaryOutfit(openOutfit, 'fresh')}
               onEdit={() => handleEditOutfit(openOutfit)}
-              onLogWear={(verdict) => handleLogOutfitWear(openOutfit, todayISO(), verdict)}
+              onLogWear={(verdict, occasion) => handleLogOutfitWear(openOutfit, todayISO(), verdict, occasion)}
               onOpenItem={(id) => setSelectedItemId(id)}
               onDuplicate={async () => {
                 // If legacy outfit had embedded items, migrate to itemIds
@@ -3941,9 +3957,10 @@ function DigitalWardrobe() {
               onNext={next ? () => setSelectedItemId(next.id) : null}
               positionLabel={idx >= 0 ? `${idx + 1} / ${liveItems.length}` : null}
               onOpenOutfit={(id) => { setSelectedItemId(null); setOpenOutfitId(id); }}
-              onLogWear={(dateISO) => handleLogWear(selectedItem, dateISO)}
+              onLogWear={(dateISO, occasion) => handleLogWear(selectedItem, dateISO, occasion)}
               onUnlogWear={(dateISO) => handleUnlogWear(selectedItem, dateISO)}
               onSetWearNote={(dateISO, note) => handleSetWearNote(selectedItem, dateISO, note)}
+              onSetWearOccasion={(dateISO, occasion) => handleSetWearOccasion(selectedItem, dateISO, occasion)}
               onMarkCared={() => handleMarkCared(selectedItem)}
               onToggleFavorite={() => handleToggleFavorite(selectedItem)}
               onSetCondition={(c) => handleSetItemCondition(selectedItem, c)}
@@ -7357,7 +7374,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   );
 }
 
-function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onMarkCared, onToggleFavorite, onSetCondition, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel }) {
+function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onSetWearOccasion, onMarkCared, onToggleFavorite, onSetCondition, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -7680,6 +7697,8 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   <WearVerdictInput
                     initial={itemWearNotes(item)[todayISO()] || ''}
                     onSave={(note) => onSetWearNote(todayISO(), note)}
+                    initialOccasion={itemWearOccasions(item)[todayISO()] || ''}
+                    onSaveOccasion={onSetWearOccasion ? (occ) => onSetWearOccasion(todayISO(), occ) : undefined}
                   />
                 )}
                 {(() => {
@@ -14133,6 +14152,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
 
 function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem }) {
   const [logVerdict, setLogVerdict] = useState('');
+  const [logOccasion, setLogOccasion] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -14335,7 +14355,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     disabled={logBusy}
                     onClick={async () => {
                       setLogBusy(true);
-                      try { await onLogWear(logVerdict); setLogVerdict(''); }
+                      try { await onLogWear(logVerdict, logOccasion); setLogVerdict(''); setLogOccasion(''); }
                       finally { setLogBusy(false); }
                     }}
                     className="text-[10px] tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 disabled:opacity-40 flex items-center gap-2 font-medium"
@@ -14343,6 +14363,19 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     <Calendar size={13} strokeWidth={1.5} /> {logBusy ? 'Logging…' : 'I wore this today'}
                   </button>
                 </div>
+              </div>
+              <div className="space-y-1.5 mb-3">
+                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+                  Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
+                </label>
+                <input
+                  value={logOccasion}
+                  onChange={(e) => setLogOccasion(e.target.value)}
+                  placeholder="e.g. gallery opening, client lunch, Sunday at home…"
+                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:bg-white focus:border-stone-900 outline-none transition-colors"
+                  style={{ fontSize: '16px' }}
+                  maxLength={60}
+                />
               </div>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {QUICK_VERDICT_CHIPS.map((c) => (
@@ -16355,12 +16388,17 @@ function ShoppingDirectory({ shops, saveShop, deleteShop }) {
 // Quick verdict on today's wear — chips for common reactions plus free-text.
 // Debounces saves so typing doesn't write to Firestore on every keystroke.
 const QUICK_VERDICT_CHIPS = ['Felt great', 'Too warm', 'Too cold', 'Restyle', 'Waistband loose', 'Compliments'];
-function WearVerdictInput({ initial, onSave }) {
+function WearVerdictInput({ initial, onSave, initialOccasion, onSaveOccasion }) {
   const [text, setText] = useState(initial || '');
   const [saved, setSaved] = useState(!!initial);
   const lastSentRef = React.useRef(initial || '');
 
+  const [occasion, setOccasion] = useState(initialOccasion || '');
+  const lastOccasionRef = React.useRef(initialOccasion || '');
+
   useEffect(() => { setText(initial || ''); lastSentRef.current = initial || ''; }, [initial]);
+  useEffect(() => { setOccasion(initialOccasion || ''); lastOccasionRef.current = initialOccasion || ''; }, [initialOccasion]);
+
   useEffect(() => {
     if (text === lastSentRef.current) return;
     const t = setTimeout(() => {
@@ -16371,33 +16409,60 @@ function WearVerdictInput({ initial, onSave }) {
     return () => clearTimeout(t);
   }, [text, onSave]);
 
+  useEffect(() => {
+    if (occasion === lastOccasionRef.current) return;
+    const t = setTimeout(() => {
+      lastOccasionRef.current = occasion;
+      onSaveOccasion?.(occasion);
+    }, 600);
+    return () => clearTimeout(t);
+  }, [occasion, onSaveOccasion]);
+
   const addChip = (c) => {
     setSaved(false);
     setText((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c);
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-stone-100">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <p className="text-[10px] tracking-widest uppercase text-stone-500">Today's verdict <span className="text-stone-400 normal-case tracking-normal">(optional)</span></p>
-        {saved && text && <span className="text-[10px] text-emerald-700 tracking-wider uppercase">Saved</span>}
+    <div className="mt-4 pt-4 border-t border-stone-100 space-y-3">
+      {onSaveOccasion && (
+        <div className="space-y-1.5">
+          <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+            Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
+          </label>
+          <input
+            type="text"
+            value={occasion}
+            onChange={(e) => setOccasion(e.target.value)}
+            placeholder="e.g. gallery opening, client lunch, Sunday at home…"
+            className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+            style={{ fontSize: '16px' }}
+            maxLength={60}
+          />
+        </div>
+      )}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <p className="text-[10px] tracking-widest uppercase text-stone-500">Today's verdict <span className="text-stone-400 normal-case tracking-normal">(optional)</span></p>
+          {saved && text && <span className="text-[10px] text-emerald-700 tracking-wider uppercase">Saved</span>}
+        </div>
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {QUICK_VERDICT_CHIPS.map((c) => (
+            <button key={c} type="button" onClick={() => addChip(c)}
+              className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-all">
+              {c}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => { setSaved(false); setText(e.target.value); }}
+          placeholder="e.g. felt great, restyle next time…"
+          className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-all text-stone-900 placeholder:text-stone-400"
+          maxLength={120}
+        />
       </div>
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {QUICK_VERDICT_CHIPS.map((c) => (
-          <button key={c} type="button" onClick={() => addChip(c)}
-            className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-all">
-            {c}
-          </button>
-        ))}
-      </div>
-      <input
-        type="text"
-        value={text}
-        onChange={(e) => { setSaved(false); setText(e.target.value); }}
-        placeholder="e.g. felt great, restyle next time…"
-        className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-all text-stone-900 placeholder:text-stone-400"
-        maxLength={120}
-      />
     </div>
   );
 }

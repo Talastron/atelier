@@ -3532,7 +3532,7 @@ function DigitalWardrobe() {
                 // position:sticky for descendants (they end up scoped to this
                 // wrapper instead of the main scroll ancestor). Fade-in only.
                 <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
-                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }} />}
+                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }} onEditPreferences={() => { setActiveTab('profile'); setTimeout(() => { try { window.location.hash = 'profile-style'; document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* swallow */ } }, 80); }} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
                       mode="studio"
@@ -3556,6 +3556,7 @@ function DigitalWardrobe() {
                       seedOutfit={studioSeed}
                       onSeedConsumed={() => setStudioSeed(null)}
                       onAfterSave={() => setActiveTab('lookbook')}
+                      onEditPreferences={() => { setActiveTab('profile'); setTimeout(() => { try { window.location.hash = 'profile-style'; document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* swallow */ } }, 80); }}
                     />
                   )}
                   {activeTab === 'lookbook' && (
@@ -3751,6 +3752,7 @@ function DigitalWardrobe() {
               measurements={measurements}
               ownerFirstName={(user?.displayName || '').split(' ')[0] || ''}
               user={user}
+              onEditPreferences={() => { setActiveTab('profile'); setTimeout(() => { try { window.location.hash = 'profile-style'; document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* swallow */ } }, 80); }}
             />
           )}
 
@@ -4704,7 +4706,7 @@ function ComposingPlaceholder({ title = 'The Daily Brief', stage }) {
   );
 }
 
-function WhyThisPanel({ weather, season, styleProfile, temperature, itemCount }) {
+function WhyThisPanel({ weather, season, styleProfile, temperature, itemCount, onEditPreferences }) {
   const tempLabel = temperature <= 0.4 ? 'Safe' : temperature >= 0.9 ? 'Surprise' : 'Balanced';
   return (
     <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700">
@@ -4721,6 +4723,15 @@ function WhyThisPanel({ weather, season, styleProfile, temperature, itemCount })
       <p className="mt-2 text-xs italic text-stone-500">
         Composed from your closet. Your data stays with you.
       </p>
+      {onEditPreferences && (
+        <button
+          type="button"
+          onClick={onEditPreferences}
+          className="mt-3 text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 inline-flex items-center gap-1 underline-offset-4 hover:underline"
+        >
+          Update preferences →
+        </button>
+      )}
     </div>
   );
 }
@@ -4738,6 +4749,9 @@ function DailyBriefCard({
   onSaveOutfit,
   onLogOutfitWear,
   onOpenOutfit,
+  onEditPreferences,  // optional: jumps to Profile → Style so the user can
+                       // change palette / formality / temperament from the
+                       // "What the Concierge saw" capsule.
   isAiEnabled,
 }) {
   const uid = user?.uid || 'anon';
@@ -4980,6 +4994,7 @@ function DailyBriefCard({
           styleProfile={measurements}
           temperature={aiTemperature}
           itemCount={items?.length ?? 0}
+          onEditPreferences={onEditPreferences}
         />
       )}
 
@@ -5489,7 +5504,7 @@ function sortWardrobeItems(items, sortBy) {
   return arr.sort((a, b) => favBoost(a, b) || comparator(a, b));
 }
 
-function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge, onOpenBrief }) {
+function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge, onOpenBrief, onEditPreferences }) {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const enterSelectMode = (firstId = null) => {
@@ -5855,6 +5870,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           onSaveOutfit={onSaveOutfit}
           onLogOutfitWear={onLogOutfitWear}
           onOpenOutfit={onOpenBrief}
+          onEditPreferences={onEditPreferences}
         />
         <TodayTile
           items={items}
@@ -6225,6 +6241,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           onSaveOutfit={onSaveOutfit}
           onLogOutfitWear={onLogOutfitWear}
           onOpenOutfit={onOpenBrief}
+          onEditPreferences={onEditPreferences}
         />
 
         <TodayTile
@@ -9287,7 +9304,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   );
 }
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed }) {
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -10134,6 +10151,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   styleProfile={measurements}
                   temperature={aiTemperature}
                   itemCount={items.filter(it => it.status === 'owned').length}
+                  onEditPreferences={onEditPreferences}
                 />
               </details>
             </div>
@@ -13461,7 +13479,7 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
 //   • error flag if a reply fails (offers retry of last user message)
 //   • input controlled with submit-on-enter (shift+enter = new line)
 //   • auto-scrolls to bottom on new messages
-function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user }) {
+function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences }) {
   useEscapeKey(onClose);
 
   // Time-of-day greeting — sets the tone before the user even types.
@@ -13661,6 +13679,15 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
                   {weather && <li>· {weather.temp != null ? `${Math.round(weather.temp)}°C` : 'no forecast'} · {currentSeason}</li>}
                   {paletteLabel && <li>· Palette: {paletteLabel}</li>}
                 </ul>
+                {onEditPreferences && (
+                  <button
+                    type="button"
+                    onClick={() => { onClose?.(); onEditPreferences(); }}
+                    className="mt-2 text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                  >
+                    Update preferences →
+                  </button>
+                )}
               </details>
             </div>
           );

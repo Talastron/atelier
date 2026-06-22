@@ -17054,6 +17054,9 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
   // StyleManifestoCard — dark surface, no shadow per convention
   // (dark on light page already reads as elevated). Padding harmonised
   // to p-6 md:p-8 matching the Insights section cards.
+  const WEARS_THRESHOLD = 30;
+  const totalWears = items.reduce((sum, it) => sum + itemWearCount(it), 0);
+
   return (
     <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-8 relative overflow-hidden">
       <div className="absolute -right-10 -bottom-10 opacity-[0.04] pointer-events-none">
@@ -17069,6 +17072,19 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
           <p className="text-stone-400 text-sm leading-relaxed max-w-xl mt-3">
             The Concierge reads your most-worn pieces, outfit pairings, and saved inspirations — and writes a private three-paragraph brief of your aesthetic. Refresh when your taste shifts.
           </p>
+          {!manifesto && !isStreaming && totalWears < WEARS_THRESHOLD && (
+            <div className="mt-4 flex items-center gap-3 max-w-xs">
+              <div className="flex-1 h-1 rounded-full bg-stone-700 overflow-hidden">
+                <div
+                  className="h-full bg-brass-400 transition-[width] duration-700"
+                  style={{ width: `${Math.min(100, (totalWears / WEARS_THRESHOLD) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[11px] tracking-wide tabular-nums text-stone-400 shrink-0">
+                {totalWears} / {WEARS_THRESHOLD} wears
+              </span>
+            </div>
+          )}
         </div>
         <button onClick={run} disabled={busy} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 flex items-center gap-2 shrink-0 font-medium">
           <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Writing…' : (manifesto ? 'Refresh' : 'Generate')}

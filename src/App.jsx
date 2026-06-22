@@ -9381,7 +9381,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
             )}
 
             {!wornPhoto && gridPieces.length > 0 && (
-              <div className={`absolute inset-0 ${isHero ? 'px-9 pt-9 pb-3 md:px-12 md:pt-12 md:pb-4' : 'px-7 pt-7 pb-3 sm:px-9 sm:pt-9 sm:pb-4'} grid ${gridCols} gap-4 sm:gap-5`}>
+              <div className={`absolute inset-0 ${isHero ? 'px-9 pt-12 pb-3 md:px-12 md:pt-14 md:pb-4' : 'px-7 pt-10 pb-3 sm:px-9 sm:pt-12 sm:pb-4'} grid ${gridCols} gap-4 sm:gap-5`}>
                 {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
                   const piece = gridPieces[slotIdx];
                   if (!piece) return <div key={slotIdx} aria-hidden="true" />;

@@ -15171,6 +15171,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [photoBusy, setPhotoBusy] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
   const [newTag, setNewTag] = useState('');
+  const [wearLogExpanded, setWearLogExpanded] = useState(false);
   const toast = useToast();
   const pieces = resolveOutfitItems(outfit, items);
   const total = pieces.reduce((sum, it) => sum + Number(it.price || 0), 0);
@@ -15605,9 +15606,10 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               </div>
             )}
 
-            {/* Wear-this-look card */}
+            {/* Wear-this-look card — progressive disclosure */}
             {onLogWear && (
               <div className="bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6 smooth-shadow">
+                {/* Always-visible header */}
                 <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 mb-1.5">
@@ -15674,7 +15676,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                               : `Logged for ${new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
                             { kind: 'success' }
                           );
-                          setLogVerdict(''); setLogOccasion(''); setLogDate(todayISO());
+                          setLogVerdict(''); setLogOccasion(''); setLogDate(todayISO()); setWearLogExpanded(false);
                         } catch (err) {
                           toast.show(err?.message || 'Could not log wear', { kind: 'error' });
                         } finally { setLogBusy(false); }
@@ -15686,35 +15688,70 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     </button>
                   </div>
                 </div>
-                <div className="space-y-1.5 mb-3">
-                  <label className="block text-[10px] tracking-widests uppercase text-stone-500 font-medium">
-                    Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
-                  </label>
-                  <input
-                    value={logOccasion}
-                    onChange={(e) => setLogOccasion(e.target.value)}
-                    placeholder="e.g. gallery opening, client lunch, Sunday at home…"
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:bg-white focus:border-stone-900 outline-none transition-colors"
-                    style={{ fontSize: '16px' }}
-                    maxLength={60}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {QUICK_VERDICT_CHIPS.map((c) => (
-                    <button key={c} type="button"
-                      onClick={() => setLogVerdict((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c)}
-                      className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
-                      {c}
+
+                {/* Collapsed: small expand link */}
+                {!wearLogExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => setWearLogExpanded(true)}
+                    className="text-[11px] tracking-wide text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                  >
+                    + Add a note, photo or occasion
+                  </button>
+                )}
+
+                {/* Expanded: full form */}
+                {wearLogExpanded && (
+                  <div className="space-y-3 animate-in fade-in duration-200">
+                    {/* Snap fit — moved here from toolbar; only relevant in rich-entry mode */}
+                    {wornPhotos.length < 6 && (
+                      <label className="text-[10px] tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center gap-2 cursor-pointer w-fit" title="Snap a selfie wearing this look">
+                        <Camera size={13} strokeWidth={1.5} /> Snap fit
+                        <input type="file" accept="image/*" capture="user" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
+                      </label>
+                    )}
+                    {/* Occasion */}
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+                        Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
+                      </label>
+                      <input
+                        value={logOccasion}
+                        onChange={(e) => setLogOccasion(e.target.value)}
+                        placeholder="e.g. gallery opening, client lunch, Sunday at home…"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:bg-white focus:border-stone-900 outline-none transition-colors"
+                        style={{ fontSize: '16px' }}
+                        maxLength={60}
+                      />
+                    </div>
+                    {/* Verdict chips */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {QUICK_VERDICT_CHIPS.map((c) => (
+                        <button key={c} type="button"
+                          onClick={() => setLogVerdict((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c)}
+                          className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Verdict free-text */}
+                    <input
+                      value={logVerdict}
+                      onChange={(e) => setLogVerdict(e.target.value)}
+                      placeholder="Optional verdict — applies to every piece…"
+                      maxLength={120}
+                      className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-colors"
+                    />
+                    {/* Collapse link */}
+                    <button
+                      type="button"
+                      onClick={() => setWearLogExpanded(false)}
+                      className="text-[11px] tracking-wide text-stone-400 hover:text-stone-700 underline-offset-4 hover:underline transition-colors"
+                    >
+                      − Hide options
                     </button>
-                  ))}
-                </div>
-                <input
-                  value={logVerdict}
-                  onChange={(e) => setLogVerdict(e.target.value)}
-                  placeholder="Optional verdict — applies to every piece…"
-                  maxLength={120}
-                  className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-colors"
-                />
+                  </div>
+                )}
               </div>
             )}
 

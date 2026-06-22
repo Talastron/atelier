@@ -616,6 +616,72 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
   }
 }
 
+// Streaming variant of geminiText. Calls onChunk(text) as fragments arrive
+// from the model. Returns the fully-accumulated text after the stream
+// completes. Use this for free-form text replies (Concierge, Manifesto,
+// wardrobe audit narrative) — NOT for jsonMode calls (the JSON is only
+// valid when whole; partial chunks aren't parseable). Single Firebase AI
+// Logic round-trip; streaming just delivers the tokens incrementally as
+// the model produces them, so first text appears in ~200ms instead of the
+// 3-5s blocking wait of generateContent.
+//
+// `onChunk` is optional — if not provided, the function still returns the
+// final string but with no per-chunk callback (degrades to "I waited for
+// the whole reply" behaviour, useful for callers that want to opt out of
+// streaming UI without changing the call site signature).
+export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled', onChunk = null) {
+  checkRateLimit();      // per-browser burst limit (same as geminiText)
+  checkUserDailyCap();   // per-user daily cap (same as geminiText)
+  try {
+    const modelName = opts.model || 'gemini-2.5-flash';
+    const ai = getAiSafe();
+    const model = getGenerativeModel(ai, {
+      model: modelName,
+      generationConfig: {
+        temperature: opts.temperature ?? 0.7,
+        // NOTE: jsonMode intentionally omitted — partial JSON chunks
+        // aren't valid JSON. Use plain geminiText({jsonMode:true}) for
+        // structured output.
+      },
+    });
+    const result = await model.generateContentStream(prompt);
+    let accumulated = '';
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (!text) continue;
+      accumulated += text;
+      // Defensive: if the caller's UI callback throws (e.g. a stale React
+      // setState reference, a missing DOM target), don't let it abort the
+      // stream. We've already consumed the tokens — we want to finish
+      // accumulating + record the call for usage tracking. Log so the bug
+      // is visible in DevTools but keep streaming.
+      if (onChunk) {
+        try { onChunk(text); }
+        catch (cbErr) { console.warn('[gemini-stream] onChunk threw:', cbErr?.message || cbErr); }
+      }
+    }
+    // Stream complete. Resolve the final response for token counting.
+    const finalResponse = await result.response;
+    recordCall();        // record only on successful API reach (matches geminiText pattern)
+    recordUserCall();
+
+    const promptStr = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
+    const tokens = extractTokenCounts({ response: finalResponse }, promptStr.length, accumulated.length);
+    logAiUsage({
+      feature,
+      model: modelName,
+      hasVision: false,
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
+      estimated: tokens.estimated,
+    });
+    return accumulated;
+  } catch (err) {
+    if (!isConfigError(err)) recordCall();
+    throw mapGeminiError(err);
+  }
+}
+
 // Multimodal: prompt + a single image (data URL). Same options as geminiText.
 // `feature`: short identifier for usage tracking.
 export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature = 'unlabeled') {

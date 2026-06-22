@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
@@ -1345,7 +1345,7 @@ Reply with the line only.`;
 //
 // Returns the assistant's reply text. Throws on AI failure so the
 // caller can surface a graceful error in the chat thread.
-async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '' }) {
+async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '', onChunk = null }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
 
   // Compress the wardrobe into a per-category inventory line. Cap at
@@ -1439,11 +1439,11 @@ When asked anything else (critique, packing, advice), reply in 1-3 short paragra
 
   const prompt = `${systemBlock}\n\n──────\n\n${conversationBlock}\n\nSTYLIST:`;
 
-  const reply = await geminiText(prompt, { temperature: 0.75 }, 'concierge');
+  const reply = await geminiTextStream(prompt, { temperature: 0.75 }, 'concierge', onChunk);
   return (reply || '').trim();
 }
 
-async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [] }) {
+async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [], onChunk = null }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
   if (owned.length < 5) throw new Error('Add at least a few items first.');
@@ -1493,7 +1493,7 @@ UK English. Warm, observational, specific. No platitudes. No bullet points.
 Data:
 ${lines.join('\n')}`;
 
-  const text = await geminiText(prompt, { temperature: 0.7 }, 'manifesto');
+  const text = await geminiTextStream(prompt, { temperature: 0.7 }, 'manifesto', onChunk);
   if (!text) throw new Error('The Concierge did not respond');
   return text.trim();
 }
@@ -13562,6 +13562,8 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   const [error, setError] = useState(null);
   const scrollRef = React.useRef(null);
   const textareaRef = React.useRef(null);
+  const cancelledRef = React.useRef(false);
+  useEffect(() => () => { cancelledRef.current = true; }, []);
 
   // Hydrate persisted thread from Firestore on mount. If there is a saved
   // thread, restore it; otherwise the greeting-only initial state stands.
@@ -13593,24 +13595,65 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   const send = async (textOverride) => {
     const text = (textOverride ?? input).trim();
     if (!text || busy) return;
-    const next = [...messages, { role: 'user', text, ts: new Date().toISOString() }];
-    setMessages(next);
-    await saveCurrentThread(next);
-    setInput('');
+    // CRITICAL: set busy immediately, before any await, to close the
+    // double-click / double-send race. Any second invocation that slips past
+    // the guard above will be stopped here before it can launch a stream.
     setBusy(true);
     setError(null);
+
+    const userMsg = { role: 'user', text, ts: new Date().toISOString() };
+    const afterUser = [...messages, userMsg];
+    setMessages(afterUser);
+    setInput('');
+    await saveCurrentThread(afterUser);
+
+    // Insert an empty placeholder assistant message that will fill in as
+    // chunks arrive. The streaming=true flag lets the bubble render a
+    // pulsing caret-style indicator while text is mid-stream.
+    const placeholder = { role: 'assistant', text: '', ts: new Date().toISOString(), streaming: true };
+    setMessages([...afterUser, placeholder]);
+
+    let accumulated = '';
     try {
-      const reply = await generateConciergeReply({
-        messages: next,
+      await generateConciergeReply({
+        messages: afterUser,
         items,
         outfits,
         styleProfile,
         ownerFirstName,
+        onChunk: (chunk) => {
+          if (cancelledRef.current) return;
+          accumulated += chunk;
+          // Update the last (placeholder) message's text in place. React
+          // re-renders the bubble; user sees text grow smoothly.
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.streaming) {
+              next[next.length - 1] = { ...last, text: accumulated };
+            }
+            return next;
+          });
+        },
       });
-      const withReply = [...next, { role: 'assistant', text: reply || '(no reply)', ts: new Date().toISOString() }];
-      setMessages(withReply);
-      await saveCurrentThread(withReply);
+
+      // Bail out if panel was closed while stream was in flight.
+      if (cancelledRef.current) return;
+
+      // Stream done. Finalize the placeholder (strip streaming flag) and
+      // persist to Firestore. Use a fresh build of the final message so the
+      // saved thread matches what the user sees.
+      const finalMsg = { role: 'assistant', text: accumulated || '(no reply)', ts: new Date().toISOString() };
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = finalMsg;
+        return next;
+      });
+      await saveCurrentThread([...afterUser, finalMsg]);
     } catch (err) {
+      if (cancelledRef.current) return;
+      // Strip the placeholder so the user doesn't see an empty bubble alongside the error
+      setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Something interrupted us. Try again?');
     } finally {
       setBusy(false);
@@ -13618,25 +13661,52 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   };
 
   const retry = async () => {
-    // Re-send the last user message (the one that failed).
-    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-    if (!lastUser) return;
-    // Drop any trailing failed assistant placeholder if exists; messages
-    // already excludes it since we never added it on error.
-    setError(null);
+    if (busy) return;
     setBusy(true);
+    setError(null);
+
+    // Insert a streaming placeholder — mirrors the send flow so the user
+    // sees tokens arrive rather than waiting for a full non-streaming reply.
+    const placeholder = { role: 'assistant', text: '', ts: new Date().toISOString(), streaming: true };
+    setMessages((prev) => [...prev, placeholder]);
+
+    // Capture the messages at retry time (closed over); retry replays against
+    // the existing thread without adding a new user message, so we use the
+    // closure-captured `messages` rather than an afterUser snapshot.
+    let accumulated = '';
     try {
-      const reply = await generateConciergeReply({
+      await generateConciergeReply({
         messages,
         items,
         outfits,
         styleProfile,
         ownerFirstName,
+        onChunk: (chunk) => {
+          if (cancelledRef.current) return;
+          accumulated += chunk;
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.streaming) {
+              next[next.length - 1] = { ...last, text: accumulated };
+            }
+            return next;
+          });
+        },
       });
-      const withReply = [...messages, { role: 'assistant', text: reply || '(no reply)', ts: new Date().toISOString() }];
-      setMessages(withReply);
-      await saveCurrentThread(withReply);
+
+      if (cancelledRef.current) return;
+
+      const finalMsg = { role: 'assistant', text: accumulated || '(no reply)', ts: new Date().toISOString() };
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = finalMsg;
+        return next;
+      });
+      await saveCurrentThread([...messages, finalMsg]);
     } catch (err) {
+      if (cancelledRef.current) return;
+      setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Still no luck — try again in a moment.');
     } finally {
       setBusy(false);
@@ -13757,9 +13827,9 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         {/* MESSAGES — vertical scroll, two bubble styles */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-5">
           {messages.map((m, i) => (
-            <ConciergeMessage key={i} role={m.role} text={m.text} />
+            <ConciergeMessage key={i} role={m.role} text={m.text} streaming={!!m.streaming} />
           ))}
-          {busy && (
+          {busy && !messages.some((m) => m.streaming) && (
             <div className="flex items-center gap-2 text-stone-400 text-sm">
               <span className="inline-flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '0ms' }} />
@@ -13826,7 +13896,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
 // (white card with brass-rule shoulder eyebrow); the client's voice is
 // quieter (dark pill aligned right). Whitespace-pre-line preserves the
 // bullet lists Gemini returns.
-function ConciergeMessage({ role, text }) {
+function ConciergeMessage({ role, text, streaming = false }) {
   if (role === 'assistant') {
     return (
       <div className="flex flex-col items-start max-w-[90%]">
@@ -13835,7 +13905,18 @@ function ConciergeMessage({ role, text }) {
           <span className="text-[9px] tracking-[0.28em] uppercase text-stone-500">Stylist</span>
         </div>
         <div className="bg-white rounded-2xl rounded-tl-md ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_12px_-6px_rgba(28,25,23,0.12)] px-5 py-4">
-          <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">{text}</p>
+          {streaming && !text ? (
+            <span className="inline-flex gap-1 items-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '300ms' }} />
+            </span>
+          ) : (
+            <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
+              {text}
+              {streaming && <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -15591,9 +15672,14 @@ function BackfillCard({ items = [], shops = [], onUpdateItem }) {
 function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfits = [], inspirations = [] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [streamingText, setStreamingText] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const cancelledRef = useRef(false);
   const toast = useToast();
   const manifesto = measurements?.styleManifesto || '';
   const generatedAt = measurements?.styleManifestoAt || null;
+
+  useEffect(() => () => { cancelledRef.current = true; }, []);
 
   // 90-day seasonal nudge: compute age of the current manifesto so we can
   // show a quiet inline prompt to refresh when it's been more than a season.
@@ -15603,13 +15689,30 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
   const manifestoStale = manifesto && manifestoAgeDays !== null && manifestoAgeDays >= 90;
 
   const run = async () => {
-    setBusy(true); setError(null);
+    if (busy) return;
+    setBusy(true); setError(null); setStreamingText(''); setIsStreaming(true);
+    let accumulated = '';
     try {
-      const text = await generateStyleManifestoWithGemini({ items, outfits, inspirations });
+      const text = await generateStyleManifestoWithGemini({
+        items,
+        outfits,
+        inspirations,
+        onChunk: (chunk) => {
+          if (cancelledRef.current) return;
+          accumulated += chunk;
+          setStreamingText(accumulated);
+        },
+      });
+      if (cancelledRef.current) return;
       await saveMeasurements({ ...measurements, styleManifesto: text, styleManifestoAt: new Date().toISOString() });
       toast.show('Manifesto refreshed', { kind: 'success' });
-    } catch (e) { setError(e?.message || 'Failed.'); }
-    finally { setBusy(false); }
+    } catch (e) {
+      if (cancelledRef.current) return;
+      setError(e?.message || 'Failed.');
+    } finally {
+      setIsStreaming(false);
+      setBusy(false);
+    }
   };
 
   // StyleManifestoCard — dark surface, no shadow per convention
@@ -15651,10 +15754,13 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
         </div>
       )}
 
-      {manifesto && (
+      {(manifesto || isStreaming) && (
         <div className="relative z-10 mt-6 bg-[#F7F5F2] text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] whitespace-pre-line font-display italic">
-          {manifesto}
-          {generatedAt && (
+          {isStreaming ? streamingText : manifesto}
+          {isStreaming && (
+            <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />
+          )}
+          {!isStreaming && generatedAt && (
             <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic flex items-center gap-3">
               <span className="brass-rule" aria-hidden="true"></span>
               Written {new Date(generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}

@@ -15043,6 +15043,8 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [editingTags, setEditingTags] = useState(false);
+  const [newTag, setNewTag] = useState('');
   const toast = useToast();
   const pieces = resolveOutfitItems(outfit, items);
   const total = pieces.reduce((sum, it) => sum + Number(it.price || 0), 0);
@@ -15213,16 +15215,67 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               <p className="italic">"{outfit.reasoning}"</p>
             </div>
           )}
-          {outfit.tags && outfit.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-5">
-              {outfit.tags.slice(0, 5).map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
-                >
-                  {tag}
-                </span>
-              ))}
+          {((outfit.tags && outfit.tags.length > 0) || typeof onSaveOutfit === 'function') && (
+            <div className="mt-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] tracking-widest uppercase text-stone-500">Tags</span>
+                {typeof onSaveOutfit === 'function' && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditingTags((v) => !v); setNewTag(''); }}
+                    className="text-[10px] tracking-wide text-stone-400 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                  >
+                    {editingTags ? 'Done' : 'Edit'}
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(outfit.tags || []).map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
+                  >
+                    {tag}
+                    {editingTags && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = (outfit.tags || []).filter((t) => t !== tag);
+                          onSaveOutfit?.({ ...outfit, tags: next });
+                        }}
+                        aria-label={`Remove ${tag}`}
+                        className="text-stone-400 hover:text-stone-900 ml-0.5 leading-none transition-colors"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </span>
+                ))}
+                {editingTags && (outfit.tags || []).length < 8 && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const t = newTag.trim().toLowerCase();
+                      if (!t) return;
+                      const existing = outfit.tags || [];
+                      if (existing.includes(t)) { setNewTag(''); return; }
+                      if (existing.length >= 8) return;
+                      onSaveOutfit?.({ ...outfit, tags: [...existing, t] });
+                      setNewTag('');
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-stone-300 bg-white"
+                  >
+                    <input
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      placeholder="+ add tag"
+                      maxLength={20}
+                      className="text-[10px] tracking-wide uppercase bg-transparent outline-none w-20"
+                      style={{ fontSize: '16px' }}
+                    />
+                  </form>
+                )}
+              </div>
             </div>
           )}
 

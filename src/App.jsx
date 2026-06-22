@@ -15173,6 +15173,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [newTag, setNewTag] = useState('');
   const [wearLogExpanded, setWearLogExpanded] = useState(false);
   const [paletteFilter, setPaletteFilter] = useState(null); // colour name or null
+  const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
   const toast = useToast();
   const pieces = resolveOutfitItems(outfit, items);
   const total = pieces.reduce((sum, it) => sum + Number(it.price || 0), 0);
@@ -15298,21 +15299,44 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <span className="hidden sm:inline">Share</span>
                 </button>
               )}
-              {onEdit && (
-                <button onClick={onEdit}
-                  className="hidden sm:inline-flex px-3 py-2.5 rounded-full text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200"
-                  title="Restyle this look in the Studio">
-                  Restyle
+              {/* Overflow menu: Restyle · Duplicate · Delete */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setToolbarMenuOpen((v) => !v)}
+                  aria-label="More actions"
+                  className="p-2.5 rounded-full text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200"
+                >
+                  <MoreHorizontal size={16} strokeWidth={1.5} />
                 </button>
-              )}
-              <button onClick={async () => { await onDuplicate?.(); toast.show('Duplicated · edit anytime', { kind: 'success' }); }}
-                className="hidden sm:inline-flex px-3 py-2.5 rounded-full text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200"
-                title="Save a copy of this look">
-                Duplicate
-              </button>
-              <button onClick={() => setConfirmDelete(true)} className="p-2.5 rounded-full text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors duration-200" aria-label="Delete look" title="Delete look">
-                <Trash2 size={16} strokeWidth={1.5} />
-              </button>
+                {toolbarMenuOpen && (
+                  <>
+                    {/* Backdrop to dismiss */}
+                    <div className="fixed inset-0 z-40" onClick={() => setToolbarMenuOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1.5 z-50 bg-white rounded-2xl shadow-2xl border border-stone-200 py-1.5 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-200">
+                      {onEdit && (
+                        <button type="button" onClick={() => { setToolbarMenuOpen(false); onEdit(); }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-3">
+                          <Wand2 size={14} strokeWidth={1.5} className="text-stone-400" />
+                          Restyle in Studio
+                        </button>
+                      )}
+                      <button type="button"
+                        onClick={async () => { setToolbarMenuOpen(false); await onDuplicate?.(); toast.show('Duplicated · edit anytime', { kind: 'success' }); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-3">
+                        <Copy size={14} strokeWidth={1.5} className="text-stone-400" />
+                        Duplicate
+                      </button>
+                      <div className="border-t border-stone-100 my-1" />
+                      <button type="button" onClick={() => { setToolbarMenuOpen(false); setConfirmDelete(true); }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3">
+                        <Trash2 size={14} strokeWidth={1.5} />
+                        Delete look
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           ) : (
             <div className="flex gap-2">

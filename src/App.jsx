@@ -1419,6 +1419,34 @@ async function generateConciergeReply({ messages, items = [], outfits = [], styl
 ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.occasion}`).join('\n')}\n`
     : '';
 
+  // Indexed item list — the model uses these IDs to anchor specific
+  // mentions. Wrapped in <<item:id|name>> markers so the renderer can
+  // swap each marker for an inline thumbnail chip without fuzzy name-
+  // matching. We cap at 80 items to keep the prompt small; that's enough
+  // coverage for the typical wardrobe size where this matters.
+  const itemIndex = items
+    .filter((i) => i && !i.deletedAt && (i.status === 'owned' || !i.status))
+    .slice(0, 80)
+    .map((i) => {
+      const display = [i.brand, i.name, i.subCategory || i.category]
+        .filter(Boolean)
+        .join(' · ')
+        .slice(0, 60);
+      return `  - ${i.id} | ${display}`;
+    })
+    .join('\n');
+
+  const chipRule = itemIndex
+    ? `\nWhen you reference a SPECIFIC piece from the wardrobe, wrap it in this exact marker form: <<item:ID|display name>> — picking the id from the indexed list below. Wrap only the piece itself, not the surrounding sentence. Examples:
+- Right: "Pair the <<item:i_xyz|ivory silk shirt>> with the <<item:i_abc|charcoal wool trouser>>."
+- Wrong: "<<item:i_xyz|Pair the ivory silk shirt>>"
+- Wrong: a marker for a piece you can't find in the indexed list — invent neither id nor item.
+
+Indexed wardrobe items (id | display):
+${itemIndex}
+`
+    : '';
+
   const systemBlock = `You are the personal stylist of ${ownerFirstName || 'the user'}, working from a complete view of their wardrobe. Your voice is warm, considered, decisive. You speak like a trusted couturier — never sycophantic, never corporate. Brief and confident; one short paragraph plus a tidy bullet list when proposing pieces. Avoid filler ("Great question!"), avoid generic style advice. Reference specific pieces by exact name from the inventory below.
 
 Today is ${todayLabel}.
@@ -1427,7 +1455,7 @@ THE WARDROBE (live inventory — only suggest from this):
 ${inventory || '(no items yet)'}
 ${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
 ${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}
-${wearContextsBlock}
+${chipRule}${wearContextsBlock}
 When proposing an outfit, format as:
 A one-sentence rationale, then:
 • [Piece name] — short reason

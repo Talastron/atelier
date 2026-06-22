@@ -4147,38 +4147,47 @@ function DigitalWardrobe() {
             />
           )}
 
-          {openOutfit && (
-            <OutfitDetailView
-              outfit={openOutfit}
-              items={liveItems}
-              onClose={() => setOpenOutfitId(null)}
-              onDelete={async () => { await handleDeleteOutfit(openOutfit.id); setOpenOutfitId(null); }}
-              onSaveOutfit={handleSaveOutfit}
-              onShare={() => handleShareOutfit(openOutfit)}
-              onExport={() => handleExportOutfit(openOutfit)}
-              onVary={() => handleVaryOutfit(openOutfit, 'fresh')}
-              onEdit={() => handleEditOutfit(openOutfit)}
-              onLogWear={(dateISO, verdict, occasion) => handleLogOutfitWear(openOutfit, dateISO, verdict, occasion)}
-              measurements={measurements}
-              onOpenItem={(id) => setSelectedItemId(id)}
-              onDuplicate={async () => {
-                // If legacy outfit had embedded items, migrate to itemIds
-                const itemIds = Array.isArray(openOutfit.itemIds)
-                  ? openOutfit.itemIds
-                  : (openOutfit.items || []).map((i) => i.id).filter(Boolean);
-                const newOutfit = {
-                  id: newId(),
-                  name: `${openOutfit.name} (copy)`,
-                  itemIds,
-                  createdAt: new Date().toISOString(),
-                  ...(openOutfit.reasoning ? { reasoning: openOutfit.reasoning } : {}),
-                  ...(openOutfit.intent ? { intent: openOutfit.intent } : {}),
-                };
-                await handleSaveOutfit(newOutfit);
-                setOpenOutfitId(newOutfit.id);
-              }}
-            />
-          )}
+          {openOutfit && (() => {
+            // Prev/next look navigation — index into outfits array for magazine page-turn.
+            const currentIdx = outfits.findIndex((o) => o.id === openOutfitId);
+            const prevOutfitId = currentIdx > 0 ? outfits[currentIdx - 1]?.id : null;
+            const nextOutfitId = currentIdx >= 0 && currentIdx < outfits.length - 1 ? outfits[currentIdx + 1]?.id : null;
+            return (
+              <OutfitDetailView
+                outfit={openOutfit}
+                items={liveItems}
+                onClose={() => setOpenOutfitId(null)}
+                onDelete={async () => { await handleDeleteOutfit(openOutfit.id); setOpenOutfitId(null); }}
+                onSaveOutfit={handleSaveOutfit}
+                onShare={() => handleShareOutfit(openOutfit)}
+                onExport={() => handleExportOutfit(openOutfit)}
+                onVary={() => handleVaryOutfit(openOutfit, 'fresh')}
+                onEdit={() => handleEditOutfit(openOutfit)}
+                onLogWear={(dateISO, verdict, occasion) => handleLogOutfitWear(openOutfit, dateISO, verdict, occasion)}
+                measurements={measurements}
+                onOpenItem={(id) => setSelectedItemId(id)}
+                prevOutfitId={prevOutfitId}
+                nextOutfitId={nextOutfitId}
+                onPick={(id) => setOpenOutfitId(id)}
+                onDuplicate={async () => {
+                  // If legacy outfit had embedded items, migrate to itemIds
+                  const itemIds = Array.isArray(openOutfit.itemIds)
+                    ? openOutfit.itemIds
+                    : (openOutfit.items || []).map((i) => i.id).filter(Boolean);
+                  const newOutfit = {
+                    id: newId(),
+                    name: `${openOutfit.name} (copy)`,
+                    itemIds,
+                    createdAt: new Date().toISOString(),
+                    ...(openOutfit.reasoning ? { reasoning: openOutfit.reasoning } : {}),
+                    ...(openOutfit.intent ? { intent: openOutfit.intent } : {}),
+                  };
+                  await handleSaveOutfit(newOutfit);
+                  setOpenOutfitId(newOutfit.id);
+                }}
+              />
+            );
+          })()}
 
           {selectedItem && (() => {
             // Build prev/next from the live wardrobe order for swipe nav.
@@ -15158,7 +15167,7 @@ const PRESET_TAG_CATEGORIES = [
   { label: 'Season', tags: ['summer evening', 'winter layers', 'spring light', 'autumn warm'] },
 ];
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem, measurements }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem, measurements, prevOutfitId = null, nextOutfitId = null, onPick = null }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logOccasion, setLogOccasion] = useState('');
   const [logBusy, setLogBusy] = useState(false);
@@ -15241,6 +15250,22 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
     const next = wornPhotos.filter((_, i) => i !== idx);
     await onSaveOutfit({ ...outfit, wornPhotos: next });
   };
+  // Keyboard navigation: ← → to flip between sibling looks
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.target?.tagName === 'INPUT' || e.target?.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowLeft' && prevOutfitId) {
+        e.preventDefault();
+        onPick?.(prevOutfitId);
+      } else if (e.key === 'ArrowRight' && nextOutfitId) {
+        e.preventDefault();
+        onPick?.(nextOutfitId);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [prevOutfitId, nextOutfitId, onPick]);
+
   // Compute colour palette here (used in both render and later for Commit 3 filter)
   const colourPalette = (() => {
     const counts = new Map();
@@ -15259,6 +15284,28 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 
   return (
     <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+      {/* Prev/next navigation — fixed at viewport edges. Hidden on mobile
+          where edge-tap conflicts with normal scroll/swipe gestures. */}
+      {prevOutfitId && (
+        <button
+          type="button"
+          onClick={() => onPick?.(prevOutfitId)}
+          aria-label="Previous look"
+          className="hidden lg:flex fixed left-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-white/85 backdrop-blur border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-white shadow-md transition-all hover:scale-105"
+        >
+          <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
+        </button>
+      )}
+      {nextOutfitId && (
+        <button
+          type="button"
+          onClick={() => onPick?.(nextOutfitId)}
+          aria-label="Next look"
+          className="hidden lg:flex fixed right-4 top-1/2 -translate-y-1/2 z-30 w-12 h-12 items-center justify-center rounded-full bg-white/85 backdrop-blur border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-white shadow-md transition-all hover:scale-105"
+        >
+          <ChevronRight size={18} strokeWidth={1.5} />
+        </button>
+      )}
       {/* Sticky toolbar */}
       <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">

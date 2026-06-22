@@ -3839,6 +3839,7 @@ function DigitalWardrobe() {
               ownerFirstName={(user?.displayName || '').split(' ')[0] || ''}
               user={user}
               onEditPreferences={() => { setActiveTab('profile'); setTimeout(() => { try { window.location.hash = 'profile-style'; document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* swallow */ } }, 80); }}
+              onOpenItem={(id) => { setIsConciergeOpen(false); setSelectedItemId(id); }}
             />
           )}
 
@@ -13568,7 +13569,7 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
 //   • error flag if a reply fails (offers retry of last user message)
 //   • input controlled with submit-on-enter (shift+enter = new line)
 //   • auto-scrolls to bottom on new messages
-function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences }) {
+function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences, onOpenItem = null }) {
   useEscapeKey(onClose);
 
   // Time-of-day greeting — sets the tone before the user even types.
@@ -13855,7 +13856,14 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         {/* MESSAGES — vertical scroll, two bubble styles */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-5">
           {messages.map((m, i) => (
-            <ConciergeMessage key={i} role={m.role} text={m.text} streaming={!!m.streaming} />
+            <ConciergeMessage
+              key={i}
+              role={m.role}
+              text={m.text}
+              streaming={!!m.streaming}
+              items={items}
+              onOpenItem={onOpenItem}
+            />
           ))}
           {busy && !messages.some((m) => m.streaming) && (
             <div className="flex items-center gap-2 text-stone-400 text-sm">
@@ -13920,11 +13928,80 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   );
 }
 
+// Inline item chip rendered when the Concierge text contains an
+// <<item:id|name>> marker. Resolves id → current item object so the
+// thumbnail is always up to date (renames, image swaps reflect
+// automatically). Falls back to plain text if the id is unknown,
+// which protects against hallucinated markers.
+function ItemChip({ itemId, fallbackName, items, onOpenItem }) {
+  const item = items.find((i) => i.id === itemId);
+  if (!item) {
+    return <span>{fallbackName}</span>;
+  }
+  const thumb = item.images?.[0] || item.imageUrl || '';
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenItem?.(item.id)}
+      className="inline-flex items-center gap-1.5 mx-0.5 align-middle px-1.5 py-0.5 rounded-full bg-stone-100 hover:bg-stone-200 border border-stone-200 text-stone-900 transition-colors max-w-[14rem]"
+      title={item.name || fallbackName}
+    >
+      {thumb ? (
+        <img
+          src={thumb}
+          alt=""
+          aria-hidden="true"
+          className="w-5 h-5 rounded-full object-cover border border-stone-300 shrink-0"
+        />
+      ) : (
+        <span className="w-5 h-5 rounded-full bg-stone-300 shrink-0" aria-hidden="true" />
+      )}
+      <span className="text-[13px] truncate">{item.name || fallbackName}</span>
+    </button>
+  );
+}
+
 // Single chat bubble. The assistant's voice gets editorial treatment
 // (white card with brass-rule shoulder eyebrow); the client's voice is
 // quieter (dark pill aligned right). Whitespace-pre-line preserves the
 // bullet lists Gemini returns.
-function ConciergeMessage({ role, text, streaming = false }) {
+function ConciergeMessage({ role, text, streaming = false, items = [], onOpenItem = null }) {
+  // Parse <<item:id|name>> markers and render each as an ItemChip,
+  // preserving the surrounding prose as text. Returns an array of
+  // React children safe to drop into a <p>.
+  //
+  // Streaming-safe by design: a partial marker like "<<item:i_abc|ivory"
+  // still in flight will not match the regex (no closing >>), so it
+  // stays as raw text until the next chunk completes the marker. The
+  // chip swap happens the moment the marker is whole.
+  const renderTextWithChips = (raw) => {
+    if (!raw) return null;
+    const re = /<<item:([^|>]+)\|([^>]+)>>/g;
+    const out = [];
+    let lastIdx = 0;
+    let match;
+    let key = 0;
+    while ((match = re.exec(raw)) !== null) {
+      if (match.index > lastIdx) {
+        out.push(raw.slice(lastIdx, match.index));
+      }
+      out.push(
+        <ItemChip
+          key={`chip-${key++}-${match[1]}`}
+          itemId={match[1]}
+          fallbackName={match[2]}
+          items={items}
+          onOpenItem={onOpenItem}
+        />
+      );
+      lastIdx = re.lastIndex;
+    }
+    if (lastIdx < raw.length) {
+      out.push(raw.slice(lastIdx));
+    }
+    return out;
+  };
+
   if (role === 'assistant') {
     return (
       <div className="flex flex-col items-start max-w-[90%]">
@@ -13941,7 +14018,7 @@ function ConciergeMessage({ role, text, streaming = false }) {
             </span>
           ) : (
             <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
-              {text}
+              {renderTextWithChips(text)}
               {streaming && <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />}
             </p>
           )}

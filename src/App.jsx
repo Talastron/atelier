@@ -9688,10 +9688,9 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   }, [initialTab]);
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
-  // Slots the user has manually re-expanded after auto-collapse, so we
-  // don't fight them by re-collapsing on every render. Cleared when the
-  // slot becomes empty again.
-  const [manuallyExpanded, setManuallyExpanded] = useState(() => new Set());
+  // Single accordion: at most one slot expanded at a time in the Wardrobe
+  // Archives. null = all collapsed.
+  const [expandedSlot, setExpandedSlot] = useState(null);
   // Refs to each archive section header so handleSelect can scroll the
   // next open section into view after a pick.
   const archiveSectionRefs = React.useRef({});
@@ -9720,21 +9719,10 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     setOutfitName(editOutfit.name || '');
     setEditingId(editOutfit.id);
     setTab('create');
-    // EDIT MODE: expand all sections that have content. Default behaviour
-    // (auto-collapse on fill) is wrong for editing — the user just clicked
-    // "Edit", they want to SEE what's in the look and pick something to
-    // swap, not have everything hidden behind "Tap to swap" buttons. Drop
-    // every filled or covered slot into manuallyExpanded so they render
-    // as full archive grids on load.
-    const expandedOnEdit = new Set();
-    for (const s of OUTFIT_SLOTS) {
-      const has = slotItems(next[s.toLowerCase()]).length > 0;
-      const wouldBeCovered = (s === 'Tops' || s === 'Bottoms') ? !!next.dresses
-                          : (s === 'Dresses') ? (!!next.tops || !!next.bottoms)
-                          : false;
-      if (has || wouldBeCovered) expandedOnEdit.add(s);
-    }
-    setManuallyExpanded(expandedOnEdit);
+    // EDIT MODE: auto-expand the first filled slot so the user can see
+    // what's in the look immediately and pick something to swap.
+    const firstFilledSlot = OUTFIT_SLOTS.find((s) => slotItems(next[s.toLowerCase()]).length > 0) || null;
+    setExpandedSlot(firstFilledSlot);
     setAiTags([]);  // clear stale AI tags from a prior generation
   }, [editOutfit?.id]);
   // Seed loader — when Lookbook hands off an AI history entry via
@@ -9869,14 +9857,8 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       if (item) {
         haptic('tap');
         toast.show(`Added to ${slot}`, { kind: 'default', duration: 1400 });
-        // Auto-flow: drop any manual-expand on this slot so it auto-collapses,
-        // then smooth-scroll to the next OPEN section (not filled, not
-        // covered-by-mutual-exclusion). Wrapped in setTimeout so the DOM
-        // has updated to its post-collapse height before we measure scroll.
-        setManuallyExpanded((prev) => {
-          if (!prev.has(slot)) return prev;
-          const next = new Set(prev); next.delete(slot); return next;
-        });
+        // Auto-flow: collapse current slot, scroll to next open section.
+        setExpandedSlot(null);
         setTimeout(() => scrollToNextOpenSection(slot, { tops: slot === 'Tops' ? item : currentOutfit.tops, bottoms: slot === 'Bottoms' ? item : currentOutfit.bottoms, dresses: slot === 'Dresses' ? item : currentOutfit.dresses }), 150);
       }
     }
@@ -9894,32 +9876,25 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   };
   const isSlotFilled = (slot, outfit = currentOutfit) =>
     slotItems(outfit[slot.toLowerCase()]).length > 0;
-  const isSlotCollapsed = (slot) => {
-    if (manuallyExpanded.has(slot)) return false;
-    // Multi-slots: user might want to keep stacking — only collapse if
-    // truly covered (which never happens for jewellery, but the API is
-    // consistent).
-    if (isMultiSlot(slot)) return false;
-    return isSlotFilled(slot) || isSlotCovered(slot);
+  // Accordion: toggle the one expanded slot; close if already open.
+  const toggleSlotExpansion = (slot) => {
+    setExpandedSlot((prev) => (prev === slot ? null : slot));
   };
-  const toggleSectionExpansion = (slot) => {
-    setManuallyExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(slot)) next.delete(slot); else next.add(slot);
-      return next;
-    });
-  };
+  // Auto-scroll when a slot expands so it's never lost above/below viewport.
+  React.useEffect(() => {
+    if (!expandedSlot) return;
+    const el = archiveSectionRefs.current[expandedSlot];
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [expandedSlot]);
   const scrollToNextOpenSection = (currentSlot, outfitOverride) => {
     const startIdx = OUTFIT_SLOTS.indexOf(currentSlot);
     if (startIdx < 0) return;
     for (let i = startIdx + 1; i < OUTFIT_SLOTS.length; i++) {
       const slot = OUTFIT_SLOTS[i];
       if (isSlotFilled(slot, outfitOverride) || isSlotCovered(slot, outfitOverride)) continue;
-      const el = archiveSectionRefs.current[slot];
-      if (el?.scrollIntoView) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
+      // Expand this slot in the accordion (the useEffect will scroll it into view).
+      setExpandedSlot(slot);
+      return;
     }
   };
 
@@ -10296,14 +10271,19 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     return (
       <div
         ref={setNodeRef}
+        onClick={pieces.length === 0 && !covered ? () => setExpandedSlot((prev) => (prev === slot ? null : slot)) : undefined}
         className={`border-2 rounded-xl lg:rounded-2xl flex flex-col items-center justify-center relative overflow-hidden transition-all duration-200 aspect-square lg:aspect-square group ${
+          pieces.length === 0 && !covered ? 'cursor-pointer' : ''
+        } ${
           isOver
             ? 'border-stone-900 ring-4 ring-stone-900/20 scale-[1.02]'
             : pieces.length > 0
               ? 'bg-white smooth-shadow border-stone-200'
               : covered
                 ? 'bg-stone-50/60 border-stone-200/60 border-dashed opacity-50'
-                : 'bg-stone-100 border-dashed border-stone-300'
+                : expandedSlot === slot
+                  ? 'bg-stone-200 border-stone-400 border-solid'
+                  : 'bg-stone-100 border-dashed border-stone-300'
         }`}>
         {pieces.length === 0 ? (
           <span className={`text-[9px] lg:text-xs font-medium tracking-widest uppercase text-center px-1 leading-tight ${covered ? 'text-stone-300 line-through' : 'text-stone-400'}`}>{slot}</span>
@@ -10825,81 +10805,73 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             <div className="lg:col-span-7">
               <div className="flex items-baseline justify-between mb-4 sm:mb-6 px-2">
                 <h3 className="font-display text-xl md:text-2xl text-stone-900">Wardrobe Archives</h3>
-                <span className="text-[10px] uppercase tracking-widest text-stone-400 hidden lg:inline">Tap or drag to a slot</span>
               </div>
-              <div className="space-y-6 sm:space-y-8">
+              <div className="space-y-2">
                 {OUTFIT_SLOTS.map((slot) => {
                   const pool = items.filter((i) => itemFitsSlot(i, slot));
                   const filled = slotItems(currentOutfit[slot.toLowerCase()]);
                   const covered = isSlotCovered(slot);
-                  const collapsed = isSlotCollapsed(slot);
-                  const coverReason = covered
-                    ? (slot === 'Dresses'
-                        ? "You've picked separates — a dress isn't needed."
-                        : "You're wearing a dress — separates aren't needed.")
-                    : null;
+                  const isExpanded = expandedSlot === slot;
+
                   return (
                     <div
                       key={slot}
                       ref={(el) => { archiveSectionRefs.current[slot] = el; }}
-                      // scroll-mt offsets the sticky tab bar (~72px tall) so
-                      // a scrolled-to section sits BELOW the bar, not behind
-                      // it. Matches the lg:top-20 used on Current Look.
-                      className="scroll-mt-24"
+                      className="scroll-mt-24 bg-white border border-stone-200 rounded-2xl overflow-hidden transition-colors hover:border-stone-300"
                     >
-                      <div className="flex items-center justify-between mb-3 md:mb-4 px-2">
-                        <h4 className="text-[11px] font-bold text-stone-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                          {slot} · {pool.length}
+                      {/* Accordion header — always visible, always tappable */}
+                      <button
+                        type="button"
+                        onClick={() => toggleSlotExpansion(slot)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-stone-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="inline-block w-3 h-px bg-brass-400 shrink-0" aria-hidden="true" />
+                          <h4 className="text-[11px] font-bold text-stone-700 uppercase tracking-[0.2em] shrink-0">
+                            {slot}
+                          </h4>
+                          <span className="text-[10px] text-stone-400 shrink-0">· {pool.length}</span>
                           {filled.length > 0 && (
-                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-700">
+                            <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-700 shrink-0" title={`${filled.length} picked`}>
                               <Check size={10} strokeWidth={2.5} />
                             </span>
                           )}
-                        </h4>
-                        {(filled.length > 0 || covered) && (
-                          <button onClick={() => toggleSectionExpansion(slot)}
-                            className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors duration-200">
-                            {collapsed ? (covered ? 'Add anyway' : 'Change') : 'Done'}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Collapsed UI: compact summary (filled) OR muted note
-                          (covered by mutual exclusion). Expanded UI: full
-                          archive grid (same as before). */}
-                      {collapsed && covered && filled.length === 0 ? (
-                        <div className="mx-2 px-4 py-3 rounded-2xl bg-stone-50 border border-stone-200/60 text-xs text-stone-500 italic">
-                          {coverReason}
+                          {/* Filled item peek — tiny thumbs visible even when collapsed */}
+                          {!isExpanded && filled.length > 0 && (
+                            <div className="flex gap-1 min-w-0 overflow-hidden ml-1">
+                              {filled.slice(0, 3).map((item) => (
+                                <div key={item.id} className="w-6 h-8 rounded-md overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
+                                  {itemImages(item)[0] && (
+                                    <img src={itemImages(item)[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
+                                  )}
+                                </div>
+                              ))}
+                              {filled.length > 3 && <span className="text-[9px] text-stone-400 self-center ml-1">+{filled.length - 3}</span>}
+                            </div>
+                          )}
                         </div>
-                      ) : collapsed && filled.length > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleSectionExpansion(slot)}
-                          className="w-[calc(100%-1rem)] mx-2 flex items-center gap-3 bg-white border border-stone-200 rounded-2xl p-2.5 hover:border-stone-500 transition-colors duration-200 text-left"
-                        >
-                          <div className="flex gap-1.5 shrink-0">
-                            {filled.slice(0, 3).map((item) => (
-                              <div key={item.id} className="w-10 h-14 rounded-lg overflow-hidden bg-stone-100">
-                                {itemImages(item)[0] && (
-                                  <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async"
-                                    className="w-full h-full object-cover" />
-                                )}
-                              </div>
-                            ))}
-                            {filled.length > 3 && (
-                              <span className="text-[10px] text-stone-500 self-center">+{filled.length - 3}</span>
-                            )}
-                          </div>
-                          <span className="text-sm text-stone-800 flex-1 min-w-0 truncate">
-                            {filled.map((i) => i.name).join(', ')}
-                          </span>
-                          <span className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0 pr-2">Tap to swap</span>
-                        </button>
-                      ) : (
-                        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 hide-scrollbar px-2 lg:flex-wrap lg:overflow-x-visible lg:pb-0">
-                          {pool.map((item) => <DraggableArchiveItem key={item.id} slot={slot} item={item} />)}
-                          {pool.length === 0 && (
-                            <div className="w-full py-8 text-center text-stone-400 text-sm border border-dashed border-stone-300 rounded-2xl">No pieces in {slot.toLowerCase()} yet.</div>
+                        <ChevronRight
+                          size={16}
+                          strokeWidth={1.5}
+                          className={`text-stone-400 shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                        />
+                      </button>
+
+                      {/* Expanded body */}
+                      {isExpanded && (
+                        <div className="border-t border-stone-100 px-4 pt-4 pb-5">
+                          {covered && filled.length === 0 ? (
+                            <p className="text-xs text-stone-500 italic">
+                              {slot === 'Dresses'
+                                ? "You've picked separates — a dress isn't needed."
+                                : "You're wearing a dress — separates aren't needed."}
+                            </p>
+                          ) : pool.length === 0 ? (
+                            <p className="text-xs text-stone-400 italic">No pieces in {slot.toLowerCase()} yet.</p>
+                          ) : (
+                            <div className="flex gap-3 md:gap-4 overflow-x-auto pb-1 hide-scrollbar lg:flex-wrap lg:overflow-x-visible">
+                              {pool.map((item) => <DraggableArchiveItem key={item.id} slot={slot} item={item} />)}
+                            </div>
                           )}
                         </div>
                       )}

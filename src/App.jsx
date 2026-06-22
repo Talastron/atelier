@@ -10447,19 +10447,25 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                         nothing to name from). Positioned inside the input
                         on the right via absolute positioning. */}
                     <div className="relative mb-4">
-                      <input type="text" placeholder="Name this look…" value={outfitName} onChange={(e) => setOutfitName(e.target.value)}
-                        className={`w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 focus:border-stone-900 outline-none transition-colors ${isAIEnabled() && pieceCount > 0 ? 'pr-28' : ''}`}
+                      <input
+                        type="text"
+                        placeholder={suggestingName ? 'Composing a name…' : 'Name this look…'}
+                        value={outfitName}
+                        onChange={(e) => setOutfitName(e.target.value)}
+                        disabled={suggestingName}
+                        className={`w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 focus:border-stone-900 outline-none transition-colors disabled:bg-stone-50 disabled:text-stone-400 ${isAIEnabled() && pieceCount > 0 ? 'pr-32' : ''}`}
                       />
                       {isAIEnabled() && pieceCount > 0 && (
                         <button
                           type="button"
                           onClick={handleSuggestName}
                           disabled={suggestingName}
-                          title="Suggest a name with the Concierge"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:opacity-50"
+                          title={suggestingName ? 'Composing a name with the Concierge' : 'Suggest a name with the Concierge'}
+                          aria-busy={suggestingName}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:cursor-not-allowed"
                         >
                           <Sparkles size={10} strokeWidth={1.75} className={suggestingName ? 'animate-pulse text-amber-500' : 'text-amber-500'} />
-                          {suggestingName ? '…' : 'Suggest'}
+                          {suggestingName ? 'Composing…' : 'Suggest'}
                         </button>
                       )}
                     </div>

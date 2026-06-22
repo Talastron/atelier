@@ -16,7 +16,7 @@ import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
 import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
-import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex } from './dailyBrief';
+import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
 import { useSubscriptionStatus } from './subscriptionStatus';
 import AppCheckDevBanner from './AppCheckDevBanner.jsx';
@@ -4999,26 +4999,33 @@ function DailyBriefCard({
     // so an honest unavailable still proceeds rather than blocking forever.
     if (!weatherSettled) return;
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      setAutoFailed(false);
-      try {
-        const out = await onGenerateOutfit({
-          intent: 'a considered look for today',
-          temperature: aiTemperature,
-          slotIndex: 0,
-        });
+    setLoading(true);
+    setError(null);
+    setAutoFailed(false);
+
+    // Use module-level inflight dedup. If another mount of this card is
+    // already composing (user tab-navigated mid-compose), await its
+    // promise instead of firing a second API call.
+    registerInflightCompose(uid, async () => {
+      const out = await onGenerateOutfit({
+        intent: 'a considered look for today',
+        temperature: aiTemperature,
+        slotIndex: 0,
+      });
+      return writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
+    })
+      .then((saved) => {
         if (cancelled) return;
-        const saved = writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
-        setBrief(saved);
-      } catch (err) {
+        if (saved) setBrief(saved);
+      })
+      .catch((err) => {
         console.warn('[daily-brief] auto-compose skipped:', err?.message || err);
         if (!cancelled) setAutoFailed(true);
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    })();
+      });
+
     return () => { cancelled = true; };
   }, [uid, isAiEnabled, items?.length, weatherSettled]); // re-fires when weather resolves so the brief gets composed with it
 

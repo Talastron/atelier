@@ -59,3 +59,31 @@ export function nextSlotIndex(uid) {
   const existing = readDailyBrief(uid);
   return (existing?.slotIndex ?? 0) + 1;
 }
+
+// Module-level in-flight tracker. The DailyBriefCard unmounts/remounts
+// on every tab navigation (key={activeTab} in DigitalWardrobe), so if a
+// compose is still running when the user navigates away, the next mount
+// would normally fire a SECOND API call before the first writes to cache.
+// This Map keys by uid → the in-flight Promise. New mounts await the
+// existing promise; only one API call per (uid, day) ever fires.
+const inflight = new Map();
+
+export function getInflightCompose(uid) {
+  return inflight.get(uid) || null;
+}
+
+// Register an in-flight compose. The returned promise resolves to the
+// brief object on success (or rejects on failure); either way the
+// inflight entry is cleared.
+export function registerInflightCompose(uid, composeFn) {
+  if (inflight.has(uid)) return inflight.get(uid);
+  const p = (async () => {
+    try {
+      return await composeFn();
+    } finally {
+      inflight.delete(uid);
+    }
+  })();
+  inflight.set(uid, p);
+  return p;
+}

@@ -12,6 +12,7 @@
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",
     "@astrojs/react": "^4.1.0",
+    "@astrojs/sitemap": "^3.7.3",
     "@atelier/design-tokens": "workspace:*",
     "@atelier/ui": "workspace:*",
     "@tailwindcss/vite": "^4.0.0",

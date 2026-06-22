@@ -16,9 +16,35 @@ import { InvestmentLens } from '../components/landing/InvestmentLens.jsx';
 import { TravelCapsuleDemo } from '../components/landing/TravelCapsuleDemo.jsx';
 import JournalRail from '../components/JournalRail.astro';
 import { BrassRule } from '@atelier/ui';
+import { SITE, EDIT_URL } from '../config.ts';
+
+// SoftwareApplication structured data — tells Google this page represents
+// a piece of software, which unlocks rich snippets (ratings, price, screen-
+// shots) when the brand is searched for. We declare the founding-member
+// price (£79/yr) here as the lower of the two tiers; the public price is
+// surfaced on /pricing where a more detailed Product schema would belong.
+const softwareLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: SITE.name,
+  url: SITE.url,
+  applicationCategory: 'LifestyleApplication',
+  operatingSystem: 'Web',
+  description: 'A private digital wardrobe and AI stylist. Capture your pieces, log wears, and have an AI compose outfits from what you already own.',
+  offers: {
+    '@type': 'Offer',
+    price: '79',
+    priceCurrency: 'GBP',
+    url: `${SITE.url}/pricing`,
+    availability: 'https://schema.org/InStock',
+  },
+};
 ---
 
-<Base title="Atelier — An AI stylist that knows your wardrobe">
+<Base
+  title="Atelier — An AI stylist that knows your wardrobe"
+  jsonLd={softwareLd}
+>
   <Nav />
   <main>
     {/* ── Hero ──────────────────────────────────────────────────────── */}

@@ -1,13 +1,68 @@
 ---
 // apps/marketing/src/layouts/Base.astro
 import '../styles/global.css';
+import { SITE } from '../config.ts';
 
 interface Props {
   title: string;
   description?: string;
+  /** Absolute or root-relative path to a 1200×630 OG image (default brand). */
+  ogImage?: string;
+  /** og:type — 'website' for static pages, 'article' for journal posts. */
+  ogType?: 'website' | 'article';
+  /** Optional JSON-LD object emitted in addition to the default Organization. */
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  /** Override the auto-derived canonical URL (rare — for redirected pages). */
+  canonical?: string;
 }
 
-const { title, description = 'The quiet luxury of a beautifully organised wardrobe.' } = Astro.props;
+const {
+  title,
+  description = 'The quiet luxury of a beautifully organised wardrobe.',
+  ogImage = '/og-image.png',
+  ogType = 'website',
+  jsonLd,
+  canonical,
+} = Astro.props;
+
+// Canonical URL derived from Astro.url against the configured site origin.
+// Strips index.html and trailing slashes for consistency; query strings are
+// dropped (canonical should point at a stable, canonical resource).
+const canonicalUrl = canonical ?? new URL(Astro.url.pathname, SITE.url).toString();
+const ogImageAbsolute = new URL(ogImage, SITE.url).toString();
+
+// Organization JSON-LD — emitted on every page so search engines associate
+// the brand entity with the domain. Includes the logo for the knowledge
+// panel and key contact details. Page-specific JSON-LD (Article, etc.)
+// stacks on top via the `jsonLd` prop.
+const organizationLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: SITE.name,
+  url: SITE.url,
+  logo: new URL('/brand/atelier-logo.png', SITE.url).toString(),
+  email: SITE.supportEmail,
+  // Talastron Ltd is the registered legal entity — declared in Footer.astro.
+  // Including it as `parentOrganization` ties the brand to its filings.
+  parentOrganization: {
+    '@type': 'Organization',
+    name: 'Talastron Ltd',
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: 'The Long Barn, Cobham Park Road',
+      addressLocality: 'Cobham',
+      addressRegion: 'Surrey',
+      postalCode: 'KT11 3NE',
+      addressCountry: 'GB',
+    },
+  },
+};
+
+// Normalize jsonLd prop to an array so the template can spread them all.
+const extraLd = jsonLd
+  ? Array.isArray(jsonLd) ? jsonLd : [jsonLd]
+  : [];
+const allLd = [organizationLd, ...extraLd];
 ---
 
 <!doctype html>
@@ -16,6 +71,7 @@ const { title, description = 'The quiet luxury of a beautifully organised wardro
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
 
     <!-- Atelier brand favicons. The SVG auto-inverts for dark browser chrome
          (light hanger on dark bg) via prefers-color-scheme inside the file.
@@ -29,6 +85,25 @@ const { title, description = 'The quiet luxury of a beautifully organised wardro
     <meta name="theme-color" content="#1c1917" />
     <meta name="apple-mobile-web-app-title" content="Atelier" />
 
+    <!-- Open Graph — Facebook, LinkedIn, iMessage, Slack, Discord previews. -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageAbsolute} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Atelier — a digital studio for your wardrobe" />
+    <meta property="og:locale" content="en_GB" />
+
+    <!-- Twitter Card — large image preview when shared on X. -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageAbsolute} />
+    <meta name="twitter:image:alt" content="Atelier — a digital studio for your wardrobe" />
+
     <!-- Fonts: Playfair Display (display serif) + Jost (body sans).
          (Pinyon Script briefly imported here for a typeset signature on
          /about; removed once the real signature image landed.) -->
@@ -38,6 +113,15 @@ const { title, description = 'The quiet luxury of a beautifully organised wardro
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap"
     />
+
+    <!-- Structured data (JSON-LD). Organization is emitted on every page;
+         page-level Article / SoftwareApplication / BreadcrumbList stacks
+         via the `jsonLd` prop. set:html keeps Astro from escaping the JSON
+         — the inserted string is generated server-side from a typed
+         object, never user input, so the no-escape path is safe here. -->
+    {allLd.map((ld) => (
+      <script type="application/ld+json" set:html={JSON.stringify(ld)} />
+    ))}
 
     <title>{title}</title>
   </head>

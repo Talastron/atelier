@@ -42,9 +42,48 @@ function fmtLongDate(d: Date) {
 
 const kindLabel = post.data.kind === 'essay' ? 'ESSAY' : 'NOTE';
 const mastheadLabel = `THE JOURNAL · VOL I · ${kindLabel} N°${String(kindNumber).padStart(2, '0')}`;
+
+// BlogPosting structured data per essay/note. Google uses headline + image
+// + dates to build rich Article snippets in Search and Discover. We also
+// emit a BreadcrumbList so the search result shows "Atelier › Journal › …"
+// instead of a bare title.
+import { SITE } from '../../config.ts';
+const postUrl = `${SITE.url}/journal/${post.slug}`;
+const articleLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.date.toISOString(),
+  // No frontmatter for revisions yet — datePublished doubles as dateModified
+  // until an explicit `updated` field lands in the journal collection.
+  dateModified: post.data.date.toISOString(),
+  image: new URL('/og-image.png', SITE.url).toString(),
+  author: { '@type': 'Organization', name: SITE.name, url: SITE.url },
+  publisher: {
+    '@type': 'Organization',
+    name: SITE.name,
+    logo: { '@type': 'ImageObject', url: new URL('/brand/atelier-logo.png', SITE.url).toString() },
+  },
+};
+const breadcrumbLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Atelier', item: SITE.url },
+    { '@type': 'ListItem', position: 2, name: 'Journal', item: `${SITE.url}/journal` },
+    { '@type': 'ListItem', position: 3, name: post.data.title, item: postUrl },
+  ],
+};
 ---
 
-<Base title={`${post.data.title} — The Journal — Atelier`} description={post.data.description}>
+<Base
+  title={`${post.data.title} — The Journal — Atelier`}
+  description={post.data.description}
+  ogType="article"
+  jsonLd={[articleLd, breadcrumbLd]}
+>
   <Nav />
   <ReadingProgress client:load targetSelector="article" />
 

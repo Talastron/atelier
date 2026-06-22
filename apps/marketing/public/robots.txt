@@ -1,0 +1,11 @@
+# Atelier · myatelier.style
+# Default-allow with a sitemap pointer so search engines find every page
+# without crawling for them.
+
+User-agent: *
+Allow: /
+
+# Block the preview surface — it's an internal demo route, not user-facing.
+Disallow: /preview
+
+Sitemap: https://myatelier.style/sitemap-index.xml

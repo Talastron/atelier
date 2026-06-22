@@ -13501,6 +13501,8 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   const [error, setError] = useState(null);
   const scrollRef = React.useRef(null);
   const textareaRef = React.useRef(null);
+  const cancelledRef = React.useRef(false);
+  useEffect(() => () => { cancelledRef.current = true; }, []);
 
   // Hydrate persisted thread from Firestore on mount. If there is a saved
   // thread, restore it; otherwise the greeting-only initial state stands.
@@ -13532,13 +13534,17 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   const send = async (textOverride) => {
     const text = (textOverride ?? input).trim();
     if (!text || busy) return;
+    // CRITICAL: set busy immediately, before any await, to close the
+    // double-click / double-send race. Any second invocation that slips past
+    // the guard above will be stopped here before it can launch a stream.
+    setBusy(true);
+    setError(null);
+
     const userMsg = { role: 'user', text, ts: new Date().toISOString() };
     const afterUser = [...messages, userMsg];
     setMessages(afterUser);
-    await saveCurrentThread(afterUser);
     setInput('');
-    setBusy(true);
-    setError(null);
+    await saveCurrentThread(afterUser);
 
     // Insert an empty placeholder assistant message that will fill in as
     // chunks arrive. The streaming=true flag lets the bubble render a
@@ -13555,6 +13561,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         styleProfile,
         ownerFirstName,
         onChunk: (chunk) => {
+          if (cancelledRef.current) return;
           accumulated += chunk;
           // Update the last (placeholder) message's text in place. React
           // re-renders the bubble; user sees text grow smoothly.
@@ -13569,6 +13576,9 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         },
       });
 
+      // Bail out if panel was closed while stream was in flight.
+      if (cancelledRef.current) return;
+
       // Stream done. Finalize the placeholder (strip streaming flag) and
       // persist to Firestore. Use a fresh build of the final message so the
       // saved thread matches what the user sees.
@@ -13580,6 +13590,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       });
       await saveCurrentThread([...afterUser, finalMsg]);
     } catch (err) {
+      if (cancelledRef.current) return;
       // Strip the placeholder so the user doesn't see an empty bubble alongside the error
       setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Something interrupted us. Try again?');
@@ -13589,25 +13600,52 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   };
 
   const retry = async () => {
-    // Re-send the last user message (the one that failed).
-    const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-    if (!lastUser) return;
-    // Drop any trailing failed assistant placeholder if exists; messages
-    // already excludes it since we never added it on error.
-    setError(null);
+    if (busy) return;
     setBusy(true);
+    setError(null);
+
+    // Insert a streaming placeholder — mirrors the send flow so the user
+    // sees tokens arrive rather than waiting for a full non-streaming reply.
+    const placeholder = { role: 'assistant', text: '', ts: new Date().toISOString(), streaming: true };
+    setMessages((prev) => [...prev, placeholder]);
+
+    // Capture the messages at retry time (closed over); retry replays against
+    // the existing thread without adding a new user message, so we use the
+    // closure-captured `messages` rather than an afterUser snapshot.
+    let accumulated = '';
     try {
-      const reply = await generateConciergeReply({
+      await generateConciergeReply({
         messages,
         items,
         outfits,
         styleProfile,
         ownerFirstName,
+        onChunk: (chunk) => {
+          if (cancelledRef.current) return;
+          accumulated += chunk;
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.streaming) {
+              next[next.length - 1] = { ...last, text: accumulated };
+            }
+            return next;
+          });
+        },
       });
-      const withReply = [...messages, { role: 'assistant', text: reply || '(no reply)', ts: new Date().toISOString() }];
-      setMessages(withReply);
-      await saveCurrentThread(withReply);
+
+      if (cancelledRef.current) return;
+
+      const finalMsg = { role: 'assistant', text: accumulated || '(no reply)', ts: new Date().toISOString() };
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = finalMsg;
+        return next;
+      });
+      await saveCurrentThread([...messages, finalMsg]);
     } catch (err) {
+      if (cancelledRef.current) return;
+      setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Still no luck — try again in a moment.');
     } finally {
       setBusy(false);

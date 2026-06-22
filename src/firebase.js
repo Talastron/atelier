@@ -645,17 +645,21 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
         // Callers can override via opts.maxOutputTokens for narrative-heavier
         // calls (manifesto can use a higher cap if needed).
         maxOutputTokens: opts.maxOutputTokens ?? 1024,
+        // Disable Gemini 2.5 Flash's thinking phase. Thinking emits ZERO
+        // tokens for 20-60s on complex prompts, which reads to the user as
+        // a frozen Concierge. Conversational replies don't need it; if a
+        // caller specifically wants thinking (deep analysis), it can pass
+        // opts.thinkingBudget explicitly.
+        //
+        // PLACEMENT NOTE: thinkingConfig belongs INSIDE generationConfig per
+        // the Gemini API + Firebase AI Logic SDK shape. At top-level on the
+        // model config it's silently ignored.
+        thinkingConfig: {
+          thinkingBudget: opts.thinkingBudget ?? 0,
+        },
         // NOTE: jsonMode intentionally omitted — partial JSON chunks
         // aren't valid JSON. Use plain geminiText({jsonMode:true}) for
         // structured output.
-      },
-      // Disable Gemini 2.5 Flash's thinking phase. Thinking emits ZERO
-      // tokens for 20-60s on complex prompts, which reads to the user as
-      // a frozen Concierge. Conversational replies don't need it; if a
-      // caller specifically wants thinking (deep analysis), it can pass
-      // opts.thinkingBudget explicitly.
-      thinkingConfig: {
-        thinkingBudget: opts.thinkingBudget ?? 0,
       },
     });
     const t0 = performance.now();

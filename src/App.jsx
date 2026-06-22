@@ -528,6 +528,10 @@ ${items.map(summarize).join('\n')}
 Respond ONLY with valid JSON in this exact shape:
 {"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100, "tags": ["3-5 short descriptive labels"]}
 
+Marker rule for the reasoning field: when you mention a specific piece by name in the reasoning text, wrap it as <<item:ID|display name>> using the id from your itemIds list. Example:
+- "The <<item:i_xyz|ivory silk shirt>> pairs cleanly with the <<item:i_abc|charcoal trouser>>."
+Wrap only the piece itself, not the surrounding sentence. Do not invent ids. If a piece is too generic to wrap, leave it as plain text.
+
 Tags guidance:
 - 3 to 5 short labels (1-2 words each, lowercase, no punctuation)
 - Mix of: occasion ("dinner", "weekend", "office"), mood ("relaxed", "polished", "playful"), formality ("smart casual", "black tie"), season/weather hint when relevant ("layered", "summer evening")
@@ -4959,6 +4963,7 @@ function DailyBriefCard({
   onSaveOutfit,
   onLogOutfitWear,
   onOpenOutfit,
+  onOpenItem = null,  // optional: tap a chip → open that item's detail view
   onEditPreferences,  // optional: jumps to Profile → Style so the user can
                        // change palette / formality / temperament from the
                        // "What the Concierge saw" capsule.
@@ -5178,7 +5183,7 @@ function DailyBriefCard({
       <h3 className="mt-2 text-2xl font-serif text-stone-900">
         Styled for today.
       </h3>
-      <p className="mt-2 text-sm italic text-stone-700">{brief.reasoning}</p>
+      <p className="mt-2 text-sm italic text-stone-700">{renderTextWithChips(brief.reasoning, { items, onOpenItem })}</p>
 
       <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-5">
         {briefItems.map(it => (
@@ -6087,6 +6092,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           onSaveOutfit={onSaveOutfit}
           onLogOutfitWear={onLogOutfitWear}
           onOpenOutfit={onOpenBrief}
+          onOpenItem={onItemClick}
           onEditPreferences={onEditPreferences}
         />
         <TodayTile
@@ -6458,6 +6464,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           onSaveOutfit={onSaveOutfit}
           onLogOutfitWear={onLogOutfitWear}
           onOpenOutfit={onOpenBrief}
+          onOpenItem={onItemClick}
           onEditPreferences={onEditPreferences}
         />
 
@@ -14524,6 +14531,44 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
   );
 }
 
+// Parse <<item:id|name>> markers in text and render each as an ItemChip,
+// preserving the surrounding prose as plain text. Returns an array of
+// React children safe to drop into a <p>.
+//
+// Streaming-safe: a partial marker like "<<item:i_abc|ivory" still in
+// flight will not match the regex (no closing >>), so it stays as raw
+// text until the next chunk completes the marker.
+//
+// Lifted to module scope so both ConciergeMessage and DailyBriefCard
+// can use it. Pass items + onOpenItem explicitly (no closure capture).
+function renderTextWithChips(raw, { items = [], onOpenItem = null } = {}) {
+  if (!raw) return null;
+  const re = /<<item:([^|>]+)\|([^>]+)>>/g;
+  const out = [];
+  let lastIdx = 0;
+  let match;
+  let key = 0;
+  while ((match = re.exec(raw)) !== null) {
+    if (match.index > lastIdx) {
+      out.push(raw.slice(lastIdx, match.index));
+    }
+    out.push(
+      <ItemChip
+        key={`chip-${key++}-${match[1]}`}
+        itemId={match[1]}
+        fallbackName={match[2]}
+        items={items}
+        onOpenItem={onOpenItem}
+      />
+    );
+    lastIdx = re.lastIndex;
+  }
+  if (lastIdx < raw.length) {
+    out.push(raw.slice(lastIdx));
+  }
+  return out;
+}
+
 function ItemChip({ itemId, fallbackName, items, onOpenItem }) {
   const item = items.find((i) => i.id === itemId);
   if (!item) {
@@ -14626,42 +14671,6 @@ function ConciergeComposingIndicator({ onCancel = null }) {
 // quieter (dark pill aligned right). Whitespace-pre-line preserves the
 // bullet lists Gemini returns.
 function ConciergeMessage({ role, text, streaming = false, items = [], onOpenItem = null, onCancel = null, onSaveLook = null, onSchedule = null, onAddToPacking = null }) {
-  // Parse <<item:id|name>> markers and render each as an ItemChip,
-  // preserving the surrounding prose as text. Returns an array of
-  // React children safe to drop into a <p>.
-  //
-  // Streaming-safe by design: a partial marker like "<<item:i_abc|ivory"
-  // still in flight will not match the regex (no closing >>), so it
-  // stays as raw text until the next chunk completes the marker. The
-  // chip swap happens the moment the marker is whole.
-  const renderTextWithChips = (raw) => {
-    if (!raw) return null;
-    const re = /<<item:([^|>]+)\|([^>]+)>>/g;
-    const out = [];
-    let lastIdx = 0;
-    let match;
-    let key = 0;
-    while ((match = re.exec(raw)) !== null) {
-      if (match.index > lastIdx) {
-        out.push(raw.slice(lastIdx, match.index));
-      }
-      out.push(
-        <ItemChip
-          key={`chip-${key++}-${match[1]}`}
-          itemId={match[1]}
-          fallbackName={match[2]}
-          items={items}
-          onOpenItem={onOpenItem}
-        />
-      );
-      lastIdx = re.lastIndex;
-    }
-    if (lastIdx < raw.length) {
-      out.push(raw.slice(lastIdx));
-    }
-    return out;
-  };
-
   if (role === 'assistant') {
     return (
       <div className="flex flex-col items-start max-w-[90%]">
@@ -14674,7 +14683,7 @@ function ConciergeMessage({ role, text, streaming = false, items = [], onOpenIte
             <ConciergeComposingIndicator onCancel={onCancel} />
           ) : (
             <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
-              {renderTextWithChips(text)}
+              {renderTextWithChips(text, { items, onOpenItem })}
               {streaming && <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />}
             </p>
           )}

@@ -526,7 +526,13 @@ Available items (id|name|brand|category|attributes):
 ${items.map(summarize).join('\n')}
 
 Respond ONLY with valid JSON in this exact shape:
-{"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100}
+{"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100, "tags": ["3-5 short descriptive labels"]}
+
+Tags guidance:
+- 3 to 5 short labels (1-2 words each, lowercase, no punctuation)
+- Mix of: occasion ("dinner", "weekend", "office"), mood ("relaxed", "polished", "playful"), formality ("smart casual", "black tie"), season/weather hint when relevant ("layered", "summer evening")
+- Avoid restating the items themselves; tags describe the LOOK, not its parts
+- No duplicates, no marketing fluff
 
 Confidence reflects how strongly the available wardrobe matches the intent (100 = perfect fit, 50 = workable but not ideal, low = thin matches).`;
 
@@ -534,7 +540,13 @@ Confidence reflects how strongly the available wardrobe matches the intent (100 
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
   if (!parsed.itemIds?.length) throw new Error('The Concierge could not compose a look from this wardrobe');
-  return parsed;
+  const tags = Array.isArray(parsed.tags)
+    ? parsed.tags
+        .map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+        .filter(Boolean)
+        .slice(0, 6)
+    : [];
+  return { ...parsed, tags };
 }
 
 // Gemini Vision: read a care/composition label photo. Pulls brand, materials,
@@ -1274,23 +1286,30 @@ async function generateOutfitNameWithGemini(picked, intent) {
     .filter(Boolean)
     .slice(0, 8)
     .join('\n- ');
-  const prompt = `You are naming a saved outfit for an editorial wardrobe app called Atelier.
-Give it a SHORT name: 2 to 4 words, evocative, no quotes, no full stops, title case.
-Mood: refined, understated, editorial — not slogans, not corny.
+  const briefLine = (intent && intent.trim() && intent !== 'Any')
+    ? `The user's brief: "${intent.trim()}"\n\nUse that brief to anchor the name — echo a place, a moment, a mood from it. The name should feel like the editor's title for THIS specific brief, not a generic stylist label.`
+    : `No specific brief — name the look as a self-contained editorial piece.`;
+
+  const prompt = `You are an editorial fashion stylist titling a saved look for Atelier, a private digital wardrobe.
+
+Give it a SHORT but evocative name: 3 to 6 words, title case, no quotes, no full stops, no emoji.
+
+Voice: like a couturier captioning a piece for a private client — refined, considered, a little romantic. Reach for atmosphere over function: a place, a time of day, a weather, a mood, a moment. Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Avoid restating the items.
+
+${briefLine}
 
 Items in this look:
 - ${itemList}
 
-Style intent: ${intent && intent !== 'Any' ? intent : 'unstated'}
+Examples of the tone wanted (note the rhythm, not the words):
+- "Storm Light at the Lido"
+- "Mayfair Hour, Late Spring"
+- "Quiet Power, Quiet Wool"
+- "Gallery Opening in Linen"
+- "Sunday Coffee, Slow Sunday"
+- "Black Tie at the Sea"
 
-Examples of the tone wanted:
-- "Sunday Loafer"
-- "Linen Wander"
-- "Office Sharp"
-- "Soft Midnight"
-- "Brass & Wool"
-
-Reply with the name only — no preamble, no explanation.`;
+Reply with the name ONLY — no preamble, no explanation, no quotes.`;
   const result = await geminiText(prompt, { temperature: 0.9 }, 'name-look');
   return (result || '')
     .trim()
@@ -9375,6 +9394,18 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                   {outfit.intent}
                 </p>
               )}
+              {outfit.tags && outfit.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {outfit.tags.slice(0, 5).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white/80 text-[10px] tracking-wide uppercase"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="relative z-20 px-7 pb-6 pt-2 sm:px-9 sm:pb-7">
@@ -9385,6 +9416,18 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mt-1.5 truncate">
                   {outfit.intent}
                 </p>
+              )}
+              {outfit.tags && outfit.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {outfit.tags.slice(0, 5).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -9462,6 +9505,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       if (has || wouldBeCovered) expandedOnEdit.add(s);
     }
     setManuallyExpanded(expandedOnEdit);
+    setAiTags([]);  // clear stale AI tags from a prior generation
   }, [editOutfit?.id]);
   // Seed loader — when Lookbook hands off an AI history entry via
   // navigation, hydrate the canvas without setting editingId. The save
@@ -9618,6 +9662,10 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       return;
     }
     setSuggestingName(true);
+    // Show the naming-phase label in the AI progress modal if it happens
+    // to be open (e.g. user triggered name suggestion while AI is still
+    // running); harmless no-op otherwise since the modal gates on aiBusy.
+    setAiStage('Titling the look…');
     try {
       const intent = customIntent.trim() || (styleIntent !== 'Any' ? styleIntent : '');
       const name = await generateOutfitNameWithGemini(picked, intent);
@@ -9646,9 +9694,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       createdAt: orig?.createdAt || new Date().toISOString(),
       ...(aiNote ? { reasoning: aiNote } : (orig?.reasoning ? { reasoning: orig.reasoning } : {})),
       ...(customIntent.trim() || styleIntent !== 'Any' ? { intent: customIntent.trim() || styleIntent } : {}),
+      ...(aiTags && aiTags.length > 0 ? { tags: aiTags } : (orig?.tags ? { tags: orig.tags } : {})),
     });
     setOutfitName(''); setCurrentOutfit(emptyOutfit());
     setAiNote(null);
+    setAiTags([]);
     setEditingId(null);
     if (onEditDone) onEditDone();
     // Studio mode: notify parent so it can navigate to Lookbook (user
@@ -9774,6 +9824,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [aiBusy, setAiBusy] = useState(false);
   const [aiStage, setAiStage] = useState('');
   const [aiNote, setAiNote] = useState(null);
+  const [aiTags, setAiTags] = useState([]);
   const [aiConfidence, setAiConfidence] = useState(null);
   const [abComparing, setAbComparing] = useState(false);
   const [abPair, setAbPair] = useState(null); // { a: { outfit, reasoning, confidence }, b: {...} }
@@ -9785,6 +9836,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     'Composing colour and shape…',
     'Adding finishing touches…',
     'Almost there…',
+    'Titling the look…',
   ];
 
   const buildIntent = () => {
@@ -9798,6 +9850,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     const style = styleIntent === 'Any' ? null : styleIntent;
     setCurrentOutfit(generateOneLook(style));
     setAiNote(null);
+    setAiTags([]);
   };
 
   // Generate two AI looks in parallel for side-by-side comparison.
@@ -9834,8 +9887,8 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       };
       setAbPair({
         intent,
-        a: { outfit: buildOutfit(resultA), reasoning: resultA.reasoning, confidence: resultA.confidence },
-        b: { outfit: buildOutfit(resultB), reasoning: resultB.reasoning, confidence: resultB.confidence },
+        a: { outfit: buildOutfit(resultA), reasoning: resultA.reasoning, confidence: resultA.confidence, tags: Array.isArray(resultA.tags) ? resultA.tags : [] },
+        b: { outfit: buildOutfit(resultB), reasoning: resultB.reasoning, confidence: resultB.confidence, tags: Array.isArray(resultB.tags) ? resultB.tags : [] },
       });
     } catch (err) {
       toast.show(err?.message || 'AB compare failed', { kind: 'error', duration: 4000 });
@@ -9847,7 +9900,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   };
 
   const handleAIStyle = async (intentOverride = null, { refine = false } = {}) => {
-    setAiBusy(true); setAiNote(null);
+    setAiBusy(true); setAiNote(null); setAiTags([]);
     setAiStage(AI_STAGES[0]);
     // Cycle stage labels every 1.2s so the user sees forward motion
     let stageIndex = 0;
@@ -9881,6 +9934,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       }
       setCurrentOutfit(next);
       setAiNote(result.reasoning || 'AI-styled look ready');
+      setAiTags(Array.isArray(result.tags) ? result.tags : []);
       setAiConfidence(typeof result.confidence === 'number' ? result.confidence : null);
       toast.show(refine ? 'Refined' : 'Styled by the Concierge', { kind: 'success' });
       // Save to AI prompt history
@@ -10273,6 +10327,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           onPick={(choice) => {
             setCurrentOutfit(choice.outfit);
             setAiNote(choice.reasoning);
+            setAiTags(choice.tags || []);
             setAiConfidence(typeof choice.confidence === 'number' ? choice.confidence : null);
             if (saveAIHistory) {
               saveAIHistory({
@@ -10423,19 +10478,25 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                         nothing to name from). Positioned inside the input
                         on the right via absolute positioning. */}
                     <div className="relative mb-4">
-                      <input type="text" placeholder="Name this look…" value={outfitName} onChange={(e) => setOutfitName(e.target.value)}
-                        className={`w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 focus:border-stone-900 outline-none transition-colors ${isAIEnabled() && pieceCount > 0 ? 'pr-28' : ''}`}
+                      <input
+                        type="text"
+                        placeholder={suggestingName ? 'Composing a name…' : 'Name this look…'}
+                        value={outfitName}
+                        onChange={(e) => setOutfitName(e.target.value)}
+                        disabled={suggestingName}
+                        className={`w-full px-5 py-4 rounded-xl bg-stone-50 border border-stone-200 focus:border-stone-900 outline-none transition-colors disabled:bg-stone-50 disabled:text-stone-400 ${isAIEnabled() && pieceCount > 0 ? 'pr-32' : ''}`}
                       />
                       {isAIEnabled() && pieceCount > 0 && (
                         <button
                           type="button"
                           onClick={handleSuggestName}
                           disabled={suggestingName}
-                          title="Suggest a name with the Concierge"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:opacity-50"
+                          title={suggestingName ? 'Composing a name with the Concierge' : 'Suggest a name with the Concierge'}
+                          aria-busy={suggestingName}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:cursor-not-allowed"
                         >
                           <Sparkles size={10} strokeWidth={1.75} className={suggestingName ? 'animate-pulse text-amber-500' : 'text-amber-500'} />
-                          {suggestingName ? '…' : 'Suggest'}
+                          {suggestingName ? 'Composing…' : 'Suggest'}
                         </button>
                       )}
                     </div>
@@ -14542,6 +14603,18 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             <div className="mt-7 bg-stone-900 text-white rounded-2xl p-5 sm:p-6 text-sm leading-relaxed flex items-start gap-3 max-w-3xl">
               <Sparkles size={14} strokeWidth={1.5} className="shrink-0 mt-0.5 text-brass-300" />
               <p className="italic">"{outfit.reasoning}"</p>
+            </div>
+          )}
+          {outfit.tags && outfit.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-5">
+              {outfit.tags.slice(0, 5).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
           )}
 

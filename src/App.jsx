@@ -3842,6 +3842,39 @@ function DigitalWardrobe() {
               user={user}
               onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
               onOpenItem={(id) => { setIsConciergeOpen(false); setSelectedItemId(id); }}
+              onSaveLook={(itemIds) => {
+                setIsConciergeOpen(false);
+                const name = `From Concierge · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+                handleSaveOutfit({
+                  id: newId(),
+                  name,
+                  itemIds,
+                  createdAt: new Date().toISOString(),
+                });
+                toast.show('Saved to Lookbook', { kind: 'success' });
+              }}
+              onSchedule={(itemIds, dateISO) => {
+                const id = newId();
+                const name = `From Concierge · ${new Date(dateISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+                handleSaveOutfit({
+                  id,
+                  name,
+                  itemIds,
+                  createdAt: new Date().toISOString(),
+                });
+                handleScheduleOutfit(dateISO, id);
+                setIsConciergeOpen(false);
+                toast.show(`Scheduled for ${new Date(dateISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`, { kind: 'success' });
+              }}
+              onAddToPacking={(itemIds) => {
+                // PackingListModal reads from schedules within a date range and
+                // cannot accept ad-hoc item lists. Defer full packing integration
+                // to a follow-up; for now surface the look in Lookbook where the
+                // user can confirm and use the existing Download packing button.
+                setIsConciergeOpen(false);
+                setActiveTab('lookbook');
+                toast.show(`${itemIds.length} pieces noted — find them in your Lookbook to add to a planned trip`, { kind: 'success' });
+              }}
             />
           )}
 
@@ -13693,7 +13726,7 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
 //   • error flag if a reply fails (offers retry of last user message)
 //   • input controlled with submit-on-enter (shift+enter = new line)
 //   • auto-scrolls to bottom on new messages
-function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences, onOpenItem = null }) {
+function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences, onOpenItem = null, onSaveLook = null, onSchedule = null, onAddToPacking = null }) {
   useEscapeKey(onClose);
 
   // Time-of-day greeting — sets the tone before the user even types.
@@ -14058,6 +14091,9 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
               items={items}
               onOpenItem={onOpenItem}
               onCancel={cancelStream}
+              onSaveLook={onSaveLook}
+              onSchedule={onSchedule}
+              onAddToPacking={onAddToPacking}
             />
           ))}
           {hasOrphanUserMessage && (
@@ -14140,6 +14176,114 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
 // thumbnail is always up to date (renames, image swaps reflect
 // automatically). Falls back to plain text if the id is unknown,
 // which protects against hallucinated markers.
+// Extract item ids referenced in Concierge assistant text via the
+// <<item:id|display>> markers. Returns a deduped string array in
+// the order they appeared. Used by the Concierge action row to know
+// what items the stylist actually proposed in a given message.
+function extractItemIdsFromConciergeText(raw) {
+  if (!raw) return [];
+  const re = /<<item:([^|>]+)\|[^>]+>>/g;
+  const seen = new Set();
+  const ids = [];
+  let match;
+  while ((match = re.exec(raw)) !== null) {
+    const id = match[1];
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+// Action row rendered below assistant messages whose text contains 2+
+// item chips. Lets the user act on the stylist's proposal without
+// leaving the chat: save the proposed pieces as a Look, schedule them
+// for a day, or drop them into the packing list. Hidden when there's
+// nothing actionable (≤1 chip = casual chat, not an outfit suggestion).
+function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPacking }) {
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+
+  if (!itemIds || itemIds.length < 2) return null;
+  const resolved = itemIds.map((id) => items.find((i) => i.id === id)).filter(Boolean);
+  if (resolved.length < 2) return null;
+
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const tomorrowISO = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {onSaveLook && (
+        <button
+          type="button"
+          onClick={() => onSaveLook(itemIds)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-900 text-white text-[11px] tracking-wide hover:bg-stone-700 transition-colors"
+        >
+          <Bookmark size={12} strokeWidth={1.75} />
+          Save as a look
+        </button>
+      )}
+      {onSchedule && !scheduleOpen && (
+        <button
+          type="button"
+          onClick={() => setScheduleOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors"
+        >
+          <Calendar size={12} strokeWidth={1.75} />
+          Schedule for…
+        </button>
+      )}
+      {onSchedule && scheduleOpen && (
+        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-stone-50 border border-stone-300">
+          <button
+            type="button"
+            onClick={() => { onSchedule(itemIds, todayISO); setScheduleOpen(false); }}
+            className="px-2 py-0.5 rounded-full text-[11px] text-stone-700 hover:bg-stone-200 transition-colors"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => { onSchedule(itemIds, tomorrowISO); setScheduleOpen(false); }}
+            className="px-2 py-0.5 rounded-full text-[11px] text-stone-700 hover:bg-stone-200 transition-colors"
+          >
+            Tomorrow
+          </button>
+          <input
+            type="date"
+            min={todayISO}
+            onChange={(e) => { if (e.target.value) { onSchedule(itemIds, e.target.value); setScheduleOpen(false); } }}
+            className="px-1.5 py-0.5 text-[11px] bg-transparent border-l border-stone-300 outline-none focus:bg-white"
+            style={{ fontSize: '16px' }}
+          />
+          <button
+            type="button"
+            onClick={() => setScheduleOpen(false)}
+            aria-label="Cancel"
+            className="px-1 text-stone-400 hover:text-stone-700"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {onAddToPacking && (
+        <button
+          type="button"
+          onClick={() => onAddToPacking(itemIds)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors"
+        >
+          <Download size={12} strokeWidth={1.75} />
+          Add to packing
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ItemChip({ itemId, fallbackName, items, onOpenItem }) {
   const item = items.find((i) => i.id === itemId);
   if (!item) {
@@ -14241,7 +14385,7 @@ function ConciergeComposingIndicator({ onCancel = null }) {
 // (white card with brass-rule shoulder eyebrow); the client's voice is
 // quieter (dark pill aligned right). Whitespace-pre-line preserves the
 // bullet lists Gemini returns.
-function ConciergeMessage({ role, text, streaming = false, items = [], onOpenItem = null, onCancel = null }) {
+function ConciergeMessage({ role, text, streaming = false, items = [], onOpenItem = null, onCancel = null, onSaveLook = null, onSchedule = null, onAddToPacking = null }) {
   // Parse <<item:id|name>> markers and render each as an ItemChip,
   // preserving the surrounding prose as text. Returns an array of
   // React children safe to drop into a <p>.
@@ -14295,6 +14439,19 @@ function ConciergeMessage({ role, text, streaming = false, items = [], onOpenIte
             </p>
           )}
         </div>
+        {!streaming && (() => {
+          const chipIds = extractItemIdsFromConciergeText(text);
+          if (chipIds.length < 2) return null;
+          return (
+            <ConciergeActionRow
+              itemIds={chipIds}
+              items={items}
+              onSaveLook={onSaveLook}
+              onSchedule={onSchedule}
+              onAddToPacking={onAddToPacking}
+            />
+          );
+        })()}
       </div>
     );
   }

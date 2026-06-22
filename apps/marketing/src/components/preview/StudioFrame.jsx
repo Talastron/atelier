@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Pic } from '@atelier/ui';
 import {
   Search,
   SlidersHorizontal,
@@ -590,7 +591,7 @@ function ItemCard({ item }) {
             />
           </div>
         )}
-        <img
+        <Pic
           src={item.src}
           alt={item.name}
           loading="lazy"
@@ -734,7 +735,7 @@ function TodayCard() {
           >
             <div className="grid grid-cols-2 grid-rows-2 gap-0.5 shrink-0 rounded-md overflow-hidden" style={{ width: 36, height: 36 }}>
               {[SAMPLE_ITEMS[1].src, SAMPLE_ITEMS[3].src, SAMPLE_ITEMS[11].src, SAMPLE_ITEMS[13].src].map((src, i) => (
-                <img key={i} src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+                <Pic key={i} src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
               ))}
             </div>
             <div className="flex-1 min-w-0">
@@ -853,7 +854,7 @@ function TodaysPickCard() {
         color: '#ffffff',
       }}
     >
-      <img
+      <Pic
         src={pick.src}
         alt={pick.name}
         loading="lazy"
@@ -1011,7 +1012,7 @@ function StylingView() {
                   </div>
                 )}
                 {isRevealed && (
-                  <img
+                  <Pic
                     src={item.src}
                     alt={item.name}
                     className="w-full h-full object-cover"
@@ -1300,7 +1301,7 @@ function CPWCard({ icon: Icon, title, accent, items }) {
       <ul className="space-y-2.5">
         {items.map((item, i) => (
           <li key={i} className="flex items-center gap-2.5">
-            <img
+            <Pic
               src={item.src}
               alt={item.name}
               loading="lazy"

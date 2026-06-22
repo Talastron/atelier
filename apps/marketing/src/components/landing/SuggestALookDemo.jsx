@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Pic } from '@atelier/ui';
 import { Sparkles, Wand2, X, Calendar, BookmarkPlus, ShirtIcon } from 'lucide-react';
 
 /**
@@ -225,7 +226,7 @@ export function SuggestALookDemo() {
           <div style={{ height: 14, width: '20%', background: 'var(--atelier-stone-100)', borderRadius: 3, marginBottom: 4 }} />
           <div className="grid grid-cols-3 gap-2 mt-1">
             {FAUX_WARDROBE.map((src, i) => (
-              <img
+              <Pic
                 key={i}
                 src={src}
                 alt=""
@@ -480,7 +481,7 @@ export function SuggestALookDemo() {
           {/* Item grid — 3 cols of small thumbnails */}
           <div className="grid grid-cols-3 gap-1.5" style={{ flexShrink: 0 }}>
             {FAUX_WARDROBE.slice(0, 6).map((src, i) => (
-              <img
+              <Pic
                 key={i}
                 src={src}
                 alt=""
@@ -613,7 +614,7 @@ export function SuggestALookDemo() {
                         </div>
                       )}
                       {isRevealed && (
-                        <img
+                        <Pic
                           src={item.src}
                           alt={item.name}
                           className="w-full h-full object-cover"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Pic } from '@atelier/ui';
 import { Sparkles, Send, X } from 'lucide-react';
 
 /**
@@ -387,7 +388,7 @@ export function ConciergeDemo() {
                       fontSize: '13px',
                     }}
                   >
-                    <img
+                    <Pic
                       src={part.src}
                       alt=""
                       loading="lazy"

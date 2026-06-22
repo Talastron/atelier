@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Pic } from '@atelier/ui';
 import {
   ChevronRight,
   Sparkles,
@@ -146,16 +147,16 @@ function StudioFrame() {
 
   // Eagerly preload every outfit photo on mount. Without this, slots load
   // lazily as they reveal — on slow networks visitors see a brief empty
-  // slot before the JPG resolves, which breaks the "items being laid out
-  // one at a time" feel. 12 small JPGs (~150-300KB each) preload in
-  // parallel in the background; by the time any slot reveals, the image
-  // is already in the browser's image cache so the <img> tag renders
-  // synchronously.
+  // slot before the image resolves, which breaks the "items being laid
+  // out one at a time" feel. Preload the WebP variant (what <Pic> serves
+  // to the 97% of browsers that support it) rather than the JPG; old
+  // browsers will fall back to the JPG fetch on demand, accepting a
+  // small reveal lag in exchange for not paying double bandwidth.
   useEffect(() => {
     OUTFITS.forEach((outfit) => {
       outfit.items.forEach(({ src }) => {
         const img = new Image();
-        img.src = src;
+        img.src = src.replace(/\.(jpe?g|png)$/i, '.webp');
       });
     });
   }, []);
@@ -549,7 +550,7 @@ function StudioFrame() {
                           </div>
                         )}
                         {isRevealed && (
-                          <img
+                          <Pic
                             src={item.src}
                             alt={item.name}
                             loading="lazy"
@@ -885,7 +886,7 @@ function StudioFrame() {
                     </div>
                   )}
                   {isRevealed && (
-                    <img
+                    <Pic
                       src={item.src}
                       alt={item.name}
                       loading="lazy"

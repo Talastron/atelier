@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Wand2 } from 'lucide-react';
-import { BrassRule } from '@atelier/ui';
+import { BrassRule, Pic } from '@atelier/ui';
 
 /**
  * OutfitPreview — interactive marketing demo of the studio's Styling Studio.
@@ -189,7 +189,7 @@ export function OutfitPreview() {
 
                 {/* Item image — fades and lifts in */}
                 {isRevealed && (
-                  <img
+                  <Pic
                     src={item.image}
                     alt={item.name}
                     className="w-full h-full object-cover"

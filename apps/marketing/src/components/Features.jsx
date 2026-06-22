@@ -6,6 +6,7 @@
 // (no emerald). Hover lift on every card.
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Pic } from '@atelier/ui';
 import {
   Camera,
   MapPin,
@@ -192,7 +193,7 @@ function IdentifyDemo() {
           flexShrink: 0,
         }}
       >
-        <img
+        <Pic
           key={activeIdx}
           src={sample.src}
           alt=""
@@ -360,7 +361,7 @@ function TravelDemo() {
               }}
             >
               {isRevealed && (
-                <img
+                <Pic
                   src={src}
                   alt=""
                   loading="lazy"
@@ -422,7 +423,7 @@ function CPWDemo() {
 
   return (
     <div ref={ref} className="flex items-center gap-3">
-      <img
+      <Pic
         key={activeIdx}
         src={sample.src}
         alt=""
@@ -669,7 +670,7 @@ function LookbookDemo() {
               }}
             >
               {isRevealed && (
-                <img
+                <Pic
                   src={src}
                   alt=""
                   loading="lazy"
@@ -780,7 +781,7 @@ function CalendarDemo() {
               }}
             >
               {isRevealed && (
-                <img
+                <Pic
                   src={plannedItem.src}
                   alt=""
                   loading="lazy"

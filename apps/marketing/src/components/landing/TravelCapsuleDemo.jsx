@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Pic } from '@atelier/ui';
 import { Cloud, Sparkles } from 'lucide-react';
 
 /**
@@ -377,7 +378,7 @@ export function TravelCapsuleDemo() {
                         border: '1px solid var(--atelier-stone-200)',
                       }}
                     >
-                      <img
+                      <Pic
                         src={item.src}
                         alt=""
                         loading="lazy"

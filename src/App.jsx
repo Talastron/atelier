@@ -15966,14 +15966,14 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
           {/* Polaroid frame: rounded white card, hairline ring, layered
               shadow so the piece sits on the surface. Hero gets a slightly
               larger radius to feel weightier. */}
-          <div className={`relative ${isHero ? 'aspect-[4/5]' : 'aspect-[3/4]'} ${isHero ? 'rounded-[1.5rem]' : 'rounded-[1.125rem]'} bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]`}>
+          <div className={`relative ${isHero ? 'aspect-[3/4]' : 'aspect-[3/4]'} ${isHero ? 'rounded-[1.5rem]' : 'rounded-[1.125rem]'} bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]`}>
             {/* N°XX tag — italic serif, the editorial signature */}
             <span className={`absolute ${isHero ? 'top-3 left-4 text-xs' : 'top-2 left-3 text-[10px]'} tracking-[0.15em] text-stone-400 font-display italic z-10`}>
               N°{String(n).padStart(2, '0')}
             </span>
             {itemImages(item)[0] ? (
               <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async"
-                className={`w-full h-full object-contain ${isHero ? 'p-4' : 'p-3'}`} />
+                className={`w-full h-full object-contain ${isHero ? 'p-2' : 'p-1.5'}`} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={isHero ? 64 : 28} strokeWidth={1} /></div>
             )}
@@ -15994,7 +15994,7 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
       {/* Atmospheric backdrop — warm radial highlight from upper-left
           like soft window light raking across a styled surface. */}
       <div
-        className="relative rounded-[2rem] border border-stone-200/60 px-5 sm:px-8 md:px-10 lg:px-12 py-8 sm:py-10 md:py-12 overflow-hidden"
+        className="relative rounded-[2rem] border border-stone-200/60 px-3 sm:px-5 md:px-7 lg:px-8 py-5 sm:py-7 md:py-8 overflow-hidden"
         style={{
           background: 'radial-gradient(ellipse 90% 70% at 20% 0%, #FBFAF7 0%, #F4F0E8 55%, #ECE6D8 100%)',
         }}
@@ -16031,7 +16031,7 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
                 the garments. Always at the bottom of the spread, like
                 the accessory credits at the end of a magazine page. */}
             {accessories.length > 0 && (
-              <div className="col-span-12 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-3 sm:gap-4">
+              <div className="col-span-12 grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                 {accessories.map((p, i) => (
                   <Cell key={p.id || `a${i}`} item={p} />
                 ))}

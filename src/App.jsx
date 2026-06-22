@@ -3826,13 +3826,13 @@ function DigitalWardrobe() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {[
-                  { id: 'finance', label: 'Insights', icon: BarChart3 },
+                  { id: 'inspiration', label: 'Inspiration', icon: Bookmark },
                   { id: 'shops', label: 'Directory', icon: Store },
                 ].map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     type="button"
-                    onClick={() => { setMobileMoreOpen(false); setActiveTab(id); }}
+                    onClick={() => { setMobileMoreOpen(false); if (id === 'inspiration') setInspirationDefaultFilter('all'); setActiveTab(id); }}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 transition-colors ${activeTab === id ? 'text-brass-700' : 'text-stone-700'}`}
                   >
                     <Icon size={16} strokeWidth={1.5} />
@@ -3862,7 +3862,7 @@ function DigitalWardrobe() {
                 onLongPress={() => setIsConciergeOpen(true)}
               />
               <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="inspiration" icon={Bookmark} label="Inspire" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} onScrollTop={scrollMainToTop} />
+              <MobileNavItem id="finance" icon={BarChart3} label="Insights" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
             </div>
           </div>
 

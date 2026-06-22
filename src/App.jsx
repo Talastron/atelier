@@ -9951,6 +9951,23 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           });
         } catch (e) { console.warn('[wardrobe] could not save AI history:', e); }
       }
+      // Auto-name the freshly composed look. The user can still click
+      // "Suggest" later to regenerate, but we save them a step in the
+      // common case where they accept the AI's suggestion. We force the
+      // stage label so the user sees what we're doing during the extra
+      // ~3s the naming call takes (the AIProgressModal is still up because
+      // aiBusy hasn't been set false yet).
+      try {
+        const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(next[s.toLowerCase()]));
+        if (picked.length > 0 && !outfitName.trim()) {
+          setAiStage('Titling the look…');
+          const briefForName = customIntent.trim() || (styleIntent !== 'Any' ? styleIntent : '');
+          const name = await generateOutfitNameWithGemini(picked, briefForName);
+          if (name) setOutfitName(name);
+        }
+      } catch (autoNameErr) {
+        console.warn('[stylist] auto-name failed:', autoNameErr?.message);
+      }
     } catch (err) {
       toast.show(err?.message || 'AI styling failed', { kind: 'error', duration: 4000 });
     } finally {
@@ -10324,7 +10341,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         <ABCompareModal
           pair={abPair}
           onClose={() => setAbPair(null)}
-          onPick={(choice) => {
+          onPick={async (choice) => {
             setCurrentOutfit(choice.outfit);
             setAiNote(choice.reasoning);
             setAiTags(choice.tags || []);
@@ -10341,6 +10358,19 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             }
             setAbPair(null);
             toast.show('Look applied', { kind: 'success' });
+            // Auto-name the A/B picked look. The AIProgressModal is no longer
+            // open here so we flip suggestingName to show the "Composing a
+            // name…" placeholder in the name input (added in P1.1 Task 2.4).
+            if (!outfitName.trim()) {
+              setSuggestingName(true);
+              try {
+                const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(choice.outfit[s.toLowerCase()]));
+                const briefForName = customIntent.trim() || (styleIntent !== 'Any' ? styleIntent : '');
+                const name = await generateOutfitNameWithGemini(picked, briefForName);
+                if (name) setOutfitName(name);
+              } catch (e) { console.warn('[stylist] A/B auto-name failed:', e?.message); }
+              finally { setSuggestingName(false); }
+            }
           }}
         />
       )}

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer, BarChart3
+  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer, BarChart3, MoreHorizontal
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -15238,8 +15238,25 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
     const next = wornPhotos.filter((_, i) => i !== idx);
     await onSaveOutfit({ ...outfit, wornPhotos: next });
   };
+  // Compute colour palette here (used in both render and later for Commit 3 filter)
+  const colourPalette = (() => {
+    const counts = new Map();
+    for (const piece of pieces) {
+      for (const c of (itemColors(piece) || [])) {
+        const key = (c || '').toLowerCase().trim();
+        if (!key) continue;
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, count]) => ({ name, count, hex: hexFromColorName(name) }));
+  })();
+
   return (
     <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+      {/* Sticky toolbar */}
       <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-xs sm:text-sm tracking-wide text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
@@ -15248,10 +15265,6 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             <span className="sm:hidden">Back</span>
           </button>
           {!confirmDelete ? (
-            // Refined toolbar — primary actions (Share, Vary) lead; star is
-            // an inline toggle; Edit and Duplicate are quieter; Delete is a
-            // text-only icon button. Less visual noise than the previous
-            // six-equal-pills row.
             <div className="flex items-center gap-1.5 sm:gap-2">
               {onSaveOutfit && (
                 <button
@@ -15308,101 +15321,134 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-12">
-        <header className="mb-10 sm:mb-12">
-          {/* Editorial eyebrow — brass-rule + small-caps, same pattern as
-              every other main-column header in the app. Was a plain caps
-              line before; now speaks the same typographic vocabulary. */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Saved Look</span>
-          </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display text-stone-900 tracking-tight leading-[1.05]">{outfit.name}</h1>
-          {/* Editorial credits line — pieces, value, intent, plus the
-              magazine-style date/wear context (saved when · worn how often
-              · last seen when). Joined with middle-dot separators in a single
-              tracked uppercase line so it reads as a credit, not data. */}
-          <p className="text-[11px] text-stone-500 mt-5 tracking-[0.18em] uppercase">
-            {[
-              `${pieces.length} pieces`,
-              `£${total.toLocaleString()}`,
-              outfit.intent ? `for ${outfit.intent}` : null,
-              savedLabel ? `saved ${savedLabel}` : null,
-              wearCount > 0 ? `worn ${wearCount}×` : null,
-              lastWornLabel && wearCount > 0 ? `last ${lastWornLabel}` : null,
-            ].filter(Boolean).join(' · ')}
-          </p>
-          {/* AI reasoning as an italic pull-quote (Vogue editorial style) —
-              dark stone-900 surface, no shadow per convention, brass accent
-              before the quote. */}
-          {outfit.reasoning && (
-            <div className="mt-7 bg-stone-900 text-white rounded-2xl p-5 sm:p-6 text-sm leading-relaxed flex items-start gap-3 max-w-3xl">
-              <Sparkles size={14} strokeWidth={1.5} className="shrink-0 mt-0.5 text-brass-300" />
-              <p className="italic">"{outfit.reasoning}"</p>
-            </div>
-          )}
-          {/* Style-fit narrative — on-demand, persisted. Tied to the user's
-              manifesto / profile so it's about THIS look × YOUR style. */}
-          {onSaveOutfit && (
-            <div className="mt-5 max-w-3xl">
-              {outfit.styleFit ? (
-                <div className="bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6 text-sm leading-relaxed">
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
-                    <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Why this fits you</span>
-                  </div>
-                  <p className="text-stone-700 italic">{outfit.styleFit}</p>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (styleFitBusy) return;
-                    setStyleFitBusy(true);
-                    setStyleFitError(null);
-                    try {
-                      const manifesto = measurements?.styleManifesto || '';
-                      const styleProfile = measurements?.styleProfile || '';
-                      const note = await generateStyleFitWithGemini({ outfit, picked: pieces, manifesto, styleProfile });
-                      if (note) {
-                        await onSaveOutfit({ ...outfit, styleFit: note.trim() });
-                      }
-                    } catch (err) {
-                      setStyleFitError(err?.message || 'Could not generate note');
-                    } finally {
-                      setStyleFitBusy(false);
-                    }
-                  }}
-                  disabled={styleFitBusy}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide uppercase hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
-                >
-                  <Sparkles size={12} strokeWidth={1.75} />
-                  {styleFitBusy ? 'Composing…' : 'Why this fits you'}
+      {/* Two-column layout: hero LEFT, editorial column RIGHT */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16">
+
+          {/* ── LEFT COLUMN: Look hero (60%) ── */}
+          <div className="lg:col-span-7">
+            {/* View toggle — small pill, top-right of the look region */}
+            <div className="flex justify-end mb-3">
+              <div className="flex bg-stone-200/50 p-1 rounded-full text-[10px] tracking-wider uppercase">
+                <button onClick={() => setView('flatlay')}
+                  className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'flatlay' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
+                  Flat-lay
                 </button>
-              )}
-              {styleFitError && (
-                <p className="text-[11px] text-stone-500 mt-2 italic">{styleFitError}</p>
-              )}
+                <button onClick={() => setView('grid')}
+                  className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'grid' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
+                  Grid
+                </button>
+              </div>
             </div>
-          )}
-          {/* Editorial colour palette strip — dominant colours across the look's
-              pieces, sorted by prevalence, capped at 8 for visual cleanliness. */}
-          {(() => {
-            const counts = new Map();
-            for (const piece of pieces) {
-              for (const c of (itemColors(piece) || [])) {
-                const key = (c || '').toLowerCase().trim();
-                if (!key) continue;
-                counts.set(key, (counts.get(key) || 0) + 1);
-              }
-            }
-            const colourPalette = [...counts.entries()]
-              .sort((a, b) => b[1] - a[1])
-              .slice(0, 8)
-              .map(([name, count]) => ({ name, count, hex: hexFromColorName(name) }));
-            if (colourPalette.length === 0) return null;
-            return (
-              <div className="mt-7 max-w-3xl">
+
+            {view === 'flatlay' ? (
+              <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} />
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 md:gap-6">
+                {pieces.map((piece, i) => {
+                  const openable = !!(onOpenItem && piece.id);
+                  const Tag = openable ? 'button' : 'div';
+                  return (
+                    <Tag
+                      key={piece.id || i}
+                      {...(openable ? { type: 'button', onClick: () => onOpenItem(piece.id), 'aria-label': `Open ${piece.name}` } : {})}
+                      className={`flex flex-col gap-3 text-left ${openable ? 'group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900 rounded-2xl' : ''}`}
+                    >
+                      <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-stone-200/60 transition-colors duration-300 ${openable ? 'lg:group-hover:border-brass-300/70' : ''}`}>
+                        {itemImages(piece)[0] ? (
+                          <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={40} strokeWidth={1} /></div>
+                        )}
+                      </div>
+                      <div className="px-1">
+                        <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{piece.brand}</p>
+                        <p className={`font-display text-base text-stone-800 leading-snug truncate ${openable ? 'group-hover:text-stone-700 transition-colors' : ''}`}>{piece.name}</p>
+                        <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
+                      </div>
+                    </Tag>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── RIGHT COLUMN: Editorial intelligence (40%) ── */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Eyebrow + title + subtitle */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="brass-rule" aria-hidden="true"></span>
+                <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Saved Look</span>
+              </div>
+              <h1 className="text-4xl sm:text-5xl lg:text-4xl xl:text-5xl font-display text-stone-900 tracking-tight leading-[1.05]">{outfit.name}</h1>
+              {(outfit.intent || savedLabel) && (
+                <p className="font-display italic text-stone-500 text-sm sm:text-base mt-3">
+                  {[
+                    outfit.intent ? `For ${outfit.intent}` : null,
+                    savedLabel ? `Saved ${savedLabel}` : null,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              )}
+              <p className="text-[10px] text-stone-500 mt-2 tracking-[0.18em] uppercase">
+                {`${pieces.length} pieces · £${total.toLocaleString()}`}
+              </p>
+            </div>
+
+            {/* Unified Stylist's Note card */}
+            {(outfit.reasoning || outfit.styleFit || onSaveOutfit) && (
+              <div className="bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6">
+                <div className="flex items-center gap-2.5 mb-4">
+                  <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
+                  <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Stylist's Note</span>
+                </div>
+                {outfit.reasoning && (
+                  <div className="mb-4">
+                    <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">On the composition</p>
+                    <p className="text-sm italic text-stone-700 leading-relaxed">"{outfit.reasoning}"</p>
+                  </div>
+                )}
+                {onSaveOutfit && (
+                  <div className={outfit.reasoning ? 'pt-4 border-t border-stone-100' : ''}>
+                    <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">On your style</p>
+                    {outfit.styleFit ? (
+                      <p className="text-sm italic text-stone-700 leading-relaxed">{outfit.styleFit}</p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (styleFitBusy) return;
+                          setStyleFitBusy(true);
+                          setStyleFitError(null);
+                          try {
+                            const manifesto = measurements?.styleManifesto || '';
+                            const styleProfile = measurements?.styleProfile || '';
+                            const note = await generateStyleFitWithGemini({ outfit, picked: pieces, manifesto, styleProfile });
+                            if (note) {
+                              await onSaveOutfit({ ...outfit, styleFit: note.trim() });
+                            }
+                          } catch (err) {
+                            setStyleFitError(err?.message || 'Could not generate note');
+                          } finally {
+                            setStyleFitBusy(false);
+                          }
+                        }}
+                        disabled={styleFitBusy}
+                        className="inline-flex items-center gap-1.5 text-[11px] tracking-wide uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors disabled:opacity-60"
+                      >
+                        <Sparkles size={11} strokeWidth={1.75} className="text-amber-500" />
+                        {styleFitBusy ? 'Composing…' : '+ Add personal note'}
+                      </button>
+                    )}
+                    {styleFitError && <p className="text-[11px] text-stone-500 mt-2 italic">{styleFitError}</p>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Colour palette */}
+            {colourPalette.length > 0 && (
+              <div>
                 <div className="flex items-center gap-2.5 mb-3">
                   <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
                   <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Palette</span>
@@ -15423,165 +15469,159 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   ))}
                 </div>
               </div>
-            );
-          })()}
-          {((outfit.tags && outfit.tags.length > 0) || typeof onSaveOutfit === 'function') && (
-            <div className="mt-8 pt-6 border-t border-stone-200">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
-                  <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Tags</span>
+            )}
+
+            {/* Tags */}
+            {((outfit.tags && outfit.tags.length > 0) || typeof onSaveOutfit === 'function') && (
+              <div className="pt-5 border-t border-stone-200">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
+                    <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Tags</span>
+                  </div>
+                  {typeof onSaveOutfit === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() => { setEditingTags((v) => !v); setNewTag(''); }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                        editingTags
+                          ? 'bg-stone-900 text-white hover:bg-stone-700'
+                          : 'bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900'
+                      }`}
+                    >
+                      {editingTags ? (
+                        <>
+                          <Check size={12} strokeWidth={2} />
+                          Done
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={12} strokeWidth={2} />
+                          {outfit.tags && outfit.tags.length > 0 ? 'Edit tags' : 'Add tags'}
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
-                {typeof onSaveOutfit === 'function' && (
-                  <button
-                    type="button"
-                    onClick={() => { setEditingTags((v) => !v); setNewTag(''); }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
-                      editingTags
-                        ? 'bg-stone-900 text-white hover:bg-stone-700'
-                        : 'bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900'
-                    }`}
-                  >
-                    {editingTags ? (
-                      <>
-                        <Check size={12} strokeWidth={2} />
-                        Done
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={12} strokeWidth={2} />
-                        {outfit.tags && outfit.tags.length > 0 ? 'Edit tags' : 'Add tags'}
-                      </>
+
+                {(outfit.tags || []).length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {(outfit.tags || []).map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[11px] tracking-wide uppercase"
+                      >
+                        {tag}
+                        {editingTags && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = (outfit.tags || []).filter((t) => t !== tag);
+                              onSaveOutfit?.({ ...outfit, tags: next });
+                            }}
+                            aria-label={`Remove ${tag}`}
+                            className="text-stone-400 hover:text-stone-900 ml-0.5 leading-none transition-colors"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-stone-400 italic">No tags yet — add a few to find this look faster.</p>
+                )}
+
+                {editingTags && typeof onSaveOutfit === 'function' && (
+                  <div className="mt-4 space-y-4">
+                    {(outfit.tags || []).length < 8 && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const t = newTag.trim().toLowerCase();
+                          if (!t) return;
+                          const existing = outfit.tags || [];
+                          if (existing.includes(t)) { setNewTag(''); return; }
+                          if (existing.length >= 8) return;
+                          onSaveOutfit?.({ ...outfit, tags: [...existing, t] });
+                          setNewTag('');
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <input
+                          value={newTag}
+                          onChange={(e) => setNewTag(e.target.value)}
+                          placeholder="Type a custom tag and press Enter"
+                          maxLength={20}
+                          className="flex-1 px-3 py-2 rounded-full bg-white border border-stone-300 text-stone-900 text-sm outline-none focus:border-stone-900 transition-colors"
+                          style={{ fontSize: '16px' }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!newTag.trim()}
+                          className="px-4 py-2 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:hover:bg-stone-900"
+                        >
+                          Add
+                        </button>
+                      </form>
                     )}
-                  </button>
+
+                    <div className="space-y-3">
+                      <p className="text-[10px] tracking-widest uppercase text-stone-400">Suggested</p>
+                      {PRESET_TAG_CATEGORIES.map(({ label, tags }) => {
+                        const available = tags.filter((t) => !(outfit.tags || []).includes(t));
+                        if (available.length === 0) return null;
+                        return (
+                          <div key={label}>
+                            <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">{label}</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {available.map((tag) => (
+                                <button
+                                  key={tag}
+                                  type="button"
+                                  disabled={(outfit.tags || []).length >= 8}
+                                  onClick={() => {
+                                    const existing = outfit.tags || [];
+                                    if (existing.includes(tag) || existing.length >= 8) return;
+                                    onSaveOutfit?.({ ...outfit, tags: [...existing, tag] });
+                                  }}
+                                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-stone-300 text-stone-600 text-[11px] tracking-wide uppercase hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <span aria-hidden="true" className="text-stone-400">+</span>
+                                  {tag}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {(outfit.tags || []).length >= 8 && (
+                      <p className="text-[10px] tracking-wide uppercase text-stone-400">Maximum of 8 tags reached.</p>
+                    )}
+                  </div>
                 )}
               </div>
+            )}
 
-              {(outfit.tags || []).length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {(outfit.tags || []).map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[11px] tracking-wide uppercase"
-                    >
-                      {tag}
-                      {editingTags && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = (outfit.tags || []).filter((t) => t !== tag);
-                            onSaveOutfit?.({ ...outfit, tags: next });
-                          }}
-                          aria-label={`Remove ${tag}`}
-                          className="text-stone-400 hover:text-stone-900 ml-0.5 leading-none transition-colors"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[12px] text-stone-400 italic">No tags yet — add a few to find this look faster.</p>
-              )}
-
-              {editingTags && typeof onSaveOutfit === 'function' && (
-                <div className="mt-4 space-y-4">
-                  {(outfit.tags || []).length < 8 && (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const t = newTag.trim().toLowerCase();
-                        if (!t) return;
-                        const existing = outfit.tags || [];
-                        if (existing.includes(t)) { setNewTag(''); return; }
-                        if (existing.length >= 8) return;
-                        onSaveOutfit?.({ ...outfit, tags: [...existing, t] });
-                        setNewTag('');
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <input
-                        value={newTag}
-                        onChange={(e) => setNewTag(e.target.value)}
-                        placeholder="Type a custom tag and press Enter"
-                        maxLength={20}
-                        className="flex-1 px-3 py-2 rounded-full bg-white border border-stone-300 text-stone-900 text-sm outline-none focus:border-stone-900 transition-colors"
-                        style={{ fontSize: '16px' }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={!newTag.trim()}
-                        className="px-4 py-2 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:hover:bg-stone-900"
-                      >
-                        Add
-                      </button>
-                    </form>
-                  )}
-
-                  <div className="space-y-3">
-                    <p className="text-[10px] tracking-widest uppercase text-stone-400">Suggested</p>
-                    {PRESET_TAG_CATEGORIES.map(({ label, tags }) => {
-                      const available = tags.filter((t) => !(outfit.tags || []).includes(t));
-                      if (available.length === 0) return null;
-                      return (
-                        <div key={label}>
-                          <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">{label}</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {available.map((tag) => (
-                              <button
-                                key={tag}
-                                type="button"
-                                disabled={(outfit.tags || []).length >= 8}
-                                onClick={() => {
-                                  const existing = outfit.tags || [];
-                                  if (existing.includes(tag) || existing.length >= 8) return;
-                                  onSaveOutfit?.({ ...outfit, tags: [...existing, tag] });
-                                }}
-                                className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-stone-300 text-stone-600 text-[11px] tracking-wide uppercase hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                              >
-                                <span aria-hidden="true" className="text-stone-400">+</span>
-                                {tag}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+            {/* Wear-this-look card */}
+            {onLogWear && (
+              <div className="bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6 smooth-shadow">
+                <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="brass-rule" aria-hidden="true"></span>
+                      <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wear this look</span>
+                    </div>
+                    {wearCount > 0 && (
+                      <p className="text-[10px] tracking-wide uppercase text-stone-400">
+                        Worn {wearCount}× · last {lastWornLabel}
+                      </p>
+                    )}
                   </div>
-
-                  {(outfit.tags || []).length >= 8 && (
-                    <p className="text-[10px] tracking-wide uppercase text-stone-400">Maximum of 8 tags reached.</p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {onLogWear && (
-            // Wear-this-look card — tightened. Brass-rule eyebrow + serif
-            // header. Two primary actions ("I wore this today" dark pill,
-            // "Snap fit" outline) on the right. Verdict chips + optional
-            // input demoted as quieter follow-up controls below — they
-            // refine the wear log AFTER the user has decided to log.
-            <div className="mt-8 bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6 max-w-3xl smooth-shadow">
-              <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <span className="brass-rule" aria-hidden="true"></span>
-                    <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wear this look</span>
-                  </div>
-                  <p className="text-xs text-stone-500 leading-relaxed">Logs every piece in one tap — counts toward each item's wear history.</p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  {wornPhotos.length < 6 && (
-                    <label className="text-[10px] tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 flex items-center gap-2 cursor-pointer" title="Snap a selfie wearing this look">
-                      <Camera size={13} strokeWidth={1.5} /> Snap fit
-                      <input type="file" accept="image/*" capture="user" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
-                    </label>
-                  )}
                   <div className="flex flex-col items-end gap-1.5">
-                    {/* Date chip — tap to change. Shows what date will be logged. */}
+                    {/* Date chip + picker */}
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] tracking-widest uppercase text-stone-400">For</span>
                       <button
@@ -15620,6 +15660,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         />
                       </div>
                     )}
+                    {/* Big log button */}
                     <button
                       type="button"
                       disabled={logBusy}
@@ -15645,127 +15686,76 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     </button>
                   </div>
                 </div>
-              </div>
-              <div className="space-y-1.5 mb-3">
-                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
-                  Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
-                </label>
+                <div className="space-y-1.5 mb-3">
+                  <label className="block text-[10px] tracking-widests uppercase text-stone-500 font-medium">
+                    Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
+                  </label>
+                  <input
+                    value={logOccasion}
+                    onChange={(e) => setLogOccasion(e.target.value)}
+                    placeholder="e.g. gallery opening, client lunch, Sunday at home…"
+                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:bg-white focus:border-stone-900 outline-none transition-colors"
+                    style={{ fontSize: '16px' }}
+                    maxLength={60}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {QUICK_VERDICT_CHIPS.map((c) => (
+                    <button key={c} type="button"
+                      onClick={() => setLogVerdict((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c)}
+                      className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
+                      {c}
+                    </button>
+                  ))}
+                </div>
                 <input
-                  value={logOccasion}
-                  onChange={(e) => setLogOccasion(e.target.value)}
-                  placeholder="e.g. gallery opening, client lunch, Sunday at home…"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:bg-white focus:border-stone-900 outline-none transition-colors"
-                  style={{ fontSize: '16px' }}
-                  maxLength={60}
+                  value={logVerdict}
+                  onChange={(e) => setLogVerdict(e.target.value)}
+                  placeholder="Optional verdict — applies to every piece…"
+                  maxLength={120}
+                  className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-colors"
                 />
               </div>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {QUICK_VERDICT_CHIPS.map((c) => (
-                  <button key={c} type="button"
-                    onClick={() => setLogVerdict((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c)}
-                    className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
-                    {c}
-                  </button>
-                ))}
-              </div>
-              <input
-                value={logVerdict}
-                onChange={(e) => setLogVerdict(e.target.value)}
-                placeholder="Optional verdict — applies to every piece…"
-                maxLength={120}
-                className="w-full text-sm px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg focus:bg-white focus:border-stone-900 outline-none transition-colors"
-              />
-            </div>
-          )}
+            )}
 
-          {/* Worn photos — brass-rule editorial eyebrow consistent with the
-              rest of the app. Photos render as small portrait cards in a
-              horizontal scroll. */}
-          <div className="mt-10">
-            <div className="flex items-baseline justify-between mb-4 gap-3">
-              <div className="flex items-center gap-3">
-                <span className="brass-rule" aria-hidden="true"></span>
-                <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wore this · {wornPhotos.length}/6</span>
+            {/* Worn photos strip */}
+            <div className="pt-5 border-t border-stone-200">
+              <div className="flex items-baseline justify-between mb-4 gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="brass-rule" aria-hidden="true"></span>
+                  <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wore this · {wornPhotos.length}/6</span>
+                </div>
+                {wornPhotos.length < 6 && (
+                  <label className="text-[10px] tracking-widests uppercase text-stone-500 hover:text-stone-900 cursor-pointer transition-colors duration-200">
+                    {photoBusy ? 'Adding…' : '＋ Add photo'}
+                    <input type="file" accept="image/*" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
+                  </label>
+                )}
               </div>
-              {wornPhotos.length < 6 && (
-                <label className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 cursor-pointer transition-colors duration-200">
-                  {photoBusy ? 'Adding…' : '＋ Add photo'}
-                  <input type="file" accept="image/*" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
-                </label>
+              {wornPhotos.length === 0 ? (
+                <p className="text-xs text-stone-400 italic">Snap a photo when you wear this look — track what actually got worn vs styled.</p>
+              ) : (
+                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+                  {wornPhotos.map((p, i) => (
+                    <div key={i} className="flex-none w-24 sm:w-28 group relative">
+                      <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 smooth-shadow">
+                        <img src={p.image} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      </div>
+                      <p className="text-[10px] text-stone-500 mt-1.5 tracking-wider">
+                        {new Date(p.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </p>
+                      <button onClick={() => removeWornPhoto(i)} className="absolute top-1.5 right-1.5 p-1.5 bg-white/90 backdrop-blur text-stone-400 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+                        <X size={11} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            {wornPhotos.length === 0 ? (
-              <p className="text-xs text-stone-400 italic">Snap a photo when you wear this look — track what actually got worn vs styled.</p>
-            ) : (
-              <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-                {wornPhotos.map((p, i) => (
-                  <div key={i} className="flex-none w-24 sm:w-28 group relative">
-                    <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 smooth-shadow">
-                      <img src={p.image} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                    </div>
-                    <p className="text-[10px] text-stone-500 mt-1.5 tracking-wider">
-                      {new Date(p.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    </p>
-                    <button onClick={() => removeWornPhoto(i)} className="absolute top-1.5 right-1.5 p-1.5 bg-white/90 backdrop-blur text-stone-400 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
-                      <X size={11} strokeWidth={2} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        </header>
+          {/* ── End right column ── */}
 
-        <div className="flex items-center justify-between mb-6 sm:mb-8 gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">The Pieces</span>
-          </div>
-          <div className="flex bg-stone-200/50 p-1 rounded-full text-[10px] tracking-wider uppercase">
-            <button onClick={() => setView('flatlay')}
-              className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'flatlay' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
-              Flat-lay
-            </button>
-            <button onClick={() => setView('grid')}
-              className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'grid' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
-              Grid
-            </button>
-          </div>
         </div>
-
-        {view === 'flatlay' ? (
-          <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} />
-        ) : (
-          // GRID VIEW — consistent with the Lookbook restraint: no
-          // hover-zoom on the image, just a brass border framing on
-          // hover (matches Lookbook card convention).
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-7">
-            {pieces.map((piece, i) => {
-              const openable = !!(onOpenItem && piece.id);
-              const Tag = openable ? 'button' : 'div';
-              return (
-                <Tag
-                  key={piece.id || i}
-                  {...(openable ? { type: 'button', onClick: () => onOpenItem(piece.id), 'aria-label': `Open ${piece.name}` } : {})}
-                  className={`flex flex-col gap-3 text-left ${openable ? 'group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900 rounded-2xl' : ''}`}
-                >
-                  <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-stone-200/60 transition-colors duration-300 ${openable ? 'lg:group-hover:border-brass-300/70' : ''}`}>
-                    {itemImages(piece)[0] ? (
-                      <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={40} strokeWidth={1} /></div>
-                    )}
-                  </div>
-                  <div className="px-1">
-                    <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{piece.brand}</p>
-                    <p className={`font-display text-base text-stone-800 leading-snug truncate ${openable ? 'group-hover:text-stone-700 transition-colors' : ''}`}>{piece.name}</p>
-                    <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
-                  </div>
-                </Tag>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

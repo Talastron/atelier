@@ -9476,6 +9476,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       if (has || wouldBeCovered) expandedOnEdit.add(s);
     }
     setManuallyExpanded(expandedOnEdit);
+    setAiTags([]);  // clear stale AI tags from a prior generation
   }, [editOutfit?.id]);
   // Seed loader — when Lookbook hands off an AI history entry via
   // navigation, hydrate the canvas without setting editingId. The save
@@ -9857,8 +9858,8 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       };
       setAbPair({
         intent,
-        a: { outfit: buildOutfit(resultA), reasoning: resultA.reasoning, confidence: resultA.confidence },
-        b: { outfit: buildOutfit(resultB), reasoning: resultB.reasoning, confidence: resultB.confidence },
+        a: { outfit: buildOutfit(resultA), reasoning: resultA.reasoning, confidence: resultA.confidence, tags: Array.isArray(resultA.tags) ? resultA.tags : [] },
+        b: { outfit: buildOutfit(resultB), reasoning: resultB.reasoning, confidence: resultB.confidence, tags: Array.isArray(resultB.tags) ? resultB.tags : [] },
       });
     } catch (err) {
       toast.show(err?.message || 'AB compare failed', { kind: 'error', duration: 4000 });
@@ -10297,6 +10298,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           onPick={(choice) => {
             setCurrentOutfit(choice.outfit);
             setAiNote(choice.reasoning);
+            setAiTags(choice.tags || []);
             setAiConfidence(typeof choice.confidence === 'number' ? choice.confidence : null);
             if (saveAIHistory) {
               saveAIHistory({

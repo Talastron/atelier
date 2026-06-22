@@ -494,7 +494,7 @@ async function generateOutfitWithGemini({ items, intent, weather, season, previo
 
 User context:
 - Intent: ${intent || 'an everyday look'}
-- Today's weather: ${weather ? `${weather.temp}°C, ${weatherLabel(weather.code)}` : 'unknown'}
+- Today's weather: ${weather ? `${weather.temp}°C, ${weatherLabel(weather.code, weather.precipProb)}${weather.precipProb != null ? ` (${weather.precipProb}% rain chance)` : ''}` : 'unknown'}
 - Current season: ${season}
 ${styleProfile ? `- ${styleProfile}` : ''}
 
@@ -858,10 +858,10 @@ function itemColors(item) {
 // Weather: fetched via browser geolocation + Open-Meteo (no API key needed).
 // Cached for 1 hour in localStorage so subsequent visits don't re-prompt.
 async function fetchTodaysWeather() {
-  // Cache-key version bump — the old `atelier-weather` cache held
-  // {temp: currentTemp} which is the wrong number for dressing. Bumping
-  // forces a fresh fetch on the new daily-max endpoint.
-  const CACHE_KEY = 'atelier-weather-v2';
+  // Cache-key version bump — v2 cache held data without precipProb. Bumping
+  // to v3 forces a fresh fetch with the new precipitation probability field
+  // (previously caused "Rain" labels to persist even when probability was 0%).
+  const CACHE_KEY = 'atelier-weather-v3';
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
     if (cached && Date.now() - cached.ts < 3600_000) return cached.data;
@@ -881,7 +881,13 @@ async function fetchTodaysWeather() {
     // user's local day boundary.
     const resp = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-      `&daily=temperature_2m_max,temperature_2m_min,weather_code` +
+      // precipitation_probability_max is the daily maximum precipitation
+      // probability — far more honest than the weather_code alone, which
+      // returns the day's DOMINANT condition. A 20-min light drizzle at 7am
+      // makes weather_code=51 ("Light drizzle"), which we used to label
+      // "Rain" even when actual rain probability is sub-10%. Cross-checking
+      // the probability lets us say "Mostly dry" instead.
+      `&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max` +
       `&current_weather=true&temperature_unit=celsius&timezone=auto&forecast_days=1`
     );
     if (!resp.ok) return null;
@@ -897,6 +903,9 @@ async function fetchTodaysWeather() {
       tempMin: Math.round(d.temperature_2m_min[0]),
       // Daily weather_code is the dominant condition for the day.
       code: d.weather_code[0],
+      // Max precipitation probability (%) — used to suppress "Rain" labels
+      // when probability is low even if the dominant code is rain-ish.
+      precipProb: d.precipitation_probability_max?.[0] ?? null,
       // Keep the current reading too for any consumer that wants it.
       tempNow: cw ? Math.round(cw.temperature) : null,
     };
@@ -1471,7 +1480,7 @@ async function narrateWearWithGemini({ outfit, items, recentLog, weather }) {
   const prompt = `You are a personal stylist commenting on the user's outfit choice today, in one short observational sentence (under 20 words). UK English. No platitudes ("great look!"). Notice something specific — colour pairing, weather fit, a fresh combination, or a return to a favourite.
 
 Today's outfit: ${summary}
-Weather: ${weather ? `${weather.temp}°C, ${weatherLabel(weather.code)}` : 'unknown'}
+Weather: ${weather ? `${weather.temp}°C, ${weatherLabel(weather.code, weather.precipProb)}${weather.precipProb != null ? ` (${weather.precipProb}% rain chance)` : ''}` : 'unknown'}
 Recent wears: ${recent}
 
 Respond with the sentence only, no quotes.`;
@@ -1877,14 +1886,30 @@ function extractReceiptItems(lines, brand) {
 }
 
 // Translate Open-Meteo weather codes to friendly labels.
-function weatherLabel(code) {
+function weatherLabel(code, precipProb = null) {
+  // Sky-only conditions first — these don't depend on precip probability.
   if (code === 0) return 'Clear';
   if (code <= 2) return 'Partly cloudy';
   if (code === 3) return 'Overcast';
   if (code <= 48) return 'Foggy';
-  if (code <= 67) return 'Rain';
+  // For rain-family codes (51-67, drizzle through rain) and shower-family
+  // codes (80-82), cross-check the daily precipitation probability. Open-
+  // Meteo's weather_code is the day's DOMINANT condition — a 30-minute
+  // morning drizzle still maps to code 51, even if it's clear the rest of
+  // the day. precipProb < 30% means most of the day will be dry; switch
+  // the label to reflect that honestly.
+  const lowChance = precipProb !== null && precipProb < 30;
+  if (code <= 67) {
+    if (lowChance) return 'Mostly dry';
+    if (code <= 55) return 'Drizzle';      // codes 51-55: drizzle, not rain
+    if (code <= 57) return 'Freezing drizzle';
+    return 'Rain';                          // codes 61-67: real rain
+  }
   if (code <= 77) return 'Snow';
-  if (code <= 82) return 'Showers';
+  if (code <= 82) {
+    if (lowChance) return 'Mostly dry';
+    return 'Showers';
+  }
   if (code <= 86) return 'Snow showers';
   return 'Stormy';
 }
@@ -4705,6 +4730,8 @@ function DailyBriefCard({
   items,
   measurements,
   weather,
+  weatherSettled = true,  // default true so callers that don't pass it (e.g. demo)
+                          // still render — only gates the live auto-compose path
   season,
   aiTemperature,
   onGenerateOutfit,
@@ -4741,6 +4768,12 @@ function DailyBriefCard({
     if (brief) return;
     if (!isAiEnabled) return;
     if ((items?.length ?? 0) < 5) return;
+    // Wait until weather fetch has settled before composing — otherwise the
+    // Concierge sees null weather and writes "weather is unknown" even though
+    // the Today tile (rendering just below) has it. weatherSettled flips true
+    // once fetchTodaysWeather resolves (with data OR null on geo-denied),
+    // so an honest unavailable still proceeds rather than blocking forever.
+    if (!weatherSettled) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -4763,7 +4796,7 @@ function DailyBriefCard({
       }
     })();
     return () => { cancelled = true; };
-  }, [uid, isAiEnabled, items?.length]); // deliberately omit weather/profile — first-of-day shot uses whatever's current
+  }, [uid, isAiEnabled, items?.length, weatherSettled]); // re-fires when weather resolves so the brief gets composed with it
 
   async function composeAnother() {
     setLoading(true);
@@ -5087,7 +5120,7 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
           <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-bold">Today</p>
           <p className="font-display text-lg sm:text-xl text-white mt-0.5">
             {weather
-              ? `${weather.tempMin != null && weather.tempMin !== weather.temp ? `${weather.tempMin}–` : ''}${weather.temp}°C · ${weatherLabel(weather.code)}`
+              ? `${weather.tempMin != null && weather.tempMin !== weather.temp ? `${weather.tempMin}–` : ''}${weather.temp}°C · ${weatherLabel(weather.code, weather.precipProb)}`
               : 'How are you styling today?'}
           </p>
         </div>
@@ -5496,7 +5529,15 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
   }, [sortBy]);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [weather, setWeather] = useState(null);
-  useEffect(() => { fetchTodaysWeather().then(setWeather); }, []);
+  // weatherSettled = the fetch promise has resolved (either with data or null).
+  // Needed by the Daily Brief auto-compose so it doesn't fire before weather
+  // is known — otherwise the Concierge sees `weather: null` and composes with
+  // "weather unknown, but given it's Summer…" which contradicts the Today
+  // tile rendered just below it.
+  const [weatherSettled, setWeatherSettled] = useState(false);
+  useEffect(() => {
+    fetchTodaysWeather().then((data) => { setWeather(data); setWeatherSettled(true); });
+  }, []);
   const weatherSeasons = weatherToSeasons(weather);
   // Current season for the Daily Brief (local date, same logic as OutfitBuilder).
   const currentSeason = (() => {
@@ -5796,6 +5837,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           items={items.filter(it => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged')}
           measurements={measurements}
           weather={weather}
+          weatherSettled={weatherSettled}
           season={currentSeason}
           aiTemperature={aiTemperature}
           isAiEnabled={isAIEnabled()}
@@ -6165,6 +6207,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           items={items.filter(it => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged')}
           measurements={measurements}
           weather={weather}
+          weatherSettled={weatherSettled}
           season={currentSeason}
           aiTemperature={aiTemperature}
           isAiEnabled={isAIEnabled()}
@@ -6215,7 +6258,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           if (weather && weatherSeasons && seasons.some((s) => weatherSeasons.includes(s))) {
             reasons.push(`fits today's ${weather.temp}°C`);
           } else if (weather) {
-            reasons.push(`for today's ${weather.temp}°C · ${weatherLabel(weather.code)}`);
+            reasons.push(`for today's ${weather.temp}°C · ${weatherLabel(weather.code, weather.precipProb)}`);
           }
           const days = daysSinceLastWorn(recommendation);
           if (days === null) reasons.push("you haven't worn it yet");
@@ -10086,7 +10129,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   Why this?
                 </summary>
                 <WhyThisPanel
-                  weather={(() => { try { return JSON.parse(localStorage.getItem('atelier-weather-v2') || 'null')?.data; } catch { return null; } })()}
+                  weather={(() => { try { return JSON.parse(localStorage.getItem('atelier-weather-v3') || 'null')?.data; } catch { return null; } })()}
                   season={(() => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter'; })()}
                   styleProfile={measurements}
                   temperature={aiTemperature}
@@ -13602,7 +13645,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
             .slice(0, 3)
             .map(it => it.name)
             .join(', ');
-          const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather-v2') || 'null')?.data; } catch { return null; } })();
+          const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather-v3') || 'null')?.data; } catch { return null; } })();
           const currentSeason = (() => { const m = new Date().getMonth(); return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter'; })();
           const paletteLabel = measurements?.stylePalette;
           return (

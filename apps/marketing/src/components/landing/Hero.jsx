@@ -129,6 +129,7 @@ function StudioFrame() {
   const [inView, setInView] = useState(true);
 
   const timersRef = useRef([]);
+  const rafRef = useRef(null);
   const addTimer = (fn, ms) => {
     const id = setTimeout(fn, ms);
     timersRef.current.push(id);
@@ -138,6 +139,26 @@ function StudioFrame() {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
   };
+  const cancelRaf = () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  };
+
+  // Eagerly preload every outfit photo on mount. Without this, slots load
+  // lazily as they reveal — on slow networks visitors see a brief empty
+  // slot before the JPG resolves, which breaks the "items being laid out
+  // one at a time" feel. 12 small JPGs (~150-300KB each) preload in
+  // parallel in the background; by the time any slot reveals, the image
+  // is already in the browser's image cache so the <img> tag renders
+  // synchronously.
+  useEffect(() => {
+    OUTFITS.forEach((outfit) => {
+      outfit.items.forEach(({ src }) => {
+        const img = new Image();
+        img.src = src;
+      });
+    });
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -153,13 +174,46 @@ function StudioFrame() {
   useEffect(() => {
     if (!inView) {
       clearAllTimers();
+      cancelRaf();
       return;
     }
     let cancelled = false;
     let localIdx = outfitIdx;
 
+    // Drive the confidence count-up with a single requestAnimationFrame
+    // loop instead of N separate setTimeouts. The old code scheduled ~48
+    // setTimeouts per cycle (one per even percent from 0 to target), each
+    // subject to setTimeout's 4ms minimum + main-thread jitter — that was
+    // the source of the visible "jumpy" count. rAF is V-synced to the
+    // display, so the count progresses one frame at a time (16.67ms on
+    // 60Hz, 8.33ms on 120Hz) for a continuously smooth ramp. We keep the
+    // original even-percent quantization so the displayed value reads
+    // identical to the previous behaviour. Functional setState bails out
+    // of re-renders on frames where the integer hasn't advanced.
+    const startConfidenceCount = () => {
+      if (cancelled) return;
+      const target = OUTFITS[localIdx].confidence;
+      const startMs = performance.now();
+      const DURATION_MS = 940; // matches old: pct goes 0→target at pct·10ms
+      const tick = (now) => {
+        if (cancelled) { rafRef.current = null; return; }
+        const t = Math.min(1, (now - startMs) / DURATION_MS);
+        const next = Math.min(target, Math.floor((t * target) / 2) * 2);
+        setConfidence((prev) => (prev === next ? prev : next));
+        if (t < 1) rafRef.current = requestAnimationFrame(tick);
+        else rafRef.current = null;
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
     const runOnce = () => {
       if (cancelled) return;
+      // Reset the timer ID array at the start of each cycle. runOnce is
+      // called recursively every 14.2s and addTimer only ever appends —
+      // without this reset, the array would grow by ~10 IDs per cycle and
+      // clearAllTimers would iterate the entire history on every cleanup.
+      timersRef.current = [];
+
       setStage(STAGE.IDLE);
       setRevealedSlots(0);
       setConfidence(0);
@@ -178,12 +232,8 @@ function StudioFrame() {
         addTimer(() => !cancelled && setRevealedSlots(i), 4100 + i * 600);
       }
 
-      // 4. Confidence count-up while last items reveal — finishes at ~7s
-      const confidenceBase = 6200;
-      const targetConfidence = OUTFITS[localIdx].confidence;
-      for (let pct = 0; pct <= targetConfidence; pct += 2) {
-        addTimer(() => !cancelled && setConfidence(pct), confidenceBase + pct * 10);
-      }
+      // 4. Confidence count-up — kicks off the rAF loop
+      addTimer(startConfidenceCount, 6200);
 
       // 5. Complete state
       addTimer(() => !cancelled && setStage(STAGE.COMPLETE), 7400);
@@ -204,6 +254,7 @@ function StudioFrame() {
     return () => {
       cancelled = true;
       clearAllTimers();
+      cancelRaf();
     };
     // Intentionally only depend on inView; outfit index is managed internally
     // via localIdx so the effect doesn't restart every time we advance.

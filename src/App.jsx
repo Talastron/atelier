@@ -4106,7 +4106,8 @@ function DigitalWardrobe() {
               onExport={() => handleExportOutfit(openOutfit)}
               onVary={() => handleVaryOutfit(openOutfit, 'fresh')}
               onEdit={() => handleEditOutfit(openOutfit)}
-              onLogWear={(verdict, occasion) => handleLogOutfitWear(openOutfit, todayISO(), verdict, occasion)}
+              onLogWear={(dateISO, verdict, occasion) => handleLogOutfitWear(openOutfit, dateISO, verdict, occasion)}
+              measurements={measurements}
               onOpenItem={(id) => setSelectedItemId(id)}
               onDuplicate={async () => {
                 // If legacy outfit had embedded items, migrate to itemIds
@@ -7575,6 +7576,8 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [itemLogDate, setItemLogDate] = useState(todayISO());
+  const [itemLogDateOpen, setItemLogDateOpen] = useState(false);
   const images = itemImages(item);
   // Touch swipe between items in the wardrobe list. Only horizontal gestures
   // (≥60px) on the page background trigger nav — vertical scrolls and gestures
@@ -7645,6 +7648,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   const wears = itemWearCount(item);
   const cpw = itemCostPerWear(item);
   const wornToday = itemWearHistory(item).includes(todayISO());
+  const wornOnLogDate = itemWearHistory(item).includes(itemLogDate);
   const sourceHost = (() => {
     try { return new URL(item.sourceUrl).host.replace(/^www\./, ''); } catch { return null; }
   })();
@@ -7882,13 +7886,60 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                     </p>
                   </div>
                 </div>
-                <button onClick={() => !wornToday && onLogWear()} disabled={wornToday}
-                  className={`w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all ${
-                    wornToday ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 cursor-default'
-                              : 'bg-stone-900 text-white hover:bg-stone-700'
-                  }`}>
-                  {wornToday ? <><CheckCircle2 size={16} strokeWidth={1.5} /> Logged for today</> : <><Calendar size={16} strokeWidth={1.5} /> I wore this today</>}
-                </button>
+                <div className="space-y-2">
+                  {/* Date chip — tap to change. Shows what date will be logged. */}
+                  {onLogWear && (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] tracking-widest uppercase text-stone-400">Logging for</span>
+                        <button
+                          type="button"
+                          onClick={() => setItemLogDateOpen((v) => !v)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors"
+                        >
+                          <Calendar size={10} strokeWidth={1.75} />
+                          {itemLogDate === todayISO() ? 'Today' : new Date(itemLogDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {itemLogDateOpen && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { setItemLogDate(todayISO()); setItemLogDateOpen(false); }}
+                        className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                      >Today</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() - 1);
+                          setItemLogDate(d.toISOString().slice(0, 10));
+                          setItemLogDateOpen(false);
+                        }}
+                        className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                      >Yesterday</button>
+                      <input
+                        type="date"
+                        value={itemLogDate}
+                        max={todayISO()}
+                        onChange={(e) => { if (e.target.value) { setItemLogDate(e.target.value); setItemLogDateOpen(false); } }}
+                        className="px-2 py-1 rounded-full text-[10px] tracking-wide bg-white border border-stone-300 text-stone-700 outline-none focus:border-stone-900"
+                        style={{ fontSize: '16px' }}
+                      />
+                    </div>
+                  )}
+                  <button onClick={() => !wornOnLogDate && onLogWear(itemLogDate)} disabled={wornOnLogDate}
+                    className={`w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-all ${
+                      wornOnLogDate ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 cursor-default'
+                                : 'bg-stone-900 text-white hover:bg-stone-700'
+                    }`}>
+                    {wornOnLogDate
+                      ? <><CheckCircle2 size={16} strokeWidth={1.5} /> {itemLogDate === todayISO() ? 'Logged for today' : `Logged for ${new Date(itemLogDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}</>
+                      : <><Calendar size={16} strokeWidth={1.5} /> {itemLogDate === todayISO() ? 'I wore this today' : 'Log this wear'}</>}
+                  </button>
+                </div>
                 {wornToday && onSetWearNote && (
                   <WearVerdictInput
                     initial={itemWearNotes(item)[todayISO()] || ''}
@@ -15055,10 +15106,14 @@ const PRESET_TAG_CATEGORIES = [
   { label: 'Season', tags: ['summer evening', 'winter layers', 'spring light', 'autumn warm'] },
 ];
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem, measurements }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logOccasion, setLogOccasion] = useState('');
   const [logBusy, setLogBusy] = useState(false);
+  const [logDate, setLogDate] = useState(todayISO());
+  const [logDateOpen, setLogDateOpen] = useState(false);
+  const [styleFitBusy, setStyleFitBusy] = useState(false);
+  const [styleFitError, setStyleFitError] = useState(null);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -15389,18 +15444,70 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                       <input type="file" accept="image/*" capture="user" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
                     </label>
                   )}
-                  <button
-                    type="button"
-                    disabled={logBusy}
-                    onClick={async () => {
-                      setLogBusy(true);
-                      try { await onLogWear(logVerdict, logOccasion); setLogVerdict(''); setLogOccasion(''); }
-                      finally { setLogBusy(false); }
-                    }}
-                    className="text-[10px] tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 disabled:opacity-40 flex items-center gap-2 font-medium"
-                  >
-                    <Calendar size={13} strokeWidth={1.5} /> {logBusy ? 'Logging…' : 'I wore this today'}
-                  </button>
+                  <div className="flex flex-col items-end gap-1.5">
+                    {/* Date chip — tap to change. Shows what date will be logged. */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] tracking-widest uppercase text-stone-400">For</span>
+                      <button
+                        type="button"
+                        onClick={() => setLogDateOpen((v) => !v)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors"
+                      >
+                        <Calendar size={10} strokeWidth={1.75} />
+                        {logDate === todayISO() ? 'Today' : new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                      </button>
+                    </div>
+                    {logDateOpen && (
+                      <div className="flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => { setLogDate(todayISO()); setLogDateOpen(false); }}
+                          className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                        >Today</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const d = new Date();
+                            d.setDate(d.getDate() - 1);
+                            setLogDate(d.toISOString().slice(0, 10));
+                            setLogDateOpen(false);
+                          }}
+                          className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                        >Yesterday</button>
+                        <input
+                          type="date"
+                          value={logDate}
+                          max={todayISO()}
+                          onChange={(e) => { if (e.target.value) { setLogDate(e.target.value); setLogDateOpen(false); } }}
+                          className="px-2 py-1 rounded-full text-[10px] tracking-wide bg-white border border-stone-300 text-stone-700 outline-none focus:border-stone-900"
+                          style={{ fontSize: '16px' }}
+                        />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      disabled={logBusy}
+                      onClick={async () => {
+                        setLogBusy(true);
+                        try {
+                          await onLogWear(logDate, logVerdict, logOccasion);
+                          toast.show(
+                            logDate === todayISO()
+                              ? 'Logged for today'
+                              : `Logged for ${new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
+                            { kind: 'success' }
+                          );
+                          setLogVerdict(''); setLogOccasion(''); setLogDate(todayISO());
+                        } catch (err) {
+                          toast.show(err?.message || 'Could not log wear', { kind: 'error' });
+                        } finally { setLogBusy(false); }
+                      }}
+                      className="text-[10px] tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 disabled:opacity-40 flex items-center gap-2 font-medium"
+                    >
+                      <Calendar size={13} strokeWidth={1.5} />
+                      {logBusy ? 'Logging…' : (logDate === todayISO() ? 'I wore this today' : 'Log this wear')}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="space-y-1.5 mb-3">

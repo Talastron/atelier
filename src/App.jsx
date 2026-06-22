@@ -15786,20 +15786,13 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     onClick={() => setWearLogExpanded(true)}
                     className="text-[11px] tracking-wide text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
                   >
-                    + Add a note, photo or occasion
+                    + Add a note or occasion
                   </button>
                 )}
 
                 {/* Expanded: full form */}
                 {wearLogExpanded && (
                   <div className="space-y-3 animate-in fade-in duration-200">
-                    {/* Snap fit — moved here from toolbar; only relevant in rich-entry mode */}
-                    {wornPhotos.length < 6 && (
-                      <label className="text-[10px] tracking-widest uppercase px-4 py-2.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center gap-2 cursor-pointer w-fit" title="Snap a selfie wearing this look">
-                        <Camera size={13} strokeWidth={1.5} /> Snap fit
-                        <input type="file" accept="image/*" capture="user" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
-                      </label>
-                    )}
                     {/* Occasion */}
                     <div className="space-y-1.5">
                       <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">

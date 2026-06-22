@@ -1964,6 +1964,17 @@ function itemWearNotes(item) {
   return (item && typeof item.wearNotes === 'object' && item.wearNotes !== null) ? item.wearNotes : {};
 }
 
+// Per-wear occasion text (e.g. "gallery opening", "client lunch", "Sunday").
+// Sparse map keyed by ISO date, mirrors the wearNotes shape so existing
+// wearHistory arrays stay simple and need no migration. Read sites that
+// want the occasion for a specific wear look it up by date:
+//   itemWearOccasions(item)['2026-06-14']  →  'gallery opening' or undefined
+// The Concierge prompt walks the most recent wears and includes whichever
+// occasions are present.
+function itemWearOccasions(item) {
+  return (item && typeof item.wearOccasions === 'object' && item.wearOccasions !== null) ? item.wearOccasions : {};
+}
+
 function itemWearCount(item) {
   return itemWearHistory(item).length;
 }

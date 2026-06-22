@@ -15172,6 +15172,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [editingTags, setEditingTags] = useState(false);
   const [newTag, setNewTag] = useState('');
   const [wearLogExpanded, setWearLogExpanded] = useState(false);
+  const [paletteFilter, setPaletteFilter] = useState(null); // colour name or null
   const toast = useToast();
   const pieces = resolveOutfitItems(outfit, items);
   const total = pieces.reduce((sum, it) => sum + Number(it.price || 0), 0);
@@ -15343,7 +15344,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             </div>
 
             {view === 'flatlay' ? (
-              <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} />
+              <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} paletteFilter={paletteFilter} />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 md:gap-6">
                 {pieces.map((piece, i) => {
@@ -15447,26 +15448,44 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               </div>
             )}
 
-            {/* Colour palette */}
+            {/* Colour palette — tappable: click to filter flat-lay by colour */}
             {colourPalette.length > 0 && (
               <div>
                 <div className="flex items-center gap-2.5 mb-3">
                   <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
                   <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Palette</span>
+                  {paletteFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setPaletteFilter(null)}
+                      className="text-[10px] tracking-wide text-stone-400 hover:text-stone-700 underline-offset-4 hover:underline transition-colors ml-1"
+                    >
+                      Clear filter
+                    </button>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
                   {colourPalette.map(({ name, count, hex }) => (
-                    <div key={name} className="inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white border border-stone-200">
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => setPaletteFilter((cur) => cur === name ? null : name)}
+                      className={`inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border transition-all ${
+                        paletteFilter === name
+                          ? 'bg-stone-900 text-white border-stone-900'
+                          : 'bg-white border-stone-200 text-stone-700 hover:border-stone-900'
+                      }`}
+                    >
                       <span
-                        className="block w-6 h-6 rounded-full border border-stone-300/70"
+                        className={`block w-6 h-6 rounded-full border ${paletteFilter === name ? 'border-white' : 'border-stone-300/70'}`}
                         style={{ backgroundColor: hex }}
                         aria-hidden="true"
                       />
-                      <span className="text-[11px] tracking-wide uppercase text-stone-700">
+                      <span className="text-[11px] tracking-wide uppercase">
                         {name}
-                        {count > 1 && <span className="text-stone-400 ml-1.5">× {count}</span>}
+                        {count > 1 && <span className={paletteFilter === name ? 'text-white/60 ml-1.5' : 'text-stone-400 ml-1.5'}>× {count}</span>}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -15803,7 +15822,13 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 // look feels uniquely composed. Names render below in a clean list to keep the
 // canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
 // jewellery smaller — mimicking a real flat-lay arrangement.
-function OutfitFlatLay({ pieces, onOpenItem }) {
+function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
+  // Helper: does this piece have a colour matching the active palette filter?
+  const pieceMatchesFilter = (piece) => {
+    if (!paletteFilter) return true;
+    const colours = (itemColors(piece) || []).map((c) => (c || '').toLowerCase().trim());
+    return colours.includes(paletteFilter);
+  };
   // MAGAZINE SPREAD — the Net-a-Porter "Complete the Look" / Mr Porter
   // "The Edit" / Vogue "What to Wear" convention. Asymmetric editorial
   // grid with three regions:
@@ -15860,33 +15885,36 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
     const openable = !!(onOpenItem && item.id);
     const Tag = openable ? 'button' : 'div';
     const n = numberOf.get(item) || 0;
+    const dimmed = !pieceMatchesFilter(item);
     return (
-      <Tag
-        {...(openable ? { type: 'button', onClick: () => onOpenItem(item.id), 'aria-label': `Open ${item.name}` } : {})}
-        className={`group block w-full text-left ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-2xl' : ''}`}
-      >
-        {/* Polaroid frame: rounded white card, hairline ring, layered
-            shadow so the piece sits on the surface. Hero gets a slightly
-            larger radius to feel weightier. */}
-        <div className={`relative ${isHero ? 'aspect-[4/5]' : 'aspect-[3/4]'} ${isHero ? 'rounded-[1.5rem]' : 'rounded-[1.125rem]'} bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]`}>
-          {/* N°XX tag — italic serif, the editorial signature */}
-          <span className={`absolute ${isHero ? 'top-3 left-4 text-xs' : 'top-2 left-3 text-[10px]'} tracking-[0.15em] text-stone-400 font-display italic z-10`}>
-            N°{String(n).padStart(2, '0')}
-          </span>
-          {itemImages(item)[0] ? (
-            <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async"
-              className={`w-full h-full object-contain ${isHero ? 'p-4' : 'p-3'}`} />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={isHero ? 64 : 28} strokeWidth={1} /></div>
-          )}
-        </div>
-        {/* CREDIT CAPTION — brand in small-caps, item name in display
-            serif. The typography pair magazines use universally. */}
-        <div className={`${isHero ? 'mt-3 px-1' : 'mt-2 px-0.5'}`}>
-          <p className={`${isHero ? 'text-[10px]' : 'text-[9px]'} tracking-[0.2em] uppercase text-stone-500 truncate`}>{item.brand || item.category}</p>
-          <p className={`font-display ${isHero ? 'text-base sm:text-lg' : 'text-xs sm:text-sm'} text-stone-900 leading-tight truncate ${openable ? 'group-hover:text-brass-700 transition-colors' : ''}`}>{item.name}</p>
-        </div>
-      </Tag>
+      <div className={`transition-opacity duration-300 ${dimmed ? 'opacity-30' : 'opacity-100'}`}>
+        <Tag
+          {...(openable ? { type: 'button', onClick: () => onOpenItem(item.id), 'aria-label': `Open ${item.name}` } : {})}
+          className={`group block w-full text-left ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-2xl' : ''}`}
+        >
+          {/* Polaroid frame: rounded white card, hairline ring, layered
+              shadow so the piece sits on the surface. Hero gets a slightly
+              larger radius to feel weightier. */}
+          <div className={`relative ${isHero ? 'aspect-[4/5]' : 'aspect-[3/4]'} ${isHero ? 'rounded-[1.5rem]' : 'rounded-[1.125rem]'} bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]`}>
+            {/* N°XX tag — italic serif, the editorial signature */}
+            <span className={`absolute ${isHero ? 'top-3 left-4 text-xs' : 'top-2 left-3 text-[10px]'} tracking-[0.15em] text-stone-400 font-display italic z-10`}>
+              N°{String(n).padStart(2, '0')}
+            </span>
+            {itemImages(item)[0] ? (
+              <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async"
+                className={`w-full h-full object-contain ${isHero ? 'p-4' : 'p-3'}`} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={isHero ? 64 : 28} strokeWidth={1} /></div>
+            )}
+          </div>
+          {/* CREDIT CAPTION — brand in small-caps, item name in display
+              serif. The typography pair magazines use universally. */}
+          <div className={`${isHero ? 'mt-3 px-1' : 'mt-2 px-0.5'}`}>
+            <p className={`${isHero ? 'text-[10px]' : 'text-[9px]'} tracking-[0.2em] uppercase text-stone-500 truncate`}>{item.brand || item.category}</p>
+            <p className={`font-display ${isHero ? 'text-base sm:text-lg' : 'text-xs sm:text-sm'} text-stone-900 leading-tight truncate ${openable ? 'group-hover:text-brass-700 transition-colors' : ''}`}>{item.name}</p>
+          </div>
+        </Tag>
+      </div>
     );
   };
 
@@ -15971,8 +15999,9 @@ function OutfitFlatLay({ pieces, onOpenItem }) {
                     const openable = !!(onOpenItem && p.id);
                     const thumb = itemImages(p)[0];
                     const Tag = openable ? 'button' : 'div';
+                    const creditsDimmed = !pieceMatchesFilter(p);
                     return (
-                      <li key={p.id || i} className="border-b border-stone-200/50 last:border-0">
+                      <li key={p.id || i} className={`border-b border-stone-200/50 last:border-0 transition-opacity duration-300 ${creditsDimmed ? 'opacity-30' : 'opacity-100'}`}>
                         <Tag
                           {...(openable ? { type: 'button', onClick: () => onOpenItem(p.id), 'aria-label': `Open ${p.name}` } : {})}
                           className={`w-full flex items-center gap-3 py-2.5 text-left ${openable ? 'group cursor-pointer hover:bg-stone-100/50 -mx-2 px-2 rounded-lg transition-colors' : ''}`}

@@ -9439,7 +9439,7 @@ function Input({ label, ...props }) {
 // can carry earrings + a necklace + a bracelet at the same time without one
 // piece evicting another. Outerwear is its own slot (was previously mixed into
 // Tops, which produced incoherent looks like "Sport jacket + Smart trousers").
-const OUTFIT_SLOTS = ['Tops', 'Dresses', 'Bottoms', 'Outerwear', 'Shoes', 'Bags', 'Accessories', 'Earrings', 'Necklaces', 'Wrist'];
+const OUTFIT_SLOTS = ['Tops', 'Dresses', 'Bottoms', 'Outerwear', 'Shoes', 'Bags', 'Accessories', 'Belts', 'Earrings', 'Necklaces', 'Wrist'];
 const SLOT_FILTER = {
   Tops:        (i) => i.category === 'Tops',
   Dresses:     (i) => i.category === 'Dresses',
@@ -9447,7 +9447,8 @@ const SLOT_FILTER = {
   Outerwear:   (i) => i.category === 'Outerwear',
   Shoes:       (i) => i.category === 'Shoes',
   Bags:        (i) => i.category === 'Bags',
-  Accessories: (i) => i.category === 'Accessories' || (i.category === 'Jewellery' && i.subCategory === 'Brooches'),
+  Accessories: (i) => i.category === 'Accessories' && i.subCategory !== 'Belts' || (i.category === 'Jewellery' && i.subCategory === 'Brooches'),
+  Belts:       (i) => i.category === 'Accessories' && i.subCategory === 'Belts',
   Earrings:    (i) => i.category === 'Jewellery' && i.subCategory === 'Earrings',
   Necklaces:   (i) => i.category === 'Jewellery' && (i.subCategory === 'Necklaces' || i.subCategory === 'Pendants'),
   Wrist:       (i) => i.category === 'Jewellery' && (i.subCategory === 'Bracelets' || i.subCategory === 'Watches' || i.subCategory === 'Rings'
@@ -9466,7 +9467,7 @@ const slotItems = (val) => Array.isArray(val) ? val : (val ? [val] : []);
 // categories a slot can hold (jewellery slots all answer "Jewellery").
 const SLOT_CATEGORIES = {
   Tops: ['Tops'], Dresses: ['Dresses'], Bottoms: ['Bottoms'], Outerwear: ['Outerwear'],
-  Shoes: ['Shoes'], Bags: ['Bags'], Accessories: ['Accessories'],
+  Shoes: ['Shoes'], Bags: ['Bags'], Accessories: ['Accessories'], Belts: ['Accessories'],
   Earrings: ['Jewellery'], Necklaces: ['Jewellery'], Wrist: ['Jewellery'],
 };
 const emptyOutfit = () => Object.fromEntries(OUTFIT_SLOTS.map((s) => [s.toLowerCase(), null]));

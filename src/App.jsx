@@ -871,6 +871,28 @@ function itemColors(item) {
   return Array.isArray(item?.colors) ? item.colors : [];
 }
 
+// Colour name → approximate hex for the outfit palette strip.
+// ~30 common wardrobe tones; unmapped names fall back to stone-300
+// so a mis-typed colour doesn't render as transparent.
+const COLOUR_HEX_MAP = {
+  black: '#1c1917', white: '#fafaf9', cream: '#f5f1ea', ivory: '#f1ebe0',
+  beige: '#d9c9af', tan: '#bfa17a', camel: '#c4974f', brown: '#6b4f3a',
+  chocolate: '#3e2a1d', grey: '#9ca29a', gray: '#9ca29a', charcoal: '#3d3d3b',
+  silver: '#c4c4c0', navy: '#1f2a44', blue: '#3e6791', 'sky blue': '#86b0d3',
+  cobalt: '#1a3d82', denim: '#4d6d8a', green: '#5a6f4e', olive: '#7a7048',
+  forest: '#3b4a36', khaki: '#8a8060', teal: '#3e7373', sage: '#8fa887',
+  red: '#9a3a30', burgundy: '#5d2a2a', rust: '#a55a3a', terracotta: '#b05e42',
+  pink: '#e0b7be', blush: '#e9c9c5', rose: '#c98996', fuchsia: '#b03070',
+  purple: '#6b4a72', lilac: '#b9a7c6', lavender: '#b0a8c8',
+  gold: '#c9a45e', brass: '#b3924b', yellow: '#d9b54a', mustard: '#b8963a',
+  orange: '#cc7a3a', coral: '#d46a5a',
+};
+
+function hexFromColorName(name) {
+  if (!name) return '#d6d3d1';
+  return COLOUR_HEX_MAP[name.toLowerCase().trim()] ?? '#d6d3d1'; // stone-300 fallback
+}
+
 // Weather: fetched via browser geolocation + Open-Meteo (no API key needed).
 // Cached for 1 hour in localStorage so subsequent visits don't re-prompt.
 async function fetchTodaysWeather() {
@@ -15106,14 +15128,12 @@ const PRESET_TAG_CATEGORIES = [
   { label: 'Season', tags: ['summer evening', 'winter layers', 'spring light', 'autumn warm'] },
 ];
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem, measurements }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logOccasion, setLogOccasion] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [logDate, setLogDate] = useState(todayISO());
   const [logDateOpen, setLogDateOpen] = useState(false);
-  const [styleFitBusy, setStyleFitBusy] = useState(false);
-  const [styleFitError, setStyleFitError] = useState(null);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -15289,6 +15309,46 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               <p className="italic">"{outfit.reasoning}"</p>
             </div>
           )}
+          {/* Editorial colour palette strip — dominant colours across the look's
+              pieces, sorted by prevalence, capped at 8 for visual cleanliness. */}
+          {(() => {
+            const counts = new Map();
+            for (const piece of pieces) {
+              for (const c of (itemColors(piece) || [])) {
+                const key = (c || '').toLowerCase().trim();
+                if (!key) continue;
+                counts.set(key, (counts.get(key) || 0) + 1);
+              }
+            }
+            const colourPalette = [...counts.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 8)
+              .map(([name, count]) => ({ name, count, hex: hexFromColorName(name) }));
+            if (colourPalette.length === 0) return null;
+            return (
+              <div className="mt-7 max-w-3xl">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
+                  <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Palette</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {colourPalette.map(({ name, count, hex }) => (
+                    <div key={name} className="inline-flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white border border-stone-200">
+                      <span
+                        className="block w-6 h-6 rounded-full border border-stone-300/70"
+                        style={{ backgroundColor: hex }}
+                        aria-hidden="true"
+                      />
+                      <span className="text-[11px] tracking-wide uppercase text-stone-700">
+                        {name}
+                        {count > 1 && <span className="text-stone-400 ml-1.5">× {count}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           {((outfit.tags && outfit.tags.length > 0) || typeof onSaveOutfit === 'function') && (
             <div className="mt-8 pt-6 border-t border-stone-200">
               <div className="flex items-center justify-between gap-3 mb-3">

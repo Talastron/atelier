@@ -3620,7 +3620,7 @@ function DigitalWardrobe() {
                 // position:sticky for descendants (they end up scoped to this
                 // wrapper instead of the main scroll ancestor). Fade-in only.
                 <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
-                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }} onEditPreferences={() => { setActiveTab('profile'); setTimeout(() => { try { window.location.hash = 'profile-style'; document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* swallow */ } }, 80); }} />}
+                  {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }} onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
                       mode="studio"
@@ -3644,7 +3644,7 @@ function DigitalWardrobe() {
                       seedOutfit={studioSeed}
                       onSeedConsumed={() => setStudioSeed(null)}
                       onAfterSave={() => setActiveTab('lookbook')}
-                      onEditPreferences={() => { setActiveTab('profile'); setTimeout(() => { try { window.location.hash = 'profile-style'; document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* swallow */ } }, 80); }}
+                      onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
                     />
                   )}
                   {activeTab === 'lookbook' && (
@@ -3840,7 +3840,7 @@ function DigitalWardrobe() {
               measurements={measurements}
               ownerFirstName={(user?.displayName || '').split(' ')[0] || ''}
               user={user}
-              onEditPreferences={() => { setActiveTab('profile'); setTimeout(() => { try { window.location.hash = 'profile-style'; document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch { /* swallow */ } }, 80); }}
+              onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
               onOpenItem={(id) => { setIsConciergeOpen(false); setSelectedItemId(id); }}
             />
           )}
@@ -12960,15 +12960,19 @@ function DiaryStatTile({ eyebrow, value, suffix, tone = 'default', children }) {
 // animation and the Most Worn tile (a tap-through button) renders as
 // children rather than the default animated number.
 function DiaryStatsRow({ daysCount, wears, streak, mostWorn, onOpenItem }) {
+  // min-w-0 on every grid item: CSS Grid items default to min-width:auto,
+  // which lets a long item name (e.g. "MV Siren Mini Nugget Huggie Earrings")
+  // expand the Most-Worn track past the card edge. min-w-0 lets the inner
+  // truncate clamp the text to the column instead.
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-      <DiaryStatTile eyebrow="Days logged" value={daysCount} />
-      <DiaryStatTile eyebrow="Total wears" value={wears} />
-      <DiaryStatTile eyebrow="Current streak" value={streak} suffix={`day${streak === 1 ? '' : 's'}`} tone={streak > 0 ? 'brass' : 'dim'} />
+      <div className="min-w-0"><DiaryStatTile eyebrow="Days logged" value={daysCount} /></div>
+      <div className="min-w-0"><DiaryStatTile eyebrow="Total wears" value={wears} /></div>
+      <div className="min-w-0"><DiaryStatTile eyebrow="Current streak" value={streak} suffix={`day${streak === 1 ? '' : 's'}`} tone={streak > 0 ? 'brass' : 'dim'} /></div>
       {mostWorn && (
-        <div className="col-span-2 md:col-span-1">
+        <div className="col-span-2 md:col-span-1 min-w-0">
           <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Most worn</p>
-          <button onClick={() => onOpenItem?.(mostWorn.item.id)} className="text-left group">
+          <button onClick={() => onOpenItem?.(mostWorn.item.id)} className="text-left group block w-full max-w-full min-w-0">
             <p className="font-display text-base sm:text-lg text-stone-900 leading-tight group-hover:text-brass-700 transition-colors truncate">{mostWorn.item.name}</p>
             <p className="text-[10px] tracking-wider uppercase text-stone-500 mt-1">× {mostWorn.count} wear{mostWorn.count === 1 ? '' : 's'}</p>
           </button>
@@ -13457,15 +13461,15 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
         {entries.length > 0 && (
           <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 sm:p-8 mb-10 smooth-shadow">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Days logged</p>
                 <p className="font-display text-3xl sm:text-4xl text-stone-900 leading-none">{entries.length}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Total wears</p>
                 <p className="font-display text-3xl sm:text-4xl text-stone-900 leading-none">{stats.wears}</p>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Current streak</p>
                 <p className={`font-display text-3xl sm:text-4xl leading-none ${stats.streak > 0 ? 'text-brass-600' : 'text-stone-300'}`}>
                   {stats.streak}
@@ -13473,10 +13477,10 @@ function WearDiaryModal({ entries = [], onOpenItem, onOpenOutfit, onClose }) {
                 </p>
               </div>
               {stats.mostWorn && (
-                <div className="col-span-2 md:col-span-1">
+                <div className="col-span-2 md:col-span-1 min-w-0">
                   <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Most worn</p>
                   <button onClick={() => onOpenItem?.(stats.mostWorn.item.id)}
-                    className="text-left group">
+                    className="text-left group block w-full max-w-full min-w-0">
                     <p className="font-display text-base sm:text-lg text-stone-900 leading-tight group-hover:text-brass-700 transition-colors truncate">{stats.mostWorn.item.name}</p>
                     <p className="text-[10px] tracking-wider uppercase text-stone-500 mt-1">× {stats.mostWorn.count} wear{stats.mostWorn.count === 1 ? '' : 's'}</p>
                   </button>
@@ -15285,6 +15289,424 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
   );
 }
 
+// Editorial bar primitives — the two canonical treatments for Insights.
+// HairlineBar: thin (3-4px) brass/colour hairline for "part of a whole"
+// (category composition, colour profile). Looks like a printer's rule.
+// DialBar: medium (6-8px) stone/accent fill for "progress toward a target"
+// (spending vs budget, season coverage). Reads like a fuel gauge.
+// Both accept a custom fill style (color OR CSS background gradient string)
+// so colour-profile swatches and brass-tinted alerts share the same chrome.
+function HairlineBar({ value, fill = 'var(--color-stone-900, #1c1917)', track = 'rgb(245 245 244 / 1)', height = 3, className = '' }) {
+  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  const fillStyle = typeof fill === 'string' && (fill.startsWith('linear') || fill.startsWith('radial'))
+    ? { background: fill }
+    : { backgroundColor: fill };
+  return (
+    <div
+      className={`w-full rounded-full overflow-hidden ${className}`}
+      style={{ height: `${height}px`, backgroundColor: track }}
+      role="progressbar"
+      aria-valuenow={Math.round(pct)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div className="h-full rounded-full transition-[width] duration-1000 ease-out" style={{ width: `${pct}%`, ...fillStyle }} />
+    </div>
+  );
+}
+
+function DialBar({ value, fill = 'var(--color-stone-900, #1c1917)', track = 'rgb(255 255 255 / 0.6)', height = 8, capped = true, className = '' }) {
+  const raw = Number(value) || 0;
+  const pct = capped ? Math.max(0, Math.min(100, raw)) : Math.max(0, raw);
+  const fillStyle = typeof fill === 'string' && (fill.startsWith('linear') || fill.startsWith('radial'))
+    ? { background: fill }
+    : { backgroundColor: fill };
+  return (
+    <div
+      className={`w-full rounded-full overflow-hidden border border-stone-200/60 ${className}`}
+      style={{ height: `${height}px`, backgroundColor: track }}
+      role="progressbar"
+      aria-valuenow={Math.round(pct)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div className="h-full rounded-full transition-[width] duration-1000 ease-out" style={{ width: `${pct}%`, ...fillStyle }} />
+    </div>
+  );
+}
+
+// Squarified-treemap layout. Given items {value, ...} sorted desc and a
+// container rect, returns each item with {x, y, w, h} packed to minimise
+// aspect-ratio distortion. Classic Bruls/Huijsen/van Wijk algorithm.
+function squarifyTreemap(items, x, y, w, h) {
+  if (items.length === 0 || w <= 0 || h <= 0) return [];
+  if (items.length === 1) return [{ ...items[0], x, y, w, h }];
+
+  const totalValue = items.reduce((s, i) => s + (Number(i.value) || 0), 0);
+  if (totalValue <= 0) return [];
+
+  // Area each value unit occupies in the current sub-rect.
+  const scale = (w * h) / totalValue;
+
+  const worstAspect = (row, shortSide) => {
+    if (row.length === 0) return Infinity;
+    const rowSum = row.reduce((s, it) => s + it.value, 0);
+    const rowArea = rowSum * scale;
+    const rowLen = rowArea / shortSide;
+    const max = Math.max(...row.map((it) => (it.value * scale) / rowLen));
+    const min = Math.min(...row.map((it) => (it.value * scale) / rowLen));
+    return Math.max((shortSide * shortSide * max) / (rowSum * rowSum * scale * scale), (rowSum * rowSum * scale * scale) / (shortSide * shortSide * min));
+  };
+
+  const shortSide = Math.min(w, h);
+  const horizontal = w <= h; // row runs along the SHORT side
+  let row = [];
+  let i = 0;
+  while (i < items.length) {
+    const candidate = [...row, items[i]];
+    const currentWorst = worstAspect(row, shortSide);
+    const candidateWorst = worstAspect(candidate, shortSide);
+    if (row.length === 0 || candidateWorst <= currentWorst) {
+      row = candidate;
+      i++;
+    } else {
+      break;
+    }
+  }
+
+  // Lay out the chosen row along the short side.
+  const rowSum = row.reduce((s, it) => s + it.value, 0);
+  const rowArea = rowSum * scale;
+  const placed = [];
+  if (horizontal) {
+    const rowH = rowArea / w;
+    let cx = x;
+    for (const it of row) {
+      const itW = (it.value / rowSum) * w;
+      placed.push({ ...it, x: cx, y, w: itW, h: rowH });
+      cx += itW;
+    }
+    const rest = items.slice(row.length);
+    return [...placed, ...squarifyTreemap(rest, x, y + rowH, w, h - rowH)];
+  } else {
+    const rowW = rowArea / h;
+    let cy = y;
+    for (const it of row) {
+      const itH = (it.value / rowSum) * h;
+      placed.push({ ...it, x, y: cy, w: rowW, h: itH });
+      cy += itH;
+    }
+    const rest = items.slice(row.length);
+    return [...placed, ...squarifyTreemap(rest, x + rowW, y, w - rowW, h)];
+  }
+}
+
+// CategoryTreemap — replaces the row-of-bars composition view.
+// Each tile is sized by category spend and backed by the lead photo of the
+// most expensive item in that category. A dark gradient at the bottom carries
+// the label, £, and %. Click-through to the wardrobe filtered by category.
+function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
+  const entries = Object.entries(categoryBreakdown)
+    .map(([category, value]) => ({ category, value }))
+    .filter((e) => e.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const total = entries.reduce((s, e) => s + e.value, 0);
+  // Pick the representative photo: most expensive item in the category that
+  // has an image. Falls back to the first image we find in the category.
+  const repPhoto = (category) => {
+    const inCat = ownedItems
+      .filter((i) => i.category === category && itemImages(i)[0])
+      .sort((a, b) => (b.price || 0) - (a.price || 0));
+    return inCat[0] ? itemImages(inCat[0])[0] : null;
+  };
+  // Layout in a virtual 100×56 unit box (≈16:9). CSS turns it back into
+  // percentages so the treemap is fluid at any container width.
+  const layout = useMemo(() => squarifyTreemap(entries, 0, 0, 100, 56), [entries]);
+  if (entries.length === 0) return <p className="text-stone-400 italic">No items owned yet.</p>;
+
+  return (
+    <div className="relative w-full" style={{ aspectRatio: '100 / 56' }}>
+      {layout.map((tile) => {
+        const photo = repPhoto(tile.category);
+        const pct = total > 0 ? (tile.value / total) * 100 : 0;
+        const clickable = !!onJumpToWardrobe;
+        const Wrap = clickable ? 'button' : 'div';
+        const tileProps = clickable
+          ? { type: 'button', onClick: () => onJumpToWardrobe({ filter: 'all', category: tile.category }), 'aria-label': `View ${tile.category} in wardrobe` }
+          : {};
+        // Tile typography scales with tile area so a sliver gets small caps
+        // and the dominant tile gets a real display heading.
+        const area = tile.w * tile.h;
+        const heroish = area >= 900;
+        const big = area >= 450;
+        return (
+          <Wrap
+            key={tile.category}
+            {...tileProps}
+            className={`group absolute overflow-hidden ${clickable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-300' : ''}`}
+            style={{
+              left: `${tile.x}%`,
+              top: `${(tile.y / 56) * 100}%`,
+              width: `${tile.w}%`,
+              height: `${(tile.h / 56) * 100}%`,
+              padding: '3px', // hairline gutter between tiles
+            }}
+          >
+            <div className="relative w-full h-full rounded-xl overflow-hidden bg-stone-200 ring-1 ring-stone-200/60">
+              {photo ? (
+                <img
+                  src={photo}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300" />
+              )}
+              {/* Editorial overlay — dark bottom wash so the label rides on the
+                  photo without a tinted card. Plus a faint top vignette so the
+                  scale-on-hover doesn't blow out the eye. */}
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-900/85 via-stone-900/20 to-transparent" />
+              {heroish && <div className="absolute inset-0 ring-[1px] ring-inset ring-white/10" />}
+              <div className="absolute left-0 right-0 bottom-0 p-3 md:p-4 text-white">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className={`${heroish ? 'text-xs sm:text-sm' : 'text-[9px] sm:text-[10px]'} tracking-[0.22em] uppercase font-semibold opacity-90`}>{tile.category}</p>
+                  <p className={`${heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]'} tracking-widest uppercase opacity-70`}>{pct.toFixed(0)}%</p>
+                </div>
+                <p className={`font-display ${heroish ? 'text-2xl md:text-3xl' : big ? 'text-lg md:text-xl' : 'text-sm'} mt-0.5`}>
+                  £{tile.value.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </Wrap>
+        );
+      })}
+    </div>
+  );
+}
+
+// Wears-over-time — replaces the 12 grey rectangles with two editorial graphics:
+//   (a) an annotated smooth-area chart with brass-tinted fill, a faint dashed
+//       12-month-average baseline, and a callout label hanging from the peak;
+//   (b) a 52-week calendar heatmap below — the year-at-a-glance ribbon.
+// Both render as inline SVG so the chrome (strokes, fills, dashes) inherits
+// the editorial palette without depending on a charting library.
+function WearTimelineCard({ ownedItems, timeline }) {
+  // Build a daily wear count Map keyed by ISO date (yyyy-mm-dd) for the last
+  // 53 weeks anchored on today's Sunday — gives the heatmap a clean weekly grid.
+  const { heatmap, weekHeaders, peakIdx, avgY, areaPath, linePath, axisPoints, totalThisYear } = useMemo(() => {
+    const dailyCounts = new Map();
+    for (const it of ownedItems) {
+      for (const d of itemWearHistory(it)) {
+        dailyCounts.set(d, (dailyCounts.get(d) || 0) + 1);
+      }
+    }
+    // Anchor the heatmap to the most recent Sunday (column 52) and step back
+    // 52 weeks. Each column = a week, each row = a weekday (Sun→Sat top→bottom).
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(today.getDate() + (6 - today.getDay())); // Saturday
+    const heat = [];
+    const headers = []; // month labels at column boundaries
+    let lastMonthLabel = '';
+    for (let col = 0; col < 53; col++) {
+      const week = [];
+      for (let row = 0; row < 7; row++) {
+        const cellDate = new Date(endOfWeek);
+        cellDate.setDate(endOfWeek.getDate() - ((52 - col) * 7) - (6 - row));
+        if (cellDate > today) { week.push(null); continue; } // future days hidden
+        const iso = `${cellDate.getFullYear()}-${String(cellDate.getMonth() + 1).padStart(2, '0')}-${String(cellDate.getDate()).padStart(2, '0')}`;
+        week.push({ iso, date: cellDate, count: dailyCounts.get(iso) || 0 });
+      }
+      heat.push(week);
+      const firstValid = week.find((c) => c);
+      if (firstValid) {
+        const label = firstValid.date.toLocaleDateString('en-GB', { month: 'short' });
+        if (label !== lastMonthLabel && firstValid.date.getDate() <= 7) {
+          headers.push({ col, label });
+          lastMonthLabel = label;
+        }
+      }
+    }
+    // Area chart geometry — viewBox 720 × 180, padded for the peak callout.
+    const counts = timeline.map((t) => t.count);
+    const maxY = Math.max(1, ...counts);
+    const padL = 8, padR = 8, padT = 28, padB = 28;
+    const W = 720, H = 180;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const stepX = counts.length > 1 ? innerW / (counts.length - 1) : 0;
+    const pts = counts.map((c, i) => ({
+      x: padL + i * stepX,
+      y: padT + (1 - c / maxY) * innerH,
+      v: c,
+    }));
+    // Catmull-Rom → cubic bezier smoothing (tension 0.2) so the curve breathes
+    // without looping past the data. Keeps the line editorial-soft, not jagged.
+    const toBezier = (P, tension = 0.2) => {
+      if (P.length < 2) return '';
+      let d = `M ${P[0].x.toFixed(2)} ${P[0].y.toFixed(2)}`;
+      for (let i = 0; i < P.length - 1; i++) {
+        const p0 = P[i - 1] || P[i];
+        const p1 = P[i];
+        const p2 = P[i + 1];
+        const p3 = P[i + 2] || p2;
+        const cp1x = p1.x + (p2.x - p0.x) * tension;
+        const cp1y = p1.y + (p2.y - p0.y) * tension;
+        const cp2x = p2.x - (p3.x - p1.x) * tension;
+        const cp2y = p2.y - (p3.y - p1.y) * tension;
+        d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+      }
+      return d;
+    };
+    const stroke = toBezier(pts);
+    const baseY = padT + innerH;
+    const area = `${stroke} L ${pts[pts.length - 1].x.toFixed(2)} ${baseY} L ${pts[0].x.toFixed(2)} ${baseY} Z`;
+    // Peak = first occurrence of max (most recent peak wins on tie).
+    let peakI = 0;
+    counts.forEach((c, i) => { if (c >= counts[peakI]) peakI = i; });
+    // Average across months with non-zero activity — a "real" baseline that
+    // doesn't get dragged down by months before the user started logging.
+    const active = counts.filter((c) => c > 0);
+    const avg = active.length > 0 ? active.reduce((s, c) => s + c, 0) / active.length : 0;
+    const avgYpx = padT + (1 - avg / maxY) * innerH;
+    // Year-to-date wear total — surfaced as the editorial headline.
+    const nowYear = new Date().getFullYear();
+    let ytd = 0;
+    for (const [iso, n] of dailyCounts) {
+      if (iso.startsWith(String(nowYear))) ytd += n;
+    }
+    return {
+      heatmap: heat,
+      weekHeaders: headers,
+      peakIdx: peakI,
+      avgY: avgYpx,
+      areaPath: area,
+      linePath: stroke,
+      axisPoints: pts,
+      totalThisYear: ytd,
+    };
+  }, [ownedItems, timeline]);
+
+  const peak = axisPoints[peakIdx];
+  const peakLabel = timeline[peakIdx]?.label;
+  const peakCount = timeline[peakIdx]?.count || 0;
+  // Heat scale — five tonal steps inside the brass family. Zero stays
+  // near-invisible so the calendar reads as paper, not a wall of squares.
+  const heatColor = (n) => {
+    if (!n) return '#f5f5f4'; // stone-100
+    if (n === 1) return 'var(--color-brass-100, #f3e9d0)';
+    if (n === 2) return 'var(--color-brass-200, #e6d2a3)';
+    if (n <= 4) return 'var(--color-brass-300, #d4b378)';
+    return 'var(--color-brass-500, #b08349)';
+  };
+
+  return (
+    <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+      <div className="flex items-baseline justify-between mb-1 flex-wrap gap-2">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
+            <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Wear rhythm · last 12 months</p>
+          </div>
+          <h3 className="font-display text-2xl md:text-3xl text-stone-900">
+            {totalThisYear} <span className="text-stone-400 text-lg font-normal">wears in {new Date().getFullYear()}</span>
+          </h3>
+        </div>
+        <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
+          {peakCount > 0 ? `Peak · ${peakLabel} (${peakCount})` : 'Awaiting wear data'}
+        </span>
+      </div>
+
+      {/* Annotated area chart. SVG inherits its strokes from the editorial
+          palette via CSS vars; no library, no axes — captions do the work. */}
+      <svg viewBox="0 0 720 180" preserveAspectRatio="none" className="w-full h-40 sm:h-48 mt-4" role="img" aria-label="Monthly wears area chart">
+        <defs>
+          <linearGradient id="wearAreaFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-brass-300, #d4b378)" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="var(--color-brass-100, #f3e9d0)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Dashed average baseline — quiet hairline, not a chart gridline. */}
+        {peakCount > 0 && (
+          <g>
+            <line x1="8" x2="712" y1={avgY} y2={avgY} stroke="#a8a29e" strokeWidth="0.75" strokeDasharray="2 4" opacity="0.6" />
+            <text x="712" y={avgY - 4} textAnchor="end" fontSize="9" fill="#78716c" fontStyle="italic" fontFamily="Playfair Display, serif">avg</text>
+          </g>
+        )}
+        <path d={areaPath} fill="url(#wearAreaFill)" />
+        <path d={linePath} fill="none" stroke="var(--color-stone-900, #1c1917)" strokeWidth="1.25" strokeLinejoin="round" strokeLinecap="round" />
+        {/* Peak callout: brass dot + caption hanging above the curve. */}
+        {peakCount > 0 && (
+          <g>
+            <circle cx={peak.x} cy={peak.y} r="3.5" fill="var(--color-brass-500, #b08349)" stroke="#fff" strokeWidth="1.5" />
+            <text x={peak.x} y={Math.max(peak.y - 12, 14)} textAnchor="middle" fontSize="10" fill="#1c1917" fontFamily="Playfair Display, serif" fontStyle="italic">
+              {peakLabel} · {peakCount}
+            </text>
+          </g>
+        )}
+        {/* Month axis — single faint baseline + tracked-out labels. */}
+        <line x1="8" x2="712" y1="152" y2="152" stroke="#e7e5e4" strokeWidth="0.75" />
+        {axisPoints.map((p, i) => (
+          <text key={i} x={p.x} y={170} textAnchor="middle" fontSize="9" fill="#a8a29e" letterSpacing="0.08em">
+            {timeline[i].label.toUpperCase()}
+          </text>
+        ))}
+      </svg>
+
+      {/* 52-week calendar heatmap. Cells 10×10 with 2px gap. Months labeled
+          along the top as a hairline scale. Quiet on empty days so the page
+          doesn't feel like a contributions wall — present, never demanding. */}
+      <div className="mt-8 pt-6 border-t border-stone-100">
+        <div className="flex items-baseline justify-between mb-3 gap-2 flex-wrap">
+          <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">A year in days</p>
+          <div className="flex items-center gap-1.5 text-[9px] tracking-widest uppercase text-stone-400">
+            <span>less</span>
+            {[0, 1, 2, 4, 6].map((n) => (
+              <span key={n} className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: heatColor(n) }} />
+            ))}
+            <span>more</span>
+          </div>
+        </div>
+        <div className="overflow-x-auto hide-scrollbar -mx-2 px-2">
+          <svg viewBox="0 0 636 96" preserveAspectRatio="xMinYMid meet" className="w-full min-w-[520px] h-24" role="img" aria-label="Calendar heatmap of wears over the last 52 weeks">
+            {/* Month headers — small caps along the top */}
+            {weekHeaders.map((h, i) => (
+              <text key={i} x={h.col * 12} y="10" fontSize="8" fill="#a8a29e" letterSpacing="0.12em">
+                {h.label.toUpperCase()}
+              </text>
+            ))}
+            <g transform="translate(0, 16)">
+              {heatmap.map((week, ci) =>
+                week.map((cell, ri) => {
+                  if (!cell) return null;
+                  return (
+                    <rect
+                      key={`${ci}-${ri}`}
+                      x={ci * 12}
+                      y={ri * 11}
+                      width="10"
+                      height="10"
+                      rx="2"
+                      fill={heatColor(cell.count)}
+                      stroke={cell.count > 0 ? 'rgba(0,0,0,0.05)' : 'transparent'}
+                      strokeWidth="0.5"
+                    >
+                      <title>{cell.iso} · {cell.count} {cell.count === 1 ? 'wear' : 'wears'}</title>
+                    </rect>
+                  );
+                })
+              )}
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit, onOpenDiary }) {
   const [diaryOpen, setDiaryOpen] = useState(false);
   const ownedItems = items.filter(i => i.status === 'owned');
@@ -15537,41 +15959,48 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
           card with a link to Profile if there's no budget but they have
           purchases this month. */}
       {monthlyBudget > 0 ? (
-        <div id="insights-spending" className={`scroll-mt-24 rounded-[2rem] p-6 md:p-8 smooth-shadow relative overflow-hidden border ${
-          budgetTone === 'green' ? 'bg-white border-stone-200/60'
-          : budgetTone === 'amber' ? 'bg-amber-50 border-amber-200'
-          : 'bg-red-50 border-red-200'
-        }`}>
-          <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
-            <div>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-1">Spending · {monthName}</p>
-              <h3 className="font-display text-3xl sm:text-4xl text-stone-900">
-                £{monthSpend.toLocaleString()}
-                <span className="text-base sm:text-lg text-stone-400 font-normal ml-2">of £{monthlyBudget.toLocaleString()}</span>
-              </h3>
-            </div>
-            <div className="text-right">
-              <p className={`text-xl sm:text-2xl font-display ${
-                budgetTone === 'green' ? 'text-stone-900'
-                : budgetTone === 'amber' ? 'text-amber-700'
-                : 'text-red-700'
-              }`}>{budgetPct.toFixed(0)}%</p>
-              <p className="text-[10px] tracking-widest uppercase text-stone-500">{monthSpendItems.length} item{monthSpendItems.length === 1 ? '' : 's'}</p>
-            </div>
-          </div>
-          <div className="w-full bg-white/60 rounded-full h-2 overflow-hidden border border-stone-200/60">
-            <div className={`h-full rounded-full transition-all duration-1000 ease-out ${
-              budgetTone === 'green' ? 'bg-emerald-500'
-              : budgetTone === 'amber' ? 'bg-amber-500'
-              : 'bg-red-500'
-            }`} style={{ width: `${Math.min(budgetPct, 100)}%` }}></div>
-          </div>
-          <p className="text-xs text-stone-500 mt-4 leading-relaxed">
-            {budgetTone === 'green' && monthSpend === 0 && `No purchases this month yet — you have £${monthlyBudget.toLocaleString()} of headroom.`}
-            {budgetTone === 'green' && monthSpend > 0 && `£${(monthlyBudget - monthSpend).toLocaleString()} left until you hit your budget for ${monthName.split(' ')[0]}.`}
-            {budgetTone === 'amber' && `Approaching your budget — £${(monthlyBudget - monthSpend).toLocaleString()} of headroom before you tip over.`}
-            {budgetTone === 'red' && `Over budget by £${(monthSpend - monthlyBudget).toLocaleString()}. Worth checking what you've added this month.`}
-          </p>
+        <div id="insights-spending" className="scroll-mt-24 rounded-[2rem] p-6 md:p-8 smooth-shadow relative overflow-hidden border bg-white border-stone-200/60">
+          {/* Editorial alert: NO tonal-flip backgrounds. The whole card stays
+              cream/white; the warning lives in one bar fill colour + one italic
+              caption. Stone → brass → claret, the three editorial steps. */}
+          {(() => {
+            const accent = budgetTone === 'green' ? 'var(--color-stone-900, #1c1917)'
+              : budgetTone === 'amber' ? 'var(--color-brass-500, #b08349)'
+              : 'var(--color-claret-700, #56241f)';
+            const accentClass = budgetTone === 'green' ? 'text-stone-900'
+              : budgetTone === 'amber' ? 'text-brass-700'
+              : 'text-claret-700';
+            const eyebrow = budgetTone === 'green' ? 'Spending'
+              : budgetTone === 'amber' ? 'Spending · approaching budget'
+              : 'Spending · over budget';
+            return (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="inline-block w-5 h-px" style={{ backgroundColor: accent, opacity: 0.7 }} aria-hidden="true" />
+                  <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">{eyebrow} · {monthName}</p>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 mb-5 flex-wrap">
+                  <div>
+                    <h3 className="font-display text-3xl sm:text-4xl text-stone-900">
+                      £{monthSpend.toLocaleString()}
+                      <span className="text-base sm:text-lg text-stone-400 font-normal ml-2">of £{monthlyBudget.toLocaleString()}</span>
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-xl sm:text-2xl font-display ${accentClass}`}>{budgetPct.toFixed(0)}%</p>
+                    <p className="text-[10px] tracking-widest uppercase text-stone-500">{monthSpendItems.length} item{monthSpendItems.length === 1 ? '' : 's'}</p>
+                  </div>
+                </div>
+                <DialBar value={budgetPct} fill={accent} height={6} />
+                <p className={`text-xs mt-4 leading-relaxed ${budgetTone === 'red' ? 'italic text-claret-700' : 'text-stone-500'}`}>
+                  {budgetTone === 'green' && monthSpend === 0 && `No purchases this month yet — you have £${monthlyBudget.toLocaleString()} of headroom.`}
+                  {budgetTone === 'green' && monthSpend > 0 && `£${(monthlyBudget - monthSpend).toLocaleString()} left until you hit your budget for ${monthName.split(' ')[0]}.`}
+                  {budgetTone === 'amber' && `Approaching your budget — £${(monthlyBudget - monthSpend).toLocaleString()} of headroom before you tip over.`}
+                  {budgetTone === 'red' && `Over by £${(monthSpend - monthlyBudget).toLocaleString()} — worth a quiet look at what you've added this month.`}
+                </p>
+              </>
+            );
+          })()}
           {monthSpendItems.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-5">
               {monthSpendItems.slice(0, 8).map((i) => (
@@ -15621,13 +16050,14 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
               <p className="text-[10px] tracking-widest uppercase text-stone-500">pieces worn</p>
             </div>
           </div>
-          <div className="w-full bg-stone-100 rounded-full h-2 overflow-hidden">
-            <div className={`h-full rounded-full transition-all duration-1000 ease-out ${
-              coverageTone === 'high' ? 'bg-emerald-500'
-              : coverageTone === 'mid' ? 'bg-stone-900'
-              : 'bg-brass-400'
-            }`} style={{ width: `${Math.min(seasonCoveragePct, 100)}%` }}></div>
-          </div>
+          <DialBar
+            value={seasonCoveragePct}
+            height={6}
+            track="#f5f5f4"
+            fill={coverageTone === 'high' ? 'var(--color-stone-900, #1c1917)'
+              : coverageTone === 'mid' ? 'var(--color-stone-900, #1c1917)'
+              : 'var(--color-brass-400, #c19a5b)'}
+          />
           <p className="text-xs text-stone-500 mt-4 leading-relaxed">{coverageMessage}</p>
 
           {seasonUnworn.length > 0 && (
@@ -15713,38 +16143,23 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       )}
 
       <div id="insights-composition" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-        <div className="flex items-baseline justify-between gap-3 mb-8 flex-wrap">
-          <h3 className="font-display text-2xl text-stone-900">Investment by Category</h3>
+        <div className="flex items-baseline justify-between gap-3 mb-6 flex-wrap">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
+              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Composition</p>
+            </div>
+            <h3 className="font-display text-2xl text-stone-900">Investment by category</h3>
+          </div>
           {Object.keys(categoryBreakdown).length > 0 && onJumpToWardrobe && (
-            <span className="text-[10px] tracking-widest uppercase text-stone-400">Tap a row to view in your wardrobe</span>
+            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">Tap a tile to open in your wardrobe</span>
           )}
         </div>
-        <div className="space-y-4">
-          {Object.entries(categoryBreakdown).map(([category, value]) => {
-            const percentage = ownedTotal > 0 ? (value / ownedTotal) * 100 : 0;
-            const clickable = !!onJumpToWardrobe;
-            const RowTag = clickable ? 'button' : 'div';
-            return (
-              <RowTag
-                key={category}
-                {...(clickable ? { type: 'button', onClick: () => onJumpToWardrobe({ filter: 'all', category }), 'aria-label': `View ${category} in wardrobe` } : {})}
-                className={`group block w-full text-left rounded-xl p-3 -mx-3 transition-colors ${clickable ? 'hover:bg-stone-100 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900' : ''}`}
-              >
-                <div className="flex justify-between items-baseline text-sm mb-2 gap-3">
-                  <span className={`font-medium tracking-wide uppercase text-xs transition-colors ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-800'}`}>{category}</span>
-                  <span className="text-stone-500 shrink-0">
-                    £{value.toLocaleString()} <span className="text-stone-300 ml-2">({percentage.toFixed(0)}%)</span>
-                    {clickable && <ChevronRight size={12} strokeWidth={1.5} className="inline-block ml-1.5 -mt-0.5 text-stone-300 group-hover:text-stone-700 transition-colors" />}
-                  </span>
-                </div>
-                <div className="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-stone-900 h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${percentage}%` }}></div>
-                </div>
-              </RowTag>
-            );
-          })}
-          {Object.keys(categoryBreakdown).length === 0 && <p className="text-stone-400 italic">No items owned yet.</p>}
-        </div>
+        <CategoryTreemap
+          categoryBreakdown={categoryBreakdown}
+          ownedItems={ownedItems}
+          onJumpToWardrobe={onJumpToWardrobe}
+        />
       </div>
 
       {sortedColors.length > 0 && (
@@ -15788,13 +16203,12 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
                       {count} {count === 1 ? 'piece' : 'pieces'} <span className="text-stone-300 ml-2">{pct.toFixed(0)}%</span>
                     </span>
                   </div>
-                  <div className="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000 ease-out"
-                      style={{
-                        width: `${pct}%`,
-                        background: swatch?.startsWith('linear') ? swatch : swatch,
-                      }} />
-                  </div>
+                  <HairlineBar
+                    value={pct}
+                    height={4}
+                    track="#f5f5f4"
+                    fill={swatch || 'var(--color-stone-900, #1c1917)'}
+                  />
                 </div>
               );
             })}
@@ -15809,25 +16223,7 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       )}
 
       {totalWears > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
-            <h3 className="font-display text-xl md:text-2xl text-stone-900">Wears over time</h3>
-            <span className="text-[10px] tracking-widest uppercase text-stone-500">Last 12 months</span>
-          </div>
-          <div className="flex items-end justify-between gap-1.5 h-32 sm:h-40">
-            {timeline.map((t) => (
-              <div key={t.ym} className="flex-1 flex flex-col items-center gap-2 min-w-0 group">
-                <span className="text-[9px] text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity">{t.count}</span>
-                <div className="w-full flex flex-col justify-end h-full">
-                  <div className={`w-full rounded-t transition-all duration-500 ${t.count > 0 ? 'bg-stone-900' : 'bg-stone-100'}`}
-                    style={{ height: `${(t.count / maxBar) * 100}%`, minHeight: t.count > 0 ? '4px' : '4px' }}
-                    title={`${t.count} wear${t.count === 1 ? '' : 's'}`} />
-                </div>
-                <span className="text-[10px] text-stone-500 tracking-wider">{t.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <WearTimelineCard ownedItems={ownedItems} timeline={timeline} />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">

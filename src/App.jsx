@@ -15170,8 +15170,8 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               {onEdit && (
                 <button onClick={onEdit}
                   className="hidden sm:inline-flex px-3 py-2.5 rounded-full text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors duration-200"
-                  title="Edit this look in Styling Studio">
-                  Edit
+                  title="Restyle this look in the Studio">
+                  Restyle
                 </button>
               )}
               <button onClick={async () => { await onDuplicate?.(); toast.show('Duplicated · edit anytime', { kind: 'success' }); }}
@@ -15236,9 +15236,23 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <button
                     type="button"
                     onClick={() => { setEditingTags((v) => !v); setNewTag(''); }}
-                    className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                      editingTags
+                        ? 'bg-stone-900 text-white hover:bg-stone-700'
+                        : 'bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900'
+                    }`}
                   >
-                    {editingTags ? 'Done' : (outfit.tags && outfit.tags.length > 0 ? 'Edit' : 'Add tags')}
+                    {editingTags ? (
+                      <>
+                        <Check size={12} strokeWidth={2} />
+                        Done
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={12} strokeWidth={2} />
+                        {outfit.tags && outfit.tags.length > 0 ? 'Edit tags' : 'Add tags'}
+                      </>
+                    )}
                   </button>
                 )}
               </div>

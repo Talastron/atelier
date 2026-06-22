@@ -1318,6 +1318,47 @@ Reply with the name ONLY — no preamble, no explanation, no quotes.`;
     .slice(0, 40);
 }
 
+// generateOutfitTagsWithGemini — generate 3-5 descriptive tags for a
+// saved outfit. Mirrors the tag-emission rule from generateOutfitWithGemini
+// (Stylist) so the vocabulary is consistent between auto-generated and
+// AI-composed looks. Returns a string[] (empty on any failure — caller
+// decides how to handle; never throws to the UI).
+async function generateOutfitTagsWithGemini(picked, intent = '') {
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
+  if (!picked || picked.length === 0) return [];
+  const itemList = picked
+    .map((p) => [p.brand, p.category, p.subCategory, p.name].filter(Boolean).join(' '))
+    .filter(Boolean)
+    .slice(0, 8)
+    .join('\n- ');
+  const prompt = `You are tagging a saved outfit for an editorial wardrobe app called Atelier.
+
+Return 3 to 5 short descriptive labels covering occasion, mood, formality, season hint.
+
+Rules:
+- Lowercase, no punctuation, 1-2 words each
+- Mix categories — don't return five tags all describing occasion
+- Avoid restating items themselves
+- No marketing fluff ("stylish", "chic", "trendy")
+
+Items in this look:
+- ${itemList}
+
+${intent && intent !== 'Any' ? `Style intent: ${intent}\n\n` : ''}Respond ONLY with valid JSON of the shape: {"tags": ["...","..."]}`;
+
+  const result = await geminiText(prompt, { temperature: 0.6, jsonMode: true }, 'backfill-tags');
+  try {
+    const parsed = JSON.parse(result);
+    if (!Array.isArray(parsed.tags)) return [];
+    return parsed.tags
+      .map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+      .filter(Boolean)
+      .slice(0, 6);
+  } catch {
+    return [];
+  }
+}
+
 // generateWearNarration — when the user logs a wear with a photo, ask
 // Gemini for ONE evocative memory line in the voice of a personal stylist
 // keeping a journal. Stored on wornPhotos[i].caption and rendered as an
@@ -9602,6 +9643,10 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [lookbookNamerOpen, setLookbookNamerOpen] = useState(false);
   const [lookbookBusy, setLookbookBusy] = useState(false);
   const [outfitsFilter, setOutfitsFilter] = useState('all');
+  const [activeTagFilter, setActiveTagFilter] = useState(null); // null = "All"
+  const [sortMode, setSortMode] = useState('recent'); // recent | most-worn | a-z
+  const [backfillBusy, setBackfillBusy] = useState(false);
+  const [backfillProgress, setBackfillProgress] = useState(null);
   // Sort by user-arranged `order` field (set via Lookbook drag-to-reorder).
   // Outfits without `order` fall back to createdAt-descending so newly-saved
   // looks land at the top before the user has explicitly arranged anything.
@@ -9618,7 +9663,44 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     });
     return arr;
   }, [outfits]);
-  const filteredOutfits = outfitsFilter === 'favorites' ? sortedAllOutfits.filter((o) => o.favorite) : sortedAllOutfits;
+  // Base filter: favorites vs all (existing behaviour)
+  const baseFilteredOutfits = outfitsFilter === 'favorites' ? sortedAllOutfits.filter((o) => o.favorite) : sortedAllOutfits;
+
+  // Union of all tags across the base-filtered set, sorted by frequency (most-used first).
+  // Cap at 12 chips to keep the row readable on narrow screens.
+  const tagUnion = React.useMemo(() => {
+    const m = new Map();
+    for (const o of baseFilteredOutfits) {
+      for (const t of (o.tags || [])) {
+        m.set(t, (m.get(t) || 0) + 1);
+      }
+    }
+    return [...m.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
+  }, [baseFilteredOutfits]);
+
+  // Tag filter applied on top of the favorites filter
+  const tagFilteredOutfits = activeTagFilter
+    ? baseFilteredOutfits.filter((o) => Array.isArray(o.tags) && o.tags.includes(activeTagFilter))
+    : baseFilteredOutfits;
+
+  // Sort the tag-filtered set according to sortMode.
+  // 'recent' honours the existing drag-to-reorder `order` field (falls back to
+  // createdAt-descending) — this matches the original sortedAllOutfits behaviour
+  // so the user's manual arrangement is respected by default.
+  const filteredOutfits = React.useMemo(() => {
+    if (sortMode === 'most-worn') {
+      const wears = (o) => Array.isArray(o.wornPhotos) ? o.wornPhotos.length : 0;
+      return [...tagFilteredOutfits].sort((a, b) => wears(b) - wears(a));
+    }
+    if (sortMode === 'a-z') {
+      return [...tagFilteredOutfits].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    }
+    // 'recent' — already in order from sortedAllOutfits, just return as-is
+    return tagFilteredOutfits;
+  }, [tagFilteredOutfits, sortMode]);
+
   const toast = useToast();
 
   // Desktop: PointerSensor for click-and-drag. We omit TouchSensor by design —
@@ -10739,6 +10821,100 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               )}
             </div>
           )}
+          {/* TAG FILTER CHIPS + SORT — revealed once there are >5 looks so
+              the controls don't dominate empty/small collections. Shows union
+              of all tags (top 12 by frequency) as click-to-filter chips, plus
+              a sort dropdown (Recent / Most worn / A-Z). */}
+          {(() => {
+            const untagged = outfits.filter((o) => !Array.isArray(o.tags) || o.tags.length === 0);
+            return (
+              <>
+                {untagged.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (backfillBusy) return;
+                      const confirmed = window.confirm(
+                        `Auto-tag ${untagged.length} look${untagged.length === 1 ? '' : 's'} using AI? This uses a tiny amount of your AI allowance (roughly £0.0001 per look).`
+                      );
+                      if (!confirmed) return;
+                      setBackfillBusy(true);
+                      setBackfillProgress({ done: 0, total: untagged.length });
+                      try {
+                        for (let i = 0; i < untagged.length; i++) {
+                          const o = untagged[i];
+                          const picked = (o.itemIds || []).map((id) => items.find((it) => it.id === id)).filter(Boolean);
+                          if (picked.length === 0) { setBackfillProgress({ done: i + 1, total: untagged.length }); continue; }
+                          try {
+                            const tags = await generateOutfitTagsWithGemini(picked, o.intent || '');
+                            if (tags.length > 0) {
+                              await saveOutfit({ ...o, tags });
+                            }
+                          } catch (err) {
+                            console.warn('[backfill-tags] failed for outfit', o.id, err?.message);
+                          }
+                          setBackfillProgress({ done: i + 1, total: untagged.length });
+                        }
+                        toast.show(`Tagged ${untagged.length} look${untagged.length === 1 ? '' : 's'}`, { kind: 'success' });
+                      } finally {
+                        setBackfillBusy(false);
+                        setBackfillProgress(null);
+                      }
+                    }}
+                    className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                    disabled={backfillBusy}
+                  >
+                    <Sparkles size={12} strokeWidth={1.75} />
+                    {backfillBusy
+                      ? (backfillProgress ? `Tagging ${backfillProgress.done}/${backfillProgress.total}…` : 'Tagging…')
+                      : `Auto-tag ${untagged.length} older look${untagged.length === 1 ? '' : 's'}`}
+                  </button>
+                )}
+                {outfits.length > 5 && (
+                  <div className="mb-6 flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTagFilter(null)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                          activeTagFilter === null
+                            ? 'bg-stone-900 text-white'
+                            : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
+                        }`}
+                      >
+                        All ({baseFilteredOutfits.length})
+                      </button>
+                      {tagUnion.map(([tag, count]) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setActiveTagFilter(tag === activeTagFilter ? null : tag)}
+                          className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                            activeTagFilter === tag
+                              ? 'bg-stone-900 text-white'
+                              : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
+                          }`}
+                        >
+                          {tag} ({count})
+                        </button>
+                      ))}
+                    </div>
+                    <select
+                      value={sortMode}
+                      onChange={(e) => setSortMode(e.target.value)}
+                      className="px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-white border border-stone-200 text-stone-700 outline-none hover:border-stone-900 transition-colors shrink-0"
+                      style={{ fontSize: '16px' }}
+                    >
+                      <option value="recent">Recent</option>
+                      <option value="most-worn">Most worn</option>
+                      <option value="a-z">A–Z</option>
+                    </select>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
           {/* Editorial lookbook grid. Single column on mobile, max TWO on
               desktop — looks deserve room to breathe. Each card is a tall
               4:5 portrait with a deterministic flat-lay arrangement of
@@ -10746,7 +10922,18 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               top). Cream gradient surface so the items pop. Serif name
               below in display weight. Mirrors a magazine spread, not a
               dashboard. */}
-          {filteredOutfits.length === 0 ? (
+          {activeTagFilter && filteredOutfits.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-stone-500 text-sm">No looks tagged "{activeTagFilter}" yet.</p>
+              <button
+                type="button"
+                onClick={() => setActiveTagFilter(null)}
+                className="mt-3 text-stone-700 underline-offset-4 hover:underline text-[12px] tracking-wide"
+              >
+                Show all looks
+              </button>
+            </div>
+          ) : filteredOutfits.length === 0 ? (
             <div className="py-24 flex flex-col items-center justify-center text-stone-400 bg-white/50 border border-dashed border-stone-300 rounded-3xl">
               <Camera size={40} strokeWidth={1} className="mb-4 opacity-50" />
               <p className="text-lg font-display tracking-wide">{outfitsFilter === 'favorites' ? 'No favourites yet.' : 'No saved looks yet.'}</p>

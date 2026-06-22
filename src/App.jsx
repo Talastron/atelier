@@ -10752,6 +10752,46 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                   <div className="grid grid-cols-3 lg:grid-cols-2 gap-2 lg:gap-3 mb-5 lg:mb-8">
                     {OUTFIT_SLOTS.map((slot) => <OutfitSlot key={slot} slot={slot} />)}
                   </div>
+                  {/* Live composing palette — mirrors the Lookbook detail palette
+                      strip but at smaller scale so it doesn't dominate the Studio
+                      canvas. Updates as pieces are added/removed. Hidden when
+                      fewer than 2 distinct colours (single-colour palette adds
+                      no signal). */}
+                  {(() => {
+                    const pickedItems = OUTFIT_SLOTS.flatMap((s) => slotItems(currentOutfit[s.toLowerCase()]));
+                    const counts = new Map();
+                    for (const piece of pickedItems) {
+                      for (const c of (itemColors(piece) || [])) {
+                        const key = (c || '').toLowerCase().trim();
+                        if (!key) continue;
+                        counts.set(key, (counts.get(key) || 0) + 1);
+                      }
+                    }
+                    const studioPalette = [...counts.entries()]
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 6)
+                      .map(([name, count]) => ({ name, count, hex: hexFromColorName(name) }));
+                    if (studioPalette.length < 2) return null;
+                    return (
+                      <div className="mb-5 lg:mb-8">
+                        <div className="flex items-center gap-2.5 mb-2">
+                          <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
+                          <span className="text-[10px] tracking-[0.28em] uppercase font-medium text-stone-500">Composing palette</span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {studioPalette.map(({ name, count, hex }) => (
+                            <div key={name} className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-0.5 rounded-full bg-white border border-stone-200">
+                              <span className="block w-4 h-4 rounded-full border border-stone-300/70 shrink-0" style={{ backgroundColor: hex }} aria-hidden="true" />
+                              <span className="text-[10px] tracking-wide uppercase text-stone-700">
+                                {name}
+                                {count > 1 && <span className="text-stone-400 ml-1">×{count}</span>}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div className="mt-auto">
                     {/* Name input + inline AI Suggest button. The Suggest
                         button only appears when AI is enabled AND the user

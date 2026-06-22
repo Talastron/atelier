@@ -212,7 +212,7 @@ function EditorialHeader({ eyebrow, title, subtitle, right, className = '' }) {
           </div>
         )}
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-display text-stone-900 tracking-tight leading-[1.05]">{title}</h2>
-        {subtitle && <p className="text-stone-500 mt-3 text-sm tracking-wide max-w-xl leading-relaxed">{subtitle}</p>}
+        {subtitle && <p className="text-stone-500 mt-3 text-sm tracking-wide max-w-xl leading-relaxed truncate min-w-0">{subtitle}</p>}
       </div>
       {right && <div className="shrink-0 self-start md:self-auto">{right}</div>}
     </header>
@@ -9951,6 +9951,23 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           });
         } catch (e) { console.warn('[wardrobe] could not save AI history:', e); }
       }
+      // Auto-name the freshly composed look. The user can still click
+      // "Suggest" later to regenerate, but we save them a step in the
+      // common case where they accept the AI's suggestion. We force the
+      // stage label so the user sees what we're doing during the extra
+      // ~3s the naming call takes (the AIProgressModal is still up because
+      // aiBusy hasn't been set false yet).
+      try {
+        const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(next[s.toLowerCase()]));
+        if (picked.length > 0 && !outfitName.trim()) {
+          setAiStage('Titling the look…');
+          const briefForName = customIntent.trim() || (styleIntent !== 'Any' ? styleIntent : '');
+          const name = await generateOutfitNameWithGemini(picked, briefForName);
+          if (name) setOutfitName(name);
+        }
+      } catch (autoNameErr) {
+        console.warn('[stylist] auto-name failed:', autoNameErr?.message);
+      }
     } catch (err) {
       toast.show(err?.message || 'AI styling failed', { kind: 'error', duration: 4000 });
     } finally {
@@ -10324,7 +10341,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         <ABCompareModal
           pair={abPair}
           onClose={() => setAbPair(null)}
-          onPick={(choice) => {
+          onPick={async (choice) => {
             setCurrentOutfit(choice.outfit);
             setAiNote(choice.reasoning);
             setAiTags(choice.tags || []);
@@ -10341,6 +10358,19 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             }
             setAbPair(null);
             toast.show('Look applied', { kind: 'success' });
+            // Auto-name the A/B picked look. The AIProgressModal is no longer
+            // open here so we flip suggestingName to show the "Composing a
+            // name…" placeholder in the name input (added in P1.1 Task 2.4).
+            if (!outfitName.trim()) {
+              setSuggestingName(true);
+              try {
+                const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(choice.outfit[s.toLowerCase()]));
+                const briefForName = customIntent.trim() || (styleIntent !== 'Any' ? styleIntent : '');
+                const name = await generateOutfitNameWithGemini(picked, briefForName);
+                if (name) setOutfitName(name);
+              } catch (e) { console.warn('[stylist] A/B auto-name failed:', e?.message); }
+              finally { setSuggestingName(false); }
+            }
           }}
         />
       )}
@@ -11721,10 +11751,18 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
         const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         return (
           <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 smooth-shadow space-y-5">
-            <div className="flex items-baseline justify-between gap-3 flex-wrap">
-              <h3 className="font-display text-xl sm:text-2xl text-stone-900">{formattedDate}</h3>
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex items-baseline gap-3 flex-wrap min-w-0">
+                <h3 className="font-display text-xl sm:text-2xl text-stone-900">{formattedDate}</h3>
+                {scheduledOutfit && (
+                  <span className="text-[10px] tracking-widest uppercase text-brass-600 bg-brass-50 px-2 py-0.5 rounded-full shrink-0">Planned</span>
+                )}
+                {!scheduledOutfit && selectedWears.length > 0 && (
+                  <span className="text-[10px] tracking-widest uppercase text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full shrink-0">{selectedWears.length} worn</span>
+                )}
+              </div>
               {isFutureOrToday && onScheduleOutfit && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 shrink-0">
                   <button onClick={() => setSchedulingDate(selectedDate)}
                     className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-500">
                     {scheduled ? 'Change look' : '＋ Plan a look'}
@@ -11746,20 +11784,36 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
             </div>
 
             {scheduledOutfit && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-                  <p className="text-[10px] tracking-widest uppercase text-brass-700 font-bold">Planned · {scheduledOutfit.name}</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => onOpenOutfit?.(scheduledOutfit.id)} className="text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900">View</button>
-                    <button onClick={() => onScheduleOutfit(selectedDate, null)} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-red-600">Unschedule</button>
+              <div className="rounded-2xl border border-amber-200 overflow-hidden">
+                {/* Tappable header area — opens the look detail */}
+                <button
+                  type="button"
+                  onClick={() => onOpenOutfit?.(scheduledOutfit.id)}
+                  className="w-full text-left bg-amber-50 hover:bg-amber-100/70 transition-colors px-4 pt-4 pb-3"
+                >
+                  <div className="text-[10px] tracking-widest uppercase text-brass-600 mb-1">Planned look</div>
+                  <div className="font-display text-stone-900 text-lg sm:text-xl leading-tight">{scheduledOutfit.name}</div>
+                  {scheduledOutfit.tags && scheduledOutfit.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {scheduledOutfit.tags.slice(0, 5).map((tag) => (
+                        <span key={tag} className="text-[9px] tracking-wide uppercase text-stone-600 bg-white/70 border border-stone-200 px-1.5 py-0.5 rounded-full">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                </button>
+                {/* Item thumbnail row */}
+                <div className="bg-amber-50/50 px-4 pb-4 pt-3">
+                  <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+                    {scheduledPieces.map((p) => (
+                      <div key={p.id} className="flex-none w-14 aspect-[3/4] rounded-lg overflow-hidden bg-white border border-amber-200/60">
+                        {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-                  {scheduledPieces.map((p) => (
-                    <div key={p.id} className="flex-none w-14 aspect-[3/4] rounded-lg overflow-hidden bg-white">
-                      {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
-                    </div>
-                  ))}
+                {/* Action row */}
+                <div className="bg-white border-t border-amber-200 px-4 py-2 flex justify-end">
+                  <button onClick={() => onScheduleOutfit(selectedDate, null)} className="text-[10px] tracking-widest uppercase text-stone-400 hover:text-red-600 transition-colors">Unschedule</button>
                 </div>
               </div>
             )}
@@ -11784,6 +11838,28 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
           </div>
         );
       })()}
+
+      {/* Persistent packing-list download — always visible, defaults to
+          the next 14 days (typical upcoming-trip window). The explicit
+          range-mode UI still exists for users who want to pick a specific
+          trip window. */}
+      <div className="flex justify-end pt-1">
+        <button
+          type="button"
+          onClick={() => {
+            const start = new Date();
+            const end = new Date();
+            end.setDate(end.getDate() + 14);
+            setRangeStart(start.toISOString().slice(0, 10));
+            setRangeEnd(end.toISOString().slice(0, 10));
+            setPackingOpen(true);
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors"
+        >
+          <Download size={14} strokeWidth={1.5} />
+          Download packing list
+        </button>
+      </div>
 
       {schedulingDate && (
         <SchedulePickerModal

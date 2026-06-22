@@ -16,6 +16,20 @@
   --color-brass-700: #785532;
   --color-brass-800: #5d422a;
   --color-brass-900: #3d2b1c;
+  /* Claret — a deep editorial wine for "over budget" / restrained alerts.
+     Replaces saturated web-red (bg-red-500/text-red-700) on Insights so the
+     warning stays in the brass/stone luxury palette instead of shouting like
+     an iOS notification. Used sparingly: meter fill + one italic caption. */
+  --color-claret-50:  #f7eeec;
+  --color-claret-100: #ecd6d2;
+  --color-claret-200: #d8a8a1;
+  --color-claret-300: #b97a72;
+  --color-claret-400: #9a5048;
+  --color-claret-500: #7d3a32;
+  --color-claret-600: #6a2e27;
+  --color-claret-700: #56241f;
+  --color-claret-800: #401a16;
+  --color-claret-900: #2a110e;
 }
 
 /* A thin editorial rule placed under display headings. Hand-cut to read as a

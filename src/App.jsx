@@ -15558,24 +15558,41 @@ function squarifyTreemap(items, x, y, w, h) {
   }
 }
 
-// CategoryTreemap — replaces the row-of-bars composition view.
-// Each tile is sized by category spend and backed by the lead photo of the
-// most expensive item in that category. A dark gradient at the bottom carries
-// the label, £, and %. Click-through to the wardrobe filtered by category.
+// CategoryTreemap — the photo-tiled composition view.
+// Each tile is sized by category spend and backed by the user's MOST-WORN
+// piece in that category (the signature piece), with most-expensive as a
+// fallback. The hero tile gets a brass-thread inset frame, a brass corner
+// mark, and a museum-label brand line above the eyebrow.
 function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
+  // Pre-bake per-category meta so we don't re-scan ownedItems every render.
+  // Representative item = most-worn (tied by price), so "Shoes" picks the
+  // worn pumps over the priciest boots — the user's signature, not the splurge.
+  const catMeta = useMemo(() => {
+    const map = {};
+    for (const cat of Object.keys(categoryBreakdown)) {
+      const inCat = ownedItems.filter((i) => i.category === cat);
+      const withPhoto = inCat.filter((i) => itemImages(i)[0]);
+      const sorted = [...withPhoto].sort((a, b) => {
+        const wa = itemWearCount(a) || 0;
+        const wb = itemWearCount(b) || 0;
+        if (wb !== wa) return wb - wa;
+        return (b.price || 0) - (a.price || 0);
+      });
+      const rep = sorted[0] || null;
+      map[cat] = {
+        photo: rep ? itemImages(rep)[0] : null,
+        brand: rep?.brand || '',
+        count: inCat.length,
+      };
+    }
+    return map;
+  }, [categoryBreakdown, ownedItems]);
+
   const entries = Object.entries(categoryBreakdown)
     .map(([category, value]) => ({ category, value }))
     .filter((e) => e.value > 0)
     .sort((a, b) => b.value - a.value);
   const total = entries.reduce((s, e) => s + e.value, 0);
-  // Pick the representative photo: most expensive item in the category that
-  // has an image. Falls back to the first image we find in the category.
-  const repPhoto = (category) => {
-    const inCat = ownedItems
-      .filter((i) => i.category === category && itemImages(i)[0])
-      .sort((a, b) => (b.price || 0) - (a.price || 0));
-    return inCat[0] ? itemImages(inCat[0])[0] : null;
-  };
   // Layout in a virtual 100×56 unit box (≈16:9). CSS turns it back into
   // percentages so the treemap is fluid at any container width.
   const layout = useMemo(() => squarifyTreemap(entries, 0, 0, 100, 56), [entries]);
@@ -15584,7 +15601,7 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
   return (
     <div className="relative w-full" style={{ aspectRatio: '100 / 56' }}>
       {layout.map((tile) => {
-        const photo = repPhoto(tile.category);
+        const meta = catMeta[tile.category] || { photo: null, brand: '', count: 0 };
         const pct = total > 0 ? (tile.value / total) * 100 : 0;
         const clickable = !!onJumpToWardrobe;
         const Wrap = clickable ? 'button' : 'div';
@@ -15610,35 +15627,168 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
             }}
           >
             <div className="relative w-full h-full rounded-xl overflow-hidden bg-stone-200 ring-1 ring-stone-200/60">
-              {photo ? (
+              {meta.photo ? (
                 <img
-                  src={photo}
+                  src={meta.photo}
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
                 />
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300" />
               )}
-              {/* Editorial overlay — dark bottom wash so the label rides on the
-                  photo without a tinted card. Plus a faint top vignette so the
-                  scale-on-hover doesn't blow out the eye. */}
-              <div className="absolute inset-0 bg-gradient-to-t from-stone-900/85 via-stone-900/20 to-transparent" />
-              {heroish && <div className="absolute inset-0 ring-[1px] ring-inset ring-white/10" />}
+              {/* Editorial overlay — a soft top wash stops highlights from
+                  blowing out on hover, and a darker bottom gradient carries
+                  the type without a tinted card behind it. */}
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-stone-900/15 to-stone-900/10" />
+
+              {/* Hero-only flourishes: a brass-thread inset frame (the
+                  printer's passe-partout move) and a small "Largest" gilded
+                  tab — a feature mark without typography overload. */}
+              {heroish && (
+                <>
+                  <div className="absolute inset-2 ring-[1px] ring-inset ring-white/15 rounded-lg pointer-events-none" />
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    <span className="w-5 h-px bg-brass-300/70" />
+                    <span className="text-[9px] tracking-[0.3em] uppercase text-brass-200/90 font-medium">Largest</span>
+                  </div>
+                </>
+              )}
+
               <div className="absolute left-0 right-0 bottom-0 p-3 md:p-4 text-white">
+                {heroish && meta.brand && (
+                  <p className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-brass-200/90 font-medium mb-1 truncate">
+                    {meta.brand}
+                  </p>
+                )}
                 <div className="flex items-baseline justify-between gap-2">
                   <p className={`${heroish ? 'text-xs sm:text-sm' : 'text-[9px] sm:text-[10px]'} tracking-[0.22em] uppercase font-semibold opacity-90`}>{tile.category}</p>
                   <p className={`${heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]'} tracking-widest uppercase opacity-70`}>{pct.toFixed(0)}%</p>
                 </div>
-                <p className={`font-display ${heroish ? 'text-2xl md:text-3xl' : big ? 'text-lg md:text-xl' : 'text-sm'} mt-0.5`}>
-                  £{tile.value.toLocaleString()}
-                </p>
+                <div className="flex items-baseline justify-between gap-2 mt-0.5">
+                  <p className={`font-display ${heroish ? 'text-2xl md:text-3xl' : big ? 'text-lg md:text-xl' : 'text-sm'}`}>
+                    £{tile.value.toLocaleString()}
+                  </p>
+                  {(big || heroish) && meta.count > 0 && (
+                    <p className={`${heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]'} tracking-widest uppercase opacity-60`}>
+                      × {meta.count} {meta.count === 1 ? 'piece' : 'pieces'}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </Wrap>
         );
       })}
+    </div>
+  );
+}
+
+// Extracts hex colours from a CSS linear-gradient string so we can rebuild
+// the same gradient inside an SVG <linearGradient> def. Used by ColourWheel
+// to render the metallic swatches (Gold, Silver, Rose Gold, Multicolor) as
+// real radial arcs rather than falling back to a flat fill.
+function parseGradientStops(str) {
+  if (!str || typeof str !== 'string' || !str.startsWith('linear-gradient')) return null;
+  const hexes = str.match(/#[0-9a-fA-F]{3,8}/g);
+  if (!hexes || hexes.length < 2) return null;
+  return hexes;
+}
+
+// ColourWheel — the radial heart of the gold-standard colour profile.
+// One donut, one arc per colour family, arc length proportional to item count,
+// arc fill = the actual swatch (solid OR parsed linear-gradient). Centre cell
+// surfaces the dominant colour as an editorial pull-quote.
+function ColourWheel({ sortedColors, colorTotal, ownedCount, taggedCount }) {
+  // Donut geometry. cx/cy at 160, outer radius 142, inner 92 → 50px ring
+  // thickness with a hairline gap (3°) between arcs so each colour gets its
+  // own breathing room. viewBox is square; CSS makes it fluid.
+  const cx = 160, cy = 160, rOuter = 142, rInner = 92;
+  const gapDeg = sortedColors.length > 1 ? Math.min(3, 360 / (sortedColors.length * 6)) : 0;
+  const totalGap = gapDeg * sortedColors.length;
+  const usableDeg = Math.max(0, 360 - totalGap);
+
+  // Build slice paths. Start at -90° (12 o'clock) and walk clockwise so the
+  // dominant colour leads at the top — reads like a watch dial.
+  let cursorDeg = -90;
+  const slices = sortedColors.map(([color, count], idx) => {
+    const pct = colorTotal > 0 ? count / colorTotal : 0;
+    const arcDeg = usableDeg * pct;
+    const a1 = (cursorDeg * Math.PI) / 180;
+    const a2 = ((cursorDeg + arcDeg) * Math.PI) / 180;
+    cursorDeg += arcDeg + gapDeg;
+    const swatch = COLOR_SWATCHES[color];
+    const gradient = parseGradientStops(swatch);
+    const ox1 = cx + rOuter * Math.cos(a1);
+    const oy1 = cy + rOuter * Math.sin(a1);
+    const ox2 = cx + rOuter * Math.cos(a2);
+    const oy2 = cy + rOuter * Math.sin(a2);
+    const ix1 = cx + rInner * Math.cos(a1);
+    const iy1 = cy + rInner * Math.sin(a1);
+    const ix2 = cx + rInner * Math.cos(a2);
+    const iy2 = cy + rInner * Math.sin(a2);
+    const large = arcDeg > 180 ? 1 : 0;
+    const d = `M ${ox1.toFixed(2)} ${oy1.toFixed(2)} A ${rOuter} ${rOuter} 0 ${large} 1 ${ox2.toFixed(2)} ${oy2.toFixed(2)} L ${ix2.toFixed(2)} ${iy2.toFixed(2)} A ${rInner} ${rInner} 0 ${large} 0 ${ix1.toFixed(2)} ${iy1.toFixed(2)} Z`;
+    return { color, count, pct, d, swatch, gradient, idx };
+  });
+
+  const dominant = sortedColors[0] || ['—', 0];
+  const dominantPct = colorTotal > 0 ? (dominant[1] / colorTotal) * 100 : 0;
+
+  return (
+    <div className="relative w-full max-w-[340px] mx-auto" style={{ aspectRatio: '1 / 1' }}>
+      <svg viewBox="0 0 320 320" className="w-full h-full" role="img" aria-label={`Colour wheel: ${sortedColors.length} colour families across ${taggedCount} tagged pieces`}>
+        <defs>
+          {/* Per-arc SVG linearGradient for metallic swatches. Direction
+              matches the original CSS 135deg (top-left to bottom-right). */}
+          {slices.map((s) => s.gradient ? (
+            <linearGradient key={`g-${s.color}`} id={`wheel-grad-${s.idx}`} x1="0" y1="0" x2="1" y2="1">
+              {s.gradient.map((hex, gi) => (
+                <stop key={gi} offset={`${(gi / Math.max(1, s.gradient.length - 1)) * 100}%`} stopColor={hex} />
+              ))}
+            </linearGradient>
+          ) : null)}
+          {/* Soft inner-shadow rim on the centre well — gives the donut a
+              jeweller's bezel look instead of a flat washer. */}
+          <radialGradient id="wheel-rim" cx="50%" cy="50%" r="50%">
+            <stop offset="70%" stopColor="#000" stopOpacity="0" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0.08" />
+          </radialGradient>
+        </defs>
+
+        {slices.map((s) => {
+          const fill = s.gradient ? `url(#wheel-grad-${s.idx})` : (s.swatch || '#a8a29e');
+          return (
+            <path
+              key={s.color}
+              d={s.d}
+              fill={fill}
+              stroke="#FAFAF9"
+              strokeWidth="0.75"
+            >
+              <title>{s.color} · {s.count} {s.count === 1 ? 'piece' : 'pieces'} · {(s.pct * 100).toFixed(0)}%</title>
+            </path>
+          );
+        })}
+
+        {/* Centre well — cream rim + dominant-colour pull-quote */}
+        <circle cx={cx} cy={cy} r={rInner - 1} fill="#F7F5F2" />
+        <circle cx={cx} cy={cy} r={rInner - 1} fill="url(#wheel-rim)" />
+        <text x={cx} y={cy - 22} textAnchor="middle" fontSize="9" letterSpacing="0.28em" fill="#a8a29e" fontFamily="Jost, sans-serif">
+          DOMINANT
+        </text>
+        <text x={cx} y={cy + 6} textAnchor="middle" fontSize="22" fill="#1c1917" fontFamily="Playfair Display, serif" fontStyle="italic">
+          {dominant[0]}
+        </text>
+        <text x={cx} y={cy + 30} textAnchor="middle" fontSize="11" fill="#78716c" fontFamily="Playfair Display, serif">
+          {dominantPct.toFixed(0)}% of palette
+        </text>
+        <line x1={cx - 18} x2={cx + 18} y1={cy + 42} y2={cy + 42} stroke="var(--color-brass-400, #c19a5b)" strokeWidth="0.75" opacity="0.7" />
+        <text x={cx} y={cy + 56} textAnchor="middle" fontSize="9" letterSpacing="0.22em" fill="#a8a29e" fontFamily="Jost, sans-serif">
+          {taggedCount} OF {ownedCount} TAGGED
+        </text>
+      </svg>
     </div>
   );
 }
@@ -16322,57 +16472,65 @@ function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements,
       {sortedColors.length > 0 && (
         <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
-            <h3 className="font-display text-xl md:text-2xl text-stone-900">Colour profile</h3>
-            <span className="text-[10px] tracking-widest uppercase text-stone-500">
-              {taggedItemsCount} of {ownedItems.length} pieces tagged
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
+                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Palette</p>
+              </div>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Colour profile</h3>
+            </div>
+            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
+              {sortedColors.length} colour {sortedColors.length === 1 ? 'family' : 'families'}
             </span>
           </div>
 
-          {/* Stacked horizontal bar — visual ratio of every colour family at a glance */}
-          <div className="flex h-10 rounded-full overflow-hidden mb-8 border border-stone-200/60">
-            {sortedColors.map(([color, count]) => {
-              const pct = colorTotal > 0 ? (count / colorTotal) * 100 : 0;
-              const swatch = COLOR_SWATCHES[color];
-              return (
-                <div key={color} title={`${color} · ${pct.toFixed(0)}%`}
-                  style={{
-                    width: `${pct}%`,
-                    background: swatch?.startsWith('linear') ? swatch : swatch,
-                  }} />
-              );
-            })}
-          </div>
-
-          {/* Top 8 colours as a labeled list */}
-          <div className="space-y-3">
-            {sortedColors.slice(0, 8).map(([color, count]) => {
-              const pct = colorTotal > 0 ? (count / colorTotal) * 100 : 0;
-              const swatch = COLOR_SWATCHES[color];
-              return (
-                <div key={color}>
-                  <div className="flex justify-between items-center text-sm mb-1.5">
-                    <span className="flex items-center gap-2 font-medium text-stone-800">
-                      <span className="w-3 h-3 rounded-full border border-stone-300/60"
-                        style={swatch?.startsWith('linear') ? { background: swatch } : { backgroundColor: swatch }} />
-                      {color}
-                    </span>
-                    <span className="text-stone-500 text-xs">
-                      {count} {count === 1 ? 'piece' : 'pieces'} <span className="text-stone-300 ml-2">{pct.toFixed(0)}%</span>
-                    </span>
+          {/* Wheel + legend: side-by-side at md+, stacked on mobile. The wheel
+              is the icon; the legend is the index — together they read like
+              a Pantone fan opened across two pages. */}
+          <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-8 md:gap-10 items-center">
+            <ColourWheel
+              sortedColors={sortedColors}
+              colorTotal={colorTotal}
+              ownedCount={ownedItems.length}
+              taggedCount={taggedItemsCount}
+            />
+            <div className="space-y-3.5">
+              {sortedColors.slice(0, 8).map(([color, count]) => {
+                const pct = colorTotal > 0 ? (count / colorTotal) * 100 : 0;
+                const swatch = COLOR_SWATCHES[color];
+                return (
+                  <div key={color}>
+                    <div className="flex justify-between items-center text-sm mb-1.5 gap-3">
+                      <span className="flex items-center gap-2.5 font-medium text-stone-800 min-w-0">
+                        <span
+                          className="w-3.5 h-3.5 rounded-sm border border-stone-300/60 shrink-0"
+                          style={swatch?.startsWith('linear') ? { background: swatch } : { backgroundColor: swatch }}
+                        />
+                        <span className="truncate">{color}</span>
+                      </span>
+                      <span className="text-stone-500 text-xs shrink-0 tabular-nums">
+                        {count} <span className="text-stone-300 ml-1.5">{pct.toFixed(0)}%</span>
+                      </span>
+                    </div>
+                    <HairlineBar
+                      value={pct}
+                      height={4}
+                      track="#f5f5f4"
+                      fill={swatch || 'var(--color-stone-900, #1c1917)'}
+                    />
                   </div>
-                  <HairlineBar
-                    value={pct}
-                    height={4}
-                    track="#f5f5f4"
-                    fill={swatch || 'var(--color-stone-900, #1c1917)'}
-                  />
-                </div>
-              );
-            })}
+                );
+              })}
+              {sortedColors.length > 8 && (
+                <p className="text-[10px] tracking-widest uppercase text-stone-400 italic pt-1">
+                  + {sortedColors.length - 8} more in your palette
+                </p>
+              )}
+            </div>
           </div>
 
           {taggedItemsCount < ownedItems.length && (
-            <p className="text-[11px] text-stone-400 mt-6 italic">
+            <p className="text-[11px] text-stone-400 mt-8 italic font-display text-center md:text-left">
               {ownedItems.length - taggedItemsCount} item{ownedItems.length - taggedItemsCount === 1 ? '' : 's'} without colour tags — open them and save to auto-detect colours from photos.
             </p>
           )}

@@ -650,7 +650,15 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
       const text = chunk.text();
       if (!text) continue;
       accumulated += text;
-      if (onChunk) onChunk(text);
+      // Defensive: if the caller's UI callback throws (e.g. a stale React
+      // setState reference, a missing DOM target), don't let it abort the
+      // stream. We've already consumed the tokens — we want to finish
+      // accumulating + record the call for usage tracking. Log so the bug
+      // is visible in DevTools but keep streaming.
+      if (onChunk) {
+        try { onChunk(text); }
+        catch (cbErr) { console.warn('[gemini-stream] onChunk threw:', cbErr?.message || cbErr); }
+      }
     }
     // Stream complete. Resolve the final response for token counting.
     const finalResponse = await result.response;

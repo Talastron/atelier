@@ -9365,6 +9365,18 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                   {outfit.intent}
                 </p>
               )}
+              {outfit.tags && outfit.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {outfit.tags.slice(0, 5).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white/80 text-[10px] tracking-wide uppercase"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="relative z-20 px-7 pb-6 pt-2 sm:px-9 sm:pb-7">
@@ -9375,6 +9387,18 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mt-1.5 truncate">
                   {outfit.intent}
                 </p>
+              )}
+              {outfit.tags && outfit.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {outfit.tags.slice(0, 5).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -9608,6 +9632,10 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       return;
     }
     setSuggestingName(true);
+    // Show the naming-phase label in the AI progress modal if it happens
+    // to be open (e.g. user triggered name suggestion while AI is still
+    // running); harmless no-op otherwise since the modal gates on aiBusy.
+    setAiStage('Titling the look…');
     try {
       const intent = customIntent.trim() || (styleIntent !== 'Any' ? styleIntent : '');
       const name = await generateOutfitNameWithGemini(picked, intent);
@@ -9636,9 +9664,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       createdAt: orig?.createdAt || new Date().toISOString(),
       ...(aiNote ? { reasoning: aiNote } : (orig?.reasoning ? { reasoning: orig.reasoning } : {})),
       ...(customIntent.trim() || styleIntent !== 'Any' ? { intent: customIntent.trim() || styleIntent } : {}),
+      ...(aiTags && aiTags.length > 0 ? { tags: aiTags } : (orig?.tags ? { tags: orig.tags } : {})),
     });
     setOutfitName(''); setCurrentOutfit(emptyOutfit());
     setAiNote(null);
+    setAiTags([]);
     setEditingId(null);
     if (onEditDone) onEditDone();
     // Studio mode: notify parent so it can navigate to Lookbook (user
@@ -9764,6 +9794,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [aiBusy, setAiBusy] = useState(false);
   const [aiStage, setAiStage] = useState('');
   const [aiNote, setAiNote] = useState(null);
+  const [aiTags, setAiTags] = useState([]);
   const [aiConfidence, setAiConfidence] = useState(null);
   const [abComparing, setAbComparing] = useState(false);
   const [abPair, setAbPair] = useState(null); // { a: { outfit, reasoning, confidence }, b: {...} }
@@ -9775,6 +9806,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     'Composing colour and shape…',
     'Adding finishing touches…',
     'Almost there…',
+    'Titling the look…',
   ];
 
   const buildIntent = () => {
@@ -9788,6 +9820,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     const style = styleIntent === 'Any' ? null : styleIntent;
     setCurrentOutfit(generateOneLook(style));
     setAiNote(null);
+    setAiTags([]);
   };
 
   // Generate two AI looks in parallel for side-by-side comparison.
@@ -9837,7 +9870,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   };
 
   const handleAIStyle = async (intentOverride = null, { refine = false } = {}) => {
-    setAiBusy(true); setAiNote(null);
+    setAiBusy(true); setAiNote(null); setAiTags([]);
     setAiStage(AI_STAGES[0]);
     // Cycle stage labels every 1.2s so the user sees forward motion
     let stageIndex = 0;
@@ -9871,6 +9904,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       }
       setCurrentOutfit(next);
       setAiNote(result.reasoning || 'AI-styled look ready');
+      setAiTags(Array.isArray(result.tags) ? result.tags : []);
       setAiConfidence(typeof result.confidence === 'number' ? result.confidence : null);
       toast.show(refine ? 'Refined' : 'Styled by the Concierge', { kind: 'success' });
       // Save to AI prompt history
@@ -14456,6 +14490,18 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             <div className="mt-7 bg-stone-900 text-white rounded-2xl p-5 sm:p-6 text-sm leading-relaxed flex items-start gap-3 max-w-3xl">
               <Sparkles size={14} strokeWidth={1.5} className="shrink-0 mt-0.5 text-brass-300" />
               <p className="italic">"{outfit.reasoning}"</p>
+            </div>
+          )}
+          {outfit.tags && outfit.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-5">
+              {outfit.tags.slice(0, 5).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
           )}
 

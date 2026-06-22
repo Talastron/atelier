@@ -1388,6 +1388,37 @@ async function generateConciergeReply({ messages, items = [], outfits = [], styl
   const today = new Date();
   const todayLabel = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  // Recent wears with occasions — empowers the stylist to say "you wore
+  // this last to the gallery opening" rather than vague references.
+  // Walks every item, picks the most recent 5 wears across the wardrobe
+  // that have an occasion noted, formats them for the prompt.
+  const recentWearsWithOccasions = (() => {
+    const entries = [];
+    for (const item of items) {
+      if (!item || item.deletedAt) continue;
+      const hist = itemWearHistory(item);
+      const occasions = itemWearOccasions(item);
+      for (const dateISO of hist) {
+        const occasion = occasions[dateISO];
+        if (occasion) {
+          entries.push({
+            dateISO,
+            occasion,
+            itemName: item.name || item.category || 'piece',
+            itemId: item.id,
+          });
+        }
+      }
+    }
+    entries.sort((a, b) => b.dateISO.localeCompare(a.dateISO));
+    return entries.slice(0, 5);
+  })();
+
+  const wearContextsBlock = recentWearsWithOccasions.length > 0
+    ? `\nRecent specific wears (use these to make replies concrete — say "you wore this last to the X" when relevant; do NOT invent occasions for items not listed here):
+${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.occasion}`).join('\n')}\n`
+    : '';
+
   const systemBlock = `You are the personal stylist of ${ownerFirstName || 'the user'}, working from a complete view of their wardrobe. Your voice is warm, considered, decisive. You speak like a trusted couturier — never sycophantic, never corporate. Brief and confident; one short paragraph plus a tidy bullet list when proposing pieces. Avoid filler ("Great question!"), avoid generic style advice. Reference specific pieces by exact name from the inventory below.
 
 Today is ${todayLabel}.
@@ -1396,7 +1427,7 @@ THE WARDROBE (live inventory — only suggest from this):
 ${inventory || '(no items yet)'}
 ${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
 ${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}
-
+${wearContextsBlock}
 When proposing an outfit, format as:
 A one-sentence rationale, then:
 • [Piece name] — short reason

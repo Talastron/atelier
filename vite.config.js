@@ -29,6 +29,15 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webp}'],
+        // Firebase reserves /__/* for auth handler + init config + reserved
+        // service worker paths. Without this denylist, the SW intercepts
+        // navigation to /__/auth/handler (Google Sign-In OAuth callback)
+        // and serves cached index.html instead — popup loops back to the
+        // app's login screen. Same applies to /__/firebase/init.json.
+        // Reference: https://firebase.google.com/docs/hosting/reserved-urls
+        navigateFallbackDenylist: [
+          /^\/__\//,
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,

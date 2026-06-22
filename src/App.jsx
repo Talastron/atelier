@@ -15036,6 +15036,16 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
   );
 }
 
+// Preset tag suggestions, organised by category. Tap to add. These mirror
+// the vocabulary the Stylist's auto-tag generation tends to produce, so
+// manually-added presets feel consistent with AI-generated tags.
+const PRESET_TAG_CATEGORIES = [
+  { label: 'Occasion', tags: ['brunch', 'dinner', 'office', 'weekend', 'travel', 'wedding', 'date night', 'errands'] },
+  { label: 'Mood', tags: ['polished', 'relaxed', 'playful', 'statement', 'classic', 'romantic', 'sharp'] },
+  { label: 'Formality', tags: ['smart casual', 'business', 'black tie', 'leisure', 'cocktail'] },
+  { label: 'Season', tags: ['summer evening', 'winter layers', 'spring light', 'autumn warm'] },
+];
+
 function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logOccasion, setLogOccasion] = useState('');
@@ -15216,66 +15226,121 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             </div>
           )}
           {((outfit.tags && outfit.tags.length > 0) || typeof onSaveOutfit === 'function') && (
-            <div className="mt-5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] tracking-widest uppercase text-stone-500">Tags</span>
+            <div className="mt-8 pt-6 border-t border-stone-200">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
+                  <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Tags</span>
+                </div>
                 {typeof onSaveOutfit === 'function' && (
                   <button
                     type="button"
                     onClick={() => { setEditingTags((v) => !v); setNewTag(''); }}
-                    className="text-[10px] tracking-wide text-stone-400 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                    className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
                   >
-                    {editingTags ? 'Done' : 'Edit'}
+                    {editingTags ? 'Done' : (outfit.tags && outfit.tags.length > 0 ? 'Edit' : 'Add tags')}
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {(outfit.tags || []).map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
-                  >
-                    {tag}
-                    {editingTags && (
+
+              {(outfit.tags || []).length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {(outfit.tags || []).map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[11px] tracking-wide uppercase"
+                    >
+                      {tag}
+                      {editingTags && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = (outfit.tags || []).filter((t) => t !== tag);
+                            onSaveOutfit?.({ ...outfit, tags: next });
+                          }}
+                          aria-label={`Remove ${tag}`}
+                          className="text-stone-400 hover:text-stone-900 ml-0.5 leading-none transition-colors"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[12px] text-stone-400 italic">No tags yet — add a few to find this look faster.</p>
+              )}
+
+              {editingTags && typeof onSaveOutfit === 'function' && (
+                <div className="mt-4 space-y-4">
+                  {(outfit.tags || []).length < 8 && (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const t = newTag.trim().toLowerCase();
+                        if (!t) return;
+                        const existing = outfit.tags || [];
+                        if (existing.includes(t)) { setNewTag(''); return; }
+                        if (existing.length >= 8) return;
+                        onSaveOutfit?.({ ...outfit, tags: [...existing, t] });
+                        setNewTag('');
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <input
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        placeholder="Type a custom tag and press Enter"
+                        maxLength={20}
+                        className="flex-1 px-3 py-2 rounded-full bg-white border border-stone-300 text-stone-900 text-sm outline-none focus:border-stone-900 transition-colors"
+                        style={{ fontSize: '16px' }}
+                      />
                       <button
-                        type="button"
-                        onClick={() => {
-                          const next = (outfit.tags || []).filter((t) => t !== tag);
-                          onSaveOutfit?.({ ...outfit, tags: next });
-                        }}
-                        aria-label={`Remove ${tag}`}
-                        className="text-stone-400 hover:text-stone-900 ml-0.5 leading-none transition-colors"
+                        type="submit"
+                        disabled={!newTag.trim()}
+                        className="px-4 py-2 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:hover:bg-stone-900"
                       >
-                        ×
+                        Add
                       </button>
-                    )}
-                  </span>
-                ))}
-                {editingTags && (outfit.tags || []).length < 8 && (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const t = newTag.trim().toLowerCase();
-                      if (!t) return;
-                      const existing = outfit.tags || [];
-                      if (existing.includes(t)) { setNewTag(''); return; }
-                      if (existing.length >= 8) return;
-                      onSaveOutfit?.({ ...outfit, tags: [...existing, t] });
-                      setNewTag('');
-                    }}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-stone-300 bg-white"
-                  >
-                    <input
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      placeholder="+ add tag"
-                      maxLength={20}
-                      className="text-[10px] tracking-wide uppercase bg-transparent outline-none w-20"
-                      style={{ fontSize: '16px' }}
-                    />
-                  </form>
-                )}
-              </div>
+                    </form>
+                  )}
+
+                  <div className="space-y-3">
+                    <p className="text-[10px] tracking-widest uppercase text-stone-400">Suggested</p>
+                    {PRESET_TAG_CATEGORIES.map(({ label, tags }) => {
+                      const available = tags.filter((t) => !(outfit.tags || []).includes(t));
+                      if (available.length === 0) return null;
+                      return (
+                        <div key={label}>
+                          <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">{label}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {available.map((tag) => (
+                              <button
+                                key={tag}
+                                type="button"
+                                disabled={(outfit.tags || []).length >= 8}
+                                onClick={() => {
+                                  const existing = outfit.tags || [];
+                                  if (existing.includes(tag) || existing.length >= 8) return;
+                                  onSaveOutfit?.({ ...outfit, tags: [...existing, tag] });
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-stone-300 text-stone-600 text-[11px] tracking-wide uppercase hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                <span aria-hidden="true" className="text-stone-400">+</span>
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {(outfit.tags || []).length >= 8 && (
+                    <p className="text-[10px] tracking-wide uppercase text-stone-400">Maximum of 8 tags reached.</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

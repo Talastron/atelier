@@ -526,7 +526,13 @@ Available items (id|name|brand|category|attributes):
 ${items.map(summarize).join('\n')}
 
 Respond ONLY with valid JSON in this exact shape:
-{"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100}
+{"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100, "tags": ["3-5 short descriptive labels"]}
+
+Tags guidance:
+- 3 to 5 short labels (1-2 words each, lowercase, no punctuation)
+- Mix of: occasion ("dinner", "weekend", "office"), mood ("relaxed", "polished", "playful"), formality ("smart casual", "black tie"), season/weather hint when relevant ("layered", "summer evening")
+- Avoid restating the items themselves; tags describe the LOOK, not its parts
+- No duplicates, no marketing fluff
 
 Confidence reflects how strongly the available wardrobe matches the intent (100 = perfect fit, 50 = workable but not ideal, low = thin matches).`;
 
@@ -534,7 +540,13 @@ Confidence reflects how strongly the available wardrobe matches the intent (100 
   let parsed;
   try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
   if (!parsed.itemIds?.length) throw new Error('The Concierge could not compose a look from this wardrobe');
-  return parsed;
+  const tags = Array.isArray(parsed.tags)
+    ? parsed.tags
+        .map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))
+        .filter(Boolean)
+        .slice(0, 6)
+    : [];
+  return { ...parsed, tags };
 }
 
 // Gemini Vision: read a care/composition label photo. Pulls brand, materials,

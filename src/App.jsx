@@ -13731,6 +13731,17 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   const cancelledRef = React.useRef(false);
   useEffect(() => () => { cancelledRef.current = true; }, []);
 
+  // Soft-cancel the in-flight stream. Sets cancelledRef so onChunk and
+  // post-await bail. We also clean up the placeholder + reset busy here
+  // so the UI returns to a clean state without waiting for the
+  // (still in-flight) Gemini stream to finally close server-side.
+  const cancelStream = React.useCallback(() => {
+    cancelledRef.current = true;
+    setMessages((prev) => prev.filter((m) => !m.streaming));
+    setBusy(false);
+    setError(null);
+  }, []);
+
   // Hydrate persisted thread from Firestore on mount. If there is a saved
   // thread, restore it; otherwise the greeting-only initial state stands.
   useEffect(() => {
@@ -13780,6 +13791,18 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     setMessages([...afterUser, placeholder]);
 
     let accumulated = '';
+    // Watchdog: if the stream doesn't deliver ANY tokens within 90s,
+    // force-cancel. This shouldn't happen with a healthy Gemini Flash
+    // call (typical reply is 5-30s) but a 180s+ hang would be wasted
+    // user patience. The watchdog soft-cancels (cancelledRef + UI cleanup)
+    // and surfaces an error so the retry pill appears.
+    const watchdog = setTimeout(() => {
+      if (!cancelledRef.current && accumulated.length === 0) {
+        cancelledRef.current = true;
+        setMessages((prev) => prev.filter((m) => !m.streaming));
+        setError('The Concierge took too long. Try again?');
+      }
+    }, 90_000);
     try {
       await generateConciergeReply({
         messages: afterUser,
@@ -13822,6 +13845,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Something interrupted us. Try again?');
     } finally {
+      clearTimeout(watchdog);
       setBusy(false);
     }
   };
@@ -13840,6 +13864,14 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     // the existing thread without adding a new user message, so we use the
     // closure-captured `messages` rather than an afterUser snapshot.
     let accumulated = '';
+    // Watchdog: same 90s no-token timeout as send().
+    const watchdog = setTimeout(() => {
+      if (!cancelledRef.current && accumulated.length === 0) {
+        cancelledRef.current = true;
+        setMessages((prev) => prev.filter((m) => !m.streaming));
+        setError('The Concierge took too long. Try again?');
+      }
+    }, 90_000);
     try {
       await generateConciergeReply({
         messages,
@@ -13875,6 +13907,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Still no luck — try again in a moment.');
     } finally {
+      clearTimeout(watchdog);
       setBusy(false);
     }
   };
@@ -14011,6 +14044,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
               streaming={!!m.streaming}
               items={items}
               onOpenItem={onOpenItem}
+              onCancel={cancelStream}
             />
           ))}
           {hasOrphanUserMessage && (
@@ -14123,51 +14157,68 @@ function ItemChip({ itemId, fallbackName, items, onOpenItem }) {
 
 // Prominent in-bubble "Composing your reply…" indicator. Renders while the
 // streaming placeholder exists but no text has arrived yet (the worst UX
-// window — feels like a hang on a slow first chunk). Rotates through
-// stage labels every 1.5s + reveals an elapsed-seconds counter after 5s
-// so the user knows it's still working, even on a long compose.
+// window — feels like a hang on a slow first chunk).
 //
-// Disappears as soon as the first chunk lands (then the streaming text +
-// caret take over the bubble).
-function ConciergeComposingIndicator() {
+// Stages advance progressively based on elapsed time and HOLD at the last
+// stage — they don't cycle back, because looping reads as "stuck in a
+// loop" to the user. After ~20s a Cancel button appears so the user
+// can bail rather than feeling trapped.
+//
+// onCancel: called when the user clicks Cancel. Parent should set its
+// cancelledRef.current = true and clean up the placeholder. Optional —
+// if not provided, the Cancel button is hidden.
+function ConciergeComposingIndicator({ onCancel = null }) {
+  // (time-in-seconds, label) pairs, ascending. The LAST entry holds
+  // indefinitely once we reach it.
   const STAGES = [
-    'Reading the conversation…',
-    'Looking through your wardrobe…',
-    'Considering the moment…',
-    'Composing a reply…',
-    'Adding finishing touches…',
+    [0,  'Reading the conversation…'],
+    [3,  'Looking through your wardrobe…'],
+    [7,  'Considering the moment…'],
+    [14, 'Composing a reply…'],
+    [25, 'Refining the wording…'],
+    [45, 'This is taking longer than usual…'],
   ];
-  const [stageIdx, setStageIdx] = useState(0);
+
   const [elapsedMs, setElapsedMs] = useState(0);
   const startRef = React.useRef(0);
 
   useEffect(() => {
     startRef.current = performance.now();
-    const stageTimer = setInterval(() => {
-      setStageIdx((i) => (i + 1) % STAGES.length);
-    }, 1500);
     const elapsedTimer = setInterval(() => {
       setElapsedMs(performance.now() - startRef.current);
     }, 250);
-    return () => {
-      clearInterval(stageTimer);
-      clearInterval(elapsedTimer);
-    };
+    return () => clearInterval(elapsedTimer);
   }, []);
 
-  const showElapsed = elapsedMs >= 5000;
+  // Pick the current stage by elapsed seconds — walk the STAGES list
+  // and choose the last entry whose threshold has been crossed.
   const elapsedSec = Math.floor(elapsedMs / 1000);
+  let currentStage = STAGES[0][1];
+  for (const [threshold, label] of STAGES) {
+    if (elapsedSec >= threshold) currentStage = label;
+  }
+  const showElapsed = elapsedMs >= 5000;
+  const showCancel = elapsedMs >= 20000 && typeof onCancel === 'function';
 
   return (
     <div className="inline-flex items-center gap-2.5 text-stone-700">
       <Sparkles size={16} strokeWidth={1.5} className="text-amber-500 animate-pulse shrink-0" />
       <span className="font-display italic text-[14px] sm:text-[15px]">
-        {STAGES[stageIdx]}
+        {currentStage}
       </span>
       {showElapsed && (
         <span className="text-[11px] tabular-nums text-stone-400 ml-1">
           {elapsedSec}s
         </span>
+      )}
+      {showCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="ml-2 text-[11px] tracking-wide text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+        >
+          Cancel
+        </button>
       )}
     </div>
   );
@@ -14177,7 +14228,7 @@ function ConciergeComposingIndicator() {
 // (white card with brass-rule shoulder eyebrow); the client's voice is
 // quieter (dark pill aligned right). Whitespace-pre-line preserves the
 // bullet lists Gemini returns.
-function ConciergeMessage({ role, text, streaming = false, items = [], onOpenItem = null }) {
+function ConciergeMessage({ role, text, streaming = false, items = [], onOpenItem = null, onCancel = null }) {
   // Parse <<item:id|name>> markers and render each as an ItemChip,
   // preserving the surrounding prose as text. Returns an array of
   // React children safe to drop into a <p>.
@@ -14223,7 +14274,7 @@ function ConciergeMessage({ role, text, streaming = false, items = [], onOpenIte
         </div>
         <div className="bg-white rounded-2xl rounded-tl-md ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_12px_-6px_rgba(28,25,23,0.12)] px-5 py-4">
           {streaming && !text ? (
-            <ConciergeComposingIndicator />
+            <ConciergeComposingIndicator onCancel={onCancel} />
           ) : (
             <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
               {renderTextWithChips(text)}

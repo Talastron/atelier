@@ -1286,23 +1286,30 @@ async function generateOutfitNameWithGemini(picked, intent) {
     .filter(Boolean)
     .slice(0, 8)
     .join('\n- ');
-  const prompt = `You are naming a saved outfit for an editorial wardrobe app called Atelier.
-Give it a SHORT name: 2 to 4 words, evocative, no quotes, no full stops, title case.
-Mood: refined, understated, editorial — not slogans, not corny.
+  const briefLine = (intent && intent.trim() && intent !== 'Any')
+    ? `The user's brief: "${intent.trim()}"\n\nUse that brief to anchor the name — echo a place, a moment, a mood from it. The name should feel like the editor's title for THIS specific brief, not a generic stylist label.`
+    : `No specific brief — name the look as a self-contained editorial piece.`;
+
+  const prompt = `You are an editorial fashion stylist titling a saved look for Atelier, a private digital wardrobe.
+
+Give it a SHORT but evocative name: 3 to 6 words, title case, no quotes, no full stops, no emoji.
+
+Voice: like a couturier captioning a piece for a private client — refined, considered, a little romantic. Reach for atmosphere over function: a place, a time of day, a weather, a mood, a moment. Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Avoid restating the items.
+
+${briefLine}
 
 Items in this look:
 - ${itemList}
 
-Style intent: ${intent && intent !== 'Any' ? intent : 'unstated'}
+Examples of the tone wanted (note the rhythm, not the words):
+- "Storm Light at the Lido"
+- "Mayfair Hour, Late Spring"
+- "Quiet Power, Quiet Wool"
+- "Gallery Opening in Linen"
+- "Sunday Coffee, Slow Sunday"
+- "Black Tie at the Sea"
 
-Examples of the tone wanted:
-- "Sunday Loafer"
-- "Linen Wander"
-- "Office Sharp"
-- "Soft Midnight"
-- "Brass & Wool"
-
-Reply with the name only — no preamble, no explanation.`;
+Reply with the name ONLY — no preamble, no explanation, no quotes.`;
   const result = await geminiText(prompt, { temperature: 0.9 }, 'name-look');
   return (result || '')
     .trim()

@@ -35,6 +35,12 @@ const ABOUT_CHAPTERS = [
 export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
   const CHAPTERS = chapters;
   const [activeId, setActiveId] = useState(CHAPTERS[0].id);
+  // The chapter index is position:fixed and stays vertically centred while
+  // you scroll — perfect through the body of the article, but it would
+  // overlap the footer's armoire + address signature on the right side of
+  // the page. Fade out as the footer enters view, fade back in if the
+  // reader scrolls up past it.
+  const [footerVisible, setFooterVisible] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -63,7 +69,25 @@ export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
       if (el) observer.observe(el);
     });
 
-    return () => observer.disconnect();
+    // Footer watcher — fades the index out as the footer approaches.
+    // rootMargin '0px 0px 120px 0px' expands the viewport's bottom edge
+    // by 120px, so the fade begins ~120px before the footer is technically
+    // visible. Combined with the 300ms fade, the index is fully out by
+    // the time the footer's signature artifact actually enters the frame.
+    const footerEl = document.querySelector('footer#footer');
+    let footerObserver;
+    if (footerEl) {
+      footerObserver = new IntersectionObserver(
+        (entries) => setFooterVisible(entries[0].isIntersecting),
+        { rootMargin: '0px 0px 120px 0px', threshold: 0 }
+      );
+      footerObserver.observe(footerEl);
+    }
+
+    return () => {
+      observer.disconnect();
+      footerObserver?.disconnect();
+    };
   }, []);
 
   function handleClick(e, id) {
@@ -78,12 +102,19 @@ export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
     <nav
       aria-label="Chapter index"
       className="hidden lg:block"
+      aria-hidden={footerVisible || undefined}
       style={{
         position: 'fixed',
         right: 'clamp(1.25rem, 2vw, 2rem)',
         top: '50%',
         transform: 'translateY(-50%)',
         zIndex: 40,
+        // Fade as the footer approaches so the chapter numerals never
+        // collide with the armoire signature artifact. pointer-events
+        // off too — a faded link shouldn't be tabbable or clickable.
+        opacity: footerVisible ? 0 : 1,
+        pointerEvents: footerVisible ? 'none' : 'auto',
+        transition: 'opacity 300ms cubic-bezier(0.22, 1, 0.36, 1)',
       }}
     >
       <ul

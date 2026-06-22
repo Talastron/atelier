@@ -1412,7 +1412,7 @@ When asked anything else (critique, packing, advice), reply in 1-3 short paragra
   return (reply || '').trim();
 }
 
-async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [] }) {
+async function generateStyleManifestoWithGemini({ items, outfits, inspirations = [], onChunk = null }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
   if (owned.length < 5) throw new Error('Add at least a few items first.');
@@ -1462,7 +1462,7 @@ UK English. Warm, observational, specific. No platitudes. No bullet points.
 Data:
 ${lines.join('\n')}`;
 
-  const text = await geminiText(prompt, { temperature: 0.7 }, 'manifesto');
+  const text = await geminiTextStream(prompt, { temperature: 0.7 }, 'manifesto', onChunk);
   if (!text) throw new Error('The Concierge did not respond');
   return text.trim();
 }
@@ -15597,9 +15597,14 @@ function BackfillCard({ items = [], shops = [], onUpdateItem }) {
 function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfits = [], inspirations = [] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [streamingText, setStreamingText] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const cancelledRef = useRef(false);
   const toast = useToast();
   const manifesto = measurements?.styleManifesto || '';
   const generatedAt = measurements?.styleManifestoAt || null;
+
+  useEffect(() => () => { cancelledRef.current = true; }, []);
 
   // 90-day seasonal nudge: compute age of the current manifesto so we can
   // show a quiet inline prompt to refresh when it's been more than a season.
@@ -15609,13 +15614,30 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
   const manifestoStale = manifesto && manifestoAgeDays !== null && manifestoAgeDays >= 90;
 
   const run = async () => {
-    setBusy(true); setError(null);
+    if (busy) return;
+    setBusy(true); setError(null); setStreamingText(''); setIsStreaming(true);
+    let accumulated = '';
     try {
-      const text = await generateStyleManifestoWithGemini({ items, outfits, inspirations });
+      const text = await generateStyleManifestoWithGemini({
+        items,
+        outfits,
+        inspirations,
+        onChunk: (chunk) => {
+          if (cancelledRef.current) return;
+          accumulated += chunk;
+          setStreamingText(accumulated);
+        },
+      });
+      if (cancelledRef.current) return;
       await saveMeasurements({ ...measurements, styleManifesto: text, styleManifestoAt: new Date().toISOString() });
       toast.show('Manifesto refreshed', { kind: 'success' });
-    } catch (e) { setError(e?.message || 'Failed.'); }
-    finally { setBusy(false); }
+    } catch (e) {
+      if (cancelledRef.current) return;
+      setError(e?.message || 'Failed.');
+    } finally {
+      setIsStreaming(false);
+      setBusy(false);
+    }
   };
 
   // StyleManifestoCard — dark surface, no shadow per convention
@@ -15657,10 +15679,13 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
         </div>
       )}
 
-      {manifesto && (
+      {(manifesto || isStreaming) && (
         <div className="relative z-10 mt-6 bg-[#F7F5F2] text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] whitespace-pre-line font-display italic">
-          {manifesto}
-          {generatedAt && (
+          {isStreaming ? streamingText : manifesto}
+          {isStreaming && (
+            <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />
+          )}
+          {!isStreaming && generatedAt && (
             <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic flex items-center gap-3">
               <span className="brass-rule" aria-hidden="true"></span>
               Written {new Date(generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}

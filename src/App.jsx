@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
@@ -17489,8 +17489,15 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
   const [inviteName, setInviteName] = useState('');
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteError, setInviteError] = useState(null);
+  const [founderCount, setFounderCount] = useState(null);
 
   useEffect(() => { if (measurements) setLocalMeasurements({ ...INITIAL_MEASUREMENTS, ...measurements }); }, [measurements]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getFounderCount().then((n) => { if (!cancelled) setFounderCount(n); });
+    return () => { cancelled = true; };
+  }, []);
   const handleChange = (e) => setLocalMeasurements({ ...localMeasurements, [e.target.name]: e.target.value });
 
   const handleInviteSubmit = async (e) => {
@@ -17513,6 +17520,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
   // don't pay).
   const PROFILE_SECTIONS = [
     { id: 'profile-account', label: 'Account' },
+    { id: 'profile-privacy', label: 'Privacy' },
     ...(isOwner ? [{ id: 'profile-people', label: 'People' }] : [{ id: 'profile-subscription', label: 'Subscription' }]),
     { id: 'profile-settings', label: 'Settings' },
     { id: 'profile-style', label: 'Style' },
@@ -17570,6 +17578,32 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
           </button>
         </div>
       )}
+
+      {/* Privacy — surfaces data-handling position and live founder cohort
+          counter. Matches the editorial chrome used throughout the profile
+          (brass-rule + small-caps headers, white card with soft border). */}
+      <section id="profile-privacy" className="scroll-mt-24 space-y-6 md:space-y-8">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Privacy</h2>
+        </div>
+        <div className="bg-white border border-stone-200/60 rounded-2xl p-6 sm:p-8">
+          <p className="text-stone-700 leading-relaxed mb-4">
+            Atelier is a private wardrobe. Your pieces, your wears, your photos — they live in your account, encrypted in transit and at rest. We do not sell, share, or train on your data. The Concierge sees only what you've added; the model never receives your personal details beyond the wardrobe and notes you've written.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-4">
+            You can export your full wardrobe at any time from the Backup section below, and delete your account permanently from the Settings section. Deletions are immediate and irrecoverable — we keep no archive.
+          </p>
+          {founderCount !== null && (
+            <div className="mt-6 pt-6 border-t border-stone-200 flex items-center gap-3">
+              <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
+              <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">
+                Atelier · {founderCount.toLocaleString()} founder{founderCount === 1 ? '' : 's'} to date
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Subscription — non-owners only. Owners don't pay. The customer portal
           link goes to Lemon Squeezy's hosted billing UI where customers sign

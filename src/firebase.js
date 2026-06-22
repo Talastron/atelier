@@ -7,6 +7,7 @@ import {
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   collection, doc, addDoc, setDoc, getDoc, serverTimestamp, increment,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 
@@ -754,4 +755,30 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
     if (!isConfigError(err)) recordCall();
     throw mapGeminiError(err);
   }
+}
+
+// Founder-cohort counter for the Profile privacy section. Counts
+// distinct users in the /users collection. One-shot read, cached
+// in-memory for the session so navigation away/back doesn't re-fetch.
+// Uses Firestore's server-side aggregation count — cheap (~1 read per
+// 1000 documents), does NOT download document data.
+let _founderCountCache = null;
+let _founderCountInflight = null;
+
+export async function getFounderCount() {
+  if (_founderCountCache !== null) return _founderCountCache;
+  if (_founderCountInflight) return _founderCountInflight;
+  _founderCountInflight = (async () => {
+    try {
+      const snap = await getCountFromServer(collection(db, 'users'));
+      _founderCountCache = snap.data().count;
+      return _founderCountCache;
+    } catch (err) {
+      console.warn('[founder-count] read failed:', err?.message);
+      return null;
+    } finally {
+      _founderCountInflight = null;
+    }
+  })();
+  return _founderCountInflight;
 }

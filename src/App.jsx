@@ -212,7 +212,7 @@ function EditorialHeader({ eyebrow, title, subtitle, right, className = '' }) {
           </div>
         )}
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-display text-stone-900 tracking-tight leading-[1.05]">{title}</h2>
-        {subtitle && <p className="text-stone-500 mt-3 text-sm tracking-wide max-w-xl leading-relaxed">{subtitle}</p>}
+        {subtitle && <p className="text-stone-500 mt-3 text-sm tracking-wide max-w-xl leading-relaxed truncate min-w-0">{subtitle}</p>}
       </div>
       {right && <div className="shrink-0 self-start md:self-auto">{right}</div>}
     </header>

@@ -1423,6 +1423,36 @@ Reply with the line only.`;
   }
 }
 
+// generateStyleFitWithGemini — generates a short narrative tying a
+// saved outfit to the user's style manifesto / profile. The result is
+// persisted on outfit.styleFit so re-opening the detail view doesn't
+// re-call. Returns the narrative string or null on failure.
+async function generateStyleFitWithGemini({ outfit, picked, manifesto = '', styleProfile = '' }) {
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
+  if (!picked || picked.length === 0) return null;
+  const itemList = picked
+    .map((p) => [p.brand, p.color, p.category, p.subCategory, p.name].filter(Boolean).join(' '))
+    .filter(Boolean)
+    .slice(0, 10)
+    .join('\n- ');
+  const profileBlock = manifesto
+    ? `\nThe client's style manifesto:\n${manifesto.slice(0, 800)}\n`
+    : styleProfile
+    ? `\nThe client's style profile: ${styleProfile.slice(0, 400)}\n`
+    : '\nNo style manifesto saved yet — read the look as a self-contained piece.\n';
+  const prompt = `You are an editorial fashion stylist writing a private note to the client about how a specific saved look fits THEIR style.
+
+Items in this look:
+- ${itemList}
+${profileBlock}
+Write 2-3 sentences (max 60 words). Voice: warm, considered, like a couturier captioning the look in a private dossier. Reference one or two specific pieces from the list and tie them to the manifesto's themes (or to the look's own atmosphere if no manifesto). Avoid clichés ("This look is perfect for..."), avoid the words "stylish" or "trendy". No bullets, no headings, just prose.
+
+Reply with the narrative only — no preamble, no quotes.`;
+  const result = await geminiText(prompt, { temperature: 0.75 }, 'style-fit');
+  if (!result) return null;
+  return result.trim().split('\n').filter(Boolean).join(' ').replace(/^["'`]+|["'`]+$/g, '');
+}
+
 // generateConciergeReply — multi-turn chat with the user's personal
 // stylist. Builds a single prompt that concatenates system context
 // (wardrobe inventory, most-worn pieces, style profile, owner name,
@@ -15128,12 +15158,14 @@ const PRESET_TAG_CATEGORIES = [
   { label: 'Season', tags: ['summer evening', 'winter layers', 'spring light', 'autumn warm'] },
 ];
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem, measurements }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logOccasion, setLogOccasion] = useState('');
   const [logBusy, setLogBusy] = useState(false);
   const [logDate, setLogDate] = useState(todayISO());
   const [logDateOpen, setLogDateOpen] = useState(false);
+  const [styleFitBusy, setStyleFitBusy] = useState(false);
+  const [styleFitError, setStyleFitError] = useState(null);
   const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -15307,6 +15339,50 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             <div className="mt-7 bg-stone-900 text-white rounded-2xl p-5 sm:p-6 text-sm leading-relaxed flex items-start gap-3 max-w-3xl">
               <Sparkles size={14} strokeWidth={1.5} className="shrink-0 mt-0.5 text-brass-300" />
               <p className="italic">"{outfit.reasoning}"</p>
+            </div>
+          )}
+          {/* Style-fit narrative — on-demand, persisted. Tied to the user's
+              manifesto / profile so it's about THIS look × YOUR style. */}
+          {onSaveOutfit && (
+            <div className="mt-5 max-w-3xl">
+              {outfit.styleFit ? (
+                <div className="bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6 text-sm leading-relaxed">
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
+                    <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Why this fits you</span>
+                  </div>
+                  <p className="text-stone-700 italic">{outfit.styleFit}</p>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (styleFitBusy) return;
+                    setStyleFitBusy(true);
+                    setStyleFitError(null);
+                    try {
+                      const manifesto = measurements?.styleManifesto || '';
+                      const styleProfile = measurements?.styleProfile || '';
+                      const note = await generateStyleFitWithGemini({ outfit, picked: pieces, manifesto, styleProfile });
+                      if (note) {
+                        await onSaveOutfit({ ...outfit, styleFit: note.trim() });
+                      }
+                    } catch (err) {
+                      setStyleFitError(err?.message || 'Could not generate note');
+                    } finally {
+                      setStyleFitBusy(false);
+                    }
+                  }}
+                  disabled={styleFitBusy}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide uppercase hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
+                >
+                  <Sparkles size={12} strokeWidth={1.75} />
+                  {styleFitBusy ? 'Composing…' : 'Why this fits you'}
+                </button>
+              )}
+              {styleFitError && (
+                <p className="text-[11px] text-stone-500 mt-2 italic">{styleFitError}</p>
+              )}
             </div>
           )}
           {/* Editorial colour palette strip — dominant colours across the look's

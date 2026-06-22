@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, isAIEnabled } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
@@ -1345,7 +1345,7 @@ Reply with the line only.`;
 //
 // Returns the assistant's reply text. Throws on AI failure so the
 // caller can surface a graceful error in the chat thread.
-async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '' }) {
+async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '', onChunk = null }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
 
   // Compress the wardrobe into a per-category inventory line. Cap at
@@ -1408,7 +1408,7 @@ When asked anything else (critique, packing, advice), reply in 1-3 short paragra
 
   const prompt = `${systemBlock}\n\n──────\n\n${conversationBlock}\n\nSTYLIST:`;
 
-  const reply = await geminiText(prompt, { temperature: 0.75 }, 'concierge');
+  const reply = await geminiTextStream(prompt, { temperature: 0.75 }, 'concierge', onChunk);
   return (reply || '').trim();
 }
 
@@ -13532,24 +13532,56 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
   const send = async (textOverride) => {
     const text = (textOverride ?? input).trim();
     if (!text || busy) return;
-    const next = [...messages, { role: 'user', text, ts: new Date().toISOString() }];
-    setMessages(next);
-    await saveCurrentThread(next);
+    const userMsg = { role: 'user', text, ts: new Date().toISOString() };
+    const afterUser = [...messages, userMsg];
+    setMessages(afterUser);
+    await saveCurrentThread(afterUser);
     setInput('');
     setBusy(true);
     setError(null);
+
+    // Insert an empty placeholder assistant message that will fill in as
+    // chunks arrive. The streaming=true flag lets the bubble render a
+    // pulsing caret-style indicator while text is mid-stream.
+    const placeholder = { role: 'assistant', text: '', ts: new Date().toISOString(), streaming: true };
+    setMessages([...afterUser, placeholder]);
+
+    let accumulated = '';
     try {
-      const reply = await generateConciergeReply({
-        messages: next,
+      await generateConciergeReply({
+        messages: afterUser,
         items,
         outfits,
         styleProfile,
         ownerFirstName,
+        onChunk: (chunk) => {
+          accumulated += chunk;
+          // Update the last (placeholder) message's text in place. React
+          // re-renders the bubble; user sees text grow smoothly.
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last && last.streaming) {
+              next[next.length - 1] = { ...last, text: accumulated };
+            }
+            return next;
+          });
+        },
       });
-      const withReply = [...next, { role: 'assistant', text: reply || '(no reply)', ts: new Date().toISOString() }];
-      setMessages(withReply);
-      await saveCurrentThread(withReply);
+
+      // Stream done. Finalize the placeholder (strip streaming flag) and
+      // persist to Firestore. Use a fresh build of the final message so the
+      // saved thread matches what the user sees.
+      const finalMsg = { role: 'assistant', text: accumulated || '(no reply)', ts: new Date().toISOString() };
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = finalMsg;
+        return next;
+      });
+      await saveCurrentThread([...afterUser, finalMsg]);
     } catch (err) {
+      // Strip the placeholder so the user doesn't see an empty bubble alongside the error
+      setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Something interrupted us. Try again?');
     } finally {
       setBusy(false);
@@ -13696,9 +13728,9 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         {/* MESSAGES — vertical scroll, two bubble styles */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-5">
           {messages.map((m, i) => (
-            <ConciergeMessage key={i} role={m.role} text={m.text} />
+            <ConciergeMessage key={i} role={m.role} text={m.text} streaming={!!m.streaming} />
           ))}
-          {busy && (
+          {busy && !messages.some((m) => m.streaming) && (
             <div className="flex items-center gap-2 text-stone-400 text-sm">
               <span className="inline-flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '0ms' }} />
@@ -13765,7 +13797,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
 // (white card with brass-rule shoulder eyebrow); the client's voice is
 // quieter (dark pill aligned right). Whitespace-pre-line preserves the
 // bullet lists Gemini returns.
-function ConciergeMessage({ role, text }) {
+function ConciergeMessage({ role, text, streaming = false }) {
   if (role === 'assistant') {
     return (
       <div className="flex flex-col items-start max-w-[90%]">
@@ -13774,7 +13806,18 @@ function ConciergeMessage({ role, text }) {
           <span className="text-[9px] tracking-[0.28em] uppercase text-stone-500">Stylist</span>
         </div>
         <div className="bg-white rounded-2xl rounded-tl-md ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_12px_-6px_rgba(28,25,23,0.12)] px-5 py-4">
-          <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">{text}</p>
+          {streaming && !text ? (
+            <span className="inline-flex gap-1 items-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '0ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '150ms' }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '300ms' }} />
+            </span>
+          ) : (
+            <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
+              {text}
+              {streaming && <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />}
+            </p>
+          )}
         </div>
       </div>
     );

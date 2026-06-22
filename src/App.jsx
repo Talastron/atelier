@@ -1367,26 +1367,7 @@ Reply with the line only.`;
 async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '', onChunk = null }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
 
-  // Compress the wardrobe into a per-category inventory line. Cap at
-  // ~60 pieces per category to keep the prompt under budget for very
-  // large closets — Gemini's context is generous but we don't want to
-  // burn tokens on accessory minutiae.
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
-  const byCat = {};
-  for (const it of owned) {
-    const cat = it.category || 'Other';
-    if (!byCat[cat]) byCat[cat] = [];
-    byCat[cat].push(it);
-  }
-  const inventory = Object.entries(byCat).map(([cat, list]) => {
-    const lines = list.slice(0, 60).map((it) => {
-      const bits = [it.name];
-      if (it.color) bits.push(`(${it.color}${it.brand ? `, ${it.brand}` : ''})`);
-      else if (it.brand) bits.push(`(${it.brand})`);
-      return bits.join(' ');
-    });
-    return `- ${cat.toUpperCase()}: ${lines.join('; ')}`;
-  }).join('\n');
 
   // Most-worn signal — the stylist should know what the user actually
   // reaches for so suggestions feel grounded in lived behaviour.
@@ -1456,7 +1437,7 @@ ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.o
     .join('\n');
 
   const chipRule = itemIndex
-    ? `\nWhen you reference a SPECIFIC piece from the wardrobe, wrap it in this exact marker form: <<item:ID|display name>> — picking the id from the indexed list below. Wrap only the piece itself, not the surrounding sentence. Examples:
+    ? `\nTHE WARDROBE (live inventory — only suggest from this). When you reference a SPECIFIC piece, wrap it in this exact marker form: <<item:ID|display name>> — picking the id from the indexed list below. Wrap only the piece itself, not the surrounding sentence. Examples:
 - Right: "Pair the <<item:i_xyz|ivory silk shirt>> with the <<item:i_abc|charcoal wool trouser>>."
 - Wrong: "<<item:i_xyz|Pair the ivory silk shirt>>"
 - Wrong: a marker for a piece you can't find in the indexed list — invent neither id nor item.
@@ -1470,8 +1451,6 @@ ${itemIndex}
 
 Today is ${todayLabel}.
 ${styleProfile ? `\nThe client's style profile: ${styleProfile}\n` : ''}
-THE WARDROBE (live inventory — only suggest from this):
-${inventory || '(no items yet)'}
 ${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
 ${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}
 ${chipRule}${wearContextsBlock}
@@ -1482,7 +1461,11 @@ A one-sentence rationale, then:
 
 When asked anything else (critique, packing, advice), reply in 1-3 short paragraphs of natural prose. No headings, no markdown. Keep it under 180 words unless asked for detail.`;
 
-  const conversationBlock = messages.map((m) => `${m.role === 'user' ? 'CLIENT' : 'STYLIST'}: ${m.text}`).join('\n\n');
+  // Cap history to last 12 messages (6 turns). Prevents unbounded prompt
+  // growth as threads age. The model still has full system context above
+  // — this just trims redundant chat backlog.
+  const trimmedMessages = messages.length > 12 ? messages.slice(-12) : messages;
+  const conversationBlock = trimmedMessages.map((m) => `${m.role === 'user' ? 'CLIENT' : 'STYLIST'}: ${m.text}`).join('\n\n');
 
   const prompt = `${systemBlock}\n\n──────\n\n${conversationBlock}\n\nSTYLIST:`;
 
@@ -13791,18 +13774,28 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     setMessages([...afterUser, placeholder]);
 
     let accumulated = '';
-    // Watchdog: if the stream doesn't deliver ANY tokens within 90s,
-    // force-cancel. This shouldn't happen with a healthy Gemini Flash
-    // call (typical reply is 5-30s) but a 180s+ hang would be wasted
-    // user patience. The watchdog soft-cancels (cancelledRef + UI cleanup)
-    // and surfaces an error so the retry pill appears.
-    const watchdog = setTimeout(() => {
+    // Two watchdogs:
+    // 1. Start watchdog: if NO chunks arrive in 60s, the stream is stuck
+    //    in thinking/connect — abort.
+    // 2. Idle watchdog: each chunk resets a 30s timer; if 30s passes
+    //    without a NEW chunk, the stream stalled mid-reply — abort.
+    let lastChunkAt = performance.now();
+    const startWatchdog = setTimeout(() => {
       if (!cancelledRef.current && accumulated.length === 0) {
         cancelledRef.current = true;
         setMessages((prev) => prev.filter((m) => !m.streaming));
-        setError('The Concierge took too long. Try again?');
+        setError('The Concierge took too long to start. Try again?');
       }
-    }, 90_000);
+    }, 60_000);
+    const idleWatchdog = setInterval(() => {
+      if (cancelledRef.current) return;
+      if (accumulated.length === 0) return; // start-watchdog covers this case
+      if (performance.now() - lastChunkAt > 30_000) {
+        cancelledRef.current = true;
+        setMessages((prev) => prev.filter((m) => !m.streaming));
+        setError('The reply stalled mid-stream. Try again?');
+      }
+    }, 5_000);
     try {
       await generateConciergeReply({
         messages: afterUser,
@@ -13812,6 +13805,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         ownerFirstName,
         onChunk: (chunk) => {
           if (cancelledRef.current) return;
+          lastChunkAt = performance.now(); // reset idle timer
           accumulated += chunk;
           // Update the last (placeholder) message's text in place. React
           // re-renders the bubble; user sees text grow smoothly.
@@ -13845,7 +13839,8 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Something interrupted us. Try again?');
     } finally {
-      clearTimeout(watchdog);
+      clearTimeout(startWatchdog);
+      clearInterval(idleWatchdog);
       setBusy(false);
     }
   };
@@ -13864,14 +13859,26 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     // the existing thread without adding a new user message, so we use the
     // closure-captured `messages` rather than an afterUser snapshot.
     let accumulated = '';
-    // Watchdog: same 90s no-token timeout as send().
-    const watchdog = setTimeout(() => {
+    // Two watchdogs (same pattern as send()):
+    // 1. Start watchdog: if NO chunks arrive in 60s, abort.
+    // 2. Idle watchdog: reset on each chunk; abort if 30s of mid-stream silence.
+    let lastChunkAt = performance.now();
+    const startWatchdog = setTimeout(() => {
       if (!cancelledRef.current && accumulated.length === 0) {
         cancelledRef.current = true;
         setMessages((prev) => prev.filter((m) => !m.streaming));
-        setError('The Concierge took too long. Try again?');
+        setError('The Concierge took too long to start. Try again?');
       }
-    }, 90_000);
+    }, 60_000);
+    const idleWatchdog = setInterval(() => {
+      if (cancelledRef.current) return;
+      if (accumulated.length === 0) return; // start-watchdog covers this case
+      if (performance.now() - lastChunkAt > 30_000) {
+        cancelledRef.current = true;
+        setMessages((prev) => prev.filter((m) => !m.streaming));
+        setError('The reply stalled mid-stream. Try again?');
+      }
+    }, 5_000);
     try {
       await generateConciergeReply({
         messages,
@@ -13881,6 +13888,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         ownerFirstName,
         onChunk: (chunk) => {
           if (cancelledRef.current) return;
+          lastChunkAt = performance.now(); // reset idle timer
           accumulated += chunk;
           setMessages((prev) => {
             const next = [...prev];
@@ -13907,7 +13915,8 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       setMessages((prev) => prev.filter((m) => !m.streaming));
       setError(err?.message || 'Still no luck — try again in a moment.');
     } finally {
-      clearTimeout(watchdog);
+      clearTimeout(startWatchdog);
+      clearInterval(idleWatchdog);
       setBusy(false);
     }
   };

@@ -639,16 +639,33 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
       model: modelName,
       generationConfig: {
         temperature: opts.temperature ?? 0.7,
+        // Cap reply length. The Concierge / Manifesto / Wardrobe Audit
+        // wrappers all use this stream; ~1024 tokens (~768 words) is plenty
+        // for any of those surfaces and prevents runaway long replies.
+        // Callers can override via opts.maxOutputTokens for narrative-heavier
+        // calls (manifesto can use a higher cap if needed).
+        maxOutputTokens: opts.maxOutputTokens ?? 1024,
         // NOTE: jsonMode intentionally omitted — partial JSON chunks
         // aren't valid JSON. Use plain geminiText({jsonMode:true}) for
         // structured output.
       },
+      // Disable Gemini 2.5 Flash's thinking phase. Thinking emits ZERO
+      // tokens for 20-60s on complex prompts, which reads to the user as
+      // a frozen Concierge. Conversational replies don't need it; if a
+      // caller specifically wants thinking (deep analysis), it can pass
+      // opts.thinkingBudget explicitly.
+      thinkingConfig: {
+        thinkingBudget: opts.thinkingBudget ?? 0,
+      },
     });
+    const t0 = performance.now();
+    let tFirstChunk = 0;
     const result = await model.generateContentStream(prompt);
     let accumulated = '';
     for await (const chunk of result.stream) {
       const text = chunk.text();
       if (!text) continue;
+      if (!tFirstChunk) tFirstChunk = performance.now();
       accumulated += text;
       // Defensive: if the caller's UI callback throws (e.g. a stale React
       // setState reference, a missing DOM target), don't let it abort the
@@ -660,12 +677,16 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
         catch (cbErr) { console.warn('[gemini-stream] onChunk threw:', cbErr?.message || cbErr); }
       }
     }
+    const tEnd = performance.now();
+    const firstChunkMs = tFirstChunk ? Math.round(tFirstChunk - t0) : null;
+    const totalMs = Math.round(tEnd - t0);
     // Stream complete. Resolve the final response for token counting.
     const finalResponse = await result.response;
     recordCall();        // record only on successful API reach (matches geminiText pattern)
     recordUserCall();
 
     const promptStr = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
+    console.log(`[gemini-stream:${feature}] prompt=${promptStr.length}ch  first-chunk=${firstChunkMs}ms  total=${totalMs}ms  output=${accumulated.length}ch`);
     const tokens = extractTokenCounts({ response: finalResponse }, promptStr.length, accumulated.length);
     logAiUsage({
       feature,

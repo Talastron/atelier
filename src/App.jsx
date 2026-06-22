@@ -14022,6 +14022,58 @@ function ItemChip({ itemId, fallbackName, items, onOpenItem }) {
   );
 }
 
+// Prominent in-bubble "Composing your reply…" indicator. Renders while the
+// streaming placeholder exists but no text has arrived yet (the worst UX
+// window — feels like a hang on a slow first chunk). Rotates through
+// stage labels every 1.5s + reveals an elapsed-seconds counter after 5s
+// so the user knows it's still working, even on a long compose.
+//
+// Disappears as soon as the first chunk lands (then the streaming text +
+// caret take over the bubble).
+function ConciergeComposingIndicator() {
+  const STAGES = [
+    'Reading the conversation…',
+    'Looking through your wardrobe…',
+    'Considering the moment…',
+    'Composing a reply…',
+    'Adding finishing touches…',
+  ];
+  const [stageIdx, setStageIdx] = useState(0);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const startRef = React.useRef(0);
+
+  useEffect(() => {
+    startRef.current = performance.now();
+    const stageTimer = setInterval(() => {
+      setStageIdx((i) => (i + 1) % STAGES.length);
+    }, 1500);
+    const elapsedTimer = setInterval(() => {
+      setElapsedMs(performance.now() - startRef.current);
+    }, 250);
+    return () => {
+      clearInterval(stageTimer);
+      clearInterval(elapsedTimer);
+    };
+  }, []);
+
+  const showElapsed = elapsedMs >= 5000;
+  const elapsedSec = Math.floor(elapsedMs / 1000);
+
+  return (
+    <div className="inline-flex items-center gap-2.5 text-stone-700">
+      <Sparkles size={16} strokeWidth={1.5} className="text-amber-500 animate-pulse shrink-0" />
+      <span className="font-display italic text-[14px] sm:text-[15px]">
+        {STAGES[stageIdx]}
+      </span>
+      {showElapsed && (
+        <span className="text-[11px] tabular-nums text-stone-400 ml-1">
+          {elapsedSec}s
+        </span>
+      )}
+    </div>
+  );
+}
+
 // Single chat bubble. The assistant's voice gets editorial treatment
 // (white card with brass-rule shoulder eyebrow); the client's voice is
 // quieter (dark pill aligned right). Whitespace-pre-line preserves the
@@ -14072,11 +14124,7 @@ function ConciergeMessage({ role, text, streaming = false, items = [], onOpenIte
         </div>
         <div className="bg-white rounded-2xl rounded-tl-md ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_12px_-6px_rgba(28,25,23,0.12)] px-5 py-4">
           {streaming && !text ? (
-            <span className="inline-flex gap-1 items-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '0ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '150ms' }} />
-              <span className="w-1.5 h-1.5 rounded-full bg-stone-400 animate-pulse" style={{ animationDelay: '300ms' }} />
-            </span>
+            <ConciergeComposingIndicator />
           ) : (
             <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
               {renderTextWithChips(text)}

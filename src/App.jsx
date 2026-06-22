@@ -1059,6 +1059,60 @@ async function composeOutfitExportImage(outfit, items) {
   ctx.textBaseline = 'alphabetic';
   wrapCanvasText(ctx, outfit?.name || 'A composed look', PAD, 248, W - PAD * 2, 88, 2);
 
+  // === PALETTE STRIP ===
+  // Computed across all outfit pieces, sorted by prevalence, capped at 6
+  // so the row fits cleanly in one line at this resolution.
+  const paletteY = 320;
+  const paletteCounts = new Map();
+  for (const p of pieces) {
+    for (const c of (itemColors(p) || [])) {
+      const key = (c || '').toLowerCase().trim();
+      if (!key) continue;
+      paletteCounts.set(key, (paletteCounts.get(key) || 0) + 1);
+    }
+  }
+  const palette = [...paletteCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
+  if (palette.length > 0) {
+    // brass-rule + "PALETTE" eyebrow
+    ctx.fillStyle = BRASS;
+    ctx.fillRect(PAD, paletteY, 36, 2);
+    ctx.font = '500 18px Jost, sans-serif';
+    ctx.fillStyle = MUTED;
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PALETTE', PAD + 52, paletteY + 1);
+
+    // Swatches
+    const swatchY = paletteY + 36;
+    const swatchR = 22; // circle radius
+    const labelGap = 12;
+    const itemGap = 28;
+    let cursorX = PAD;
+    ctx.font = '500 18px Jost, sans-serif';
+    ctx.textBaseline = 'middle';
+    for (const [name, count] of palette) {
+      const hex = hexFromColorName(name);
+      // Circle
+      ctx.beginPath();
+      ctx.fillStyle = hex;
+      ctx.arc(cursorX + swatchR, swatchY + swatchR, swatchR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      ctx.stroke();
+      // Label
+      const label = count > 1 ? `${name.toUpperCase()} × ${count}` : name.toUpperCase();
+      const labelX = cursorX + swatchR * 2 + labelGap;
+      const labelW = ctx.measureText(label).width;
+      ctx.fillStyle = INK;
+      ctx.fillText(label, labelX, swatchY + swatchR);
+      cursorX = labelX + labelW + itemGap;
+      // Wrap to next line if next swatch would overflow — simple guard
+      if (cursorX > W - PAD - 200) break;
+    }
+  }
+
   // === ITEMS GRID ===
   const imgs = await Promise.all(pieces.map((p) => loadImageForCanvas(itemImages(p)[0])));
   // Smart grid: 1=full, 2=stack, 3-4=2col, 5-6=2col, 7-9=3col
@@ -1067,8 +1121,8 @@ async function composeOutfitExportImage(outfit, items) {
              : pieces.length <= 6 ? 2
              : 3;
   const rows = Math.ceil(pieces.length / cols);
-  const GRID_TOP = 460;
-  const GRID_BOTTOM = H - 280;
+  const GRID_TOP = 420;
+  const GRID_BOTTOM = H - 400;
   const GUTTER = 36;
   const cellW = (W - PAD * 2 - GUTTER * (cols - 1)) / cols;
   const maxCellH = (GRID_BOTTOM - GRID_TOP - GUTTER * (rows - 1)) / rows;
@@ -1105,6 +1159,27 @@ async function composeOutfitExportImage(outfit, items) {
     drawRoundedRect(ctx, x, y, cellW, cellH, 24);
     ctx.stroke();
   });
+
+  // === STYLIST'S NOTE ===
+  // Reasoning rendered as italic pull-quote with brass-rule eyebrow.
+  // Wraps to 3 lines max; truncates with ellipsis if longer.
+  if (outfit?.reasoning && outfit.reasoning.trim()) {
+    const noteY = H - 340;
+    // brass-rule + "STYLIST'S NOTE" eyebrow
+    ctx.fillStyle = BRASS;
+    ctx.fillRect(PAD, noteY, 36, 2);
+    ctx.font = '500 18px Jost, sans-serif';
+    ctx.fillStyle = MUTED;
+    ctx.textBaseline = 'middle';
+    ctx.fillText("STYLIST'S NOTE", PAD + 52, noteY + 1);
+
+    // Italic body, multi-line, max 3 lines
+    ctx.font = 'italic 500 28px "Playfair Display", Georgia, serif';
+    ctx.fillStyle = INK;
+    ctx.textBaseline = 'alphabetic';
+    const noteText = `"${outfit.reasoning.trim()}"`;
+    wrapCanvasText(ctx, noteText, PAD, noteY + 70, W - PAD * 2, 38, 3);
+  }
 
   // === FOOTER ===
   const footerY = H - 160;

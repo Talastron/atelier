@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer
+  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer, BarChart3
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -2682,6 +2682,7 @@ function DigitalWardrobe() {
   // in at ~0px scroll). Hiding it as soon as the user starts scrolling
   // gets it out of the way; it returns when they scroll back to the top.
   const [atTop, setAtTop] = useState(true);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   useEffect(() => {
     const el = mainScrollRef.current;
     if (!el) return;
@@ -3755,6 +3756,51 @@ function DigitalWardrobe() {
           >
             <Ruler size={16} strokeWidth={1.75} />
           </button>
+
+          {/* MOBILE MORE BUTTON — second floating pill below the Profile button,
+              reveals Insights / Directory which have no bottom-nav slot.
+              Same visual treatment: stone-900/85 + backdrop-blur, hides when
+              the user scrolls down (matches Profile button behaviour). */}
+          <button
+            type="button"
+            aria-label="More destinations"
+            onClick={() => setMobileMoreOpen(true)}
+            className={`lg:hidden fixed top-0 right-3 z-40 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 3.75rem)' }}
+            aria-hidden={!atTop}
+            tabIndex={atTop ? 0 : -1}
+          >
+            <BarChart3 size={16} strokeWidth={1.75} />
+          </button>
+
+          {mobileMoreOpen && (
+            <div
+              className="lg:hidden fixed inset-0 z-50"
+              onClick={() => setMobileMoreOpen(false)}
+            >
+              <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-sm" />
+              <div
+                className="absolute right-3 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200"
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 7rem)' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {[
+                  { id: 'finance', label: 'Insights', icon: BarChart3 },
+                  { id: 'shops', label: 'Directory', icon: Store },
+                ].map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => { setMobileMoreOpen(false); setActiveTab(id); }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 transition-colors ${activeTab === id ? 'text-brass-700' : 'text-stone-700'}`}
+                  >
+                    <Icon size={16} strokeWidth={1.5} />
+                    <span className="text-sm tracking-wide">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>

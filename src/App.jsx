@@ -13825,6 +13825,17 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     'Which pieces have I worn least?',
   ];
 
+  // True when the last message is a user message and we're not actively
+  // streaming or erroring. Happens when a previous stream was abandoned
+  // (user closed the panel mid-stream → cancelledRef bailed → the
+  // assistant reply was never persisted). Surfacing a one-tap retry
+  // is much friendlier than making the user retype.
+  const hasOrphanUserMessage =
+    messages.length > 0 &&
+    messages[messages.length - 1]?.role === 'user' &&
+    !busy &&
+    !error;
+
   return createPortal(
     <div className="fixed inset-0 z-[70] flex animate-in fade-in duration-200" onClick={onClose}>
       {/* Scrim */}
@@ -13926,6 +13937,18 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
               onOpenItem={onOpenItem}
             />
           ))}
+          {hasOrphanUserMessage && (
+            <div className="flex justify-center py-3">
+              <button
+                type="button"
+                onClick={retry}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-[12px] tracking-wide hover:bg-stone-700 transition-colors shadow-sm"
+              >
+                <Sparkles size={13} strokeWidth={1.75} className="text-amber-400" />
+                Tap to retry
+              </button>
+            </div>
+          )}
           {busy && !messages.some((m) => m.streaming) && (
             <div className="flex items-center gap-2 text-stone-400 text-sm">
               <span className="inline-flex gap-1">

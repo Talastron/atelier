@@ -746,33 +746,83 @@ async function analyzeInspirationWithGemini({ imageDataUrl, items }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!imageDataUrl) throw new Error('No image to analyze.');
 
-  const wardrobeSummary = items.slice(0, 100).map((i) =>
-    `${i.id}|${i.name}|${i.brand || '?'}|${i.category}${i.subCategory ? '/' + i.subCategory : ''}|colors=${itemColors(i).join(',') || '-'}`
-  ).join('\n');
+  // Richer wardrobe summary — include subcategory, materials, and styles
+  // so the model has more signal to match. Cap at 120 (was 100).
+  const wardrobeSummary = items.slice(0, 120).map((i) => {
+    const cat = i.subCategory ? `${i.category}/${i.subCategory}` : i.category;
+    const colours = itemColors(i).join(',') || '-';
+    const styles = itemStyles(i).join(',') || '-';
+    return `${i.id}|${i.name}|${i.brand || '?'}|${cat}|colors=${colours}|styles=${styles}`;
+  }).join('\n');
 
-  const prompt = `You are an expert stylist analyzing an inspiration outfit photo.
+  const prompt = `You are an expert stylist analyzing an inspiration outfit photo against a specific user's wardrobe.
 
-Look at the image and:
-1. Identify every visible garment with its category, brief description, and dominant colour.
-2. From the user's wardrobe below, find any items that closely match each garment (similar category + similar colour + similar style).
-3. List any garments shown in the inspiration that the user is missing from their wardrobe.
+YOUR TASK:
+For EACH visible garment in the inspiration photo, decide whether the user OWNS something close enough to wear, OR is MISSING a piece they would need to buy.
 
-User's wardrobe (id|name|brand|category|attrs):
+MATCHING RULES (be generous — close counts):
+- Same category (or close: a "shirt" matches "Tops/Shirts", a "trouser" matches "Bottoms/Trousers")
+- Compatible colour family (cream matches ivory/white; navy matches dark blue)
+- Compatible silhouette/style when the wardrobe item description suggests one
+If those three loosely align, treat it as MATCHED. Do not require perfection — a wardrobe is rarely identical to an inspiration.
+
+CRITICAL RULE — NO DOUBLE-DIPPING:
+If you matched a garment to a wardrobe item, do NOT also list it as missing. Every garment in the inspiration must be EITHER matched OR missing, never both.
+
+User's wardrobe (id|name|brand|category|colors|styles):
 ${wardrobeSummary}
 
 Respond ONLY with valid JSON in this exact shape:
 {
   "garments": [
-    {"category": "Tops|Bottoms|Outerwear|Dresses|Shoes|Bags|Accessories|Jewellery", "description": "white silk blouse", "color": "white"}
+    {
+      "category": "Tops|Bottoms|Outerwear|Dresses|Shoes|Bags|Accessories|Jewellery",
+      "description": "white silk sleeveless shirt",
+      "color": "white",
+      "matchedItemId": "id_xyz_or_null",
+      "buyingNote": "string or null — only set when matchedItemId is null, briefly describe what to look for"
+    }
   ],
-  "wardrobeMatchIds": ["id1", "id2"],
-  "missingPieces": ["a tailored navy blazer", "white slip-on trainers"],
   "summary": "one elegant sentence describing the overall look"
-}`;
+}
 
-  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.4, jsonMode: true }, 'inspiration-analysis');
+Rules for the response:
+- One object per visible garment in the inspiration.
+- matchedItemId MUST be an exact id from the wardrobe list above, or null if no match.
+- When matchedItemId is set, buyingNote MUST be null (nothing to buy — they own it).
+- When matchedItemId is null, buyingNote MUST be a short specific suggestion (e.g. "a tailored navy blazer with peak lapels").
+- Never invent ids. Never list the same id twice.`;
+
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.3, jsonMode: true }, 'inspiration-analysis');
   if (!text) throw new Error('The Concierge could not analyse this photo');
-  return JSON.parse(text);
+  const parsed = JSON.parse(text);
+
+  // Derive the legacy shape from the new structure so existing consumers
+  // (the UI that renders wardrobeMatchIds / missingPieces) don't need
+  // updates yet. Mutual exclusion is now enforced by the per-garment
+  // matchedItemId being null XOR set.
+  const garments = Array.isArray(parsed.garments) ? parsed.garments : [];
+  const wardrobeMatchIds = [];
+  const missingPieces = [];
+  for (const g of garments) {
+    if (g.matchedItemId && typeof g.matchedItemId === 'string') {
+      // Verify the id actually exists in the wardrobe before trusting it
+      if (items.some((i) => i.id === g.matchedItemId)) {
+        wardrobeMatchIds.push(g.matchedItemId);
+        continue;
+      }
+    }
+    // Otherwise treat as missing — prefer the model's buyingNote, fallback to description
+    const note = g.buyingNote || g.description;
+    if (note) missingPieces.push(note);
+  }
+
+  return {
+    garments,                                  // new shape (preferred)
+    wardrobeMatchIds: [...new Set(wardrobeMatchIds)],
+    missingPieces,
+    summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+  };
 }
 
 const COLOR_FAMILIES = [

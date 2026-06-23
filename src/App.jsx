@@ -4213,6 +4213,7 @@ function DigitalWardrobe() {
                       inspirations={inspirations}
                       onOpenInspiration={setSelectedInspirationId}
                       onAddInspiration={() => setIsInspirationModalOpen(true)}
+                      onDelete={handleDeleteInspiration}
                       defaultFilter={inspirationDefaultFilter}
                       wishlistCount={liveItems.filter((i) => i.status === 'wishlist').length}
                       onJumpToWishlist={() => jumpToWardrobe({ filter: 'wishlist' })}
@@ -11663,7 +11664,7 @@ function AIProgressModal({ open, stage, title = 'Putting together your outfit' }
   );
 }
 
-function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, defaultFilter = 'all', wishlistCount = 0, onJumpToWishlist }) {
+function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, onDelete, defaultFilter = 'all', wishlistCount = 0, onJumpToWishlist }) {
   // Filter: 'all' or 'unanalysed'. Initialised from defaultFilter so the
   // digest can target the user straight to unanalysed inspirations.
   const [filter, setFilter] = useState(defaultFilter);
@@ -11687,10 +11688,13 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
 
       {inspirations.length === 0 ? (
         <div className="py-24 flex flex-col items-center justify-center text-center bg-white/50 border border-dashed border-stone-300 rounded-3xl px-6">
-          <Bookmark size={48} strokeWidth={1} className="mb-6 text-stone-300" />
-          <p className="font-display text-2xl text-stone-700">Save looks you love</p>
-          <p className="text-sm text-stone-500 mt-3 max-w-md">
-            Paste a Pinterest, Instagram or magazine URL — or upload a screenshot. The Concierge identifies the garments and finds matches in your wardrobe.
+          <div className="mb-6 text-brass-400">
+            <Bookmark size={40} strokeWidth={1.25} />
+          </div>
+          <div className="w-8 h-px bg-brass-300 mb-5" aria-hidden="true" />
+          <p className="font-display text-2xl text-stone-700">Your moodboard begins here</p>
+          <p className="text-sm text-stone-500 mt-3 max-w-xs leading-relaxed italic">
+            Save inspiration by tapping the button above — Concierge analyses each look to find what's in your wardrobe and what's missing.
           </p>
         </div>
       ) : (
@@ -11698,14 +11702,7 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
           {/* Sticky filter strip — same pattern as the wardrobe view's
               filter/sort toolbar. Stays visible while scrolling a long
               inspiration grid so the user can switch between All and
-              Unanalysed without scrolling back to the top. Solid bg
-              matches the page (#F7F5F2) and bleeds edge-to-edge of the
-              <main> scroll container via negative margins. */}
-          {/* Sticky filter bar — pill sizing matches the Insights sub-nav
-              (px-3 py-1.5 text-[10px] sm:text-xs). One canonical 'sticky-bar
-              pill' style across both views: same height, same typography,
-              same border. Active state still uses the dark fill so the
-              current filter is unmistakable. */}
+              Unanalysed without scrolling back to the top. */}
           <div className="flex items-center gap-2 flex-wrap sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
                style={{ top: 'env(safe-area-inset-top, 0px)' }}>
             {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
@@ -11716,9 +11713,7 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
                     : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
                 }`}>{label}</button>
             ))}
-            {/* Cross-link to wishlist — inspirations often feed wishlist items;
-                surfacing the count here gives the user a one-tap path to action
-                what they've earmarked from their saved looks. */}
+            {/* Cross-link to wishlist */}
             {wishlistCount > 0 && onJumpToWishlist && (
               <button onClick={onJumpToWishlist}
                 className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 inline-flex items-center gap-1.5 ml-auto">
@@ -11735,44 +11730,137 @@ function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, de
           </div>
 
           {visible.length === 0 ? (
-            <div className="py-16 text-center text-stone-500 text-sm italic">
-              All inspirations have been analysed. Nice.
+            <div className="py-20 flex flex-col items-center justify-center text-center px-6">
+              <div className="mb-4 text-brass-400">
+                <Bookmark size={32} strokeWidth={1.25} />
+              </div>
+              <div className="w-6 h-px bg-brass-300 mb-4" aria-hidden="true" />
+              <p className="font-display text-xl text-stone-700">
+                {filter === 'unanalysed' ? 'All looks analysed' : 'Nothing here yet'}
+              </p>
+              <p className="text-sm text-stone-500 mt-2 max-w-xs leading-relaxed italic">
+                {filter === 'unanalysed'
+                  ? 'Every saved look has been analysed by the Concierge.'
+                  : 'Save a look to get started.'}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {visible.map((insp) => (
-                <button key={insp.id} onClick={() => onOpenInspiration(insp.id)}
-                  // Same editorial card convention as wardrobe items:
-                  // image is the interactive surface (zoom + shadow lift);
-                  // caption stays anchored; no wrapper press-scale (avoids
-                  // the wrapper jumping when inner controls fire).
-                  className="text-left group cursor-pointer">
-                  <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 smooth-shadow lg:group-hover:shadow-xl transition-shadow duration-500 relative">
-                    {insp.image ? (
-                      <img src={insp.image} alt={insp.caption || 'inspiration'}
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                        loading="lazy" decoding="async" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-stone-300"><Bookmark size={40} strokeWidth={1} /></div>
-                    )}
-                    {insp.analysis ? (
-                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-stone-900/80 backdrop-blur text-white text-[10px] tracking-widest uppercase rounded-full inline-flex items-center gap-1">
-                        <Sparkles size={10} strokeWidth={2} className="text-brass-300" /> Analysed
-                      </span>
-                    ) : (
-                      // Animate-pulse + arrow makes the badge read as a CTA
-                      // rather than a passive status label — the user knows to
-                      // tap the card to trigger analysis in the detail view.
-                      <span className="absolute top-3 left-3 px-2.5 py-1 bg-brass-300 text-stone-900 text-[10px] tracking-widest uppercase rounded-full inline-flex items-center gap-1 font-medium shadow-md animate-pulse">
-                        <Sparkles size={10} strokeWidth={2} /> Tap to analyse
-                      </span>
+              {visible.map((insp) => {
+                const isAnalysed = !!insp.analysis;
+                const garmentList = isAnalysed ? (insp.analysis.garments || []) : [];
+                const matchCount = garmentList.filter((g) => g.matchedItemId).length;
+                const totalGarments = garmentList.length;
+                const cardPalette = isAnalysed
+                  ? derivePaletteFromGarments(garmentList).slice(0, 5)
+                  : [];
+                const sourceHost = (() => {
+                  const src = insp.sourceUrl || insp.caption || '';
+                  return parseSourceUrl(src)?.hostname || null;
+                })();
+                return (
+                  <div key={insp.id} className="group relative">
+                    <button
+                      type="button"
+                      onClick={() => onOpenInspiration(insp.id)}
+                      className="block w-full text-left"
+                    >
+                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/60 transition-all duration-300 lg:group-hover:border-brass-300 lg:group-hover:shadow-lg lg:group-hover:scale-[1.015]">
+                        {insp.image ? (
+                          <img
+                            src={insp.image}
+                            alt={insp.caption || ''}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover transition-transform duration-700 ease-out lg:group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-stone-300">
+                            <Bookmark size={32} strokeWidth={1} />
+                          </div>
+                        )}
+
+                        {/* Top-left: analysis state */}
+                        <div className="absolute top-2.5 left-2.5">
+                          {isAnalysed ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-sm text-[9px] tracking-[0.22em] uppercase font-medium text-stone-800">
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-brass-500" aria-hidden="true" />
+                              Analysed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-900/80 backdrop-blur-sm text-[9px] tracking-[0.22em] uppercase font-medium text-white animate-pulse">
+                              <Sparkles size={9} strokeWidth={2} />
+                              Tap to analyse
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Top-right: source hostname (when imported from URL) */}
+                        {sourceHost && (
+                          <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-white/85 backdrop-blur-sm text-[8px] tracking-[0.22em] uppercase text-stone-600">
+                            {sourceHost}
+                          </span>
+                        )}
+
+                        {/* Bottom gradient overlay: caption + palette dots + match chip */}
+                        {(insp.caption || cardPalette.length > 0 || (isAnalysed && totalGarments > 0)) && (
+                          <div className="absolute inset-x-0 bottom-0 p-3 sm:p-3.5 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
+                            {insp.caption && !parseSourceUrl(insp.caption) && (
+                              <p className="font-display text-white text-[13px] sm:text-sm leading-snug truncate mb-1.5 drop-shadow-sm">
+                                {insp.caption}
+                              </p>
+                            )}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1">
+                                {cardPalette.map((color, i) => {
+                                  const swatch = COLOR_SWATCHES[color];
+                                  const style = swatch
+                                    ? (swatch.startsWith('linear') ? { background: swatch } : { backgroundColor: swatch })
+                                    : { backgroundColor: '#d6d3d1' };
+                                  return (
+                                    <span
+                                      key={`${color}-${i}`}
+                                      className="block w-3 h-3 rounded-full border border-white/40 shrink-0"
+                                      style={style}
+                                      aria-label={color}
+                                    />
+                                  );
+                                })}
+                              </div>
+                              {isAnalysed && totalGarments > 0 && (
+                                <span className={`text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                                  matchCount === 0
+                                    ? 'bg-amber-500/20 text-amber-100'
+                                    : matchCount === totalGarments
+                                      ? 'bg-emerald-500/30 text-emerald-50'
+                                      : 'bg-white/15 text-white'
+                                }`}>
+                                  {matchCount} / {totalGarments} owned
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Desktop hover quick-action: Delete */}
+                    {onDelete && (
+                      <div className="hidden lg:flex absolute -top-3 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onDelete(insp.id); }}
+                          className="w-7 h-7 rounded-full bg-white shadow-lg border border-stone-200 flex items-center justify-center text-stone-500 hover:text-red-600 hover:border-red-200 transition-colors"
+                          aria-label="Delete inspiration"
+                          title="Delete inspiration"
+                        >
+                          <Trash2 size={12} strokeWidth={1.75} />
+                        </button>
+                      </div>
                     )}
                   </div>
-                  {insp.caption && (
-                    <p className="mt-3 text-xs text-stone-700 truncate px-1">{insp.caption}</p>
-                  )}
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </>

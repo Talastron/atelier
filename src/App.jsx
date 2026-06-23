@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc, query, orderBy } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount, findProductListingFromPhoto } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount, findProductListingFromPhoto, connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
@@ -3286,6 +3286,23 @@ function DigitalWardrobe() {
       setAccessDenied(false);
       if (!u) setLoading(false);
     });
+  }, []);
+
+  // Post-OAuth return from the Google Calendar consent screen. The callback
+  // lands on the app root with ?calendarConnected=1 regardless of which tab
+  // is active, so this runs once at mount and strips the param afterwards so
+  // a refresh doesn't re-toast.
+  useEffect(() => {
+    let params;
+    try { params = new URLSearchParams(window.location.search); } catch { return; }
+    if (params.get('calendarConnected') === '1') {
+      toast.show('Calendar connected', { kind: 'success', eyebrow: 'CONNECTED' });
+      params.delete('calendarConnected');
+      const qs = params.toString();
+      const newUrl = window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash;
+      window.history.replaceState({}, '', newUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Demo mode bootstrap. Skips Firestore entirely — populates items from the
@@ -19730,6 +19747,46 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
   const [inviteError, setInviteError] = useState(null);
   const [founderCount, setFounderCount] = useState(null);
 
+  // Google Calendar connection state. null = still checking, true/false = known.
+  const profileToast = useToast();
+  const [calConnected, setCalConnected] = useState(null);
+  const [calBusy, setCalBusy] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const connected = await isCalendarConnected(user);
+        if (alive) setCalConnected(connected);
+      } catch {
+        if (alive) setCalConnected(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [user]);
+
+  const handleConnectCalendar = async () => {
+    setCalBusy(true);
+    try {
+      await connectGoogleCalendar(); // redirects away on success
+    } catch {
+      setCalBusy(false);
+      profileToast.show('Could not start calendar connection. Please try again.', { kind: 'error' });
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    setCalBusy(true);
+    try {
+      await disconnectGoogleCalendar();
+      setCalConnected(false);
+      profileToast.show('Calendar disconnected', { kind: 'success', eyebrow: 'DISCONNECTED' });
+    } catch {
+      profileToast.show('Could not disconnect. Please try again.', { kind: 'error' });
+    } finally {
+      setCalBusy(false);
+    }
+  };
+
   useEffect(() => { if (measurements) setLocalMeasurements({ ...INITIAL_MEASUREMENTS, ...measurements }); }, [measurements]);
 
   useEffect(() => {
@@ -19760,6 +19817,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
   const PROFILE_SECTIONS = [
     { id: 'profile-account', label: 'Account' },
     { id: 'profile-privacy', label: 'Privacy' },
+    { id: 'profile-calendar', label: 'Calendar' },
     ...(isOwner ? [{ id: 'profile-people', label: 'People' }] : [{ id: 'profile-subscription', label: 'Subscription' }]),
     { id: 'profile-settings', label: 'Settings' },
     { id: 'profile-style', label: 'Style' },
@@ -19840,6 +19898,49 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
               <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">
                 Atelier · {founderCount.toLocaleString()} founder{founderCount === 1 ? '' : 's'} to date
               </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Calendar — optional Google Calendar connection. Read-only: the
+          Concierge uses upcoming events to dress you for what's on. */}
+      <section id="profile-calendar" className="scroll-mt-24 space-y-6 md:space-y-8">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Calendar</h2>
+        </div>
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          {calConnected === null ? (
+            <p className="text-stone-400 text-sm">Checking…</p>
+          ) : calConnected ? (
+            <div>
+              <div className="flex items-center gap-2 text-stone-900">
+                <Check size={18} strokeWidth={2} className="text-emerald-600" />
+                <span className="font-display text-lg">Connected</span>
+              </div>
+              <p className="text-stone-500 text-sm mt-2">Primary calendar · read-only.</p>
+              <button
+                onClick={handleDisconnectCalendar}
+                disabled={calBusy}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-sm tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {calBusy ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p className="text-stone-700 leading-relaxed mb-6">
+                Connect your Google Calendar and the Concierge will dress you for what's actually on — a board meeting, a long lunch, a quiet day in. Read-only: Atelier never edits or deletes anything on your calendar. Primary calendar only.
+              </p>
+              <button
+                onClick={handleConnectCalendar}
+                disabled={calBusy}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Calendar size={16} strokeWidth={1.5} />
+                {calBusy ? 'Connecting…' : 'Connect Google Calendar'}
+              </button>
             </div>
           )}
         </div>

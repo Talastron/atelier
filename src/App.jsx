@@ -3662,6 +3662,29 @@ function DigitalWardrobe() {
     await batch.commit();
     haptic('success');
     toast.show(`${outfit.name} · ${touched} ${touched === 1 ? 'piece' : 'pieces'}`, { kind: 'success', eyebrow: 'WORN' });
+    // Also record the wear at the OUTFIT level (separate from per-item
+    // wearHistory). The outfit's wearLog is what powers the "Worn N times"
+    // counter on the detail view — without this, a wear without a photo
+    // read as "didn't wear it" because the old counter only counted photos.
+    try {
+      const existingLog = Array.isArray(outfit.wearLog) ? outfit.wearLog : [];
+      // Don't add a duplicate entry for the same date
+      if (!existingLog.some((w) => w.date === dateISO)) {
+        const entry = { date: dateISO };
+        const v = (verdict || '').trim();
+        const occ = (occasion || '').trim();
+        if (v) entry.verdict = v;
+        if (occ) entry.occasion = occ;
+        const nextLog = [...existingLog, entry].sort((a, b) => a.date.localeCompare(b.date));
+        await setDoc(doc(userOutfitsRef(user.uid), outfit.id), {
+          ...outfit,
+          wearLog: nextLog,
+        });
+      }
+    } catch (e) {
+      console.warn('[outfit-wear-log] failed to write outfit-level wearLog:', e?.message);
+      // Non-blocking — per-item wears already committed; outfit-level is supplementary
+    }
     // Fire-and-forget Gemini narration. Won't block the wear log.
     try {
       const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
@@ -15331,13 +15354,33 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const savedLabel = savedDate
     ? savedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: savedDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined })
     : null;
-  // Wear stats: any wear of ANY piece on a date counts as a wear of the
-  // outfit IF the wornPhotos array also has that date — else fall back to
-  // wornPhotos count alone. wornPhotos is the authoritative "I wore this
-  // outfit" signal because pieces wear-log can fire for non-outfit wears.
-  const wearDates = wornPhotos.map((p) => p.date).filter(Boolean).sort();
-  const wearCount = wearDates.length;
-  const lastWornISO = wearDates[wearDates.length - 1];
+  // Derive outfit-level wear stats. Source of truth: outfit.wearLog
+  // (added in P2.3 — written by handleLogOutfitWear). Legacy fallback:
+  // scan items in the outfit, count dates where ≥50% of pieces share
+  // a wear entry (heuristic for outfits logged before wearLog existed).
+  const wearLogEntries = (() => {
+    if (Array.isArray(outfit.wearLog) && outfit.wearLog.length > 0) {
+      return outfit.wearLog;
+    }
+    // Legacy backfill: derive from items' wearHistory union
+    const dateCounts = new Map();
+    for (const piece of pieces) {
+      const hist = itemWearHistory(piece);
+      for (const d of hist) dateCounts.set(d, (dateCounts.get(d) || 0) + 1);
+    }
+    const threshold = Math.max(1, Math.ceil(pieces.length / 2));
+    return [...dateCounts.entries()]
+      .filter(([, count]) => count >= threshold)
+      .map(([date]) => ({ date }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  })();
+  const totalWears = wearLogEntries.length;
+  const photosCount = wornPhotos.length;
+  // wearCount and lastWornISO now come from wearLog (or legacy backfill),
+  // not just wornPhotos, so a wear without a photo is counted correctly.
+  const wearCount = totalWears;
+  const lastWornISOFromLog = wearLogEntries.length > 0 ? wearLogEntries[wearLogEntries.length - 1].date : null;
+  const lastWornISO = lastWornISOFromLog;
   const lastWornLabel = lastWornISO ? (() => {
     const t = todayISO();
     if (lastWornISO === t) return 'today';
@@ -15981,7 +16024,12 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               <div className="flex items-baseline justify-between mb-4 gap-3">
                 <div className="flex items-center gap-3">
                   <span className="brass-rule" aria-hidden="true"></span>
-                  <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wore this · {wornPhotos.length}/6</span>
+                  <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">
+                    {totalWears === 0 ? 'Wore this · not yet' : `Wore this · ${totalWears}`}
+                    {photosCount > 0 && (
+                      <span className="text-stone-400 normal-case tracking-wide ml-2">({photosCount} with photo)</span>
+                    )}
+                  </span>
                 </div>
                 {wornPhotos.length < 6 && (
                   <label className="text-[10px] tracking-widests uppercase text-stone-500 hover:text-stone-900 cursor-pointer transition-colors duration-200">
@@ -15990,9 +16038,33 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   </label>
                 )}
               </div>
-              {wornPhotos.length === 0 ? (
+              {/* Date chips for wears that don't have a corresponding photo.
+                  Rendered above the photo strip so the user can see ALL
+                  their wears at a glance even without photos. */}
+              {wearLogEntries.length > 0 && wearLogEntries.some((w) => !wornPhotos.find((p) => p.date === w.date)) && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {wearLogEntries
+                    .filter((w) => !wornPhotos.find((p) => p.date === w.date))
+                    .slice(-8)
+                    .map((w) => (
+                      <span
+                        key={w.date}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 text-[10px] tracking-wide uppercase"
+                        title={w.occasion ? `${w.date} · ${w.occasion}` : w.date}
+                      >
+                        <Calendar size={10} strokeWidth={1.75} />
+                        {(() => {
+                          const d = new Date(w.date + 'T00:00:00');
+                          return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                        })()}
+                        {w.occasion && <span className="text-stone-400 normal-case tracking-normal">· {w.occasion}</span>}
+                      </span>
+                    ))}
+                </div>
+              )}
+              {wornPhotos.length === 0 && totalWears === 0 ? (
                 <p className="text-xs text-stone-400 italic">Snap a photo when you wear this look — track what actually got worn vs styled.</p>
-              ) : (
+              ) : wornPhotos.length === 0 ? null : (
                 <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
                   {wornPhotos.map((p, i) => (
                     <div key={i} className="flex-none w-24 sm:w-28 group relative">

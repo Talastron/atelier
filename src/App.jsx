@@ -6826,7 +6826,15 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
                 </p>
                 <p className="font-display text-base sm:text-lg text-white leading-tight truncate">{recommendation.name}</p>
                 <p className="text-[11px] text-stone-400 mt-1 truncate">
-                  {recommendation.brand}{seasons.length > 0 && ` · ${seasons.join(' · ')}`}
+                  {(() => {
+                    const recSeasons = itemSeasons(recommendation);
+                    return (
+                      <>
+                        {recommendation.brand}
+                        {recSeasons.length > 0 && ` · ${recSeasons.join(' · ')}`}
+                      </>
+                    );
+                  })()}
                 </p>
                 {reasons.length > 0 && (
                   <p className="text-[10px] text-emerald-300/90 mt-2 tracking-wide italic truncate" title={reasons.join(' · ')}>

@@ -134,6 +134,70 @@ function itemImages(item) {
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
+// Build a self-contained HTML document for a printable packing list page.
+// Called by both TravelPlannerModal and PackingListModal so that print output
+// is consistent regardless of which path the user took.
+// categorySections: raw HTML string of <section> blocks already rendered by
+// the caller (since each modal has a different data shape).
+function buildPackingListHtml({ startLabel, endLabel, totalDays, totalPieces, categorySections }) {
+  const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Packing list · ${esc(startLabel)} → ${esc(endLabel)}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 24mm 18mm; }
+    body { margin: 0; background: #fff; color: #1c1917; font-family: 'Playfair Display', Georgia, serif; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 12mm; }
+    .header { border-bottom: 1px solid #e7e5e4; padding-bottom: 24px; margin-bottom: 32px; }
+    .header .brass { display: inline-block; width: 36px; height: 3px; background-color: #C9A66B; vertical-align: middle; margin-right: 14px; }
+    .header .eyebrow { font-family: Jost, sans-serif; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: #57534e; vertical-align: middle; }
+    .header h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 36px; line-height: 1.1; margin: 16px 0 8px; font-weight: 500; }
+    .header .dates { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 16px; color: #78716c; margin: 0; }
+    .header .meta { font-family: Jost, sans-serif; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: #a8a29e; margin-top: 14px; }
+    .footer { border-top: 1px solid #e7e5e4; padding-top: 16px; margin-top: 40px; display: flex; justify-content: space-between; align-items: baseline; }
+    .footer .brand { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 16px; color: #1c1917; }
+    .footer .note { font-family: Jost, sans-serif; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #a8a29e; }
+    @media print { .no-print { display: none !important; } }
+    .no-print { position: fixed; top: 16px; right: 16px; background: #1c1917; color: white; padding: 10px 18px; border-radius: 999px; font-family: Jost, sans-serif; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer; border: none; }
+  </style>
+</head>
+<body>
+  <button class="no-print" onclick="window.print()">Print or save as PDF</button>
+  <div class="wrap">
+    <header class="header">
+      <div>
+        <span class="brass"></span>
+        <span class="eyebrow">Packing list</span>
+      </div>
+      <h1>${esc(startLabel)} → ${esc(endLabel)}</h1>
+      <p class="dates">${totalDays} day${totalDays === 1 ? '' : 's'} away</p>
+      <p class="meta">${totalPieces} piece${totalPieces === 1 ? '' : 's'} to pack</p>
+    </header>
+    ${categorySections}
+    <footer class="footer">
+      <span class="brand">myatelier.style</span>
+      <span class="note">Generated ${esc(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }))}</span>
+    </footer>
+  </div>
+  <script>
+    (function() {
+      var print = function() { try { window.print(); } catch (e) {} };
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function() { setTimeout(print, 150); });
+      } else {
+        setTimeout(print, 600);
+      }
+    })();
+  </script>
+</body>
+</html>`;
+}
+
 const CURRENCY_SYMBOLS = { GBP: '£', USD: '$', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$' };
 function formatPrice(amount, currency = 'GBP') {
   const symbol = CURRENCY_SYMBOLS[currency] || '£';
@@ -13510,13 +13574,81 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
     }
   };
 
-  // Print just the packing list (not the whole app UI). The .travel-print-target
-  // div below is normally `display:none`; @media print injected via the modal
-  // makes it visible while hiding everything else. Replaces the previous
-  // window.print() which rendered the entire app including the sidebar.
+  // Print just the packing list. Opens a new browser window containing a
+  // self-contained HTML document with ONLY the packing list — no app chrome,
+  // no Tailwind classes, no sidebar. The new window auto-triggers
+  // window.print() once web fonts have loaded (document.fonts.ready).
+  // Replaces the previous @media print CSS approach, which was fragile and
+  // would sometimes show the entire app in the print dialog.
   const handlePrint = () => {
-    // Tiny delay so the print stylesheet has applied before the dialog opens.
-    setTimeout(() => window.print(), 50);
+    const { entries } = buildPackingList();
+    if (!entries || entries.length === 0) {
+      toast.show('No items to pack — schedule outfits first', { kind: 'default' });
+      return;
+    }
+
+    // Group by category for the printable layout
+    const grouped = new Map();
+    for (const e of entries) {
+      const cat = e.piece?.category || 'Other';
+      if (!grouped.has(cat)) grouped.set(cat, []);
+      grouped.get(cat).push(e);
+    }
+
+    const CATEGORY_ORDER = ['Outerwear', 'Dresses', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Belts', 'Jewellery', 'Swimwear', 'Sportswear', 'Other'];
+    const orderedCategories = [...grouped.keys()].sort((a, b) => {
+      const ai = CATEGORY_ORDER.indexOf(a);
+      const bi = CATEGORY_ORDER.indexOf(b);
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+    });
+
+    const startLabel = new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const endLabel = new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    const totalDays = Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 86400000) + 1;
+    const totalPieces = entries.length;
+
+    const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    const categorySections = orderedCategories.map((cat) => {
+      const rows = grouped.get(cat).map((e) => {
+        const brand = e.piece?.brand || '';
+        const name = e.piece?.name || e.piece?.category || 'Item';
+        const days = e.dayCount || 1;
+        const imgs = itemImages(e.piece);
+        const thumb = imgs[0] || '';
+        const thumbCell = thumb
+          ? `<td style="width:60px;padding:0 12px 0 0;"><div style="width:48px;height:48px;border-radius:8px;background-color:#f5f5f4;border:1px solid #e7e5e4;overflow:hidden;"><img src="${esc(thumb)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" /></div></td>`
+          : `<td style="width:60px;padding:0 12px 0 0;"><div style="width:48px;height:48px;border-radius:8px;background-color:#f5f5f4;border:1px solid #e7e5e4;"></div></td>`;
+        return `<tr style="border-bottom:1px solid #e7e5e4;">
+          ${thumbCell}
+          <td style="padding:8px 0;vertical-align:middle;">
+            <div style="font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#1c1917;line-height:1.3;">${esc(name)}</div>
+            ${brand ? `<div style="font-family:Jost,sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#78716c;margin-top:2px;">${esc(brand)}</div>` : ''}
+          </td>
+          <td style="padding:8px 0;text-align:right;vertical-align:middle;font-family:Jost,sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#a8a29e;white-space:nowrap;">
+            ${days} day${days === 1 ? '' : 's'}
+          </td>
+        </tr>`;
+      }).join('');
+      return `<section style="break-inside:avoid;margin-bottom:32px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="display:inline-block;width:18px;height:2px;background-color:#C9A66B;"></span>
+          <span style="font-family:Jost,sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#57534e;font-weight:500;">${esc(cat)}</span>
+          <span style="font-family:Jost,sans-serif;font-size:10px;color:#a8a29e;">· ${grouped.get(cat).length}</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">${rows}</table>
+      </section>`;
+    }).join('');
+
+    const html = buildPackingListHtml({ startLabel, endLabel, totalDays, totalPieces, categorySections });
+
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
+    if (!w) {
+      toast.show('Pop-up blocked — allow pop-ups for this site and try again', { kind: 'error', duration: 6000 });
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
   };
 
   const apply = async () => {
@@ -16064,6 +16196,63 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
   const orderedCategories = Object.keys(byCategory).sort((a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b));
   const totalPieces = seen.size;
 
+  // Open a new browser window containing only the packing list as a clean
+  // printable HTML document. No app chrome, no Tailwind — the print dialog
+  // shows just the list. Same editorial styling as TravelPlannerModal's print.
+  const handlePrintPackingList = () => {
+    if (totalPieces === 0) return;
+
+    const CATEGORY_ORDER = ['Outerwear', 'Dresses', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Belts', 'Jewellery', 'Swimwear', 'Sportswear', 'Other'];
+    const orderedCats = Object.keys(byCategory).sort((a, b) => {
+      const ai = CATEGORY_ORDER.indexOf(a);
+      const bi = CATEGORY_ORDER.indexOf(b);
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+    });
+
+    const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    const categorySections = orderedCats.map((cat) => {
+      const rows = byCategory[cat].map(({ item, days }) => {
+        const brand = item.brand || '';
+        const name = item.name || item.category || 'Item';
+        const dayCount = days.length;
+        const imgs = itemImages(item);
+        const thumb = imgs[0] || '';
+        const thumbCell = thumb
+          ? `<td style="width:60px;padding:0 12px 0 0;"><div style="width:48px;height:48px;border-radius:8px;background-color:#f5f5f4;border:1px solid #e7e5e4;overflow:hidden;"><img src="${esc(thumb)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" /></div></td>`
+          : `<td style="width:60px;padding:0 12px 0 0;"><div style="width:48px;height:48px;border-radius:8px;background-color:#f5f5f4;border:1px solid #e7e5e4;"></div></td>`;
+        return `<tr style="border-bottom:1px solid #e7e5e4;">
+          ${thumbCell}
+          <td style="padding:8px 0;vertical-align:middle;">
+            <div style="font-family:'Playfair Display',Georgia,serif;font-size:14px;color:#1c1917;line-height:1.3;">${esc(name)}</div>
+            ${brand ? `<div style="font-family:Jost,sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#78716c;margin-top:2px;">${esc(brand)}</div>` : ''}
+          </td>
+          <td style="padding:8px 0;text-align:right;vertical-align:middle;font-family:Jost,sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:#a8a29e;white-space:nowrap;">
+            ${dayCount} day${dayCount === 1 ? '' : 's'}
+          </td>
+        </tr>`;
+      }).join('');
+      return `<section style="break-inside:avoid;margin-bottom:32px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="display:inline-block;width:18px;height:2px;background-color:#C9A66B;"></span>
+          <span style="font-family:Jost,sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#57534e;font-weight:500;">${esc(cat)}</span>
+          <span style="font-family:Jost,sans-serif;font-size:10px;color:#a8a29e;">· ${byCategory[cat].length}</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;">${rows}</table>
+      </section>`;
+    }).join('');
+
+    const html = buildPackingListHtml({ startLabel, endLabel, totalDays: dayCount, totalPieces, categorySections });
+
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
+    if (!w) {
+      alert('Pop-up blocked — please allow pop-ups for this site and try again.');
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  };
+
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6 print:bg-white print:relative print:p-0" onClick={onClose}>
       <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] print:max-h-none print:rounded-none print:shadow-none print:bg-white" onClick={(e) => e.stopPropagation()}>
@@ -16140,7 +16329,7 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
           <button onClick={onClose} className="text-xs tracking-wider uppercase px-4 py-2 rounded-full text-stone-500 hover:text-stone-900">
             Close
           </button>
-          <button onClick={() => window.print()} disabled={totalPieces === 0}
+          <button onClick={handlePrintPackingList} disabled={totalPieces === 0}
             className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 flex items-center gap-2">
             <Download size={14} strokeWidth={1.5} /> Print / Save PDF
           </button>

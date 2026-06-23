@@ -3933,7 +3933,13 @@ function DigitalWardrobe() {
     if (!user) return;
     await setDoc(doc(userAIHistoryRef(user.uid), entry.id), { ...entry, favorite: !entry.favorite });
   };
-  const handleScheduleOutfit = async (dateISO, outfitId, eventName = '') => {
+  // meta is an optional plain object written verbatim into the schedule doc.
+  // TravelPlannerModal uses it to stamp trip metadata onto each scheduled day:
+  //   meta.trip = { id, name, startISO, endISO, location }
+  // All existing call-sites that pass only (dateISO, outfitId) are unaffected —
+  // the third positional arg is still the eventName string for the rare callers
+  // that set it, and meta is the FOURTH arg for new travel-planner callers.
+  const handleScheduleOutfit = async (dateISO, outfitId, eventName = '', meta = null) => {
     if (!user) return;
     if (!outfitId) {
       await deleteDoc(userScheduleDoc(user.uid, dateISO));
@@ -3942,6 +3948,7 @@ function DigitalWardrobe() {
       const trimmed = (eventName || '').trim();
       const doc = { outfitId, scheduledAt: new Date().toISOString() };
       if (trimmed) doc.eventName = trimmed;
+      if (meta && typeof meta === 'object') Object.assign(doc, meta);
       await setDoc(userScheduleDoc(user.uid, dateISO), doc);
       toast.show(trimmed ? `Scheduled · ${trimmed}` : 'Scheduled', { kind: 'success' });
     }
@@ -13110,8 +13117,45 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
         const scheduledPieces = scheduledOutfit ? resolveOutfitItems(scheduledOutfit, items) : [];
         const isFutureOrToday = selectedDate >= todayISO();
         const formattedDate = new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const tripInfo = scheduled?.trip ?? null;
         return (
           <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 smooth-shadow space-y-5">
+            {/* Trip overview eyebrow — only renders when this scheduled day
+                has trip metadata (written by TravelPlannerModal.apply()).
+                Existing scheduled outfits without trip metadata are
+                unaffected (optional chaining). */}
+            {tripInfo && (
+              <div className="-mt-1 mb-1 px-3 py-2.5 bg-amber-50/60 border border-amber-200/60 rounded-xl">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="inline-block w-3 h-px bg-amber-400 shrink-0" aria-hidden="true" />
+                    <span className="text-[10px] tracking-[0.28em] uppercase text-amber-800 font-medium shrink-0">Trip</span>
+                    <span className="text-[12px] text-stone-700 font-display truncate">{tripInfo.name}</span>
+                  </div>
+                  <span className="text-[10px] tracking-wide text-stone-500 shrink-0">
+                    {new Date(tripInfo.startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    {' → '}
+                    {new Date(tripInfo.endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+                {tripInfo.location && tripInfo.location !== tripInfo.name && (
+                  <p className="text-[10px] tracking-wide text-stone-500 mt-1">{tripInfo.location}</p>
+                )}
+                <div className="flex gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRangeStart(tripInfo.startISO);
+                      setRangeEnd(tripInfo.endISO);
+                      setPackingOpen(true);
+                    }}
+                    className="text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 underline-offset-4 hover:underline"
+                  >
+                    View packing list
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="flex items-baseline gap-3 flex-wrap min-w-0">
                 <h3 className="font-display text-xl sm:text-2xl text-stone-900">{formattedDate}</h3>
@@ -13477,6 +13521,21 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 
   const apply = async () => {
     if (!plan?.days?.length) return;
+    // Trip metadata stamped onto every scheduled day so the calendar can
+    // surface a trip-overview eyebrow without a separate trips collection.
+    const tripId = newId();
+    const destName = forecast?.name
+      ? `${forecast.name}${forecast.country ? ', ' + forecast.country : ''}`
+      : null;
+    const tripMeta = {
+      trip: {
+        id: tripId,
+        name: destName || destination.trim() || 'Trip',
+        startISO,
+        endISO,
+        location: destName || null,
+      },
+    };
     for (const day of plan.days) {
       const itemIds = (day.itemIds || []).filter((id) => items.some((i) => i.id === id));
       if (itemIds.length === 0) continue;
@@ -13489,7 +13548,8 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
         intent: forecast?.name ? `travel · ${forecast.name}` : 'travel',
       };
       await onSaveOutfit?.(outfit);
-      await onScheduleOutfit?.(day.date, outfit.id);
+      // Pass '' as eventName (positional) so the trip meta goes in the 4th arg.
+      await onScheduleOutfit?.(day.date, outfit.id, '', tripMeta);
     }
     toast.show(`Travel capsule saved · ${plan.days.length} days scheduled`, { kind: 'success' });
     onClose?.();

@@ -1,0 +1,21 @@
+User-agent: *
+# The demo URL spins up a local-only sample wardrobe and shouldn't be
+# scraped or surfaced as a separate indexable page.
+Disallow: /?demo=
+Disallow: /seed-wardrobe/
+
+# AI / training crawlers — explicitly excluded.
+User-agent: GPTBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /

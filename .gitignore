@@ -17,3 +17,9 @@ firestore.rules
 .cache/
 .idea/
 .vscode/
+
+# Local Claude Code session state — contains debug tokens, agent transcripts
+.claude/
+
+# Generated build artifact, not source
+prod.html

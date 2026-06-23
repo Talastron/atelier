@@ -11169,7 +11169,6 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           {(isLookbook
             ? [
                 ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
-                ['diary', 'Diary'],
                 ['trips', `Trips${trips.length > 0 ? ` · ${trips.length}` : ''}`],
               ]
             : [

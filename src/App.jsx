@@ -764,7 +764,11 @@ MATCHING RULES (be generous — close counts):
 - Same category (or close: a "shirt" matches "Tops/Shirts", a "trouser" matches "Bottoms/Trousers")
 - Compatible colour family (cream matches ivory/white; navy matches dark blue)
 - Compatible silhouette/style when the wardrobe item description suggests one
-If those three loosely align, treat it as MATCHED. Do not require perfection — a wardrobe is rarely identical to an inspiration.
+If those three loosely align, treat it as MATCHED. Do not require perfection.
+
+BRAND IDENTIFICATION (be conservative):
+- For each garment, set "brand_guess" ONLY if you can clearly identify the brand from a visible logo, signature design element, or extremely distinctive style (e.g. a Cartier Tank watch, Chanel quilted bag with CC clasp, Bottega Veneta intrecciato weave).
+- If uncertain — even slightly — leave brand_guess as null. Wrong brand guesses are worse than no guess.
 
 CRITICAL RULE — NO DOUBLE-DIPPING:
 If you matched a garment to a wardrobe item, do NOT also list it as missing. Every garment in the inspiration must be EITHER matched OR missing, never both.
@@ -779,8 +783,10 @@ Respond ONLY with valid JSON in this exact shape:
       "category": "Tops|Bottoms|Outerwear|Dresses|Shoes|Bags|Accessories|Jewellery",
       "description": "white silk sleeveless shirt",
       "color": "white",
+      "brand_guess": "brand name or null — see brand identification rules above",
       "matchedItemId": "id_xyz_or_null",
-      "buyingNote": "string or null — only set when matchedItemId is null, briefly describe what to look for"
+      "matchConfidence": "high|medium|low or null — only set when matchedItemId is set",
+      "buyingNote": "string or null — only when matchedItemId is null. Include a brand-or-style suggestion when useful (e.g. 'a tailored navy blazer with peak lapels — Ralph Lauren or Theory style')"
     }
   ],
   "summary": "one elegant sentence describing the overall look"
@@ -789,8 +795,9 @@ Respond ONLY with valid JSON in this exact shape:
 Rules for the response:
 - One object per visible garment in the inspiration.
 - matchedItemId MUST be an exact id from the wardrobe list above, or null if no match.
-- When matchedItemId is set, buyingNote MUST be null (nothing to buy — they own it).
-- When matchedItemId is null, buyingNote MUST be a short specific suggestion (e.g. "a tailored navy blazer with peak lapels").
+- When matchedItemId is set: matchConfidence MUST be 'high', 'medium', or 'low'. buyingNote MUST be null.
+- When matchedItemId is null: matchConfidence MUST be null. buyingNote MUST be a short specific suggestion (<=90 chars).
+- brand_guess is independent of matching — you can guess a brand on the inspiration whether or not the user owns something matching.
 - Never invent ids. Never list the same id twice.`;
 
   const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.3, jsonMode: true }, 'inspiration-analysis');
@@ -11767,10 +11774,26 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                     <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold mb-3">Garments identified</h2>
                     <div className="space-y-2">
                       {inspiration.analysis.garments.map((g, i) => (
-                        <div key={i} className="flex items-center gap-3 p-3 bg-white border border-stone-200 rounded-xl">
-                          <span className="text-[10px] uppercase tracking-widest text-stone-500 font-medium shrink-0 w-20">{g.category}</span>
-                          <span className="text-sm text-stone-800 flex-1">{g.description}</span>
-                          {g.color && <span className="text-xs text-stone-500 capitalize">{g.color}</span>}
+                        <div key={i} className="flex items-start gap-3 p-3 bg-white border border-stone-200 rounded-xl">
+                          <span className="text-[10px] uppercase tracking-widest text-stone-500 font-medium shrink-0 w-20 pt-0.5">{g.category}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-sm text-stone-800">{g.description}</span>
+                              {g.brand_guess && (
+                                <span className="text-[10px] italic text-amber-700">· likely {g.brand_guess}</span>
+                              )}
+                              {g.matchedItemId && g.matchConfidence && (
+                                <span className={`text-[9px] tracking-widest uppercase font-medium ${
+                                  g.matchConfidence === 'high' ? 'text-emerald-700' :
+                                  g.matchConfidence === 'medium' ? 'text-stone-500' :
+                                  'text-stone-400'
+                                }`}>
+                                  {g.matchConfidence} match
+                                </span>
+                              )}
+                            </div>
+                            {g.color && <span className="text-[10px] text-stone-400 capitalize">{g.color}</span>}
+                          </div>
                         </div>
                       ))}
                     </div>

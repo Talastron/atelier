@@ -1888,13 +1888,32 @@ ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.o
     : '';
 
   const eventsBlock = calendarEvents.length > 0
-    ? `\nON THE CLIENT'S CALENDAR TODAY:
-${calendarEvents.map((e) => {
-  const time = e.allDay ? 'All day' : new Date(e.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  return `  - ${time}: ${e.title}${e.location ? ` (${e.location})` : ''}`;
-}).join('\n')}
-
-Dress the client for these events — match formality to the occasion (a board meeting calls for sharper tailoring than a coffee catch-up). Only reference an event when it's clearly relevant to the wardrobe question; don't shoehorn it in.\n`
+    ? (() => {
+        // Group events by their LOCAL day so the stylist can dress for a
+        // specific day the client asks about ("what should I wear Thursday?"),
+        // not just today. en-CA gives a YYYY-MM-DD key for grouping; en-GB
+        // gives the human label. All-day events carry a bare date already.
+        const byDay = new Map();
+        for (const e of calendarEvents) {
+          const key = e.allDay ? e.startISO.slice(0, 10) : new Date(e.startISO).toLocaleDateString('en-CA');
+          if (!byDay.has(key)) byDay.set(key, []);
+          byDay.get(key).push(e);
+        }
+        const today = todayISO();
+        const days = [...byDay.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, evs]) => {
+            const label = new Date(key + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+            const heading = key === today ? `${label} (today)` : label;
+            const items = evs.map((e) => {
+              const time = e.allDay ? 'All day' : new Date(e.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+              return `  - ${time}: ${e.title}${e.location ? ` (${e.location})` : ''}`;
+            }).join('\n');
+            return `${heading}:\n${items}`;
+          })
+          .join('\n');
+        return `\nON THE CLIENT'S CALENDAR (next 7 days):\n${days}\n\nWhen the client asks what to wear on a particular day, dress for THAT day's events — match formality to the occasion (a board meeting or presentation calls for sharper tailoring than a coffee catch-up). Only reference an event when it's relevant to the wardrobe question; don't shoehorn it in.\n`;
+      })()
     : '';
 
   // Indexed item list — the model uses these IDs to anchor specific
@@ -15816,8 +15835,11 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
 
-  // Best-effort: pull today's calendar events so the stylist can dress for
-  // what's on. Guarded so non-connected users never fire the callable.
+  // Best-effort: pull the next week of calendar events so the stylist can
+  // dress for whatever day the client asks about — not just today. (The Daily
+  // Brief stays today-only; it composes a look for today specifically. The
+  // Concierge is conversational and the client may ask about any upcoming day.)
+  // Guarded so non-connected users never fire the callable.
   const [calendarEvents, setCalendarEvents] = useState([]);
   useEffect(() => {
     if (!user) return;
@@ -15826,9 +15848,11 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       try {
         const connected = await isCalendarConnected(user);
         if (!connected || !alive) return;
-        const startISO = new Date(todayISO() + 'T00:00:00').toISOString();
-        const endISO = new Date(todayISO() + 'T23:59:59').toISOString();
-        const { events = [], reason } = await fetchCalendarEvents(startISO, endISO);
+        const start = new Date(todayISO() + 'T00:00:00');
+        const end = new Date(todayISO() + 'T00:00:00');
+        end.setDate(end.getDate() + 7);
+        end.setHours(23, 59, 59, 999);
+        const { events = [], reason } = await fetchCalendarEvents(start.toISOString(), end.toISOString());
         if (alive && reason !== 'revoked') setCalendarEvents(events);
       } catch (err) {
         // Calendar context is best-effort — never block styling on it.

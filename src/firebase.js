@@ -10,6 +10,7 @@ import {
   getCountFromServer,
 } from 'firebase/firestore';
 import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -219,6 +220,54 @@ export const sendMagicLink = async (email) => {
 
 export const signOutUser = () => signOut(auth);
 export { onAuthStateChanged, isSignInWithEmailLink, signInWithEmailLink };
+
+// ─── Google Calendar integration ─────────────────────────────────────────
+// Thin client wrappers over the Cloud Functions deployed in europe-west2.
+// CRITICAL: the region MUST be 'europe-west2' to match where the functions
+// were deployed — getFunctions with the wrong (default us-central1) region
+// silently 404s every call.
+//
+// The OAuth tokens live in a server-only Firestore doc the client cannot
+// read; connect/disconnect therefore go through callable Functions, and
+// "is connected?" reads a separate client-readable metadata doc.
+const calendarFns = getFunctions(app, 'europe-west2');
+
+// Kick off the Google Calendar OAuth flow. Asks the backend for an auth URL
+// then full-page redirects to it (not a popup — popups are brittle on mobile
+// Safari, same reasoning as signInWithGoogle's redirect fallback).
+export async function connectGoogleCalendar() {
+  const start = httpsCallable(calendarFns, 'calendarOAuthStart');
+  const { data } = await start();
+  window.location.href = data.authUrl;
+}
+
+// Fetch calendar events in [startISO, endISO]. Both must be full RFC3339
+// timestamps WITH timezone offset (e.g. '2026-06-23T00:00:00+01:00').
+// Returns the FULL data object { events, reason? } — callers inspect
+// reason === 'revoked' to detect that the user revoked access upstream,
+// so we deliberately do NOT unwrap to data.events here.
+export async function fetchCalendarEvents(startISO, endISO) {
+  const fetcher = httpsCallable(calendarFns, 'getCalendarEvents');
+  const { data } = await fetcher({ startISO, endISO });
+  return data; // { events, reason? }
+}
+
+// Is the calendar connected for this user? Reads the client-readable
+// METADATA doc (users/{uid}/integrations/google_calendar), never the
+// server-only tokens doc (which Firestore rules deny to the client).
+export async function isCalendarConnected(user) {
+  if (!user) return false;
+  const ref = doc(db, `users/${user.uid}/integrations/google_calendar`);
+  const snap = await getDoc(ref);
+  return snap.exists();
+}
+
+// Disconnect: must go through the Function — the client can't delete the
+// server-only tokens doc itself. The Function clears tokens + metadata.
+export async function disconnectGoogleCalendar() {
+  const fn = httpsCallable(calendarFns, 'disconnectCalendar');
+  await fn();
+}
 
 // ─── Gemini via Firebase AI Logic ────────────────────────────────────────
 // Uses the Google AI (Gemini Developer API) backend — free tier, no API key

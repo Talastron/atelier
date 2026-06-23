@@ -5728,68 +5728,10 @@ function DailyBriefCard({
   );
 }
 
-// ─── Home-screen tile: condenses today/tomorrow into a single actionable card.
-// Three states surface:
-//   - Tomorrow has a planned outfit → show it; tap to open.
-//   - No plan but Gemini available → "Suggest a look" CTA; result has accept/skip/regen.
-//   - No items / AI disabled → nothing renders (don't pollute the wardrobe top).
-function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTemperature, measurements, onOpenOutfit, onScheduleOutfit, onSaveOutfit, onLogOutfitWear }) {
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const [suggestion, setSuggestion] = useState(null); // { itemIds, reasoning, confidence }
-  const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [pickDate, setPickDate] = useState(null); // ISO string when scheduling
-  const [pickEventName, setPickEventName] = useState(''); // optional event tag (wedding, etc.)
-
-  const buildOutfitFromSuggestion = () => {
-    if (!suggestion?.itemIds?.length) return null;
-    const validIds = suggestion.itemIds.filter((id) => items.some((i) => i.id === id));
-    if (!validIds.length) return null;
-    const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-    return {
-      id: newId(),
-      name: `Today's pick · ${today}`,
-      itemIds: validIds,
-      createdAt: new Date().toISOString(),
-      reasoning: suggestion.reasoning || '',
-      intent: 'today',
-    };
-  };
-
-  const saveAsLook = async () => {
-    const outfit = buildOutfitFromSuggestion();
-    if (!outfit || !onSaveOutfit) return;
-    setSaving(true);
-    try { await onSaveOutfit(outfit); setSuggestion(null); }
-    finally { setSaving(false); }
-  };
-
-  const wearToday = async () => {
-    const outfit = buildOutfitFromSuggestion();
-    if (!outfit || !onSaveOutfit) return;
-    setSaving(true);
-    try {
-      await onSaveOutfit(outfit);
-      if (onLogOutfitWear) await onLogOutfitWear(outfit, todayISO(), '');
-      setSuggestion(null);
-    } finally { setSaving(false); }
-  };
-
-  const scheduleFor = async (dateISO) => {
-    const outfit = buildOutfitFromSuggestion();
-    if (!outfit || !onSaveOutfit || !onScheduleOutfit) return;
-    setSaving(true);
-    try {
-      await onSaveOutfit(outfit);
-      await onScheduleOutfit(dateISO, outfit.id, pickEventName);
-      toast.show(`Scheduled for ${new Date(dateISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}`, { kind: 'success' });
-      setSuggestion(null);
-      setPickDate(null);
-      setPickEventName('');
-    } finally { setSaving(false); }
-  };
-
+// ─── Home-screen tile: at-a-glance weather summary + tomorrow's planned outfit.
+// Compose functionality lives exclusively in the Daily Brief card above — this
+// tile is a quiet information strip, not a second compose surface.
+function TodayTile({ items, outfits, schedules, weather, onOpenOutfit }) {
   const owned = items.filter((i) => i.status === 'owned');
   if (owned.length < 4) return null;
 
@@ -5799,47 +5741,29 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
   const tomorrowPieces = tomorrowOutfit ? resolveOutfitItems(tomorrowOutfit, items) : [];
   const tomorrowLabel = new Date(tomorrow + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long' });
 
-  const generate = async () => {
-    setBusy(true); setError(null);
-    try {
-      const season = (weatherSeasons && weatherSeasons[0]) || 'Spring';
-      // Skip items in the wash / damaged so suggestions are wearable right now.
-      const available = owned.filter(isItemAvailable);
-      const result = await generateOutfitWithGemini({
-        items: available.length >= 3 ? available : owned,
-        intent: 'a balanced everyday look for now', weather, season, temperature: aiTemperature,
-        styleProfile: summariseStyleProfile(measurements),
-      });
-      setSuggestion(result);
-    } catch (e) {
-      setError(e?.message || 'The Concierge is offline right now.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const suggestedPieces = suggestion?.itemIds?.map((id) => items.find((i) => i.id === id)).filter(Boolean) || [];
+  // Nothing to show when no weather AND no tomorrow outfit — don't emit an empty dark card.
+  if (!weather && !tomorrowOutfit) return null;
 
   return (
-    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-5 smooth-shadow relative overflow-hidden">
+    <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl p-4 smooth-shadow relative overflow-hidden">
       <div className="absolute -right-12 -top-12 opacity-[0.06] rotate-12 pointer-events-none">
         <Sparkles size={220} strokeWidth={0.8} />
       </div>
 
-      <div className="relative z-10 flex items-start justify-between gap-4 mb-3 flex-wrap">
-        <div className="min-w-0">
-          <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-bold">Today</p>
-          <p className="font-display text-lg sm:text-xl text-white mt-0.5">
-            {weather
-              ? `${weather.tempMin != null && weather.tempMin !== weather.temp ? `${weather.tempMin}–` : ''}${weather.temp}°C · ${weatherLabel(weather.code, weather.precipProb)}`
-              : 'How are you styling today?'}
-          </p>
+      {weather && (
+        <div className="relative z-10 flex items-start gap-4 mb-2 flex-wrap">
+          <div className="min-w-0">
+            <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-bold">Today</p>
+            <p className="font-display text-lg sm:text-xl text-white mt-0.5">
+              {`${weather.tempMin != null && weather.tempMin !== weather.temp ? `${weather.tempMin}–` : ''}${weather.temp}°C · ${weatherLabel(weather.code, weather.precipProb)}`}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {tomorrowOutfit && (
         <button onClick={() => onOpenOutfit?.(tomorrowOutfit.id)}
-          className="relative z-10 w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 sm:p-4 flex items-center gap-4 transition-colors mb-3">
+          className={`relative z-10 w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-3 sm:p-4 flex items-center gap-4 transition-colors${weather ? ' mt-2' : ''}`}>
           <div className="grid grid-cols-2 grid-rows-2 gap-0.5 w-16 h-16 rounded-xl overflow-hidden bg-stone-700 shrink-0">
             {tomorrowPieces.slice(0, 4).map((p) => (
               <div key={p.id}><img src={itemImages(p)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /></div>
@@ -5855,164 +5779,6 @@ function TodayTile({ items, outfits, schedules, weather, weatherSeasons, aiTempe
           </div>
           <ChevronRight size={16} strokeWidth={1.5} className="text-stone-400 shrink-0" />
         </button>
-      )}
-
-      {!suggestion && (
-        <div className="relative z-10 flex flex-col gap-2">
-          <button onClick={generate} disabled={busy || !isAIEnabled()}
-            className="w-full text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
-            <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Composing…' : 'Suggest a look'}
-          </button>
-          {!isAIEnabled() && <span className="text-[10px] tracking-widest uppercase text-stone-400 text-center">Concierge needs setup</span>}
-          {error && <span className="text-[10px] text-brass-300 text-center">{error}</span>}
-        </div>
-      )}
-
-      {/* Suggestion rendering moved to a portal modal below — the sidebar
-          TodayTile is too narrow to host a generated outfit + 3 action
-          buttons + a regenerate/dismiss row. Modal gives the result the
-          space it deserves, including progress feedback while AI composes. */}
-
-      {(busy || (suggestion && suggestedPieces.length > 0)) && createPortal(
-        <div
-          className="fixed inset-0 z-[60] bg-stone-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={(e) => {
-            // Dismiss on backdrop click only — but not during AI work to
-            // avoid losing the in-flight call (Gemini still resolves, but
-            // user expects the result they're waiting for).
-            if (e.target === e.currentTarget && !busy && !saving) {
-              setSuggestion(null);
-              setPickDate(null);
-            }
-          }}
-        >
-          <div className="bg-gradient-to-br from-stone-900 to-stone-800 text-white rounded-3xl shadow-2xl w-full max-w-xl sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden relative animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-            {/* Decorative sparkles, same flavour as the TodayTile card */}
-            <div className="absolute -right-16 -top-16 opacity-[0.06] rotate-12 pointer-events-none">
-              <Sparkles size={280} strokeWidth={0.8} />
-            </div>
-
-            <div className="relative p-6 sm:p-8">
-              {/* Header — title + close. Close hidden while composing. */}
-              <div className="flex items-start justify-between gap-3 mb-5">
-                <div>
-                  <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
-                    {busy ? 'Composing' : `Suggested · ${suggestion?.confidence ?? '–'}/100 confidence`}
-                  </p>
-                  <h2 className="font-display text-2xl sm:text-3xl mt-1">
-                    {busy ? 'Atelier is styling you…' : "Today's proposal"}
-                  </h2>
-                </div>
-                {!busy && !saving && (
-                  <button
-                    onClick={() => { setSuggestion(null); setPickDate(null); }}
-                    aria-label="Close"
-                    className="shrink-0 -mt-1 -mr-1 p-2 rounded-full hover:bg-white/10 transition-colors"
-                  >
-                    <X size={18} strokeWidth={1.5} />
-                  </button>
-                )}
-              </div>
-
-              {busy ? (
-                /* Progress state — animated bar + thumbnails fading in */
-                <div className="py-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-brass-300 rounded-full animate-pulse" style={{ width: '40%' }} />
-                    </div>
-                    <span className="text-xs text-stone-400 tracking-wide">Reading the room…</span>
-                  </div>
-                  <p className="text-sm text-stone-400 leading-relaxed">
-                    Pulling your owned pieces, weighing what fits today's {weather?.temp}°C and the season,
-                    leaning on your style profile.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* The proposed outfit — wraps to a grid so the modal never
-                      scrolls sideways. 3 cols on mobile, 4 on small/medium,
-                      5 on larger screens. Most outfits are 5-7 pieces. */}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
-                    {suggestedPieces.map((p) => (
-                      <div key={p.id} className="min-w-0">
-                        <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
-                          {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
-                        </div>
-                        <p className="text-[11px] text-stone-300 truncate">{p.name}</p>
-                        <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {suggestion?.reasoning && (
-                    <p className="text-sm text-stone-300 italic mt-5 leading-relaxed bg-white/5 border border-white/10 rounded-xl p-4">
-                      "{suggestion.reasoning}"
-                    </p>
-                  )}
-
-                  {/* Actions */}
-                  {pickDate === null ? (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-6">
-                        <button onClick={wearToday} disabled={saving || !onLogOutfitWear}
-                          className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
-                          <Calendar size={14} strokeWidth={1.5} /> Wear today
-                        </button>
-                        <button onClick={saveAsLook} disabled={saving || !onSaveOutfit}
-                          className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-white text-stone-900 hover:bg-stone-100 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
-                          <Bookmark size={14} strokeWidth={1.5} /> Save look
-                        </button>
-                        <button onClick={() => setPickDate(todayISO())} disabled={saving || !onScheduleOutfit}
-                          className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
-                          <Calendar size={14} strokeWidth={1.5} /> Schedule…
-                        </button>
-                      </div>
-                      <div className="flex justify-between items-center mt-5 pt-5 border-t border-white/10">
-                        <button onClick={generate} disabled={busy || saving}
-                          className="text-[11px] tracking-widest uppercase text-stone-400 hover:text-white disabled:opacity-40 transition-colors inline-flex items-center gap-1.5">
-                          ↻ Try a different look
-                        </button>
-                        <button onClick={() => { setSuggestion(null); setPickDate(null); }} disabled={saving}
-                          className="text-[11px] tracking-widest uppercase text-stone-400 hover:text-white transition-colors">
-                          Discard
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="mt-6 bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-                      <div>
-                        <p className="text-[10px] tracking-widest uppercase text-stone-300 mb-2">Schedule for</p>
-                        <input type="date" value={pickDate} min={todayISO()}
-                          onChange={(e) => setPickDate(e.target.value)}
-                          className="w-full sm:w-auto bg-stone-800 text-white text-sm px-4 py-2.5 rounded-xl border border-white/10 focus:border-brass-300 outline-none" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] tracking-widest uppercase text-stone-300 mb-2">Event <span className="text-stone-500 normal-case tracking-wide font-normal">— optional</span></p>
-                        <input type="text" value={pickEventName} maxLength={60}
-                          onChange={(e) => setPickEventName(e.target.value)}
-                          placeholder="e.g. Anna's wedding, Monday meeting…"
-                          className="w-full bg-stone-800 text-white text-sm px-4 py-2.5 rounded-xl border border-white/10 focus:border-brass-300 outline-none placeholder-stone-500" />
-                        <p className="text-[10px] text-stone-500 mt-1.5">Surfaces as a tag on the Today card and the countdown.</p>
-                      </div>
-                      <div className="flex gap-2 justify-end pt-1">
-                        <button onClick={() => { setPickDate(null); setPickEventName(''); }} disabled={saving}
-                          className="text-xs tracking-widest uppercase px-4 py-2.5 rounded-full text-stone-400 hover:text-white">
-                          Cancel
-                        </button>
-                        <button onClick={() => scheduleFor(pickDate)} disabled={saving || !pickDate}
-                          className="text-xs tracking-widest uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 font-medium">
-                          {saving ? 'Saving…' : 'Confirm'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>,
-        document.body
       )}
     </div>
   );
@@ -6580,13 +6346,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           outfits={outfits}
           schedules={schedules}
           weather={weather}
-          weatherSeasons={weatherSeasons}
-          aiTemperature={aiTemperature}
-          measurements={measurements}
           onOpenOutfit={onOpenOutfit}
-          onScheduleOutfit={onScheduleOutfit}
-          onSaveOutfit={onSaveOutfit}
-          onLogOutfitWear={onLogOutfitWear}
         />
         <DailyDigest
           items={items}
@@ -6953,13 +6713,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           outfits={outfits}
           schedules={schedules}
           weather={weather}
-          weatherSeasons={weatherSeasons}
-          aiTemperature={aiTemperature}
-          measurements={measurements}
           onOpenOutfit={onOpenOutfit}
-          onScheduleOutfit={onScheduleOutfit}
-          onSaveOutfit={onSaveOutfit}
-          onLogOutfitWear={onLogOutfitWear}
         />
 
         <DailyDigest

@@ -4473,6 +4473,7 @@ function DigitalWardrobe() {
                       onHardDeleteItem={handleHardDeleteItem}
                       onUpdateItem={handleAddItem}
                       subStatus={subStatus}
+                      onOpenInsights={() => setActiveTab('finance')}
                     />
                   )}
                   {activeTab === 'shops' && (
@@ -19882,7 +19883,7 @@ function SubscriptionPill({ state }) {
   return <p className="mt-2 text-sm text-stone-400">Membership status unavailable.</p>;
 }
 
-function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus }) {
+function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights }) {
   const currency = measurements?.currency || 'GBP';
   const aiTempPreset = measurements?.aiTemperaturePreset || 'balanced';
   const setCurrency = (v) => saveMeasurements({ ...measurements, currency: v });
@@ -20022,6 +20023,17 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
               full pill with label on sm+. The icon alone is universally
               understood for sign-out (door-with-arrow) so this stays
               accessible without a label. */}
+          {/* Insights is a sidebar pillar on desktop; on mobile (no sidebar)
+              it's reached here, from the Profile screen. */}
+          {onOpenInsights && (
+            <button
+              onClick={onOpenInsights}
+              className="lg:hidden flex items-center gap-2 px-3 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors shrink-0"
+              aria-label="Insights"
+            >
+              <BarChart3 size={14} strokeWidth={1.5} />
+            </button>
+          )}
           <button
             onClick={signOutUser}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors shrink-0"

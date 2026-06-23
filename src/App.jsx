@@ -2458,9 +2458,67 @@ function itemCostPerWear(item) {
   return price / wears;
 }
 
-// Smart recommendation: prefers items you OWNED + haven't worn in 14+ days +
-// match current season. Picks one item. Returns null if nothing eligible.
-function pickTodaysRecommendation(items) {
+// Score an item's weather appropriateness against today's temperature.
+// Returns 0..1 (1 = ideal, 0 = strongly inappropriate). Used by
+// pickTodaysRecommendation to avoid suggesting a wool sweater in 30°C heat
+// or a tank top in 5°C cold.
+//
+// Reads category, subCategory, and styles for signals. Defaults to 0.5
+// (neutral) when there's no signal to penalise or reward — so unflagged
+// items still surface, just not over a clearly-appropriate piece.
+function weatherAppropriatenessScore(item, tempC) {
+  if (tempC == null || Number.isNaN(tempC)) return 0.5; // no temp info → neutral
+  const cat = (item.category || '').toLowerCase();
+  const sub = (item.subCategory || '').toLowerCase();
+  const styles = (itemStyles(item) || []).map((s) => (s || '').toLowerCase());
+  const text = `${cat} ${sub} ${styles.join(' ')}`;
+
+  // Buckets:
+  //   hot:  tempC >= 26  — sleeveless / shorts / dresses ideal; knits/coats penalised
+  //   warm: 18-25        — light layers / chinos / t-shirts ideal
+  //   cool: 10-17        — sweaters / long sleeves / jeans ideal
+  //   cold: < 10         — coats / boots / wool / layers ideal
+  const HEAVY_PATTERNS = ['coat', 'jacket', 'blazer', 'sweater', 'jumper', 'knit', 'wool', 'cashmere', 'puffer', 'parka', 'trench', 'leather jacket', 'turtleneck'];
+  const LIGHT_PATTERNS = ['tank', 'sleeveless', 'camisole', 'cami', 't-shirt', 'tee', 'shorts', 'sundress', 'sandal', 'flip', 'linen', 'cotton'];
+  const LONG_SLEEVE_PATTERNS = ['long sleeve', 'long-sleeve', 'long sleeved'];
+  const LAYER_PATTERNS = ['cardigan', 'cardi', 'gilet', 'vest'];
+
+  const hasAny = (patterns) => patterns.some((p) => text.includes(p));
+
+  let score = 0.5;
+  if (tempC >= 26) {
+    // Hot day
+    if (hasAny(HEAVY_PATTERNS)) score -= 0.45;          // wool jumper on 28°C day = bad
+    if (hasAny(LONG_SLEEVE_PATTERNS)) score -= 0.25;    // long-sleeve top on a hot day = also bad
+    if (hasAny(LIGHT_PATTERNS)) score += 0.35;
+    if (cat === 'dresses' && sub.includes('summer')) score += 0.2;
+    if (cat === 'shoes' && (sub.includes('sandal') || text.includes('open'))) score += 0.15;
+  } else if (tempC >= 18) {
+    // Warm day
+    if (hasAny(HEAVY_PATTERNS) && !hasAny(LAYER_PATTERNS)) score -= 0.25;
+    if (hasAny(LIGHT_PATTERNS)) score += 0.2;
+    if (cat === 'outerwear' && (sub.includes('coat') || sub.includes('parka') || sub.includes('puffer'))) score -= 0.3;
+  } else if (tempC >= 10) {
+    // Cool day
+    if (hasAny(LIGHT_PATTERNS) && !hasAny(LAYER_PATTERNS)) score -= 0.2;
+    if (hasAny(HEAVY_PATTERNS) || hasAny(LAYER_PATTERNS)) score += 0.15;
+  } else {
+    // Cold day
+    if (hasAny(LIGHT_PATTERNS)) score -= 0.45;
+    if (cat === 'outerwear' && (sub.includes('coat') || sub.includes('parka') || sub.includes('puffer'))) score += 0.35;
+    if (hasAny(HEAVY_PATTERNS)) score += 0.25;
+    if (cat === 'shoes' && (sub.includes('boot') || sub.includes('ankle'))) score += 0.15;
+  }
+  return Math.max(0, Math.min(1, score));
+}
+
+// Smart recommendation: prefers items you OWN + haven't worn recently +
+// are appropriate for today's actual temperature band. Picks one item.
+// Returns null if nothing eligible.
+//
+// tempC should be the day's HIGH (weather.temp from Open-Meteo daily max).
+// Pass null when geolocation is unavailable — falls back to season-only scoring.
+function pickTodaysRecommendation(items, tempC = null) {
   const owned = live(items).filter((i) => i.status === 'owned');
   if (owned.length === 0) return null;
   const month = new Date().getMonth();
@@ -2476,11 +2534,18 @@ function pickTodaysRecommendation(items) {
     // starred should surface more often as Today's Pick than equally-suitable
     // unstarred items.
     const favouriteBoost = item.favorite ? 0.25 : 0;
-    const score = seasonFit * 0.55 + recency * 0.2 + favouriteBoost;
-    return { item, score };
+    const weatherFit = weatherAppropriatenessScore(item, tempC);
+    // Weather is the dominant signal when known (0.45 weight); season is
+    // secondary (0.25); recency + favourite remain meaningful tie-breakers.
+    const score = weatherFit * 0.45 + seasonFit * 0.25 + recency * 0.15 + favouriteBoost * 0.15;
+    return { item, score, weatherFit };
   });
   scored.sort((a, b) => b.score - a.score);
-  const top = scored.slice(0, Math.max(3, Math.floor(scored.length * 0.2)));
+  // Hard filter: anything with weatherFit < 0.2 is too inappropriate for
+  // today's weather to ever be Today's Pick, no matter how favourited or
+  // unworn. (Wool jumper on a 34°C day = never Today's Pick.)
+  const eligible = scored.filter((s) => s.weatherFit >= 0.2);
+  const top = (eligible.length > 0 ? eligible : scored).slice(0, Math.max(3, Math.floor(scored.length * 0.2)));
   if (top.length === 0) return null;
   // Seed pick by today's date so it stays stable through the day, then rotates.
   const todayKey = new Date().toISOString().slice(0, 10);
@@ -6028,15 +6093,17 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
     return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter';
   })();
 
-  // Recommendation factors in weather when available — prefers items whose
-  // seasons match the day's temperature band.
+  // Recommendation uses actual temperature for appropriateness scoring.
+  // weather.temp is the day's HIGH from Open-Meteo daily max — the right
+  // number for dressing decisions. Falls back gracefully to null when
+  // geolocation is denied or the fetch hasn't settled yet.
   const pickRec = () => {
     const owned = items.filter((i) => i.status === 'owned');
     if (owned.length === 0) return null;
-    const weatherMatched = weatherSeasons
-      ? owned.filter((i) => itemSeasons(i).some((s) => weatherSeasons.includes(s)) || itemSeasons(i).length === 0)
-      : owned;
-    return pickTodaysRecommendation(weatherMatched.length ? weatherMatched : owned);
+    // weather.temp is the daily max temperature (°C). weatherAppropriatenessScore
+    // inside pickTodaysRecommendation handles null gracefully (neutral 0.5).
+    const tempC = weather?.temp ?? null;
+    return pickTodaysRecommendation(owned, tempC);
   };
   const [recommendation, setRecommendation] = useState(() => pickRec());
   useEffect(() => { setRecommendation(pickRec()); /* eslint-disable-next-line */ }, [items.length, weather]);
@@ -6729,15 +6796,23 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
 
         {recommendation && (() => {
           const reasons = [];
-          const seasons = itemSeasons(recommendation);
-          if (weather && weatherSeasons && seasons.some((s) => weatherSeasons.includes(s))) {
-            reasons.push(`fits today's ${weather.temp}°C`);
-          } else if (weather) {
-            reasons.push(`for today's ${weather.temp}°C · ${weatherLabel(weather.code, weather.precipProb)}`);
+          const tempC = weather?.temp ?? null;
+          if (tempC != null) {
+            const fit = weatherAppropriatenessScore(recommendation, tempC);
+            // Only show the weather note when the item genuinely passes
+            // temperature appropriateness (fit >= 0.5 = neutral-to-good).
+            // Below that it still surfaces as Today's Pick (no hard block at
+            // the card level — the hard filter is inside pickTodaysRecommendation),
+            // but we don't mislead with "fits today's 34°C" for a borderline pick.
+            if (fit >= 0.5) {
+              reasons.push(`fits today's ${Math.round(tempC)}°C`);
+            } else {
+              reasons.push(`for today's ${Math.round(tempC)}°C`);
+            }
           }
           const days = daysSinceLastWorn(recommendation);
-          if (days === null) reasons.push("you haven't worn it yet");
-          else if (days >= 60) reasons.push(`unworn for ${days} days`);
+          if (days === null) reasons.push("never worn");
+          else if (days >= 30) reasons.push(`not worn in ${Math.floor(days / 30)} month${days < 60 ? '' : 's'}`);
           else if (days >= 14) reasons.push(`not worn in ${days} days`);
           return (
             <button onClick={() => onItemClick?.(recommendation.id)}

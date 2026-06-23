@@ -1032,15 +1032,41 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
 }
 function loadImageForCanvas(src) {
   if (!src) return Promise.resolve(null);
-  return new Promise((res) => {
+
+  // Data URLs are same-origin so no CORS attr needed and setting it
+  // can actually break them in some browsers.
+  const isData = src.startsWith('data:');
+
+  const tryLoad = (url, useCors) => new Promise((res) => {
     const img = new Image();
-    // Data URLs are same-origin so no CORS attr needed (and setting it
-    // can actually break them in some browsers). Only set crossOrigin
-    // for http/https sources where we need the canvas to stay un-tainted.
-    if (!src.startsWith('data:')) img.crossOrigin = 'anonymous';
+    if (useCors && !isData) img.crossOrigin = 'anonymous';
     img.onload = () => res(img);
     img.onerror = () => res(null);
-    img.src = src;
+    img.src = url;
+  });
+
+  return new Promise(async (resolve) => {
+    // First try: direct load with CORS attr — works for Firebase Storage,
+    // weserv-proxied URLs, and any CDN that sends ACAO headers.
+    const direct = await tryLoad(src, true);
+    if (direct) return resolve(direct);
+
+    // For data URLs there's nothing else to try
+    if (isData) return resolve(null);
+
+    // Fallback: route through weserv.nl which re-emits the image with
+    // permissive CORS headers. This unblocks third-party CDNs that
+    // refuse to send ACAO themselves (Monica Vinader, etc).
+    try {
+      const u = new URL(src);
+      const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(u.hostname + u.pathname + u.search)}`;
+      const viaProxy = await tryLoad(proxied, true);
+      if (viaProxy) return resolve(viaProxy);
+    } catch {
+      // bad URL — fall through to null
+    }
+
+    resolve(null);
   });
 }
 function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 2) {
@@ -1209,8 +1235,57 @@ async function composeOutfitExportImage(outfit, items) {
       else         { sw = img.width;  sh = sw / ca; sx = 0; sy = (img.height - sh) / 2; }
       ctx.drawImage(img, sx, sy, sw, sh, x, y, cellW, cellH);
       ctx.restore();
+    } else {
+      // Image failed to load (CORS-blocked, dead URL, or no image set).
+      // Render a typographic placeholder so the cell still credits the
+      // piece instead of going blank.
+      const cx = x + cellW / 2;
+      const cy = y + cellH / 2;
+      // Small geometric mark — a brass-stroked circle
+      ctx.beginPath();
+      ctx.arc(cx, cy - 36, 18, 0, Math.PI * 2);
+      ctx.strokeStyle = BRASS;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Brand line (small caps tracked)
+      if (p.brand) {
+        ctx.font = '500 18px Jost, sans-serif';
+        ctx.fillStyle = MUTED;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.brand.toUpperCase().slice(0, 22), cx, cy + 6);
+      }
+      // Item name (serif italic — editorial caption style)
+      if (p.name) {
+        ctx.font = 'italic 500 22px "Playfair Display", Georgia, serif';
+        ctx.fillStyle = INK;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Wrap to 2 lines if needed; truncate if longer
+        const nameMaxWidth = cellW - 40;
+        const words = p.name.split(/\s+/);
+        let line1 = '', line2 = '';
+        for (const w of words) {
+          const test = line1 ? `${line1} ${w}` : w;
+          if (ctx.measureText(test).width <= nameMaxWidth) line1 = test;
+          else { line2 = words.slice(words.indexOf(w)).join(' '); break; }
+        }
+        if (line2) {
+          // Truncate line2 if too long
+          while (ctx.measureText(line2 + '…').width > nameMaxWidth && line2.length > 0) {
+            line2 = line2.slice(0, -1);
+          }
+          if (line2.length < words.slice(line1.split(' ').length).join(' ').length) line2 = line2 + '…';
+          ctx.fillText(line1, cx, cy + 36);
+          ctx.fillText(line2, cx, cy + 64);
+        } else {
+          ctx.fillText(line1, cx, cy + 36);
+        }
+      }
+      // Reset text alignment for downstream drawing
+      ctx.textAlign = 'left';
     }
-    // Hairline frame
+    // Hairline frame (unchanged)
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
     ctx.lineWidth = 1.5;
     drawRoundedRect(ctx, x, y, cellW, cellH, 24);

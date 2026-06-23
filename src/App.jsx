@@ -530,7 +530,7 @@ function summariseStyleProfile(measurements) {
   return `Style profile: ${bits.join('; ')}.`;
 }
 
-async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null }) {
+async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null, calendarEvents = [] }) {
   if (!isAIEnabled()) {
     throw new Error('Concierge is not yet set up. Add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local to enable styling.');
   }
@@ -554,13 +554,20 @@ async function generateOutfitWithGemini({ items, intent, weather, season, previo
     ? `\n\nFOCAL PIECE — the outfit MUST be built around this exact item (do not omit it, do not substitute):\n- id=${mustIncludeItem.id} · ${mustIncludeItem.name} by ${mustIncludeItem.brand || '?'} · ${mustIncludeItem.category}${mustIncludeItem.subCategory ? '/' + mustIncludeItem.subCategory : ''}\nInclude '${mustIncludeItem.id}' in itemIds. Build complementary pieces from the rest of the wardrobe that work with its colour, style and category.\n`
     : '';
 
+  const eventsHint = calendarEvents.length > 0
+    ? `\n\nWHAT THE USER HAS ON TODAY:
+${calendarEvents.map((e) => `- ${e.allDay ? 'All day' : new Date(e.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}: ${e.title}${e.location ? ` (${e.location})` : ''}`).join('\n')}
+
+Dress for the most demanding event of the day — if there's a board meeting AND a casual lunch, dress for the board meeting. Reflect this in the reasoning sentence.\n`
+    : '';
+
   const prompt = `You are an expert personal stylist. From the user's wardrobe below, build ONE coherent outfit that genuinely works together visually.${refinementBlock}${mustIncludeBlock}
 
 User context:
 - Intent: ${intent || 'an everyday look'}
 - Today's weather: ${weather ? `${weather.temp}°C, ${weatherLabel(weather.code, weather.precipProb)}${weather.precipProb != null ? ` (${weather.precipProb}% rain chance)` : ''}` : 'unknown'}
 - Current season: ${season}
-${styleProfile ? `- ${styleProfile}` : ''}
+${styleProfile ? `- ${styleProfile}` : ''}${eventsHint}
 
 Stylist rules:
 - Pick AT MOST one item per category slot for: Tops, Outerwear, Bottoms, Dresses, Shoes, Bags, Accessories.
@@ -1825,7 +1832,7 @@ Reply with the narrative only — no preamble, no quotes.`;
 //
 // Returns the assistant's reply text. Throws on AI failure so the
 // caller can surface a graceful error in the chat thread.
-async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '', onChunk = null }) {
+async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '', calendarEvents = [], onChunk = null }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
 
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
@@ -1880,6 +1887,16 @@ async function generateConciergeReply({ messages, items = [], outfits = [], styl
 ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.occasion}`).join('\n')}\n`
     : '';
 
+  const eventsBlock = calendarEvents.length > 0
+    ? `\nON THE CLIENT'S CALENDAR TODAY:
+${calendarEvents.map((e) => {
+  const time = e.allDay ? 'All day' : new Date(e.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return `  - ${time}: ${e.title}${e.location ? ` (${e.location})` : ''}`;
+}).join('\n')}
+
+Dress the client for these events — match formality to the occasion (a board meeting calls for sharper tailoring than a coffee catch-up). Only reference an event when it's clearly relevant to the wardrobe question; don't shoehorn it in.\n`
+    : '';
+
   // Indexed item list — the model uses these IDs to anchor specific
   // mentions. Wrapped in <<item:id|name>> markers so the renderer can
   // swap each marker for an inline thumbnail chip without fuzzy name-
@@ -1914,7 +1931,7 @@ Today is ${todayLabel}.
 ${styleProfile ? `\nThe client's style profile: ${styleProfile}\n` : ''}
 ${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
 ${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}
-${chipRule}${wearContextsBlock}
+${chipRule}${wearContextsBlock}${eventsBlock}
 When proposing an outfit, format as:
 A one-sentence rationale, then:
 • [Piece name] — short reason
@@ -5688,6 +5705,28 @@ function DailyBriefCard({
   const [wearState, setWearState] = useState('idle'); // idle | wearing | done
   useEffect(() => { setSaveState('idle'); setWearState('idle'); }, [brief?.savedAt]);
 
+  // Best-effort: pull today's calendar events so the brief can dress for
+  // what's on. Guarded so non-connected users never fire the callable.
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    (async () => {
+      try {
+        const connected = await isCalendarConnected(user);
+        if (!connected || !alive) return;
+        const startISO = new Date(todayISO() + 'T00:00:00').toISOString();
+        const endISO = new Date(todayISO() + 'T23:59:59').toISOString();
+        const { events = [], reason } = await fetchCalendarEvents(startISO, endISO);
+        if (alive && reason !== 'revoked') setCalendarEvents(events);
+      } catch (err) {
+        // Calendar context is best-effort — never block styling on it.
+        console.warn('[calendar] event fetch for AI context failed:', err?.message);
+      }
+    })();
+    return () => { alive = false; };
+  }, [user]);
+
   // Auto-compose on first mount of the day if we have enough items and AI is on.
   // Errors here are quietly swallowed (no scary banner on every page load) —
   // but we flip autoFailed so the card stays visible with a manual-trigger
@@ -5715,6 +5754,7 @@ function DailyBriefCard({
         intent: 'a considered look for today',
         temperature: aiTemperature,
         slotIndex: 0,
+        calendarEvents,
       });
       return writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
     })
@@ -5743,6 +5783,7 @@ function DailyBriefCard({
         temperature: aiTemperature,
         slotIndex: slot,
         previous: brief,
+        calendarEvents,
       });
       const saved = writeDailyBrief(uid, { ...out, intent: 'a different considered look for today', slotIndex: slot });
       setBrief(saved);
@@ -6551,7 +6592,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           season={currentSeason}
           aiTemperature={aiTemperature}
           isAiEnabled={isAIEnabled()}
-          onGenerateOutfit={async ({ intent, temperature, previous }) => {
+          onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents }) => {
             return generateOutfitWithGemini({
               items,
               intent,
@@ -6560,6 +6601,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
               styleProfile: summariseStyleProfile(measurements),
               temperature,
               previousOutfit: previous ? (previous.itemIds || []).map(id => items.find(it => it.id === id)).filter(Boolean) : null,
+              calendarEvents,
             });
           }}
           onSaveOutfit={onSaveOutfit}
@@ -6917,7 +6959,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           season={currentSeason}
           aiTemperature={aiTemperature}
           isAiEnabled={isAIEnabled()}
-          onGenerateOutfit={async ({ intent, temperature, previous }) => {
+          onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents }) => {
             return generateOutfitWithGemini({
               items,
               intent,
@@ -6926,6 +6968,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
               styleProfile: summariseStyleProfile(measurements),
               temperature,
               previousOutfit: previous ? (previous.itemIds || []).map(id => items.find(it => it.id === id)).filter(Boolean) : null,
+              calendarEvents,
             });
           }}
           onSaveOutfit={onSaveOutfit}
@@ -15760,6 +15803,28 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
 
+  // Best-effort: pull today's calendar events so the stylist can dress for
+  // what's on. Guarded so non-connected users never fire the callable.
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    (async () => {
+      try {
+        const connected = await isCalendarConnected(user);
+        if (!connected || !alive) return;
+        const startISO = new Date(todayISO() + 'T00:00:00').toISOString();
+        const endISO = new Date(todayISO() + 'T23:59:59').toISOString();
+        const { events = [], reason } = await fetchCalendarEvents(startISO, endISO);
+        if (alive && reason !== 'revoked') setCalendarEvents(events);
+      } catch (err) {
+        // Calendar context is best-effort — never block styling on it.
+        console.warn('[calendar] event fetch for AI context failed:', err?.message);
+      }
+    })();
+    return () => { alive = false; };
+  }, [user]);
+
   // Focus the input when the panel opens.
   useEffect(() => {
     textareaRef.current?.focus();
@@ -15816,6 +15881,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         outfits,
         styleProfile,
         ownerFirstName,
+        calendarEvents,
         onChunk: (chunk) => {
           if (cancelledRef.current) return;
           lastChunkAt = performance.now(); // reset idle timer
@@ -15899,6 +15965,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         outfits,
         styleProfile,
         ownerFirstName,
+        calendarEvents,
         onChunk: (chunk) => {
           if (cancelledRef.current) return;
           lastChunkAt = performance.now(); // reset idle timer

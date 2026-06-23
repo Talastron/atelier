@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc, query, orderBy } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount, findProductListingFromPhoto, connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount, findProductListingFromPhoto, connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, fetchCalendarEvents } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
@@ -13328,6 +13328,34 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
   const [showRangeHint, setShowRangeHint] = useState(false);
   const toast = useToast();
 
+  const [dayEvents, setDayEvents] = useState([]);
+  const [calendarOff, setCalendarOff] = useState(false); // true once we learn calendar isn't connected/available — stops retrying this session
+  const eventCacheRef = useRef({}); // { 'YYYY-MM-DD': [events] } — per-session cache so re-selecting a day doesn't refetch
+
+  useEffect(() => {
+    if (!selectedDate || calendarOff) { setDayEvents([]); return; }
+    const cached = eventCacheRef.current[selectedDate];
+    if (cached) { setDayEvents(cached); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const startISO = new Date(selectedDate + 'T00:00:00').toISOString();
+        const endISO = new Date(selectedDate + 'T23:59:59').toISOString();
+        const { events = [], reason } = await fetchCalendarEvents(startISO, endISO);
+        if (!alive) return;
+        if (reason === 'revoked') { setCalendarOff(true); setDayEvents([]); return; }
+        eventCacheRef.current[selectedDate] = events;
+        setDayEvents(events);
+      } catch (err) {
+        if (!alive) return;
+        // 'failed-precondition' = not connected. Any error → stop trying this session, hide the block.
+        setCalendarOff(true);
+        setDayEvents([]);
+      }
+    })();
+    return () => { alive = false; };
+  }, [selectedDate, calendarOff]);
+
   useEffect(() => {
     if (autoActivateRangeMode) {
       setRangeMode(true);
@@ -13633,6 +13661,26 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                 </div>
               )}
             </div>
+
+            {dayEvents.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2.5 mb-1.5">
+                  <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
+                  <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500">On your calendar</span>
+                </div>
+                <ul className="space-y-1">
+                  {dayEvents.map((e) => (
+                    <li key={e.id} className="text-[12px] text-stone-700 flex items-baseline gap-2">
+                      <span className="text-stone-400 tabular-nums tracking-wide shrink-0">
+                        {e.allDay ? 'All day' : new Date(e.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <span className="truncate">{e.title}</span>
+                      {e.location && <span className="text-stone-400 italic truncate">· {e.location}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {scheduledOutfit && (
               <div className="rounded-2xl border border-amber-200 overflow-hidden">

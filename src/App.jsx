@@ -3031,6 +3031,12 @@ function DigitalWardrobe() {
   const [editingItem, setEditingItem] = useState(null);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const liveItems = items.filter(isLive);
+  // Items the user actually OWNS (not deleted, not wishlist).
+  // Use this for composition, counts, AI analysis — anywhere "what's in
+  // your wardrobe today" matters. liveItems still exists for views that
+  // LEGITIMATELY need both owned + wishlist (the Wardrobe browser with
+  // its filters, the Wishlist tab, etc).
+  const ownedItems = liveItems.filter((i) => i.status === 'owned');
   const deletedItems = items.filter(isDeleted);
   const mainScrollRef = React.useRef(null);
   // Show a floating ↑ button once the user has scrolled. Universal fallback
@@ -3710,7 +3716,7 @@ function DigitalWardrobe() {
   };
   const handleAnalyzeInspiration = async (insp) => {
     if (!user) return;
-    const analysis = await analyzeInspirationWithGemini({ imageDataUrl: insp.image, items: liveItems });
+    const analysis = await analyzeInspirationWithGemini({ imageDataUrl: insp.image, items: ownedItems });
     await setDoc(doc(userInspirationRef(user.uid), insp.id), { ...insp, analysis });
     toast.show('Analysis complete', { kind: 'success' });
   };
@@ -4013,7 +4019,7 @@ function DigitalWardrobe() {
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
                       mode="studio"
-                      items={liveItems}
+                      items={ownedItems}
                       outfits={outfits}
                       saveOutfit={handleSaveOutfit}
                       deleteOutfit={handleDeleteOutfit}
@@ -4039,7 +4045,7 @@ function DigitalWardrobe() {
                   {activeTab === 'lookbook' && (
                     <OutfitBuilder
                       mode="lookbook"
-                      items={liveItems}
+                      items={ownedItems}
                       outfits={outfits}
                       saveOutfit={handleSaveOutfit}
                       deleteOutfit={handleDeleteOutfit}
@@ -4060,7 +4066,7 @@ function DigitalWardrobe() {
                       onInitialTabConsumed={() => setLookbookInitialTab(null)}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => { setLookbookInitialTab('diary'); setActiveTab('lookbook'); }} />}
+                  {activeTab === 'finance' && <FinanceView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => { setLookbookInitialTab('diary'); setActiveTab('lookbook'); }} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}
@@ -4070,7 +4076,7 @@ function DigitalWardrobe() {
                       allowlist={allowlist}
                       addInvite={handleAddInvite}
                       removeInvite={handleRemoveInvite}
-                      items={liveItems}
+                      items={ownedItems}
                       deletedItems={deletedItems}
                       outfits={outfits}
                       inspirations={inspirations}
@@ -4268,7 +4274,7 @@ function DigitalWardrobe() {
           {isConciergeOpen && (
             <AtelierConcierge
               onClose={() => setIsConciergeOpen(false)}
-              items={liveItems}
+              items={ownedItems}
               outfits={outfits}
               styleProfile={summariseStyleProfile(measurements)}
               measurements={measurements}
@@ -6080,6 +6086,12 @@ function sortWardrobeItems(items, sortBy) {
 }
 
 function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge, onOpenBrief, onEditPreferences }) {
+  // Header counts — owned only for the primary count; wishlist as secondary.
+  // items here is liveItems (all non-deleted) so WardrobeView can show its own
+  // All/Owned/Wishlist filter. Counts are derived separately so the headline
+  // only reflects pieces the user actually owns.
+  const ownedCount = items.filter((i) => i.status === 'owned').length;
+  const wishlistCount = items.filter((i) => i.status === 'wishlist').length;
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const enterSelectMode = (firstId = null) => {
@@ -6384,7 +6396,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           )}
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-3xl xl:text-4xl font-display text-stone-900 tracking-tight leading-[1.05]">Your Collection</h2>
           <p className="text-stone-500 mt-2 md:mt-3 lg:mt-1 text-xs md:text-sm tracking-wide uppercase font-medium">
-            {items.length} Pieces Curated
+            {ownedCount} Pieces Curated{wishlistCount > 0 && <span className="normal-case tracking-normal font-normal text-stone-400 ml-1.5">· {wishlistCount} on wishlist</span>}
           </p>
           {/* THE CONCIERGE — small inline CTA right under the greeting.
               Most discoverable on landing without being a banner-style
@@ -9979,6 +9991,15 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   }, [initialTab]);
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
+  // Studio archives: by default only owned items appear in slot pools.
+  // When includeWishlist is ON, wishlist items are also eligible and get
+  // a brass "WISHLIST" badge so the user knows they're composing around
+  // a piece they don't yet own.
+  const [includeWishlist, setIncludeWishlist] = useState(false);
+  const composableItems = useMemo(
+    () => includeWishlist ? items : items.filter((i) => i.status === 'owned'),
+    [items, includeWishlist]
+  );
   // Single accordion: at most one slot expanded at a time in the Wardrobe
   // Archives. null = all collapsed.
   const [expandedSlot, setExpandedSlot] = useState(null);
@@ -10646,6 +10667,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           <div className="hidden lg:block absolute top-1.5 left-1.5 p-1 bg-white/85 backdrop-blur rounded-full text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             <GripVertical size={11} strokeWidth={1.5} />
           </div>
+          {item.status === 'wishlist' && (
+            <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[8px] tracking-widest uppercase font-medium pointer-events-none">
+              Wishlist
+            </span>
+          )}
         </div>
         <p className="text-xs font-medium text-stone-900 truncate px-1">{item.name}</p>
         <p className="text-[10px] text-stone-500 uppercase tracking-wider px-1 mt-0.5">{item.brand}</p>
@@ -11137,9 +11163,23 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               <div className="flex items-baseline justify-between mb-4 sm:mb-6 px-2">
                 <h3 className="font-display text-xl md:text-2xl text-stone-900">Wardrobe Archives</h3>
               </div>
+              {items.some((i) => i.status === 'wishlist') && (
+                <div className="flex items-center gap-2 mb-4 px-2">
+                  <label className="text-[10px] tracking-widest uppercase text-stone-500 cursor-pointer flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={includeWishlist}
+                      onChange={(e) => setIncludeWishlist(e.target.checked)}
+                      className="w-3.5 h-3.5 accent-stone-900"
+                    />
+                    Include wishlist
+                    {includeWishlist && <span className="text-stone-400 normal-case tracking-normal">({items.filter((i) => i.status === 'wishlist').length} items)</span>}
+                  </label>
+                </div>
+              )}
               <div className="space-y-2">
                 {OUTFIT_SLOTS.map((slot) => {
-                  const pool = items.filter((i) => itemFitsSlot(i, slot));
+                  const pool = composableItems.filter((i) => itemFitsSlot(i, slot));
                   const filled = slotItems(currentOutfit[slot.toLowerCase()]);
                   const covered = isSlotCovered(slot);
                   const isExpanded = expandedSlot === slot;

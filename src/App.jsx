@@ -1429,6 +1429,67 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
               </button>
             )}
           </div>
+
+          {/* Social share options — visible mainly on desktop where Web Share
+              doesn't cover Pinterest/Instagram natively. On mobile the OS
+              share sheet typically already includes both if the apps are
+              installed, so we hide this row on small screens. */}
+          <div className="hidden sm:block pt-4 border-t border-stone-200/60">
+            <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mb-2.5">Share to</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!imageBlob || busy) return;
+                  setBusy(true);
+                  try {
+                    // Need a public URL for Pinterest. Try the existing onCreateLink
+                    // flow first — it generates a shareable link with the image
+                    // hosted on Firebase. Fall back: download the image so the user
+                    // can drag it to Pinterest manually.
+                    if (onCreateLink) {
+                      try {
+                        const publicUrl = await onCreateLink();
+                        if (publicUrl && typeof publicUrl === 'string') {
+                          const pinterestUrl = `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(publicUrl)}&description=${encodeURIComponent(outfit?.name || 'A look from Atelier')}`;
+                          window.open(pinterestUrl, '_blank', 'noopener,noreferrer,width=750,height=600');
+                          return;
+                        }
+                      } catch (linkErr) {
+                        console.warn('[share] onCreateLink failed:', linkErr?.message);
+                      }
+                    }
+                    // Fallback: download image + open Pinterest create-pin page
+                    handleDownload();
+                    window.open('https://www.pinterest.com/pin-builder/', '_blank', 'noopener,noreferrer');
+                    toast.show('Image saved — drag it into Pinterest', { kind: 'default', eyebrow: 'TIP' });
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+                disabled={!imageBlob || busy}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
+              >
+                <span className="w-4 h-4 rounded-full bg-[#E60023] text-white text-[9px] font-bold flex items-center justify-center" aria-hidden="true">P</span>
+                Pin to Pinterest
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDownload();
+                  toast.show('Image saved — open Instagram to post', { kind: 'default', eyebrow: 'TIP' });
+                }}
+                disabled={!imageBlob || busy}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
+              >
+                <span className="w-4 h-4 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white text-[9px] font-bold flex items-center justify-center" aria-hidden="true">i</span>
+                Save for Instagram
+              </button>
+            </div>
+            <p className="text-[10px] text-stone-400 italic mt-2">
+              On mobile, the standard Share button covers Pinterest, Instagram and more.
+            </p>
+          </div>
         </div>
       </div>
     </div>,

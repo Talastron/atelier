@@ -29,8 +29,9 @@ const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const PROD_REDIRECT = 'https://edit.myatelier.style/?calendarConnected=1';
 const LOCAL_REDIRECT = 'http://localhost:5173/?calendarConnected=1';
-const INTEGRATION_DOC = 'google_calendar';
-const STATE_DOC = '_oauth_state';
+const INTEGRATION_DOC = 'google_calendar';            // client-readable metadata
+const TOKENS_DOC = '_google_calendar_tokens';         // server-only (rule denies client reads on _-prefixed integrations)
+const STATE_DOC = '_oauth_state';                     // server-only (same convention)
 
 // --- Secrets -----------------------------------------------------------------
 
@@ -44,6 +45,10 @@ function integrationRef(uid) {
   return admin.firestore().doc(`users/${uid}/integrations/${INTEGRATION_DOC}`);
 }
 
+function tokensRef(uid) {
+  return admin.firestore().doc(`users/${uid}/integrations/${TOKENS_DOC}`);
+}
+
 function stateRef(uid) {
   return admin.firestore().doc(`users/${uid}/integrations/${STATE_DOC}`);
 }
@@ -53,13 +58,11 @@ function isRunningInEmulator() {
 }
 
 function isRevokedError(err) {
-  const code = err?.code || err?.response?.status;
-  const msg = String(err?.message || err?.response?.data?.error || '');
-  return (
-    code === 401 ||
-    msg.includes('invalid_grant') ||
-    msg.includes('Token has been expired or revoked')
-  );
+  // Only treat as "revoked" when Google explicitly says `invalid_grant`.
+  // Bare 401s or message-substring matches false-positive on transient errors,
+  // SDK upgrades, or misconfigured client pairs — and deleting the integration
+  // doc on a false positive forces the user through the OAuth dance again.
+  return err?.response?.data?.error === 'invalid_grant';
 }
 
 // --- 1. calendarOAuthStart ---------------------------------------------------
@@ -147,10 +150,15 @@ exports.calendarOAuthCallback = onRequest(
         return;
       }
 
-      await integrationRef(uid).set({
+      // Split storage: tokens to a server-only doc (underscore-prefixed, rule
+      // denies client reads); metadata to a client-readable doc so the SPA can
+      // show "Connected since…" without ever loading the refresh token.
+      await tokensRef(uid).set({
         refreshToken: tokens.refresh_token,
         accessToken: tokens.access_token,
         expiresAt: tokens.expiry_date,
+      });
+      await integrationRef(uid).set({
         scope: tokens.scope,
         connectedAt: Date.now(),
       });
@@ -168,10 +176,12 @@ exports.calendarOAuthCallback = onRequest(
 
 // --- 3. getCalendarEvents ----------------------------------------------------
 
+// minInstances: 0 — the daily-brief fetch happens once per session and is
+// chained with a Gemini call that takes ~500-1500ms, so a 1-2s cold start
+// is invisible. Revisit if usage patterns change.
 exports.getCalendarEvents = onCall(
   {
     region: REGION,
-    minInstances: 1,
     secrets: [GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI],
   },
   async (request) => {
@@ -192,12 +202,12 @@ exports.getCalendarEvents = onCall(
       throw new HttpsError('invalid-argument', 'startISO and endISO must be RFC3339 strings.');
     }
 
-    const snap = await integrationRef(uid).get();
-    if (!snap.exists) {
+    const tokensSnap = await tokensRef(uid).get();
+    if (!tokensSnap.exists) {
       throw new HttpsError('failed-precondition', 'Calendar not connected.');
     }
 
-    const stored = snap.data();
+    const stored = tokensSnap.data();
     const oauth2 = new google.auth.OAuth2(
       GOOGLE_OAUTH_CLIENT_ID.value(),
       GOOGLE_OAUTH_CLIENT_SECRET.value(),
@@ -222,7 +232,10 @@ exports.getCalendarEvents = onCall(
     } catch (err) {
       if (isRevokedError(err)) {
         logger.warn('Calendar access revoked; clearing integration', { uid });
-        await integrationRef(uid).delete();
+        await Promise.all([
+          tokensRef(uid).delete(),
+          integrationRef(uid).delete(),
+        ]);
         return { events: [], reason: 'revoked' };
       }
       logger.error('events.list failed', err);
@@ -232,7 +245,7 @@ exports.getCalendarEvents = onCall(
     // Persist refreshed access token if googleapis auto-refreshed it.
     const newAccessToken = oauth2.credentials.access_token;
     if (newAccessToken && newAccessToken !== stored.accessToken) {
-      await integrationRef(uid).update({
+      await tokensRef(uid).update({
         accessToken: newAccessToken,
         expiresAt: oauth2.credentials.expiry_date,
       });

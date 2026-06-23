@@ -48,8 +48,8 @@ function stateRef(uid) {
   return admin.firestore().doc(`users/${uid}/integrations/${STATE_DOC}`);
 }
 
-function isLocalHost(hostname) {
-  return !!hostname && (hostname.includes('localhost') || hostname.includes('127.0.0.1'));
+function isRunningInEmulator() {
+  return process.env.FUNCTIONS_EMULATOR === 'true';
 }
 
 function isRevokedError(err) {
@@ -157,7 +157,7 @@ exports.calendarOAuthCallback = onRequest(
 
       await stateRef(uid).delete();
 
-      const redirect = isLocalHost(req.hostname) ? LOCAL_REDIRECT : PROD_REDIRECT;
+      const redirect = isRunningInEmulator() ? LOCAL_REDIRECT : PROD_REDIRECT;
       res.redirect(redirect);
     } catch (err) {
       logger.error('calendarOAuthCallback failed', err);
@@ -180,9 +180,16 @@ exports.getCalendarEvents = onCall(
       throw new HttpsError('unauthenticated', 'Sign in required.');
     }
 
+    // Contract: startISO/endISO must be full RFC3339 timestamps WITH timezone
+    // offset (e.g. '2026-06-23T00:00:00+01:00'). The client is responsible for
+    // producing these from the user's local midnight/end-of-day. If we built
+    // them server-side from a YYYY-MM-DD date, they'd be interpreted in the
+    // Function's UTC timezone and shift the day window for non-UTC users (UK
+    // in BST is off by an hour). Forwarding the client's tz-aware values
+    // straight to Google avoids the ambiguity entirely.
     const { startISO, endISO } = request.data || {};
-    if (!startISO || !endISO) {
-      throw new HttpsError('invalid-argument', 'startISO and endISO are required.');
+    if (typeof startISO !== 'string' || typeof endISO !== 'string') {
+      throw new HttpsError('invalid-argument', 'startISO and endISO must be RFC3339 strings.');
     }
 
     const snap = await integrationRef(uid).get();
@@ -206,8 +213,8 @@ exports.getCalendarEvents = onCall(
     try {
       listResp = await google.calendar({ version: 'v3', auth: oauth2 }).events.list({
         calendarId: 'primary',
-        timeMin: new Date(startISO + 'T00:00:00').toISOString(),
-        timeMax: new Date(endISO + 'T23:59:59').toISOString(),
+        timeMin: startISO,
+        timeMax: endISO,
         singleEvents: true,
         orderBy: 'startTime',
         maxResults: 50,

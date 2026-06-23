@@ -760,11 +760,18 @@ async function analyzeInspirationWithGemini({ imageDataUrl, items }) {
 YOUR TASK:
 For EACH visible garment in the inspiration photo, decide whether the user OWNS something close enough to wear, OR is MISSING a piece they would need to buy.
 
-MATCHING RULES (be generous — close counts):
-- Same category (or close: a "shirt" matches "Tops/Shirts", a "trouser" matches "Bottoms/Trousers")
-- Compatible colour family (cream matches ivory/white; navy matches dark blue)
-- Compatible silhouette/style when the wardrobe item description suggests one
-If those three loosely align, treat it as MATCHED. Do not require perfection.
+MATCHING RULES (be GENEROUS — the user owns very few near-perfect matches; close is the target):
+- Same broad category (a "blouse" in the inspiration matches "Tops" in the wardrobe; a "shirt" matches "Tops/Shirts" OR "Tops/Blouses")
+- Compatible colour FAMILY (cream/ivory/white are interchangeable; navy/dark blue interchangeable; tan/camel/cognac interchangeable)
+- Compatible silhouette when both have silhouette info (loose fits loose, tailored fits tailored)
+- If the inspiration garment is generic (e.g. "white shirt") and the wardrobe has a "white linen shirt" or "white silk shirt" — that IS a match. The garment description does not need to be exact.
+- When in doubt, MATCH rather than mark missing. A user with a wardrobe of 100+ pieces almost always has a stand-in for any common item. Listing things as missing that they functionally own is the WORST failure mode.
+
+EXAMPLES of what counts as a match:
+- Inspiration "white linen button-down" + Wardrobe "Sleeveless Amalfi Linen Shirt" (White, by Holland Cooper) → MATCH (both white, both linen, both Tops)
+- Inspiration "tailored navy trousers" + Wardrobe "Slim Fit Stretch Chinos" (Navy, by Ralph Lauren) → MATCH (both Bottoms, both navy, both tailored-ish)
+- Inspiration "leather loafer" + Wardrobe "Barnsbury Driver Shoe" (Tan, by Ralph Lauren) → MATCH (both Shoes/Loafers, compatible colour)
+- Inspiration "gold cuff bracelet" + Wardrobe "MV Siren Muse Bold Cuff" (Gold, by Monica Vinader) → MATCH (both Jewellery/Cuffs, both gold)
 
 BRAND IDENTIFICATION (be conservative):
 - For each garment, set "brand_guess" ONLY if you can clearly identify the brand from a visible logo, signature design element, or extremely distinctive style (e.g. a Cartier Tank watch, Chanel quilted bag with CC clasp, Bottega Veneta intrecciato weave).
@@ -786,21 +793,21 @@ Respond ONLY with valid JSON in this exact shape:
       "brand_guess": "brand name or null — see brand identification rules above",
       "matchedItemId": "id_xyz_or_null",
       "matchConfidence": "high|medium|low or null — only set when matchedItemId is set",
-      "buyingNote": "string or null — only when matchedItemId is null. Include a brand-or-style suggestion when useful (e.g. 'a tailored navy blazer with peak lapels — Ralph Lauren or Theory style')"
+      "buyingNote": "string or null — only when matchedItemId is null. Include a brand-or-style suggestion when useful (e.g. 'a tailored navy blazer with peak lapels — Ralph Lauren or Theory style'). When matchedItemId is set with confidence medium or low, you MAY instead include a note of the form 'you have a similar piece but the inspiration\\'s is [more relaxed / more cropped / different material]' only if the difference is meaningful — otherwise leave null."
     }
   ],
-  "summary": "one elegant sentence describing the overall look"
+  "summary": "2-3 sentences describing the overall look — its atmosphere, what makes it cohesive, the kind of moment it suggests. Editorial voice, like a stylist captioning the page in a magazine. Avoid generic words like 'stylish', 'chic', 'fresh' — reach for specificity."
 }
 
 Rules for the response:
 - One object per visible garment in the inspiration.
 - matchedItemId MUST be an exact id from the wardrobe list above, or null if no match.
-- When matchedItemId is set: matchConfidence MUST be 'high', 'medium', or 'low'. buyingNote MUST be null.
+- When matchedItemId is set: matchConfidence MUST be 'high', 'medium', or 'low'. buyingNote is optional (null unless you want to note a meaningful difference).
 - When matchedItemId is null: matchConfidence MUST be null. buyingNote MUST be a short specific suggestion (<=90 chars).
 - brand_guess is independent of matching — you can guess a brand on the inspiration whether or not the user owns something matching.
 - Never invent ids. Never list the same id twice.`;
 
-  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.3, jsonMode: true }, 'inspiration-analysis');
+  const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true }, 'inspiration-analysis');
   if (!text) throw new Error('The Concierge could not analyse this photo');
   const parsed = JSON.parse(text);
 

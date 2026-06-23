@@ -11526,105 +11526,13 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               )}
             </div>
           )}
-          {/* TAG FILTER CHIPS + SORT — revealed once there are >5 looks so
-              the controls don't dominate empty/small collections. Shows union
-              of all tags (top 12 by frequency) as click-to-filter chips, plus
-              a sort dropdown (Recent / Most worn / A-Z). */}
-          {(() => {
-            const untagged = outfits.filter((o) => !Array.isArray(o.tags) || o.tags.length === 0);
-            return (
-              <>
-                {untagged.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (backfillBusy) return;
-                      const confirmed = window.confirm(
-                        `Auto-tag ${untagged.length} look${untagged.length === 1 ? '' : 's'} using AI? This uses a tiny amount of your AI allowance (roughly £0.0001 per look).`
-                      );
-                      if (!confirmed) return;
-                      setBackfillBusy(true);
-                      setBackfillProgress({ done: 0, total: untagged.length });
-                      try {
-                        for (let i = 0; i < untagged.length; i++) {
-                          const o = untagged[i];
-                          const picked = (o.itemIds || []).map((id) => items.find((it) => it.id === id)).filter(Boolean);
-                          if (picked.length === 0) { setBackfillProgress({ done: i + 1, total: untagged.length }); continue; }
-                          try {
-                            const tags = await generateOutfitTagsWithGemini(picked, o.intent || '');
-                            if (tags.length > 0) {
-                              await saveOutfit({ ...o, tags });
-                            }
-                          } catch (err) {
-                            console.warn('[backfill-tags] failed for outfit', o.id, err?.message);
-                          }
-                          setBackfillProgress({ done: i + 1, total: untagged.length });
-                        }
-                        toast.show(`Tagged ${untagged.length} look${untagged.length === 1 ? '' : 's'}`, { kind: 'success' });
-                      } finally {
-                        setBackfillBusy(false);
-                        setBackfillProgress(null);
-                      }
-                    }}
-                    className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors disabled:opacity-50"
-                    disabled={backfillBusy}
-                  >
-                    <Sparkles size={12} strokeWidth={1.75} />
-                    {backfillBusy
-                      ? (backfillProgress ? `Tagging ${backfillProgress.done}/${backfillProgress.total}…` : 'Tagging…')
-                      : `Auto-tag ${untagged.length} older look${untagged.length === 1 ? '' : 's'}`}
-                  </button>
-                )}
-                {outfits.length > 5 && (
-                  <div className="mb-6 flex flex-wrap items-center gap-3">
-                    <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTagFilter(null)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
-                          activeTagFilter === null
-                            ? 'bg-stone-900 text-white'
-                            : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
-                        }`}
-                      >
-                        All ({baseFilteredOutfits.length})
-                      </button>
-                      {tagUnion.map(([tag, count]) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => setActiveTagFilter(tag === activeTagFilter ? null : tag)}
-                          className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
-                            activeTagFilter === tag
-                              ? 'bg-stone-900 text-white'
-                              : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
-                          }`}
-                        >
-                          {tag} ({count})
-                        </button>
-                      ))}
-                    </div>
-                    <select
-                      value={sortMode}
-                      onChange={(e) => setSortMode(e.target.value)}
-                      className="px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-white border border-stone-200 text-stone-700 outline-none hover:border-stone-900 transition-colors shrink-0"
-                      style={{ fontSize: '16px' }}
-                    >
-                      <option value="recent">Recent</option>
-                      <option value="most-worn">Most worn</option>
-                      <option value="a-z">A–Z</option>
-                    </select>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {/* Collections strip — named outfit moodboards shown as a horizontal
-              tile row above the main grid. Each tile is a 2×2 mosaic of the
-              first piece image from up to 4 outfits in that collection.
-              Tapping a tile filters the grid to that collection's looks.
-              On desktop (lg+) the strip becomes a 4-col inline grid. */}
+          {/* Collections strip — named outfit moodboards. Sits ABOVE the
+              tag-chip + sort row so it reads as primary navigation pivot
+              (choose a named collection) before secondary filtering
+              (chip + sort within that pivot). Each tile is a 2×2 mosaic
+              of the first piece image from up to 4 outfits in that
+              collection. On desktop (lg+) the strip becomes a 4-col
+              inline grid. */}
           {isLookbook && collections.length > 0 && (
             <section className="mb-10">
               <div className="flex items-center justify-between mb-4">
@@ -11754,6 +11662,103 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               )}
             </section>
           )}
+
+          {/* TAG FILTER CHIPS + SORT — sits BELOW Collections. Auto-tag
+              button is a small contextual prompt (untagged looks exist);
+              chip row + compact sort pill share one flex row so they read
+              as a single control surface. Revealed once there are >5
+              looks so the controls don't dominate empty collections. */}
+          {(() => {
+            const untagged = outfits.filter((o) => !Array.isArray(o.tags) || o.tags.length === 0);
+            return (
+              <>
+                {untagged.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (backfillBusy) return;
+                      const confirmed = window.confirm(
+                        `Auto-tag ${untagged.length} look${untagged.length === 1 ? '' : 's'} using AI? This uses a tiny amount of your AI allowance (roughly £0.0001 per look).`
+                      );
+                      if (!confirmed) return;
+                      setBackfillBusy(true);
+                      setBackfillProgress({ done: 0, total: untagged.length });
+                      try {
+                        for (let i = 0; i < untagged.length; i++) {
+                          const o = untagged[i];
+                          const picked = (o.itemIds || []).map((id) => items.find((it) => it.id === id)).filter(Boolean);
+                          if (picked.length === 0) { setBackfillProgress({ done: i + 1, total: untagged.length }); continue; }
+                          try {
+                            const tags = await generateOutfitTagsWithGemini(picked, o.intent || '');
+                            if (tags.length > 0) {
+                              await saveOutfit({ ...o, tags });
+                            }
+                          } catch (err) {
+                            console.warn('[backfill-tags] failed for outfit', o.id, err?.message);
+                          }
+                          setBackfillProgress({ done: i + 1, total: untagged.length });
+                        }
+                        toast.show(`Tagged ${untagged.length} look${untagged.length === 1 ? '' : 's'}`, { kind: 'success' });
+                      } finally {
+                        setBackfillBusy(false);
+                        setBackfillProgress(null);
+                      }
+                    }}
+                    className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                    disabled={backfillBusy}
+                  >
+                    <Sparkles size={12} strokeWidth={1.75} />
+                    {backfillBusy
+                      ? (backfillProgress ? `Tagging ${backfillProgress.done}/${backfillProgress.total}…` : 'Tagging…')
+                      : `Auto-tag ${untagged.length} older look${untagged.length === 1 ? '' : 's'}`}
+                  </button>
+                )}
+                {outfits.length > 5 && (
+                  <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTagFilter(null)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                          activeTagFilter === null
+                            ? 'bg-stone-900 text-white'
+                            : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
+                        }`}
+                      >
+                        All ({baseFilteredOutfits.length})
+                      </button>
+                      {tagUnion.map(([tag, count]) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setActiveTagFilter(tag === activeTagFilter ? null : tag)}
+                          className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                            activeTagFilter === tag
+                              ? 'bg-stone-900 text-white'
+                              : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
+                          }`}
+                        >
+                          {tag} ({count})
+                        </button>
+                      ))}
+                    </div>
+                    <div className="shrink-0">
+                      <select
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value)}
+                        className="text-[10px] tracking-widest uppercase bg-white border border-stone-300 px-3 py-2 rounded-full text-stone-700 hover:border-stone-900 outline-none cursor-pointer transition-colors"
+                        style={{ fontSize: '16px' }}
+                      >
+                        <option value="recent">Recent</option>
+                        <option value="most-worn">Most worn</option>
+                        <option value="a-z">A–Z</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {/* Editorial lookbook grid. Single column on mobile, max TWO on
               desktop — looks deserve room to breathe. Each card is a tall

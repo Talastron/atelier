@@ -13,7 +13,7 @@ import {
   SortableContext, useSortable, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
-import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc, query, orderBy } from 'firebase/firestore';
 import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount, findProductListingFromPhoto } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
@@ -3074,6 +3074,7 @@ const userShopsRef = (uid) => collection(db, 'users', uid, 'shops');
 const userInspirationRef = (uid) => collection(db, 'users', uid, 'inspiration');
 const userAIHistoryRef = (uid) => collection(db, 'users', uid, 'aiHistory');
 const userScheduleRef = (uid) => collection(db, 'users', uid, 'schedule');
+const userCollectionsRef = (uid) => collection(db, 'users', uid, 'collections');
 const userScheduleDoc = (uid, dateISO) => doc(db, 'users', uid, 'schedule', dateISO);
 const userProfileDoc = (uid) => doc(db, 'users', uid, 'profile', 'measurements');
 const allowlistRef = () => collection(db, 'allowlist');
@@ -3138,6 +3139,7 @@ function DigitalWardrobe() {
   const [isInspirationModalOpen, setIsInspirationModalOpen] = useState(false);
   const [aiHistory, setAiHistory] = useState([]);
   const [schedules, setSchedules] = useState({}); // { 'YYYY-MM-DD': { outfitId } }
+  const [collections, setCollections] = useState([]); // named outfit moodboards
   const selectedInspiration = selectedInspirationId ? inspirations.find((i) => i.id === selectedInspirationId) : null;
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
@@ -3292,8 +3294,13 @@ function DigitalWardrobe() {
       (snap) => { if (snap.exists()) setMeasurements({ ...INITIAL_MEASUREMENTS, ...snap.data() }); },
       onPermErr
     );
+    const unsubCollections = onSnapshot(
+      query(userCollectionsRef(user.uid), orderBy('createdAt', 'desc')),
+      (snap) => setCollections(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      onPermErr
+    );
 
-    return () => { unsubItems(); unsubOutfits(); unsubShops(); unsubInspiration(); unsubAIHistory(); unsubSchedule(); unsubProfile(); };
+    return () => { unsubItems(); unsubOutfits(); unsubShops(); unsubInspiration(); unsubAIHistory(); unsubSchedule(); unsubProfile(); unsubCollections(); };
   }, [user]);
 
   // Only owners can list the whole allowlist; everyone else just gets [].
@@ -3537,6 +3544,57 @@ function DigitalWardrobe() {
       toast.show('Could not save the new order', { kind: 'error' });
     }
   };
+  // --- Collections (named outfit moodboards) ---
+  // /users/{uid}/collections/{id}: { id, name, outfitIds[], cover, createdAt, notes? }
+  const handleCreateCollection = async (name, initialOutfitIds = []) => {
+    if (!user || !name?.trim()) return null;
+    const id = newId();
+    const data = {
+      id,
+      name: name.trim(),
+      outfitIds: Array.isArray(initialOutfitIds) ? initialOutfitIds : [],
+      cover: null,
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(doc(userCollectionsRef(user.uid), id), data);
+    return id;
+  };
+
+  const handleAddOutfitToCollection = async (collectionId, outfitId) => {
+    if (!user) return;
+    const coll = collections.find((c) => c.id === collectionId);
+    if (!coll || coll.outfitIds.includes(outfitId)) return;
+    await setDoc(doc(userCollectionsRef(user.uid), collectionId), {
+      ...coll,
+      outfitIds: [...coll.outfitIds, outfitId],
+    });
+  };
+
+  const handleRemoveOutfitFromCollection = async (collectionId, outfitId) => {
+    if (!user) return;
+    const coll = collections.find((c) => c.id === collectionId);
+    if (!coll) return;
+    await setDoc(doc(userCollectionsRef(user.uid), collectionId), {
+      ...coll,
+      outfitIds: coll.outfitIds.filter((id) => id !== outfitId),
+    });
+  };
+
+  const handleRenameCollection = async (collectionId, name) => {
+    if (!user || !name?.trim()) return;
+    const coll = collections.find((c) => c.id === collectionId);
+    if (!coll) return;
+    await setDoc(doc(userCollectionsRef(user.uid), collectionId), {
+      ...coll,
+      name: name.trim(),
+    });
+  };
+
+  const handleDeleteCollection = async (collectionId) => {
+    if (!user) return;
+    await deleteDoc(doc(userCollectionsRef(user.uid), collectionId));
+  };
+
   // Snapshot a collection of outfits as a lookbook. Same /public/{shareId}
   // shape as single shares; the public viewer renders kind === 'lookbook'
   // as a vertical list of outfits with a sticky contents nav.
@@ -4248,6 +4306,11 @@ function DigitalWardrobe() {
                       onReorderOutfits={handleReorderOutfits}
                       initialTab={lookbookInitialTab}
                       onInitialTabConsumed={() => setLookbookInitialTab(null)}
+                      collections={collections}
+                      onCreateCollection={handleCreateCollection}
+                      onAddOutfitToCollection={handleAddOutfitToCollection}
+                      onRemoveOutfitFromCollection={handleRemoveOutfitFromCollection}
+                      onDeleteCollection={handleDeleteCollection}
                     />
                   )}
                   {activeTab === 'finance' && <FinanceView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => { setLookbookInitialTab('diary'); setActiveTab('lookbook'); }} />}
@@ -4667,6 +4730,10 @@ function DigitalWardrobe() {
                   await handleSaveOutfit(newOutfit);
                   setOpenOutfitId(newOutfit.id);
                 }}
+                collections={collections}
+                onAddToCollection={handleAddOutfitToCollection}
+                onRemoveFromCollection={handleRemoveOutfitFromCollection}
+                onCreateCollection={handleCreateCollection}
               />
             );
           })()}
@@ -10126,7 +10193,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   );
 }
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences }) {
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences, collections = [], onCreateCollection = null, onAddOutfitToCollection = null, onRemoveOutfitFromCollection = null, onDeleteCollection = null }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -10230,6 +10297,9 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [sortMode, setSortMode] = useState('recent'); // recent | most-worn | a-z
   const [backfillBusy, setBackfillBusy] = useState(false);
   const [backfillProgress, setBackfillProgress] = useState(null);
+  const [activeCollection, setActiveCollection] = useState(null); // collectionId or null
+  const [newCollectionOpen, setNewCollectionOpen] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
   // Sort by user-arranged `order` field (set via Lookbook drag-to-reorder).
   // Outfits without `order` fall back to createdAt-descending so newly-saved
   // looks land at the top before the user has explicitly arranged anything.
@@ -10283,6 +10353,15 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
     // 'recent' — already in order from sortedAllOutfits, just return as-is
     return tagFilteredOutfits;
   }, [tagFilteredOutfits, sortMode]);
+
+  // Collection filter: if a collection is active, narrow to its outfitIds
+  const collectionFilteredOutfits = React.useMemo(() => {
+    if (!activeCollection) return filteredOutfits;
+    const coll = collections.find((c) => c.id === activeCollection);
+    if (!coll) return filteredOutfits;
+    const idSet = new Set(coll.outfitIds);
+    return filteredOutfits.filter((o) => idSet.has(o.id));
+  }, [filteredOutfits, activeCollection, collections]);
 
   const toast = useToast();
 
@@ -11430,7 +11509,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                         : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
                     }`}>{label}</button>
                 ))}
-                <span className="text-xs text-stone-500 ml-2">{filteredOutfits.length} {filteredOutfits.length === 1 ? 'look' : 'looks'}</span>
+                <span className="text-xs text-stone-500 ml-2">{collectionFilteredOutfits.length} {collectionFilteredOutfits.length === 1 ? 'look' : 'looks'}</span>
               </div>
               {!selectMode ? (
                 <button onClick={() => setSelectMode(true)} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors">
@@ -11541,6 +11620,141 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             );
           })()}
 
+          {/* Collections strip — named outfit moodboards shown as a horizontal
+              tile row above the main grid. Each tile is a 2×2 mosaic of the
+              first piece image from up to 4 outfits in that collection.
+              Tapping a tile filters the grid to that collection's looks.
+              On desktop (lg+) the strip becomes a 4-col inline grid. */}
+          {isLookbook && collections.length > 0 && (
+            <section className="mb-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="brass-rule" aria-hidden="true"></span>
+                  <h3 className="font-display text-stone-900 text-lg sm:text-xl">Collections</h3>
+                  <span className="text-[10px] tracking-widest uppercase text-stone-400">{collections.length}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {activeCollection && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveCollection(null)}
+                      className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline"
+                    >
+                      Show all
+                    </button>
+                  )}
+                  {typeof onCreateCollection === 'function' && (
+                    <button
+                      type="button"
+                      onClick={() => { setNewCollectionOpen(true); setNewCollectionName(''); }}
+                      className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline"
+                    >
+                      + New collection
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible">
+                {collections.map((coll) => {
+                  const collOutfits = coll.outfitIds.map((id) => outfits.find((o) => o.id === id)).filter(Boolean);
+                  const preview = collOutfits.slice(0, 4).map((o) => {
+                    const pieces = resolveOutfitItems(o, items);
+                    return pieces[0] ? itemImages(pieces[0])[0] : null;
+                  });
+                  const isActive = activeCollection === coll.id;
+                  return (
+                    <button
+                      key={coll.id}
+                      type="button"
+                      onClick={() => setActiveCollection(isActive ? null : coll.id)}
+                      className={`shrink-0 lg:shrink w-48 lg:w-auto text-left bg-white border rounded-2xl overflow-hidden transition-colors ${
+                        isActive ? 'border-stone-900 shadow-sm' : 'border-stone-200 hover:border-stone-500'
+                      }`}
+                    >
+                      <div className="aspect-[4/3] bg-stone-100 grid grid-cols-2 grid-rows-2 gap-0.5">
+                        {preview.length === 0
+                          ? <div className="col-span-2 row-span-2 flex items-center justify-center text-stone-300"><Bookmark size={28} strokeWidth={1} /></div>
+                          : Array.from({ length: 4 }).map((_, i) => {
+                              const img = preview[i];
+                              return (
+                                <div key={i} className="bg-stone-100 overflow-hidden">
+                                  {img && <img src={img} alt="" loading="lazy" className="w-full h-full object-cover" />}
+                                </div>
+                              );
+                            })}
+                      </div>
+                      <div className="p-3">
+                        <p className="font-display text-sm text-stone-900 truncate">{coll.name}</p>
+                        <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-0.5">
+                          {collOutfits.length} look{collOutfits.length === 1 ? '' : 's'}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Active collection banner */}
+              {activeCollection && (() => {
+                const coll = collections.find((c) => c.id === activeCollection);
+                if (!coll) return null;
+                return (
+                  <div className="mt-4 flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] tracking-widest uppercase text-stone-500">Showing:</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase">
+                      {coll.name}
+                      <button type="button" onClick={() => setActiveCollection(null)} className="text-white/60 hover:text-white ml-0.5 leading-none" aria-label="Clear collection filter">×</button>
+                    </span>
+                  </div>
+                );
+              })()}
+              {/* New collection modal (lightweight inline) */}
+              {newCollectionOpen && (
+                <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6" onClick={() => setNewCollectionOpen(false)}>
+                  <form
+                    className="bg-[#F7F5F2] rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const name = newCollectionName.trim();
+                      if (!name || !onCreateCollection) return;
+                      await onCreateCollection(name, []);
+                      setNewCollectionOpen(false);
+                      setNewCollectionName('');
+                    }}
+                  >
+                    <p className="text-[10px] tracking-widest uppercase text-stone-500 mb-1">New collection</p>
+                    <h3 className="font-display text-stone-900 text-lg mb-4">Name your moodboard</h3>
+                    <input
+                      autoFocus
+                      value={newCollectionName}
+                      onChange={(e) => setNewCollectionName(e.target.value)}
+                      placeholder="e.g. Wedding season 2026"
+                      maxLength={50}
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-stone-300 text-sm outline-none focus:border-stone-900 mb-4"
+                      style={{ fontSize: '16px' }}
+                    />
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setNewCollectionOpen(false)}
+                        className="flex-1 px-4 py-2.5 rounded-full border border-stone-300 text-stone-700 text-[11px] tracking-wide uppercase hover:border-stone-900"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={!newCollectionName.trim()}
+                        className="flex-1 px-4 py-2.5 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 disabled:opacity-50"
+                      >
+                        Create
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Editorial lookbook grid. Single column on mobile, max TWO on
               desktop — looks deserve room to breathe. Each card is a tall
               4:5 portrait with a deterministic flat-lay arrangement of
@@ -11548,9 +11762,9 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               top). Cream gradient surface so the items pop. Serif name
               below in display weight. Mirrors a magazine spread, not a
               dashboard. */}
-          {activeTagFilter && filteredOutfits.length === 0 ? (
+          {activeTagFilter && collectionFilteredOutfits.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-stone-500 text-sm">No looks tagged "{activeTagFilter}" yet.</p>
+              <p className="text-stone-500 text-sm">No looks tagged "{activeTagFilter}"{ activeCollection ? ' in this collection' : ''} yet.</p>
               <button
                 type="button"
                 onClick={() => setActiveTagFilter(null)}
@@ -11559,11 +11773,11 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                 Show all looks
               </button>
             </div>
-          ) : filteredOutfits.length === 0 ? (
+          ) : collectionFilteredOutfits.length === 0 ? (
             <div className="py-24 flex flex-col items-center justify-center text-stone-400 bg-white/50 border border-dashed border-stone-300 rounded-3xl">
               <Camera size={40} strokeWidth={1} className="mb-4 opacity-50" />
-              <p className="text-lg font-display tracking-wide">{outfitsFilter === 'favorites' ? 'No favourites yet.' : 'No saved looks yet.'}</p>
-              <p className="text-sm mt-1">{outfitsFilter === 'favorites' ? 'Star a look from its detail page.' : 'Create one in the Studio.'}</p>
+              <p className="text-lg font-display tracking-wide">{activeCollection ? 'No looks in this collection yet.' : outfitsFilter === 'favorites' ? 'No favourites yet.' : 'No saved looks yet.'}</p>
+              <p className="text-sm mt-1">{activeCollection ? 'Open a look and add it to this collection.' : outfitsFilter === 'favorites' ? 'Star a look from its detail page.' : 'Create one in the Studio.'}</p>
             </div>
           ) : (
           <DndContext
@@ -11572,17 +11786,17 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             onDragEnd={(event) => {
               const { active, over } = event;
               if (!over || active.id === over.id) return;
-              const oldIndex = filteredOutfits.findIndex((o) => o.id === active.id);
-              const newIndex = filteredOutfits.findIndex((o) => o.id === over.id);
+              const oldIndex = collectionFilteredOutfits.findIndex((o) => o.id === active.id);
+              const newIndex = collectionFilteredOutfits.findIndex((o) => o.id === over.id);
               if (oldIndex < 0 || newIndex < 0) return;
-              const newOrder = arrayMove(filteredOutfits, oldIndex, newIndex).map((o) => o.id);
+              const newOrder = arrayMove(collectionFilteredOutfits, oldIndex, newIndex).map((o) => o.id);
               if (onReorderOutfits) onReorderOutfits(newOrder);
               haptic('tap');
             }}
           >
-            <SortableContext items={filteredOutfits.map((o) => o.id)} strategy={rectSortingStrategy}>
+            <SortableContext items={collectionFilteredOutfits.map((o) => o.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
-                {filteredOutfits.map((outfit, idx) => {
+                {collectionFilteredOutfits.map((outfit, idx) => {
                   const isSelected = selectedOutfits.has(outfit.id);
                   const handleCardClick = () => {
                     if (selectMode) {
@@ -15936,7 +16150,7 @@ const PRESET_TAG_CATEGORIES = [
   { label: 'Season', tags: ['summer evening', 'winter layers', 'spring light', 'autumn warm'] },
 ];
 
-function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem, measurements, prevOutfitId = null, nextOutfitId = null, onPick = null }) {
+function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, onSaveOutfit, onShare, onExport, onVary, onEdit, onLogWear, onOpenItem, measurements, prevOutfitId = null, nextOutfitId = null, onPick = null, collections = [], onAddToCollection = null, onRemoveFromCollection = null, onCreateCollection = null }) {
   const [logVerdict, setLogVerdict] = useState('');
   const [logOccasion, setLogOccasion] = useState('');
   const [logBusy, setLogBusy] = useState(false);
@@ -15952,6 +16166,8 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [wearLogExpanded, setWearLogExpanded] = useState(false);
   const [paletteFilter, setPaletteFilter] = useState(null); // colour name or null
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
+  const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
+  const [newCollectionNameDetail, setNewCollectionNameDetail] = useState('');
   const toast = useToast();
   const pieces = resolveOutfitItems(outfit, items);
   const total = pieces.reduce((sum, it) => sum + Number(it.price || 0), 0);
@@ -16479,6 +16695,94 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 
                     {(outfit.tags || []).length >= 8 && (
                       <p className="text-[10px] tracking-wide uppercase text-stone-400">Maximum of 8 tags reached.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Collections — which named moodboards this outfit belongs to.
+                Mirrors the Tags affordance: same eyebrow, same pill pattern.
+                Only shown when the parent passes the collection handlers. */}
+            {typeof onAddToCollection === 'function' && (
+              <div className="bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6 smooth-shadow">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="brass-rule" aria-hidden="true"></span>
+                    <span className="text-[10px] tracking-[0.28em] uppercase font-medium text-stone-700">Collections</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setAddToCollectionOpen((v) => !v); setNewCollectionNameDetail(''); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide uppercase hover:border-stone-900 transition-colors"
+                  >
+                    <Plus size={12} strokeWidth={2} /> {addToCollectionOpen ? 'Done' : 'Add to'}
+                  </button>
+                </div>
+                {(() => {
+                  const memberCollections = collections.filter((c) => c.outfitIds.includes(outfit.id));
+                  if (memberCollections.length === 0 && !addToCollectionOpen) {
+                    return <p className="text-[12px] text-stone-400 italic">Not in any collection yet.</p>;
+                  }
+                  return (
+                    <div className="flex flex-wrap gap-1.5">
+                      {memberCollections.map((c) => (
+                        <span key={c.id} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[11px] tracking-wide uppercase">
+                          {c.name}
+                          {addToCollectionOpen && (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveFromCollection?.(c.id, outfit.id)}
+                              className="text-stone-400 hover:text-stone-900 ml-0.5 leading-none transition-colors"
+                              aria-label={`Remove from ${c.name}`}
+                            >×</button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
+                {addToCollectionOpen && (
+                  <div className="mt-3 space-y-2">
+                    {collections.filter((c) => !c.outfitIds.includes(outfit.id)).map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => onAddToCollection?.(c.id, outfit.id)}
+                        className="w-full text-left px-3 py-2 rounded-lg bg-white border border-stone-200 hover:border-stone-900 text-sm text-stone-700 transition-colors flex items-center justify-between"
+                      >
+                        <span>{c.name}</span>
+                        <span className="text-[10px] tracking-widest uppercase text-stone-400">{c.outfitIds.length} look{c.outfitIds.length === 1 ? '' : 's'}</span>
+                      </button>
+                    ))}
+                    {typeof onCreateCollection === 'function' && (
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const name = newCollectionNameDetail.trim();
+                          if (!name) return;
+                          const id = await onCreateCollection(name, [outfit.id]);
+                          if (id) setNewCollectionNameDetail('');
+                          setAddToCollectionOpen(false);
+                        }}
+                        className="flex gap-2"
+                      >
+                        <input
+                          value={newCollectionNameDetail}
+                          onChange={(e) => setNewCollectionNameDetail(e.target.value)}
+                          placeholder="+ New collection name"
+                          maxLength={50}
+                          className="flex-1 px-3 py-2 rounded-lg bg-white border border-stone-300 text-sm outline-none focus:border-stone-900"
+                          style={{ fontSize: '16px' }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!newCollectionNameDetail.trim()}
+                          className="px-4 py-2 rounded-lg bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 disabled:opacity-50"
+                        >
+                          Create
+                        </button>
+                      </form>
                     )}
                   </div>
                 )}

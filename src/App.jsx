@@ -10371,6 +10371,43 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [activeCollection, setActiveCollection] = useState(null); // collectionId or null
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
+  // Trips sub-tab: open trip detail portal
+  const [openTripId, setOpenTripId] = useState(null);
+  // Aggregate schedule entries that have trip metadata (added in P3.1).
+  // Groups by trip.id so each trip appears once with its list of days.
+  const trips = useMemo(() => {
+    const map = new Map();
+    for (const [dateISO, entry] of Object.entries(schedules || {})) {
+      if (!entry || !entry.trip || !entry.trip.id) continue;
+      if (!map.has(entry.trip.id)) {
+        map.set(entry.trip.id, {
+          id: entry.trip.id,
+          name: entry.trip.name || 'Trip',
+          startISO: entry.trip.startISO,
+          endISO: entry.trip.endISO,
+          location: entry.trip.location || null,
+          days: [],
+        });
+      }
+      const t = map.get(entry.trip.id);
+      t.days.push({ dateISO, outfitId: entry.outfitId });
+    }
+    const today = todayISO();
+    const list = [...map.values()].map((t) => {
+      t.days.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+      let status = 'upcoming';
+      if (t.startISO <= today && t.endISO >= today) status = 'active';
+      else if (t.endISO < today) status = 'past';
+      return { ...t, status };
+    });
+    // Sort: active first, then upcoming (closest first), then past (most recent first)
+    return list.sort((a, b) => {
+      const order = { active: 0, upcoming: 1, past: 2 };
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+      if (a.status === 'past') return b.startISO.localeCompare(a.startISO);
+      return a.startISO.localeCompare(b.startISO);
+    });
+  }, [schedules]);
   // Sort by user-arranged `order` field (set via Lookbook drag-to-reorder).
   // Outfits without `order` fall back to createdAt-descending so newly-saved
   // looks land at the top before the user has explicitly arranged anything.
@@ -11015,6 +11052,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             ? [
                 ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
                 ['diary', 'Diary'],
+                ['trips', `Trips${trips.length > 0 ? ` · ${trips.length}` : ''}`],
               ]
             : [
                 ['create', 'Compose'],
@@ -11248,6 +11286,30 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           }}
         />
       )}
+
+      {isLookbook && tab === 'trips' && (
+        <TripsListView
+          trips={trips}
+          outfits={outfits}
+          items={items}
+          onOpenTrip={(tripId) => setOpenTripId(tripId)}
+        />
+      )}
+
+      {openTripId && (() => {
+        const trip = trips.find((t) => t.id === openTripId);
+        if (!trip) return null;
+        return (
+          <TripDetailView
+            trip={trip}
+            outfits={outfits}
+            items={items}
+            schedules={schedules}
+            onClose={() => setOpenTripId(null)}
+            onOpenOutfit={(id) => { setOpenTripId(null); onOpenOutfit?.(id); }}
+          />
+        );
+      })()}
 
       {isLookbook && tab === 'diary' ? (
         // DIARY — the wear journal + calendar living inside Lookbook.
@@ -11964,6 +12026,243 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
       ) : null}
 
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TripsListView — Lookbook "Trips" sub-tab: grouped list of planned trips
+// ---------------------------------------------------------------------------
+function TripsListView({ trips, outfits, items, onOpenTrip }) {
+  if (trips.length === 0) {
+    return (
+      <div className="bg-white border border-stone-200/60 rounded-2xl p-10 sm:p-16 text-center">
+        <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-stone-300 flex items-center justify-center">
+          <Calendar size={20} strokeWidth={1.5} className="text-stone-500" />
+        </div>
+        <h3 className="font-display text-stone-900 text-2xl mb-2">Your trips begin here</h3>
+        <p className="text-stone-500 text-sm italic max-w-md mx-auto leading-relaxed">
+          Plan a trip from the Calendar: tap range mode, pick your dates, and let the Concierge compose a capsule. Future and past trips will collect here for easy reference.
+        </p>
+      </div>
+    );
+  }
+
+  const grouped = [
+    { label: 'Active', trips: trips.filter((t) => t.status === 'active') },
+    { label: 'Upcoming', trips: trips.filter((t) => t.status === 'upcoming') },
+    { label: 'Past', trips: trips.filter((t) => t.status === 'past') },
+  ].filter((g) => g.trips.length > 0);
+
+  return (
+    <div className="space-y-10">
+      {grouped.map((group) => (
+        <section key={group.label}>
+          <div className="flex items-center gap-3 mb-5">
+            <span className="brass-rule" aria-hidden="true"></span>
+            <h3 className="font-display text-stone-900 text-lg sm:text-xl">{group.label}</h3>
+            <span className="text-[10px] tracking-widest uppercase text-stone-400">{group.trips.length}</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-7">
+            {group.trips.map((trip) => {
+              const tripOutfits = trip.days
+                .map((d) => outfits.find((o) => o.id === d.outfitId))
+                .filter(Boolean);
+              const preview = tripOutfits.slice(0, 4).map((o) => {
+                const pieces = resolveOutfitItems(o, items);
+                return pieces[0] ? itemImages(pieces[0])[0] : null;
+              });
+              const startLabel = new Date(trip.startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              const endLabel = new Date(trip.endISO + 'T00:00:00').toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: new Date(trip.endISO).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+              });
+              const daysCount = trip.days.length;
+              return (
+                <button
+                  key={trip.id}
+                  type="button"
+                  onClick={() => onOpenTrip(trip.id)}
+                  className="text-left group bg-white border border-stone-200 rounded-2xl overflow-hidden hover:border-stone-500 transition-colors"
+                >
+                  <div className="aspect-[4/3] bg-stone-100 grid grid-cols-2 grid-rows-2 gap-0.5 relative">
+                    {preview.length === 0 ? (
+                      <div className="col-span-2 row-span-2 flex items-center justify-center text-stone-300">
+                        <Calendar size={32} strokeWidth={1} />
+                      </div>
+                    ) : (
+                      Array.from({ length: 4 }).map((_, i) => {
+                        const img = preview[i];
+                        return (
+                          <div key={i} className="bg-stone-100 overflow-hidden">
+                            {img && <img src={img} alt="" loading="lazy" className="w-full h-full object-cover" />}
+                          </div>
+                        );
+                      })
+                    )}
+                    {trip.status === 'active' && (
+                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-emerald-500/90 text-white text-[9px] tracking-widest uppercase font-medium">
+                        Active now
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="font-display text-stone-900 text-base sm:text-lg leading-tight truncate group-hover:text-brass-700 transition-colors">{trip.name}</p>
+                    {trip.location && (
+                      <p className="text-[11px] text-stone-500 italic mt-0.5 truncate">{trip.location}</p>
+                    )}
+                    <p className="text-[10px] tracking-widest uppercase text-stone-500 mt-2">
+                      {startLabel} → {endLabel}
+                    </p>
+                    <p className="text-[10px] tracking-wide text-stone-400 mt-1">
+                      {daysCount} day{daysCount === 1 ? '' : 's'} · {tripOutfits.length} outfit{tripOutfits.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TripDetailView — full-screen portal showing day-by-day outfits for a trip
+// ---------------------------------------------------------------------------
+function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit }) {
+  useEscapeKey(onClose);
+  const [packingOpen, setPackingOpen] = useState(false);
+
+  const tripOutfits = trip.days
+    .map((d) => ({ dateISO: d.dateISO, outfit: outfits.find((o) => o.id === d.outfitId) }))
+    .filter((d) => d.outfit);
+
+  const totalDays = trip.days.length;
+  const totalPieces = new Set(tripOutfits.flatMap((d) => d.outfit.itemIds || [])).size;
+
+  const startLabel = new Date(trip.startISO + 'T00:00:00').toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+  const endLabel = new Date(trip.endISO + 'T00:00:00').toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  return createPortal(
+    <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+      {/* Sticky top bar */}
+      <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60">
+        <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-xs sm:text-sm tracking-wide text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors"
+          >
+            <ChevronRight size={16} strokeWidth={1.5} className="rotate-180" />
+            <span className="hidden sm:inline">Back to Trips</span>
+            <span className="sm:hidden">Back</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPackingOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-[12px] tracking-wide hover:bg-stone-700 transition-colors"
+          >
+            <Download size={14} strokeWidth={1.5} />
+            View packing list
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-12">
+        {/* Editorial header */}
+        <header className="mb-10 sm:mb-12">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="brass-rule" aria-hidden="true"></span>
+            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">
+              {trip.status === 'active' ? 'Active trip' : trip.status === 'upcoming' ? 'Upcoming trip' : 'Past trip'}
+            </span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display text-stone-900 tracking-tight leading-[1.05]">
+            {trip.name}
+          </h1>
+          {trip.location && (
+            <p className="font-display italic text-stone-500 text-base sm:text-lg mt-3">{trip.location}</p>
+          )}
+          <p className="text-[11px] text-stone-500 mt-3 tracking-[0.18em] uppercase">
+            {startLabel} → {endLabel}
+          </p>
+          <p className="text-[10px] text-stone-400 mt-1 tracking-wide">
+            {totalDays} day{totalDays === 1 ? '' : 's'} · {totalPieces} piece{totalPieces === 1 ? '' : 's'} packed · {tripOutfits.length} outfit{tripOutfits.length === 1 ? '' : 's'}
+          </p>
+        </header>
+
+        {/* Day-by-day section header */}
+        <div className="flex items-center gap-3 mb-6 sm:mb-8">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Day by day</span>
+        </div>
+
+        {tripOutfits.length === 0 ? (
+          <p className="text-stone-400 text-sm italic">No outfits planned for this trip yet.</p>
+        ) : (
+          <div className="space-y-5">
+            {tripOutfits.map(({ dateISO, outfit }) => {
+              const pieces = resolveOutfitItems(outfit, items);
+              const dayLabel = new Date(dateISO + 'T00:00:00').toLocaleDateString('en-GB', {
+                weekday: 'long', day: 'numeric', month: 'long',
+              });
+              return (
+                <button
+                  key={dateISO}
+                  type="button"
+                  onClick={() => onOpenOutfit?.(outfit.id)}
+                  className="w-full text-left bg-white border border-stone-200/60 rounded-2xl p-4 sm:p-5 hover:border-stone-500 transition-colors flex items-center gap-4 group"
+                >
+                  <div className="flex gap-1.5 shrink-0">
+                    {pieces.slice(0, 4).map((it) => {
+                      const thumb = itemImages(it)[0];
+                      return (
+                        <div key={it.id} className="w-12 h-14 sm:w-14 sm:h-16 rounded-lg overflow-hidden bg-stone-100 border border-stone-200">
+                          {thumb && <img src={thumb} alt="" loading="lazy" className="w-full h-full object-cover" />}
+                        </div>
+                      );
+                    })}
+                    {pieces.length > 4 && (
+                      <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-lg bg-stone-100 border border-stone-200 flex items-center justify-center text-[10px] tracking-wide text-stone-500">
+                        +{pieces.length - 4}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] tracking-widest uppercase text-stone-400">{dayLabel}</p>
+                    <p className="font-display text-stone-900 text-base sm:text-lg leading-tight truncate group-hover:text-brass-700 transition-colors mt-0.5">
+                      {outfit.name}
+                    </p>
+                    <p className="text-[10px] tracking-wide uppercase text-stone-500 mt-1">
+                      {pieces.length} piece{pieces.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} strokeWidth={1.5} className="text-stone-400 shrink-0 group-hover:text-stone-700 transition-colors" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {packingOpen && (
+        <PackingListModal
+          startISO={trip.startISO}
+          endISO={trip.endISO}
+          schedules={schedules}
+          outfits={outfits}
+          items={items}
+          onPlanWithConcierge={null}
+          onClose={() => setPackingOpen(false)}
+        />
+      )}
+    </div>,
+    document.body
   );
 }
 

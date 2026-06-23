@@ -931,6 +931,31 @@ async function extractDominantColors(dataUrl, maxResults = 2) {
   });
 }
 
+// Build a palette from analysed garment colours rather than pixel-sampling
+// the image. The Vision-identified colours are semantically correct (they
+// describe what each garment IS) whereas pixel sampling is fooled by:
+//   - soft pastels (pale pink → Tan/Orange in HSL bucket)
+//   - solid backdrops dominating the sample (cream studio = lots of tan)
+//   - thin saturated accents missed because they're a small pixel %
+//
+// Each garment carries `color` (e.g. "white", "navy"). We normalise the
+// string via matchColorFamily, dedupe by family, count occurrences,
+// sort by prevalence, cap to keep the strip visually clean.
+function derivePaletteFromGarments(garments) {
+  if (!Array.isArray(garments)) return [];
+  const counts = new Map();
+  for (const g of garments) {
+    if (!g?.color) continue;
+    const family = matchColorFamily(g.color);
+    if (!family) continue;
+    counts.set(family, (counts.get(family) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name]) => name);
+}
+
 function itemColors(item) {
   return Array.isArray(item?.colors) ? item.colors : [];
 }
@@ -11934,7 +11959,13 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
   const [analyzeStage, setAnalyzeStage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState(null);
-  const [paletteColors, setPaletteColors] = useState([]);
+  const [paletteColors, setPaletteColors] = useState(() => {
+    // Synchronous initial: derive from analysis if available so the palette
+    // is visible before any async work.
+    const garmentList = inspiration?.analysis?.garments;
+    if (Array.isArray(garmentList)) return derivePaletteFromGarments(garmentList);
+    return [];
+  });
   const toast = useToast();
 
   // Build a garment-to-wardrobe-item map from the new garments array.
@@ -11952,15 +11983,29 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
     return map;
   }, [garments, items]);
 
-  // Extract palette from the inspiration image on mount / when image changes
+  // Preferred path: derive palette from Vision-identified garment colours.
+  // These are semantically correct (Gemini names the actual garment colour,
+  // not the backdrop) so "soft pink + denim" → Pink, Blue rather than the
+  // Tan/Orange that pixel sampling returned.
+  //
+  // Fallback: unanalysed inspirations — pixel-sample the image so the palette
+  // section isn't empty before the user analyses. Once analysed, the garment-
+  // derived palette takes over and updates immediately when refreshed.
   useEffect(() => {
-    if (!inspiration.image) return;
+    const garmentList = inspiration?.analysis?.garments;
+    if (Array.isArray(garmentList) && garmentList.length > 0) {
+      setPaletteColors(derivePaletteFromGarments(garmentList));
+      return;
+    }
+    // Fallback: pixel sampling for unanalysed inspirations.
     let cancelled = false;
-    extractDominantColors(inspiration.image, 5).then((colors) => {
-      if (!cancelled) setPaletteColors(colors);
-    }).catch(() => {});
+    if (inspiration?.image) {
+      extractDominantColors(inspiration.image, 5).then((colors) => {
+        if (!cancelled) setPaletteColors(colors || []);
+      }).catch(() => {});
+    }
     return () => { cancelled = true; };
-  }, [inspiration.image]);
+  }, [inspiration?.id, inspiration?.analysis]);
 
   const shopHosts = useMemo(() => shops.map((s) => {
     try { return new URL(s.url).hostname.replace(/^www\./, ''); } catch { return null; }

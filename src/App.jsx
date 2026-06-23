@@ -4600,11 +4600,11 @@ function DigitalWardrobe() {
               <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
               <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
               <MobileFAB
-                onTap={() => setIsAddItemModalOpen(true)}
+                onTap={() => setIsConciergeOpen(true)}
                 onLongPress={() => setIsConciergeOpen(true)}
               />
+              <MobileNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
               <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="finance" icon={BarChart3} label="Insights" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
             </div>
           </div>
 
@@ -5582,7 +5582,7 @@ function MobileFAB({ onTap, onLongPress }) {
       {holdActive && (
         <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-150 z-10">
           <div className="text-[10px] tracking-[0.25em] uppercase text-stone-900 bg-brass-100 ring-1 ring-brass-300 px-3 py-1.5 rounded-full shadow-md font-medium">
-            Hold for Concierge ✦
+            Your stylist ✦
           </div>
         </div>
       )}
@@ -5603,23 +5603,11 @@ function MobileFAB({ onTap, onLongPress }) {
           userSelect: 'none',
           touchAction: 'manipulation',
         }}
-        aria-label="Add item — press and hold to open Concierge"
+        aria-label="Open the Concierge — your private stylist"
       >
-        {/* Full sentinel inside the FAB — hanger silhouette + brass charm,
-            sized at 48px so it fills ~75% of the 64px FAB (was 30px which
-            felt lost). Charm dimensions are scaled up relative to the brand
-            mark (line stroke 5 vs 1.5, dot r=12 vs 5) because the original
-            details are sub-pixel at icon scale; the proportions are tuned
-            so the charm reads as a deliberate pendant, not a stray dot.
-            The dark rect is skipped — the FAB IS the ink ground. */}
-        <svg width="48" height="48" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <g fill="none" stroke="currentColor" strokeWidth="14" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110" />
-            <path d="M 128 110 L 62 184 L 194 184 Z" />
-          </g>
-          <line x1="128" y1="184" x2="128" y2="206" stroke="#D4B378" strokeWidth="5" strokeLinecap="round" />
-          <circle cx="128" cy="216" r="12" fill="#D4B378" />
-        </svg>
+        {/* The centre FAB is now the Concierge — brass Sparkles to match the
+            desktop sidebar's Concierge entry. Tap or hold opens the stylist. */}
+        <Sparkles size={30} strokeWidth={1.5} className="text-brass-300" />
       </button>
     </div>
   );

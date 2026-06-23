@@ -5707,14 +5707,20 @@ function DailyBriefCard({
 
   // Best-effort: pull today's calendar events so the brief can dress for
   // what's on. Guarded so non-connected users never fire the callable.
+  // `calendarReady` gates the auto-compose below: we must NOT compose the
+  // day's brief before this resolves, or the events arrive too late and the
+  // headline "dress for what's on today" feature silently no-ops on the very
+  // brief most users see. Mirrors the existing `weatherSettled` gate.
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarReady, setCalendarReady] = useState(false);
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setCalendarReady(true); return; }
     let alive = true;
     (async () => {
       try {
         const connected = await isCalendarConnected(user);
-        if (!connected || !alive) return;
+        if (!alive) return;
+        if (!connected) return;
         const startISO = new Date(todayISO() + 'T00:00:00').toISOString();
         const endISO = new Date(todayISO() + 'T23:59:59').toISOString();
         const { events = [], reason } = await fetchCalendarEvents(startISO, endISO);
@@ -5722,6 +5728,8 @@ function DailyBriefCard({
       } catch (err) {
         // Calendar context is best-effort — never block styling on it.
         console.warn('[calendar] event fetch for AI context failed:', err?.message);
+      } finally {
+        if (alive) setCalendarReady(true);
       }
     })();
     return () => { alive = false; };
@@ -5741,6 +5749,11 @@ function DailyBriefCard({
     // once fetchTodaysWeather resolves (with data OR null on geo-denied),
     // so an honest unavailable still proceeds rather than blocking forever.
     if (!weatherSettled) return;
+    // Likewise wait for the calendar check to resolve, so a connected user's
+    // first brief of the day is composed WITH today's events rather than
+    // racing ahead with an empty list. Non-connected users flip this true
+    // almost immediately, so they're not delayed.
+    if (!calendarReady) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -5771,7 +5784,7 @@ function DailyBriefCard({
       });
 
     return () => { cancelled = true; };
-  }, [uid, isAiEnabled, items?.length, weatherSettled]); // re-fires when weather resolves so the brief gets composed with it
+  }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady]); // re-fires when weather AND calendar resolve so the brief is composed with both
 
   async function composeAnother() {
     setLoading(true);

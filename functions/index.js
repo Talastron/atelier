@@ -65,6 +65,19 @@ function isRunningInEmulator() {
   return process.env.FUNCTIONS_EMULATOR === 'true';
 }
 
+// Project an error down to non-sensitive fields before logging. googleapis /
+// gaxios errors carry `.config.headers.Authorization` (the access token) and
+// `.config.data` (the refresh token on revoke calls); logging the raw error
+// would spill tokens into Cloud Logging. Only the code/status/message are safe.
+function safeErr(err) {
+  return {
+    code: err?.code,
+    status: err?.response?.status,
+    googleError: err?.response?.data?.error,
+    message: err?.message,
+  };
+}
+
 function isRevokedError(err) {
   // Only treat as "revoked" when Google explicitly says `invalid_grant`.
   // Bare 401s or message-substring matches false-positive on transient errors,
@@ -176,7 +189,7 @@ exports.calendarOAuthCallback = onRequest(
       const redirect = isRunningInEmulator() ? LOCAL_REDIRECT : PROD_REDIRECT;
       res.redirect(redirect);
     } catch (err) {
-      logger.error('calendarOAuthCallback failed', err);
+      logger.error('calendarOAuthCallback failed', safeErr(err));
       res.status(500).send('Calendar connection failed. Please try again.');
     }
   }
@@ -246,7 +259,7 @@ exports.getCalendarEvents = onCall(
         ]);
         return { events: [], reason: 'revoked' };
       }
-      logger.error('events.list failed', err);
+      logger.error('events.list failed', { uid, ...safeErr(err) });
       throw new HttpsError('internal', 'Failed to fetch calendar events.');
     }
 
@@ -303,7 +316,7 @@ exports.disconnectCalendar = onCall(
         await oauth2.revokeToken(tokensSnap.data().refreshToken);
       }
     } catch (err) {
-      logger.warn('Failed to revoke refresh token at Google; proceeding with local delete', err);
+      logger.warn('Failed to revoke refresh token at Google; proceeding with local delete', { uid, ...safeErr(err) });
     }
 
     await Promise.all([

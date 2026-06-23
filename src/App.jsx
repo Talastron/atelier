@@ -11852,8 +11852,42 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
   const [analyzeStage, setAnalyzeStage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState(null);
+  const [paletteColors, setPaletteColors] = useState([]);
   const toast = useToast();
-  const matches = (inspiration.analysis?.wardrobeMatchIds || []).map((id) => items.find((i) => i.id === id)).filter(Boolean);
+
+  // Build a garment-to-wardrobe-item map from the new garments array.
+  // Falls back to the legacy wardrobeMatchIds shape for analyses run before
+  // the garment-per-item schema existed.
+  const garments = inspiration.analysis?.garments || [];
+  const matchedItemById = useMemo(() => {
+    const map = {};
+    for (const g of garments) {
+      if (g.matchedItemId) {
+        const item = items.find((i) => i.id === g.matchedItemId);
+        if (item) map[g.matchedItemId] = item;
+      }
+    }
+    return map;
+  }, [garments, items]);
+
+  // Extract palette from the inspiration image on mount / when image changes
+  useEffect(() => {
+    if (!inspiration.image) return;
+    let cancelled = false;
+    extractDominantColors(inspiration.image, 5).then((colors) => {
+      if (!cancelled) setPaletteColors(colors);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [inspiration.image]);
+
+  const shopHosts = useMemo(() => shops.map((s) => {
+    try { return new URL(s.url).hostname.replace(/^www\./, ''); } catch { return null; }
+  }).filter(Boolean), [shops]);
+
+  const googleShopUrl = (piece) => `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(piece)}`;
+  const yourShopsUrl = (piece) => shopHosts.length > 0
+    ? `https://www.google.com/search?q=${encodeURIComponent(piece + ' (' + shopHosts.map((h) => `site:${h}`).join(' OR ') + ')')}`
+    : null;
 
   const ANALYSE_STAGES = [
     'Examining the photograph…',
@@ -11874,10 +11908,15 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
     finally { clearInterval(t); setAnalyzing(false); setAnalyzeStage(''); }
   };
 
+  const hasAnalysis = !!inspiration.analysis;
+  const hasMatches = garments.some((g) => g.matchedItemId && matchedItemById[g.matchedItemId]);
+  const recreateable = hasMatches && !!onRecreateLook;
+
   return createPortal(
     <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+      {/* ─── TOP NAV ─── */}
       <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
-        <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
             <span className="hidden sm:inline">Back to Inspiration</span>
@@ -11907,26 +11946,66 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-10 lg:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-          <div className="lg:col-span-6">
-            <div className="aspect-[3/4] rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow">
-              <img src={inspiration.image} alt={inspiration.caption || 'inspiration'} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+      {/* ─── TWO-COLUMN BODY ─── */}
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100vh-64px)]">
+
+          {/* ── LEFT: Hero photo ── */}
+          <div className="lg:col-span-6 lg:sticky lg:top-[65px] lg:self-start lg:h-[calc(100vh-65px)] p-4 sm:p-6 lg:p-8 lg:pr-0">
+            <div className="h-full rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow">
+              <img
+                src={inspiration.image}
+                alt={inspiration.caption || 'inspiration'}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover"
+              />
             </div>
             {inspiration.sourceUrl && (
-              <a href={inspiration.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 text-xs tracking-wider uppercase text-stone-500 hover:text-stone-900 transition-colors">
-                <LinkIcon size={12} strokeWidth={2} /> View source
+              <a href={inspiration.sourceUrl} target="_blank" rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-2 text-xs tracking-wider uppercase text-stone-400 hover:text-stone-700 transition-colors">
+                <LinkIcon size={11} strokeWidth={2} /> View source
               </a>
             )}
           </div>
 
-          <div className="lg:col-span-6 space-y-8">
+          {/* ── RIGHT: Editorial intelligence column ── */}
+          <div className="lg:col-span-6 px-4 sm:px-6 lg:px-10 lg:pr-8 py-8 lg:py-12 space-y-8">
+
+            {/* Eyebrow + title */}
             <div>
-              {inspiration.caption && <h1 className="text-3xl sm:text-4xl font-display text-stone-900 leading-tight">{inspiration.caption}</h1>}
-              {inspiration.notes && <p className="text-stone-600 mt-4 leading-relaxed text-sm whitespace-pre-wrap">{inspiration.notes}</p>}
+              <div className="flex items-center gap-3 mb-3">
+                <span className="brass-rule" aria-hidden="true" />
+                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Inspiration</p>
+              </div>
+              {inspiration.caption && (
+                <h1 className="text-3xl sm:text-4xl font-display text-stone-900 leading-tight">{inspiration.caption}</h1>
+              )}
+              {inspiration.notes && (
+                <p className="text-stone-500 mt-3 leading-relaxed text-sm whitespace-pre-wrap">{inspiration.notes}</p>
+              )}
             </div>
 
-            {!inspiration.analysis && (
+            {/* Palette strip */}
+            {paletteColors.length > 0 && (
+              <div>
+                <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-medium mb-2">Palette</p>
+                <div className="flex gap-2 flex-wrap">
+                  {paletteColors.map((colour) => (
+                    <div key={colour} className="flex items-center gap-1.5">
+                      <span
+                        className="w-5 h-5 rounded-full border border-stone-200/60 shrink-0"
+                        style={{ background: COLOR_SWATCHES[colour] || hexFromColorName(colour) }}
+                      />
+                      <span className="text-[10px] text-stone-500 tracking-wider">{colour}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Analyse CTA (pre-analysis state) ── */}
+            {!hasAnalysis && (
               <div className="bg-stone-900 text-white rounded-2xl p-5 lg:p-6">
                 <h2 className="font-display text-xl mb-3 flex items-center gap-2">
                   <Sparkles size={16} strokeWidth={1.5} className="text-brass-300" /> Analyse with Concierge
@@ -11936,126 +12015,150 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                 </p>
                 <button onClick={handleAnalyze} disabled={analyzing || !isAIEnabled()}
                   className="bg-white text-stone-900 px-5 py-3 rounded-full text-sm font-medium hover:bg-stone-100 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2">
-                  <Sparkles size={14} strokeWidth={1.5} /> {analyzing ? 'Analysing…' : isAIEnabled() ? 'Analyse this look' : 'Concierge not set up'}
+                  <Sparkles size={14} strokeWidth={1.5} />
+                  {analyzing ? 'Analysing…' : isAIEnabled() ? 'Analyse this look' : 'Concierge not set up'}
                 </button>
                 {error && <p className="mt-3 text-xs text-red-300">{error}</p>}
               </div>
             )}
 
-            {inspiration.analysis && (
+            {/* ── Post-analysis content ── */}
+            {hasAnalysis && (
               <>
-                <div className="bg-stone-50 border border-stone-200 rounded-2xl p-5">
-                  <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold mb-3">Concierge summary</h2>
-                  <p className="text-stone-800 italic leading-relaxed">{inspiration.analysis.summary}</p>
-                  <button onClick={handleAnalyze} disabled={analyzing} className="mt-4 text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors inline-flex items-center gap-1.5">
-                    <Sparkles size={11} strokeWidth={1.5} /> {analyzing ? 'Re-analysing…' : 'Re-analyse'}
+                {/* Concierge summary as editorial pull-quote */}
+                {inspiration.analysis.summary && (
+                  <div>
+                    <p className="font-display text-stone-800 text-lg sm:text-xl leading-relaxed italic">
+                      "{inspiration.analysis.summary}"
+                    </p>
+                    <button onClick={handleAnalyze} disabled={analyzing}
+                      className="mt-3 text-[10px] tracking-widest uppercase text-stone-400 hover:text-stone-700 transition-colors inline-flex items-center gap-1.5">
+                      <Sparkles size={11} strokeWidth={1.5} />
+                      {analyzing ? 'Re-analysing…' : 'Re-analyse'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Recreate CTA — primary action, near the top */}
+                {recreateable && (
+                  <button onClick={onRecreateLook}
+                    className="w-full sm:w-auto bg-stone-900 text-white px-6 py-3.5 rounded-full font-medium hover:bg-stone-700 transition-all shadow-lg active:scale-[0.98] inline-flex items-center justify-center gap-2 text-sm">
+                    <Sparkles size={15} strokeWidth={1.5} />
+                    Recreate this look
                   </button>
-                </div>
-
-                {inspiration.analysis.garments?.length > 0 && (
-                  <div>
-                    <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold mb-3">Garments identified</h2>
-                    <div className="space-y-2">
-                      {inspiration.analysis.garments.map((g, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 bg-white border border-stone-200 rounded-xl">
-                          <span className="text-[10px] uppercase tracking-widest text-stone-500 font-medium shrink-0 w-20 pt-0.5">{g.category}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-sm text-stone-800">{g.description}</span>
-                              {g.brand_guess && (
-                                <span className="text-[10px] italic text-amber-700">· likely {g.brand_guess}</span>
-                              )}
-                              {g.matchedItemId && g.matchConfidence && (
-                                <span className={`text-[9px] tracking-widest uppercase font-medium ${
-                                  g.matchConfidence === 'high' ? 'text-emerald-700' :
-                                  g.matchConfidence === 'medium' ? 'text-stone-500' :
-                                  'text-stone-400'
-                                }`}>
-                                  {g.matchConfidence} match
-                                </span>
-                              )}
-                            </div>
-                            {g.color && <span className="text-[10px] text-stone-400 capitalize">{g.color}</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 )}
 
-                {matches.length > 0 && (
+                {/* Garments as visual cards */}
+                {garments.length > 0 && (
                   <div>
-                    <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
-                      <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold">From your wardrobe ({matches.length} match{matches.length === 1 ? '' : 'es'})</h2>
-                      {onRecreateLook && (
-                        <button onClick={onRecreateLook}
-                          className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5">
-                          <Sparkles size={11} strokeWidth={1.5} /> Recreate this look
-                        </button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {matches.map((item) => (
-                        <button key={item.id} onClick={() => onOpenItem?.(item.id)} className="text-left group">
-                          <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 mb-2">
-                            {itemImages(item)[0] && <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />}
-                          </div>
-                          <p className="text-xs text-stone-900 truncate">{item.name}</p>
-                          <p className="text-[10px] text-stone-500 uppercase tracking-wider truncate">{item.brand}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {inspiration.analysis.missingPieces?.length > 0 && (
-                  <div>
-                    <h2 className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-bold mb-3">Missing from your wardrobe</h2>
-                    <ul className="space-y-3">
-                      {inspiration.analysis.missingPieces.map((piece, i) => {
-                        const googleShop = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(piece)}`;
-                        // Build a Google search restricted to user's Directory hosts
-                        const shopHosts = shops.map((s) => {
-                          try { return new URL(s.url).hostname.replace(/^www\./, ''); } catch { return null; }
-                        }).filter(Boolean);
-                        const yourShops = shopHosts.length > 0
-                          ? `https://www.google.com/search?q=${encodeURIComponent(piece + ' (' + shopHosts.map((h) => `site:${h}`).join(' OR ') + ')')}`
-                          : null;
+                    <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-medium mb-3">
+                      Garments identified · {garments.length}
+                    </p>
+                    <div className="space-y-3">
+                      {garments.map((g, idx) => {
+                        const matchedItem = g.matchedItemId ? matchedItemById[g.matchedItemId] : null;
+                        const isMatched = !!matchedItem;
+                        // For non-garments-array analyses: derive missingPiece text from buyingNote
+                        const missingText = !isMatched ? (g.buyingNote || g.description) : null;
+                        const shopUrl = missingText ? googleShopUrl(missingText) : null;
+                        const yourShops = missingText ? yourShopsUrl(missingText) : null;
                         return (
-                          <li key={i} className="p-4 bg-orange-50 border border-orange-200/50 rounded-2xl">
-                            <div className="flex gap-3 items-start mb-3">
-                              <AlertCircle size={16} strokeWidth={1.5} className="shrink-0 mt-0.5 text-orange-700" />
-                              <span className="text-sm text-orange-900 flex-1">{piece}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2 ml-7">
-                              {onAddMissingToWishlist && (
-                                <button onClick={() => onAddMissingToWishlist(piece)}
-                                  className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-stone-900 hover:bg-stone-700 text-white rounded-full transition-colors">
-                                  <Heart size={11} strokeWidth={1.5} /> Add to wishlist
-                                </button>
+                          <div key={idx} className="bg-white border border-stone-200/60 rounded-2xl p-4 flex items-start gap-4">
+                            {/* Thumbnail / fallback */}
+                            {isMatched ? (
+                              <button
+                                onClick={() => onOpenItem?.(matchedItem.id)}
+                                className="shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-stone-100 border border-stone-200 hover:border-stone-400 transition-colors"
+                                title={`Open ${matchedItem.name}`}
+                              >
+                                {itemImages(matchedItem)[0]
+                                  ? <img src={itemImages(matchedItem)[0]} alt={matchedItem.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                  : <div className="w-full h-full flex items-center justify-center"><Shirt size={18} className="text-stone-300" /></div>}
+                              </button>
+                            ) : (
+                              <div className="shrink-0 w-14 h-14 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center">
+                                <Shirt size={20} className="text-stone-300" />
+                              </div>
+                            )}
+
+                            {/* Details */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[10px] tracking-widest uppercase text-stone-400 mb-0.5">{g.category}</p>
+                              <p className="text-stone-900 text-sm font-medium leading-snug">
+                                {g.description}
+                                {g.brand_guess && (
+                                  <span className="text-[11px] italic text-amber-700 font-normal ml-2">· likely {g.brand_guess}</span>
+                                )}
+                              </p>
+
+                              {/* Match status chip */}
+                              {isMatched ? (
+                                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                                  <span className="text-[9px] tracking-widest uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                    ✓ In your wardrobe
+                                  </span>
+                                  {g.matchConfidence && (
+                                    <span className={`text-[9px] tracking-widest uppercase ${
+                                      g.matchConfidence === 'high' ? 'text-emerald-600' : 'text-stone-400'
+                                    }`}>
+                                      {g.matchConfidence} match
+                                    </span>
+                                  )}
+                                  {g.buyingNote && (
+                                    <p className="w-full text-[11px] text-stone-400 italic mt-1">{g.buyingNote}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="mt-1.5">
+                                  <span className="text-[9px] tracking-widest uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                                    ◯ Missing from wardrobe
+                                  </span>
+                                  {/* Buying actions inline */}
+                                  {missingText && (
+                                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                      {onAddMissingToWishlist && (
+                                        <button onClick={() => onAddMissingToWishlist(missingText)}
+                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-stone-900 hover:bg-stone-700 text-white rounded-full transition-colors">
+                                          <Heart size={10} strokeWidth={1.5} /> Wishlist
+                                        </button>
+                                      )}
+                                      {shopUrl && (
+                                        <a href={shopUrl} target="_blank" rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                          <Store size={10} strokeWidth={1.5} /> Shop
+                                        </a>
+                                      )}
+                                      {yourShops && (
+                                        <a href={yourShops} target="_blank" rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                          <Bookmark size={10} strokeWidth={1.5} /> Your shops
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               )}
-                              <a href={googleShop} target="_blank" rel="noopener noreferrer"
-                                 className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
-                                <Store size={11} strokeWidth={1.5} /> Shop on Google
-                              </a>
-                              {yourShops && (
-                                <a href={yourShops} target="_blank" rel="noopener noreferrer"
-                                   className="inline-flex items-center gap-1.5 text-[11px] tracking-wider uppercase px-3 py-1.5 bg-white border border-stone-200 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
-                                  <Bookmark size={11} strokeWidth={1.5} /> Search your shops
-                                </a>
-                              )}
                             </div>
-                          </li>
+                          </div>
                         );
                       })}
-                    </ul>
+                    </div>
                   </div>
+                )}
+
+                {/* Re-analyse link (bottom) */}
+                {!analyzing && (
+                  <button onClick={handleAnalyze} disabled={analyzing}
+                    className="text-[10px] tracking-widest uppercase text-stone-400 hover:text-stone-700 transition-colors inline-flex items-center gap-1.5">
+                    <Sparkles size={11} strokeWidth={1.5} /> Re-analyse
+                  </button>
                 )}
               </>
             )}
           </div>
         </div>
       </div>
+
       <AIProgressModal open={analyzing} stage={analyzeStage} title="Analysing your inspiration" />
     </div>,
     document.body

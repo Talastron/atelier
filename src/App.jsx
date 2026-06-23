@@ -4437,7 +4437,20 @@ function DigitalWardrobe() {
                       onDeleteCollection={handleDeleteCollection}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => { setLookbookInitialTab('diary'); setActiveTab('lookbook'); }} />}
+                  {activeTab === 'calendar' && (
+                    <DiaryView
+                      items={ownedItems}
+                      outfits={outfits}
+                      schedules={schedules}
+                      onScheduleOutfit={handleScheduleOutfit}
+                      onOpenOutfit={setOpenOutfitId}
+                      onSaveOutfit={handleSaveOutfit}
+                      onOpenItem={setSelectedItemId}
+                      styleProfile={summariseStyleProfile(measurements)}
+                      autoActivateRangeMode={false}
+                    />
+                  )}
+                  {activeTab === 'finance' && <FinanceView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('calendar')} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}

@@ -2601,6 +2601,27 @@ async function compressImageToDataUrl(file, { maxWidth = 800, maxBytes = 150_000
   throw new Error('Image is very complex — try a simpler shot or fewer photos.');
 }
 
+// Rehost a third-party image URL to an inline data URL, so:
+// - Canvas exports work (the original CDN may block CORS)
+// - The image survives if the brand removes the product page
+// - All wardrobe images live in our data, not someone else's
+//
+// Delegates to imageUrlToCompressedDataUrl which uses the same fetchViaProxy
+// chain as the normal import path (weserv + allorigins fallback). Returns the
+// data URL on success, or null on failure (caller keeps the external URL as
+// graceful degradation).
+async function rehostExternalImage(externalUrl) {
+  if (!externalUrl) return null;
+  if (externalUrl.startsWith('data:')) return externalUrl; // already inline
+  try {
+    const dataUrl = await imageUrlToCompressedDataUrl(externalUrl);
+    return dataUrl; // null if proxy failed — caller handles gracefully
+  } catch (err) {
+    console.warn('[rehost] failed for', externalUrl, '—', err?.message);
+    return null;
+  }
+}
+
 // Body shape classification from bust/waist/hips ratios.
 // Same approach used by M&S "Find My Fit", ASOS, Stitch Fix etc. The result is
 // general styling guidance, not per-item size prediction (that needs brand
@@ -3183,6 +3204,50 @@ function DigitalWardrobe() {
     }
     if (!user) return;
     await setDoc(doc(userItemsRef(user.uid), newItem.id), newItem);
+
+    // Fire-and-forget rehost: if any image is still an external URL (not a
+    // data URL), copy it into inline data in the background. The initial save
+    // above is already done — the user sees the item immediately. When the
+    // rehost completes, a second write patches the item with the data URL.
+    // This handles the case where fetchProductFromUrl's imageUrlToCompressedDataUrl
+    // failed (e.g. the proxy timed out) and fell back to the raw external URL.
+    const externalRefs = [];
+    if (newItem.imageUrl && !newItem.imageUrl.startsWith('data:')) {
+      externalRefs.push({ field: 'imageUrl', index: -1, url: newItem.imageUrl });
+    }
+    if (Array.isArray(newItem.images)) {
+      newItem.images.forEach((u, i) => {
+        if (u && !u.startsWith('data:')) externalRefs.push({ field: 'images', index: i, url: u });
+      });
+    }
+    if (externalRefs.length > 0) {
+      const uid = user.uid;
+      (async () => {
+        try {
+          const patch = { ...newItem };
+          let changed = false;
+          for (const ref of externalRefs) {
+            const dataUrl = await rehostExternalImage(ref.url);
+            if (!dataUrl || dataUrl === ref.url) continue;
+            if (ref.field === 'imageUrl') {
+              patch.imageUrl = dataUrl;
+              changed = true;
+            } else if (ref.field === 'images' && Array.isArray(patch.images)) {
+              const next = [...patch.images];
+              next[ref.index] = dataUrl;
+              patch.images = next;
+              changed = true;
+            }
+          }
+          if (changed) {
+            await setDoc(doc(userItemsRef(uid), newItem.id), patch);
+            console.log('[rehost] patched item', newItem.id, 'with', externalRefs.length, 'rehosted image(s)');
+          }
+        } catch (err) {
+          console.warn('[rehost-bg] failed for item', newItem.id, '—', err?.message);
+        }
+      })();
+    }
   };
   const handleBulkUpdateItems = async (ids, partial) => {
     if (!ids.length) return;
@@ -18063,6 +18128,99 @@ function BackfillCard({ items = [], shops = [], onUpdateItem }) {
   );
 }
 
+// Backfill external-URL images to inline data URLs for existing items.
+// Surfaces in Profile → Storage. Uses the same rehostExternalImage helper
+// as the fire-and-forget that runs on every new item save.
+function RehostCard({ items = [], onUpdateItem }) {
+  const [stage, setStage] = useState('idle'); // idle | running | done
+  const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
+  const toast = useToast();
+
+  const isExternal = (u) => u && typeof u === 'string' && !u.startsWith('data:');
+  const candidates = items.filter((i) => !i.deletedAt && (
+    isExternal(i.imageUrl) ||
+    (Array.isArray(i.images) && i.images.some(isExternal))
+  ));
+
+  const run = async () => {
+    if (candidates.length === 0 || stage === 'running') return;
+    const ok = window.confirm(
+      `Rehost ${candidates.length} item${candidates.length === 1 ? '' : 's'} with external images? ` +
+      `This downloads each image and stores it in your wardrobe data. Runs in the background — you can keep using the app.`
+    );
+    if (!ok) return;
+    setStage('running');
+    setProgress({ done: 0, total: candidates.length, failed: 0 });
+    let failed = 0;
+    for (const item of candidates) {
+      try {
+        const patch = { ...item };
+        let changed = false;
+        if (isExternal(item.imageUrl)) {
+          const dataUrl = await rehostExternalImage(item.imageUrl);
+          if (dataUrl && dataUrl !== item.imageUrl) { patch.imageUrl = dataUrl; changed = true; }
+        }
+        if (Array.isArray(item.images)) {
+          const next = [...item.images];
+          let anyChanged = false;
+          for (let i = 0; i < item.images.length; i++) {
+            if (isExternal(item.images[i])) {
+              const dataUrl = await rehostExternalImage(item.images[i]);
+              if (dataUrl && dataUrl !== item.images[i]) { next[i] = dataUrl; anyChanged = true; }
+            }
+          }
+          if (anyChanged) { patch.images = next; changed = true; }
+        }
+        if (changed) await onUpdateItem(patch);
+      } catch (err) {
+        console.warn('[rehost] item failed', item.id, err?.message);
+        failed++;
+      }
+      setProgress((p) => ({ ...p, done: p.done + 1, failed }));
+    }
+    setStage('done');
+    const failedNote = failed > 0 ? ` · ${failed} couldn't be fetched` : '';
+    toast.show(`Rehosted ${candidates.length - failed} image${candidates.length - failed === 1 ? '' : 's'}${failedNote}`, { kind: 'success', duration: 5000 });
+  };
+
+  return (
+    <div id="profile-storage" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="brass-rule" aria-hidden="true"></span>
+            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-600 font-medium">Storage</span>
+          </div>
+          <h3 className="font-display text-xl md:text-2xl text-stone-900">Rehost external images</h3>
+          <p className="text-stone-500 text-sm mt-2 leading-relaxed max-w-xl">
+            {candidates.length === 0
+              ? 'All your wardrobe images are stored inline — share exports and Lookbook covers render reliably everywhere.'
+              : `${candidates.length} item${candidates.length === 1 ? '' : 's'} still reference${candidates.length === 1 ? 's' : ''} the brand's CDN. Those URLs can break if the product page is removed, and many brand CDNs block external use (which is why some pieces appear blank in share exports). Rehost copies each image into your own data.`}
+          </p>
+        </div>
+        {candidates.length > 0 && stage !== 'running' && (
+          <button onClick={run}
+            className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 flex items-center gap-2 shrink-0 transition-colors">
+            <Sparkles size={14} strokeWidth={1.5} />
+            {stage === 'done' ? 'Run again' : `Rehost ${candidates.length}`}
+          </button>
+        )}
+        {candidates.length === 0 && (
+          <span className="inline-flex items-center gap-2 text-[11px] tracking-widest uppercase text-emerald-700 shrink-0">
+            <Check size={12} strokeWidth={2.5} /> All rehosted
+          </span>
+        )}
+      </div>
+      {stage === 'running' && (
+        <div className="mt-4 flex items-center gap-3 text-sm text-stone-600">
+          <div className="w-4 h-4 border-2 border-stone-300 border-t-stone-900 rounded-full animate-spin" />
+          Rehosting {progress.done}/{progress.total}{progress.failed > 0 ? ` · ${progress.failed} failed` : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfits = [], inspirations = [] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -18442,6 +18600,7 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
     { id: 'profile-settings', label: 'Settings' },
     { id: 'profile-style', label: 'Style' },
     { id: 'profile-cutouts', label: 'Cutouts' },
+    { id: 'profile-storage', label: 'Storage' },
     { id: 'profile-backup', label: 'Backup' },
     { id: 'profile-trash', label: 'Trash' },
     { id: 'profile-measurements', label: 'Measurements' },
@@ -18689,6 +18848,8 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
       <FitProfileCard measurements={measurements} />
 
       <BackfillCard items={items} shops={shops} onUpdateItem={onUpdateItem} />
+
+      <RehostCard items={items} onUpdateItem={onUpdateItem} />
 
       <div id="profile-backup" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">

@@ -29,9 +29,9 @@ const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const PROD_REDIRECT = 'https://edit.myatelier.style/?calendarConnected=1';
 const LOCAL_REDIRECT = 'http://localhost:5173/?calendarConnected=1';
-const INTEGRATION_DOC = 'google_calendar';            // client-readable metadata
-const TOKENS_DOC = '_google_calendar_tokens';         // server-only (rule denies client reads on _-prefixed integrations)
-const STATE_DOC = '_oauth_state';                     // server-only (same convention)
+const INTEGRATION_DOC = 'google_calendar';   // client-readable metadata, under users/{uid}/integrations
+const PROVIDER = 'google_calendar';          // server-only secrets, under integrationSecrets/{uid}/providers
+const STATE_DOC = '_oauth_state';            // server-only transient state, same subtree
 
 // --- Secrets -----------------------------------------------------------------
 
@@ -41,16 +41,24 @@ const GOOGLE_OAUTH_REDIRECT_URI = defineSecret('GOOGLE_OAUTH_REDIRECT_URI');
 
 // --- Helpers -----------------------------------------------------------------
 
+// Client-readable metadata (scope, connectedAt) — the SPA reads this to show
+// the "Connected" badge. Covered by the existing /users/{uid}/{document=**}
+// rule, which is fine: it holds nothing sensitive.
 function integrationRef(uid) {
   return admin.firestore().doc(`users/${uid}/integrations/${INTEGRATION_DOC}`);
 }
 
+// Server-only secrets. Stored OUTSIDE /users/{uid} on purpose: Firestore rules
+// are additive, so the recursive /users/{uid}/{document=**} allow can't be
+// narrowed by a more-specific deny. Keeping tokens under /integrationSecrets
+// (no client allow rule → default-deny) is the only way to truly seal them.
+// Functions reach them via the Admin SDK, which bypasses rules.
 function tokensRef(uid) {
-  return admin.firestore().doc(`users/${uid}/integrations/${TOKENS_DOC}`);
+  return admin.firestore().doc(`integrationSecrets/${uid}/providers/${PROVIDER}`);
 }
 
 function stateRef(uid) {
-  return admin.firestore().doc(`users/${uid}/integrations/${STATE_DOC}`);
+  return admin.firestore().doc(`integrationSecrets/${uid}/providers/${STATE_DOC}`);
 }
 
 function isRunningInEmulator() {

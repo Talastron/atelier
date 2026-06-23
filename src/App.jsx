@@ -10285,6 +10285,15 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   }, [initialTab]);
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
+  // Transient flag: when the user clicks "+ Plan a trip" from TripsListView,
+  // this switches the tab to Diary and tells DiaryView → WearCalendar to
+  // auto-activate range mode. Clears itself after WearCalendar consumes it.
+  const [autoActivateRange, setAutoActivateRange] = useState(false);
+  const handlePlanTripFromTrips = () => {
+    setTab('diary');
+    setAutoActivateRange(true);
+    setTimeout(() => setAutoActivateRange(false), 200);
+  };
   // Studio archives: by default only owned items appear in slot pools.
   // When includeWishlist is ON, wishlist items are also eligible and get
   // a brass "WISHLIST" badge so the user knows they're composing around
@@ -11293,6 +11302,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           outfits={outfits}
           items={items}
           onOpenTrip={(tripId) => setOpenTripId(tripId)}
+          onPlanTrip={handlePlanTripFromTrips}
         />
       )}
 
@@ -11324,6 +11334,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           onSaveOutfit={saveOutfit}
           onOpenItem={onOpenItem}
           styleProfile={styleProfile}
+          autoActivateRangeMode={autoActivateRange}
         />
       ) : !isLookbook && tab === 'create' ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -12032,17 +12043,27 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
 // ---------------------------------------------------------------------------
 // TripsListView — Lookbook "Trips" sub-tab: grouped list of planned trips
 // ---------------------------------------------------------------------------
-function TripsListView({ trips, outfits, items, onOpenTrip }) {
+function TripsListView({ trips, outfits, items, onOpenTrip, onPlanTrip }) {
   if (trips.length === 0) {
     return (
       <div className="bg-white border border-stone-200/60 rounded-2xl p-10 sm:p-16 text-center">
-        <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-stone-300 flex items-center justify-center">
-          <Calendar size={20} strokeWidth={1.5} className="text-stone-500" />
+        <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-brass-400 flex items-center justify-center">
+          <Calendar size={20} strokeWidth={1.5} className="text-brass-700" />
         </div>
         <h3 className="font-display text-stone-900 text-2xl mb-2">Your trips begin here</h3>
-        <p className="text-stone-500 text-sm italic max-w-md mx-auto leading-relaxed">
-          Plan a trip from the Calendar: tap range mode, pick your dates, and let the Concierge compose a capsule. Future and past trips will collect here for easy reference.
+        <p className="text-stone-500 text-sm italic max-w-md mx-auto leading-relaxed mb-6">
+          Plan a trip and let the Concierge compose a capsule. Future and past trips collect here for easy reference.
         </p>
+        {onPlanTrip && (
+          <button
+            type="button"
+            onClick={onPlanTrip}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-stone-900 text-white text-sm tracking-wide hover:bg-stone-700 transition-colors"
+          >
+            <Plus size={14} strokeWidth={2} />
+            Plan a trip
+          </button>
+        )}
       </div>
     );
   }
@@ -12055,6 +12076,18 @@ function TripsListView({ trips, outfits, items, onOpenTrip }) {
 
   return (
     <div className="space-y-10">
+      {onPlanTrip && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onPlanTrip}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-stone-900 text-white text-[12px] tracking-wide hover:bg-stone-700 transition-colors"
+          >
+            <Plus size={13} strokeWidth={2} />
+            Plan a trip
+          </button>
+        </div>
+      )}
       {grouped.map((group) => (
         <section key={group.label}>
           <div className="flex items-center gap-3 mb-5">
@@ -13265,7 +13298,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
   );
 }
 
-function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '', onOpenItem = null }) {
+function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '', onOpenItem = null, autoActivateRangeMode = false }) {
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [selectedDate, setSelectedDate] = useState(null);
@@ -13275,7 +13308,24 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
   const [rangeEnd, setRangeEnd] = useState(null);
   const [packingOpen, setPackingOpen] = useState(false);
   const [travelOpen, setTravelOpen] = useState(false);
+  const [showRangeHint, setShowRangeHint] = useState(false);
   const toast = useToast();
+
+  useEffect(() => {
+    if (autoActivateRangeMode) {
+      setRangeMode(true);
+      setRangeStart(null);
+      setRangeEnd(null);
+      setSelectedDate(null);
+      setShowRangeHint(true);
+      setTimeout(() => {
+        const el = document.querySelector('[data-calendar-root]');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+      // Auto-dismiss the hint after 8s
+      setTimeout(() => setShowRangeHint(false), 8000);
+    }
+  }, [autoActivateRangeMode]);
 
   const toggleRangeMode = () => {
     setRangeMode((on) => !on);
@@ -13339,7 +13389,23 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
   const plannedInMonth = Object.keys(schedules).filter((d) => d.startsWith(monthPrefix) && schedules[d]?.outfitId).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-calendar-root>
+      {showRangeHint && rangeMode && (
+        <div className="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-stone-700 text-sm flex items-center justify-between gap-3 animate-in fade-in duration-300">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Calendar size={16} strokeWidth={1.5} className="text-amber-700 shrink-0" />
+            <span className="leading-snug">Pick your trip's <span className="font-medium">start date</span>, then the <span className="font-medium">end date</span>. The Concierge will compose a capsule.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowRangeHint(false)}
+            aria-label="Dismiss hint"
+            className="text-stone-500 hover:text-stone-900 shrink-0"
+          >
+            <X size={14} strokeWidth={1.5} />
+          </button>
+        </div>
+      )}
       <div className="bg-white border border-stone-200/60 rounded-[2rem] p-4 sm:p-6 smooth-shadow">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <button onClick={goPrev} className="p-2.5 rounded-full text-stone-500 hover:bg-stone-100 transition-colors" aria-label="Previous month">
@@ -14863,9 +14929,15 @@ function DiaryStatsRow({ daysCount, wears, streak, mostWorn, onOpenItem }) {
 // numerals, polaroid item thumbnails, italic pull-quote notes, photo
 // lightbox. The diary is now a SINGLE keepsake destination, not a feature
 // fractured across Studio + Insights.
-function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, onOpenItem, styleProfile = '' }) {
+function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, onOpenItem, styleProfile = '', autoActivateRangeMode = false }) {
   const [tab, setTab] = useState('journal');
   const [filter, setFilter] = useState('all');
+
+  // When a "Plan a trip" CTA fires from TripsListView, switch to the
+  // Calendar sub-tab so WearCalendar is visible before auto-activating range mode.
+  useEffect(() => {
+    if (autoActivateRangeMode) setTab('calendar');
+  }, [autoActivateRangeMode]);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
   // Compute wearDiary entries — every day with a logged wear, newest
@@ -15023,6 +15095,7 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
             onSaveOutfit={onSaveOutfit}
             styleProfile={styleProfile}
             onOpenItem={onOpenItem}
+            autoActivateRangeMode={autoActivateRangeMode}
           />
         </div>
       ) : (

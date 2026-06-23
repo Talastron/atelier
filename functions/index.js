@@ -263,3 +263,46 @@ exports.getCalendarEvents = onCall(
     return { events };
   }
 );
+
+// --- 4. disconnectCalendar --------------------------------------------------
+//
+// Client cannot delete the tokens doc directly (Firestore rules deny client
+// writes on _-prefixed integration docs). Funnel disconnect through here so
+// both the metadata and tokens docs are cleaned up atomically.
+
+exports.disconnectCalendar = onCall(
+  {
+    region: REGION,
+    secrets: [GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URI],
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    // Best-effort: revoke at Google so the refresh token can't be re-used
+    // even if the Firestore delete fails. Failure here is non-fatal — the
+    // tokens being deleted from our side is the load-bearing step.
+    try {
+      const tokensSnap = await tokensRef(uid).get();
+      if (tokensSnap.exists && tokensSnap.data().refreshToken) {
+        const oauth2 = new google.auth.OAuth2(
+          GOOGLE_OAUTH_CLIENT_ID.value(),
+          GOOGLE_OAUTH_CLIENT_SECRET.value(),
+          GOOGLE_OAUTH_REDIRECT_URI.value()
+        );
+        await oauth2.revokeToken(tokensSnap.data().refreshToken);
+      }
+    } catch (err) {
+      logger.warn('Failed to revoke refresh token at Google; proceeding with local delete', err);
+    }
+
+    await Promise.all([
+      tokensRef(uid).delete(),
+      integrationRef(uid).delete(),
+    ]);
+
+    return { ok: true };
+  }
+);

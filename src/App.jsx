@@ -2622,6 +2622,23 @@ async function rehostExternalImage(externalUrl) {
   }
 }
 
+// Detect if a string is just a URL (possibly with tracking parameters).
+// Returns null if not a plain URL; { hostname, url } if it is. Used to
+// render inspiration captions / notes that ARE URLs as a clean "Source ·
+// hostname" link rather than a raw 200-character tracking URL.
+function parseSourceUrl(text) {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  if (/\s/.test(trimmed)) return null; // contains spaces — it's prose, not a URL
+  try {
+    const u = new URL(trimmed);
+    return { hostname: u.hostname.replace(/^www\./, ''), url: trimmed };
+  } catch {
+    return null;
+  }
+}
+
 // Body shape classification from bust/waist/hips ratios.
 // Same approach used by M&S "Find My Fit", ASOS, Stitch Fix etc. The result is
 // general styling guidance, not per-item size prediction (that needs brand
@@ -12043,12 +12060,53 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                 <span className="brass-rule" aria-hidden="true" />
                 <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Inspiration</p>
               </div>
-              {inspiration.caption && (
-                <h1 className="text-3xl sm:text-4xl font-display text-stone-900 leading-tight">{inspiration.caption}</h1>
-              )}
-              {inspiration.notes && (
-                <p className="text-stone-500 mt-3 leading-relaxed text-sm whitespace-pre-wrap">{inspiration.notes}</p>
-              )}
+              {/* Caption: if it's a plain URL (e.g. the product name wasn't
+                  found so the URL ended up as caption), render a source chip
+                  instead of a raw tracking URL as the H1. */}
+              {(() => {
+                const captionUrl = parseSourceUrl(inspiration.caption);
+                if (captionUrl) {
+                  // Caption IS a URL — show fallback title + source chip
+                  return (
+                    <>
+                      <h1 className="text-3xl sm:text-4xl font-display text-stone-900 leading-tight">Untitled inspiration</h1>
+                      <a
+                        href={captionUrl.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 mt-3 text-[11px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                      >
+                        <span className="inline-block w-3 h-px bg-current" aria-hidden="true" />
+                        Source · {captionUrl.hostname}
+                      </a>
+                    </>
+                  );
+                }
+                return inspiration.caption ? (
+                  <h1 className="text-3xl sm:text-4xl font-display text-stone-900 leading-tight">{inspiration.caption}</h1>
+                ) : null;
+              })()}
+              {/* Notes: if prose, render as italic text. If somehow a bare URL,
+                  render as a source chip (e.g. old data where notes held the URL). */}
+              {(() => {
+                const notesUrl = parseSourceUrl(inspiration.notes);
+                if (notesUrl) {
+                  return (
+                    <a
+                      href={notesUrl.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-3 text-[11px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                    >
+                      <span className="inline-block w-3 h-px bg-current" aria-hidden="true" />
+                      Source · {notesUrl.hostname}
+                    </a>
+                  );
+                }
+                return inspiration.notes ? (
+                  <p className="text-stone-500 mt-3 leading-relaxed text-sm whitespace-pre-wrap">{inspiration.notes}</p>
+                ) : null;
+              })()}
             </div>
 
             {/* Palette strip */}

@@ -4322,12 +4322,16 @@ function DigitalWardrobe() {
                 <span className="text-sm font-medium">Concierge</span>
                 <span className="ml-auto text-[9px] tracking-[0.25em] uppercase text-stone-400 group-hover:text-brass-500 transition-colors">Ask</span>
               </button>
+              {/* Primary pillars */}
               <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
+              <DesktopNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
+
+              {/* Secondary — quieter, below a hairline */}
+              <div className="border-t border-stone-200/60 my-3" aria-hidden="true"></div>
               <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
               <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
-              <DesktopNavItem id="profile" icon={Ruler} label="Profile" activeTab={activeTab} setTab={setActiveTab} />
               <DesktopNavItem id="shops" icon={Store} label="Directory" activeTab={activeTab} setTab={setActiveTab} />
             </nav>
 

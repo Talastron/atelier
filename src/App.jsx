@@ -2151,6 +2151,10 @@ WEATHER-DRIVEN RULES (use the DAILY MAX temperature for each outfit, this is NON
 Available items (id|name|brand|category|attributes):
 ${items.map(summarize).join('\n')}
 
+Marker rule for the reasoning field: when you mention a specific piece by name in the reasoning text, wrap it as <<item:ID|display name>> using the id from your itemIds list. Example:
+- "The <<item:i_xyz|ivory silk shirt>> keeps it breezy at 26°C."
+Wrap only the piece itself, not the surrounding sentence. Do not invent ids.
+
 Respond ONLY with valid JSON in this exact shape:
 {
   "days": [
@@ -2226,6 +2230,7 @@ ${styleProfile ? `${styleProfile}\n\n` : ''}Rules:
 - Apply the same WEATHER-DRIVEN RULES (same temperature thresholds as a full capsule prompt).
 - Reasoning line ≤ 12 words, mention the temperature range.
 - Compose something DIFFERENT from the last attempt — fresh combination, not the same pieces.
+- Marker rule: when you name a specific piece in reasoning, wrap it as <<item:ID|display name>> using the id from itemIds. Example: "The <<item:i_xyz|ivory silk shirt>> keeps it cool at 26°C." Wrap only the piece name, not the whole sentence. Do not invent ids.
 
 Available items (id|name|brand|category|attributes):
 ${items.map(summarize).join('\n')}
@@ -12671,7 +12676,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
   );
 }
 
-function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '' }) {
+function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '', onOpenItem = null }) {
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [selectedDate, setSelectedDate] = useState(null);
@@ -13026,6 +13031,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
           onSaveOutfit={onSaveOutfit}
           onScheduleOutfit={onScheduleOutfit}
           styleProfile={styleProfile}
+          onOpenItem={onOpenItem}
           onClose={() => setTravelOpen(false)}
         />
       )}
@@ -13054,7 +13060,7 @@ const TRAVEL_ACTIVITIES = [
   { id: 'family', label: 'Family time / casual', hint: 'easy, machine-washable' },
 ];
 
-function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleOutfit, styleProfile, onClose }) {
+function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleOutfit, styleProfile, onOpenItem = null, onClose }) {
   useEscapeKey(onClose);
   const [destination, setDestination] = useState('');
   const [tripType, setTripType] = useState('vacation'); // vacation | business | mixed
@@ -13546,7 +13552,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                               Sparse outfit ({pieces.length} piece{pieces.length === 1 ? '' : 's'}) — Reroll for a fuller composition.
                             </p>
                           )}
-                          {d.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed">{d.reasoning}</p>}
+                          {d.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed">{renderTextWithChips(d.reasoning, { items, onOpenItem })}</p>}
                         </>
                       )}
                     </div>
@@ -14306,6 +14312,7 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
             onOpenOutfit={onOpenOutfit}
             onSaveOutfit={onSaveOutfit}
             styleProfile={styleProfile}
+            onOpenItem={onOpenItem}
           />
         </div>
       ) : (

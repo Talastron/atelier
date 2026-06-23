@@ -757,6 +757,112 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
   }
 }
 
+// Photo-to-listing search. Given a garment photo, asks Gemini Vision to
+// identify the exact product and return a concise search query the user
+// can run on Google Shopping to find the real listing.
+//
+// Google Search grounding (tools: [{ googleSearch: {} }]) is NOT yet
+// available in the firebase/ai SDK — it only exists in the raw Gemini
+// API. We therefore use a vision-only prompt that produces a search query
+// + brand + description, and the caller opens Google Shopping for the user
+// or accepts a pasted URL, then routes through the existing fetchProductFromUrl
+// import path to pull the real data (name, brand, official image, price).
+//
+// Returns:
+//   { description, searchQuery, brand, confidence, searchAvailable: false }
+// `searchAvailable` is always false (SDK doesn't yet support grounding).
+// When the SDK gains tools support, flip the logic inside this function
+// to try grounded mode first and fall back here.
+export async function findProductListingFromPhoto(imageDataUrl, opts = {}, feature = 'find-listing') {
+  checkRateLimit();
+  checkUserDailyCap();
+  try {
+    const ai = getAiSafe();
+    const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Image format not recognised.');
+    const [, mimeType, data] = match;
+    const modelName = opts.model || 'gemini-2.5-flash';
+
+    const model = getGenerativeModel(ai, {
+      model: modelName,
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 600,
+      },
+    });
+
+    const prompt = `You are looking at a photograph of a single garment or fashion accessory. Your job is to identify the product precisely enough that a Google Shopping search will surface the exact listing.
+
+Look carefully for:
+- Brand logos, labels, or text visible on the item or tag
+- Distinctive design signatures (e.g. Burberry check, Bottega woven leather, Gucci GG canvas, LV monogram, Cartier's red leather cord)
+- Product shape, silhouette, cut (e.g. "belted trench", "mule", "biker jacket")
+- Dominant colour(s)
+- Hardware, stitching, or pattern details that make this identifiable
+
+Return ONLY JSON — no markdown, no fences, no extra text:
+{
+  "description": "one-sentence description of what you see (e.g. 'beige Burberry-check double-breasted trench coat, mid-length, belted')",
+  "searchQuery": "the best short Google Shopping query to find this exact item (e.g. 'Burberry Heritage Trench Coat beige')",
+  "confidence": "high | medium | low",
+  "brand": "Brand name if there is a visible logo or unmistakably signature design element, otherwise null"
+}
+
+Rules:
+- confidence 'high' = you can clearly see a brand logo / label or a uniquely identifiable brand signature design
+- confidence 'medium' = you believe you recognise the brand or style but are not certain
+- confidence 'low' = you can describe the item but cannot identify the brand or specific product
+- Do NOT invent brand names without visible evidence — better to set brand null and confidence low than to hallucinate
+- searchQuery should be 3–8 words, brand-first when known`;
+
+    const result = await model.generateContent({
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType, data } },
+        ],
+      }],
+    });
+
+    const text = result.response.text();
+    recordCall();
+    recordUserCall();
+
+    const promptLen = prompt.length;
+    const tokens = extractTokenCounts(result, promptLen, text.length);
+    if (tokens.estimated) tokens.inputTokens += 258; // flat image-token estimate
+    logAiUsage({
+      feature,
+      model: modelName,
+      hasVision: true,
+      inputTokens: tokens.inputTokens,
+      outputTokens: tokens.outputTokens,
+      estimated: tokens.estimated,
+    });
+
+    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+    let parsed;
+    try { parsed = JSON.parse(cleaned); }
+    catch (parseErr) {
+      console.warn('[find-listing] JSON parse failed:', parseErr?.message, '|', cleaned.slice(0, 200));
+      return { description: '', searchQuery: '', brand: null, confidence: 'low', searchAvailable: false };
+    }
+
+    return {
+      description: typeof parsed.description === 'string' ? parsed.description : '',
+      searchQuery: typeof parsed.searchQuery === 'string' ? parsed.searchQuery : (parsed.description || ''),
+      brand: typeof parsed.brand === 'string' ? parsed.brand : null,
+      confidence: ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'low',
+      searchAvailable: false,
+      candidates: [], // reserved for future grounded-search path
+    };
+  } catch (err) {
+    if (!isConfigError(err)) recordCall();
+    throw mapGeminiError(err);
+  }
+}
+
 // Founder-cohort counter for the Profile privacy section. Counts
 // distinct users in the /users collection. One-shot read, cached
 // in-memory for the session so navigation away/back doesn't re-fetch.

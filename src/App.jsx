@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc } from 'firebase/firestore';
-import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount } from './firebase.js';
+import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, geminiText, geminiTextVision, geminiTextStream, isAIEnabled, getFounderCount, findProductListingFromPhoto } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
@@ -6990,6 +6990,82 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     description: '', sourceUrl: '', purchasedDate: '', purchasedFrom: '', size: '', care: [], colors: [], materials: [], lentTo: '', lentReturnBy: '', wishlistReason: '',
   });
 
+  // ── Photo-to-listing state ──────────────────────────────────────────────────
+  // State machine for the "Find this online" path added to the Identify flow.
+  // idle → searching → found | no-match
+  // found: show Google Shopping link; no-match: same but note AI wasn't sure
+  // Both states let the user paste a URL to import via fetchProductFromUrl.
+  const [findStep, setFindStep] = useState('idle'); // idle | searching | found | no-match
+  const [findResult, setFindResult] = useState(null); // { description, searchQuery, brand, confidence }
+  const [findError, setFindError] = useState(null);
+  const [findPasteUrl, setFindPasteUrl] = useState('');
+
+  // The photo data URL captured for "Find this online" — needed so we can
+  // pass it to findProductListingFromPhoto and also add it as the item image
+  // if the user does end up importing from a URL.
+  const [findPhotoDataUrl, setFindPhotoDataUrl] = useState(null);
+
+  const handleFindOnline = async (file) => {
+    if (!file) return;
+    if (!isAIEnabled()) { setError('Find online needs the Concierge configured (add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic).'); return; }
+    setIsLoading(true); setFindError(null); setFindStep('searching'); setFindResult(null); setFindPasteUrl('');
+    // Switch to the find-online sub-view — we use step 1.5 conceptually but
+    // keep step===1 and use findStep to drive the sub-UI inside step 1.
+    try {
+      const dataUrl = await compressImageToDataUrl(file, { maxWidth: 1200, maxBytes: 350_000, enhance: false });
+      setFindPhotoDataUrl(dataUrl);
+      const result = await findProductListingFromPhoto(dataUrl);
+      setFindResult(result);
+      setFindStep(result.confidence === 'low' ? 'no-match' : 'found');
+    } catch (err) {
+      setFindError(err?.message || 'Could not search for this item.');
+      setFindStep('idle');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleFindInput = (e) => {
+    const f = e.target.files?.[0];
+    if (f) handleFindOnline(f);
+    e.target.value = '';
+  };
+
+  // Import from a URL the user has pasted (in the find-online flow).
+  // Mirrors importFromLink but also carries over the photo as a fallback
+  // if the listing has no image.
+  const handleFindPasteImport = async () => {
+    const url = findPasteUrl.trim();
+    if (!url) return;
+    setIsLoading(true); setFindError(null);
+    try {
+      const data = await fetchProductFromUrl(url);
+      setFormData((prev) => ({
+        ...prev,
+        name: data.name || prev.name,
+        brand: data.brand || prev.brand,
+        images: data.imageUrl
+          ? [...(prev.images || []), data.imageUrl].slice(0, 6)
+          // No listing image → use the photo they took for this flow
+          : (findPhotoDataUrl ? [...(prev.images || []), findPhotoDataUrl].slice(0, 6) : prev.images),
+        description: data.description || prev.description,
+        price: data.price || prev.price,
+        sourceUrl: data.sourceUrl || prev.sourceUrl || url,
+      }));
+      setFindStep('idle'); setFindResult(null); setFindPhotoDataUrl(null); setFindPasteUrl('');
+      toast.show('Listing imported ✓ — review and save', { kind: 'success', duration: 3500 });
+      setStep(2);
+    } catch (err) {
+      setFindError(err?.message || 'Could not import from this URL. Try another link or Manual Entry.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFindReset = () => {
+    setFindStep('idle'); setFindResult(null); setFindError(null); setFindPasteUrl(''); setFindPhotoDataUrl(null);
+  };
+  // ── End photo-to-listing state ──────────────────────────────────────────────
+
   // Scan a care label / brand tag / barcode → Gemini Vision pre-fills the form.
   // Materials/care/colour are mapped to the app's known vocabularies (chips light
   // up correctly). Unmapped care phrases get appended to the description so they
@@ -7389,6 +7465,120 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                 <div className="flex-grow border-t border-stone-200"></div>
               </div>
 
+              {/* ── Photo-to-listing active panel ───────────────────────────────────── */}
+              {findStep !== 'idle' && (
+                <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden">
+                  {/* Header row */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100">
+                    <p className="text-[10px] tracking-widest uppercase font-semibold text-stone-500">
+                      {findStep === 'searching' ? 'Searching…' : 'Find this online'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleFindReset}
+                      className="text-stone-400 hover:text-stone-900 transition-colors"
+                      aria-label="Cancel search"
+                    >
+                      <X size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+
+                  {/* Searching spinner */}
+                  {findStep === 'searching' && (
+                    <div className="py-8 flex flex-col items-center gap-3 text-stone-600">
+                      <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin" />
+                      <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">Identifying product</p>
+                    </div>
+                  )}
+
+                  {/* Result panel: found (medium/high confidence) or no-match (low) */}
+                  {(findStep === 'found' || findStep === 'no-match') && findResult && (
+                    <div className="p-4 space-y-4">
+                      {/* What we saw */}
+                      <div className="text-xs text-stone-600 leading-relaxed italic">
+                        "{findResult.description}"
+                      </div>
+
+                      {/* Confidence badge + brand */}
+                      {findResult.confidence !== 'low' && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {findResult.brand && (
+                            <span className="px-2.5 py-1 rounded-full bg-stone-900 text-white text-[10px] tracking-widest uppercase">
+                              {findResult.brand}
+                            </span>
+                          )}
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] tracking-widest uppercase ${
+                            findResult.confidence === 'high'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}>
+                            {findResult.confidence === 'high' ? 'Confident match' : 'Possible match'}
+                          </span>
+                        </div>
+                      )}
+                      {findStep === 'no-match' && (
+                        <p className="text-[11px] text-stone-500 italic">
+                          Couldn't identify a specific brand or product — try Google Shopping below to find it yourself.
+                        </p>
+                      )}
+
+                      {/* Google Shopping CTA */}
+                      <a
+                        href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(findResult.searchQuery || findResult.description || '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-stone-900 text-white text-sm tracking-wide hover:bg-stone-700 transition-colors"
+                      >
+                        <Search size={14} strokeWidth={1.5} />
+                        Search Google Shopping
+                        {findResult.searchQuery && (
+                          <span className="text-stone-400 text-[10px] truncate max-w-[120px] hidden sm:inline">
+                            "{findResult.searchQuery}"
+                          </span>
+                        )}
+                      </a>
+
+                      {/* URL paste */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] tracking-widest uppercase text-stone-500">Found the listing? Paste the URL to import it:</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={findPasteUrl}
+                            onChange={(e) => setFindPasteUrl(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleFindPasteImport(); } }}
+                            placeholder="https://…"
+                            className="flex-1 px-3 py-2.5 rounded-xl bg-stone-50 border border-stone-200 text-sm outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 transition-all"
+                            style={{ fontSize: '16px' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleFindPasteImport}
+                            disabled={!findPasteUrl.trim() || isLoading}
+                            className="px-4 py-2 rounded-xl bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 disabled:opacity-50 transition-colors shrink-0"
+                          >
+                            {isLoading ? '…' : 'Import'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {findError && <p className="text-[11px] text-red-700 italic">{findError}</p>}
+
+                      {/* Escape hatch back to normal AI analysis */}
+                      <button
+                        type="button"
+                        onClick={() => { handleFindReset(); }}
+                        className="w-full text-[11px] tracking-wide text-stone-400 hover:text-stone-900 hover:underline underline-offset-4 transition-colors"
+                      >
+                        Or go back to other add options
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Normal option grid — hidden while find-online flow is active ──── */}
+              {findStep === 'idle' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <label className="group relative flex flex-col items-center justify-center p-5 sm:p-6 bg-stone-900 border border-stone-900 rounded-2xl cursor-pointer hover:bg-stone-700 transition-all col-span-2 sm:col-span-3 text-center">
                   <span className="absolute top-2 right-2 text-[9px] tracking-widest uppercase text-brass-300 font-medium">Fastest</span>
@@ -7396,6 +7586,14 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   <span className="font-display text-base sm:text-lg text-white">Identify with Concierge</span>
                   <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase">Snap any item · category, brand, colours, name — auto-filled</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handleIdentifyInput} className="hidden" />
+                </label>
+                {/* Find this online — new card */}
+                <label className="group relative flex flex-col items-center justify-center p-5 sm:p-6 bg-white border-2 border-stone-200 hover:border-stone-900 rounded-2xl cursor-pointer transition-all col-span-2 sm:col-span-3 text-center">
+                  <span className="absolute top-2 right-2 text-[9px] tracking-widest uppercase text-stone-400 font-medium">Best images</span>
+                  <Search size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
+                  <span className="font-display text-base sm:text-lg text-stone-900">Find this online</span>
+                  <span className="text-[10px] text-stone-500 mt-1 tracking-wide uppercase">Snap · AI finds the real listing · import name, brand, official image, price</span>
+                  <input type="file" accept="image/*" capture="environment" onChange={handleFindInput} className="hidden" />
                 </label>
                 {onOpenSweep && (
                   <button type="button" onClick={onOpenSweep} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-brass-50 border border-brass-300 rounded-2xl cursor-pointer hover:border-brass-500 transition-all col-span-2 sm:col-span-3">
@@ -7436,6 +7634,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Type details</span>
                 </button>
               </div>
+              )}
               <p className="text-[10px] text-stone-400 tracking-wide text-center">
                 Tip: on desktop, copy an image and press <span className="font-medium text-stone-600">Ctrl+V</span> anywhere in this dialog to paste it in.
               </p>

@@ -20,6 +20,9 @@ import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInf
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
 import { useSubscriptionStatus } from './subscriptionStatus';
 import AppCheckDevBanner from './AppCheckDevBanner.jsx';
+import AtelierMark from './components/AtelierMark.jsx';
+import BottomBar from './nav/BottomBar.jsx';
+import Sidebar from './nav/Sidebar.jsx';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -245,23 +248,6 @@ function haptic(kind = 'tap') {
 }
 
 // Atelier monogram — wire-hanger silhouette with a brass charm hanging from
-// the bar. Universal wardrobe-app vocabulary plus the brass-detail signature.
-// Mirrors /public/icon.svg exactly so the brand mark reads the same
-// everywhere (favicon, sidebar, sign-in, public share viewer).
-function AtelierMark({ size = 40 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect width="256" height="256" fill="#1c1917" rx="56" />
-      <g fill="none" stroke="#F7F5F2" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110" />
-        <path d="M 128 110 L 62 184 L 194 184 Z" />
-      </g>
-      <line x1="128" y1="184" x2="128" y2="206" stroke="#D4B378" strokeWidth="1.5" strokeLinecap="round" opacity="0.8" />
-      <circle cx="128" cy="212" r="5" fill="#D4B378" />
-    </svg>
-  );
-}
-
 // Editorial section header. Pattern: brass rule + small-caps eyebrow + Playfair
 // title + optional muted subtitle. Used at the top of every primary tab view
 // to give the app a unified printed-magazine voice.
@@ -4284,86 +4270,7 @@ function DigitalWardrobe() {
               </div>
             </div>
           )}
-          <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
-            {/* Logo block height + this margin is tuned so the first nav pill
-                (Wardrobe) sits at the same Y as the search bar in the main
-                column. Math: main scroll-container has the page header
-                (~144px tall) + 8px gap; sidebar has 48px top padding +
-                ~42px logo. So mb ≈ 144 + 8 - 48 - 42 ≈ 62px → mb-[3.875rem]
-                rounded to mb-16 (4rem) for the cleanest visual baseline. */}
-            <div className="flex items-center gap-3 mb-16">
-              <AtelierMark size={42} />
-              <h1 className="text-3xl font-display font-medium tracking-wide">Atelier<span className="text-[#D4B378]">.</span></h1>
-            </div>
-
-            {/* Editorial eyebrow + brass rule above the nav — mirrors the
-                "GOOD MORNING, SIBYLLE" + brass-rule pattern in every main
-                column header. The sidebar now speaks the same typographic
-                language instead of being a flat list floating in the page. */}
-            <div className="flex items-center gap-3 mb-4 px-1">
-              <span className="brass-rule" aria-hidden="true"></span>
-              <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">
-                Studio
-              </p>
-            </div>
-            <nav className="space-y-2 flex-1">
-              {/* THE CONCIERGE — flagship AI feature, sits at the top of
-                  the sidebar as the most luxurious entry point. Not a
-                  destination tab (it's an overlay), so we use a plain
-                  button styled to match DesktopNavItem. Brass-coloured
-                  Sparkles icon signals 'special' without screaming. */}
-              <button
-                onClick={() => setIsConciergeOpen(true)}
-                className="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-stone-700 hover:bg-stone-200/70 hover:text-stone-900 transition-colors duration-200 group"
-              >
-                <span className="w-5 flex items-center justify-center text-brass-500 group-hover:text-brass-600 transition-colors">
-                  <Sparkles size={18} strokeWidth={1.5} />
-                </span>
-                <span className="text-sm font-medium">Concierge</span>
-                <span className="ml-auto text-[9px] tracking-[0.25em] uppercase text-stone-400 group-hover:text-brass-500 transition-colors">Ask</span>
-              </button>
-              {/* Primary pillars */}
-              <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
-              <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
-              <DesktopNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} />
-              <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
-
-              {/* Secondary — quieter, below a hairline */}
-              <div className="border-t border-stone-200/60 my-3" aria-hidden="true"></div>
-              <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
-              <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
-              <DesktopNavItem id="shops" icon={Store} label="Directory" activeTab={activeTab} setTab={setActiveTab} />
-            </nav>
-
-            <div className="border-t border-stone-200/60 pt-5 mt-6">
-              <button onClick={() => setActiveTab('profile')}
-                // Same hover language as nav items: stone-200/70 on the
-                // #F7F5F2 sidebar (stone-100 was invisible against #F7F5F2).
-                className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-stone-200/70 transition-colors duration-200 group"
-              >
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full ring-2 ring-stone-100 shrink-0" referrerPolicy="no-referrer" />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-base shrink-0">
-                    {(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
-                  <p className="text-[11px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
-                </div>
-                <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500 transition-colors shrink-0" strokeWidth={1.5} />
-              </button>
-              {/* Sign out — left-aligned with profile-row content above (matches
-                  the 12px avatar + 14px gap so the icon lines up under the name). */}
-              <button onClick={signOutUser} className="w-full flex items-center gap-2 mt-2 px-2 py-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-200/70 hover:text-stone-900 transition-colors duration-200">
-                <span className="w-12 flex items-center justify-center shrink-0">
-                  <LogOut size={12} strokeWidth={1.5} />
-                </span>
-                <span>Sign out</span>
-              </button>
-            </div>
-          </aside>
+          <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onOpenConcierge={() => setIsConciergeOpen(true)} user={user} demoMode={demoMode} signOutUser={signOutUser} setInspirationDefaultFilter={setInspirationDefaultFilter} />
 
           <main ref={mainScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden lg:pb-0 relative scroll-smooth hide-scrollbar"
                 style={{
@@ -4597,16 +4504,7 @@ function DigitalWardrobe() {
                 Asymmetric flex-group layouts (3-left+FAB+2-right) read
                 as off-centre because the eye weights item density, not
                 pixel position. Symmetric grid is the only true fix. */}
-            <div className="grid grid-cols-5 max-w-lg mx-auto py-1 items-center">
-              <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileFAB
-                onTap={() => setIsConciergeOpen(true)}
-                onLongPress={() => setIsConciergeOpen(true)}
-              />
-              <MobileNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-              <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={scrollMainToTop} />
-            </div>
+            <BottomBar activeTab={activeTab} setActiveTab={setActiveTab} onScrollTop={scrollMainToTop} onOpenConcierge={() => setIsConciergeOpen(true)} />
           </div>
 
           <PwaInstallNudge hasContent={liveItems.length > 0} />
@@ -5445,171 +5343,6 @@ function AccessDeniedScreen({ user, onSignOut }) {
       <p className="text-xs text-stone-400 leading-relaxed max-w-sm">
         Already a member with a different email, or expecting an invite from the wardrobe owner? Sign out and try again, or write to <a href="mailto:contact@myatelier.style" className="underline hover:text-stone-700">contact@myatelier.style</a>.
       </p>
-    </div>
-  );
-}
-
-function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
-  const isActive = activeTab === id;
-  return (
-    <button
-      onClick={() => setTab(id)}
-      // Active state: white bg + bold text + chevron is plenty of signal
-      // on the #F7F5F2 sidebar. No shadow — nav items should feel anchored
-      // to the sidebar, not floating above it.
-      // Hover: stone-200/70 — stone-100 was visually identical to the
-      // #F7F5F2 sidebar bg (only 2 RGB points apart), so the hover read
-      // as "no feedback at all." Stone-200/70 is a clear step down.
-      className={`w-full h-12 flex items-center justify-between px-5 rounded-2xl transition-colors duration-200 ${
-        isActive ? 'bg-white text-stone-900' : 'text-stone-500 hover:bg-stone-200/70 hover:text-stone-900'
-      }`}
-    >
-      <div className="flex items-center gap-4">
-        <Icon size={20} strokeWidth={isActive ? 2 : 1.5} />
-        <span className={`text-sm tracking-wide ${isActive ? 'font-medium' : 'font-normal'}`}>{label}</span>
-      </div>
-      {isActive && <ChevronRight size={16} className="text-stone-400" strokeWidth={1.5} />}
-    </button>
-  );
-}
-
-function MobileNavItem({ icon: Icon, label, id, activeTab, setTab, onScrollTop }) {
-  const isActive = activeTab === id;
-  return (
-    <button
-      onClick={() => {
-        // iOS pattern: tapping the active tab again scrolls that view to top.
-        if (isActive) onScrollTop?.();
-        else setTab(id);
-      }}
-      className="flex flex-col items-center gap-1 px-3 py-2 w-[68px] min-h-[56px] transition-all active:scale-95 relative"
-      aria-label={label}
-      aria-current={isActive ? 'page' : undefined}
-    >
-      <Icon size={22} strokeWidth={isActive ? 2 : 1.5} className={`transition-all duration-200 ${isActive ? 'text-stone-900 scale-110' : 'text-stone-400'}`} />
-      <span className={`text-[10px] tracking-wide transition-colors ${isActive ? 'text-stone-900 font-medium' : 'text-stone-400'}`}>{label}</span>
-      {isActive && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-stone-900" />}
-    </button>
-  );
-}
-
-// Mobile bottom-nav FAB — central button with two gestures:
-//   • Tap    → onTap()        (default: open the Add-Item modal)
-//   • Hold   → onLongPress()  (default: open the Atelier Concierge)
-//
-// The double action lets a single button serve both flagship paths
-// (capture a new piece / consult the AI stylist) without crowding the
-// nav. Discoverability comes from three sources:
-//   1. The 5th onboarding step explicitly teaches the gesture.
-//   2. A mid-press tooltip appears after ~180ms of holding, confirming
-//      what releasing now would do. This self-teaches the long-press
-//      to anyone who naturally tries holding it later.
-//   3. Haptic buzz at the trigger moment (navigator.vibrate) — on
-//      Android, makes the gesture feel intentional.
-const FAB_LONG_PRESS_MS = 550;
-const FAB_MOVE_THRESHOLD_PX = 12; // iOS HIG drag threshold — below this is jitter
-function MobileFAB({ onTap, onLongPress }) {
-  const [holdActive, setHoldActive] = useState(false);
-  const longPressTimer = React.useRef(null);
-  const tooltipTimer = React.useRef(null);
-  const triggered = React.useRef(false);
-  const moved = React.useRef(false);
-  const startX = React.useRef(0);
-  const startY = React.useRef(0);
-
-  const cleanup = () => {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-    if (tooltipTimer.current)   { clearTimeout(tooltipTimer.current);   tooltipTimer.current   = null; }
-    setHoldActive(false);
-  };
-
-  const onPointerDown = (e) => {
-    // Mouse: only react to primary button.
-    if (e.button !== undefined && e.button !== 0) return;
-
-    // setPointerCapture is the FIX for the broken hold gesture: without
-    // it, the tiniest subpixel finger jitter during touch fires
-    // `pointerleave` and kills the timer before 550ms. Capturing binds
-    // all further pointer events (move/up/cancel) to THIS element
-    // regardless of finger position. A real drag is still caught by the
-    // distance check in onPointerMove below.
-    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* old browsers */ }
-
-    triggered.current = false;
-    moved.current = false;
-    startX.current = e.clientX;
-    startY.current = e.clientY;
-
-    // Delay the tooltip slightly so a normal tap doesn't flash it.
-    tooltipTimer.current = setTimeout(() => {
-      if (!triggered.current && !moved.current) setHoldActive(true);
-    }, 180);
-
-    longPressTimer.current = setTimeout(() => {
-      triggered.current = true;
-      try { navigator.vibrate?.(20); } catch { /* iOS Safari ignores; that's fine */ }
-      cleanup();
-      onLongPress?.();
-    }, FAB_LONG_PRESS_MS);
-  };
-
-  const onPointerMove = (e) => {
-    if (!longPressTimer.current) return;
-    const dx = e.clientX - startX.current;
-    const dy = e.clientY - startY.current;
-    if (Math.hypot(dx, dy) > FAB_MOVE_THRESHOLD_PX) {
-      moved.current = true;
-      cleanup();
-    }
-  };
-
-  const onPointerUp = (e) => {
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
-    const fired = triggered.current;
-    const wasMoved = moved.current;
-    cleanup();
-    if (!fired && !wasMoved) onTap?.();
-  };
-
-  const onPointerCancel = (e) => {
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
-    moved.current = true;
-    cleanup();
-  };
-
-  return (
-    <div className="flex justify-center -mt-7 relative">
-      {/* Mid-press tooltip — brass label confirming the gesture. */}
-      {holdActive && (
-        <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-150 z-10">
-          <div className="text-[10px] tracking-[0.25em] uppercase text-stone-900 bg-brass-100 ring-1 ring-brass-300 px-3 py-1.5 rounded-full shadow-md font-medium">
-            Your stylist ✦
-          </div>
-        </div>
-      )}
-      <button
-        type="button"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onContextMenu={(e) => e.preventDefault()}
-        className={`w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all duration-200 active:scale-90 hover:scale-105 ring-4 ${holdActive ? 'ring-brass-300 scale-105' : 'ring-[#F7F5F2]'}`}
-        style={{
-          boxShadow: '0 10px 30px -8px rgba(28, 25, 23, 0.45)',
-          // Disables iOS Safari's long-press callout (the "copy / share" menu)
-          // and the double-tap-zoom delay so our gesture feels native-native.
-          WebkitTouchCallout: 'none',
-          WebkitUserSelect: 'none',
-          userSelect: 'none',
-          touchAction: 'manipulation',
-        }}
-        aria-label="Open the Concierge — your private stylist"
-      >
-        {/* The centre FAB is now the Concierge — brass Sparkles to match the
-            desktop sidebar's Concierge entry. Tap or hold opens the stylist. */}
-        <Sparkles size={30} strokeWidth={1.5} className="text-brass-300" />
-      </button>
     </div>
   );
 }

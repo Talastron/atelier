@@ -5658,9 +5658,14 @@ function DailyBriefCard({
 
   if (!brief) return null;
 
+  // Order the brief thumbnails clothing-first so the actual garments lead the
+  // eye, not the jewellery stack: dress/top/bottom/outerwear → shoes → bags →
+  // accessories → jewellery. Stable sort keeps Gemini's order within a tier.
+  const BRIEF_CATEGORY_ORDER = { Dresses: 0, Tops: 0, Bottoms: 0, Outerwear: 0, Sportswear: 0, Swimwear: 0, Shoes: 1, Bags: 2, Accessories: 3, Jewellery: 4 };
   const briefItems = (brief.itemIds || [])
     .map(id => items.find(it => it.id === id))
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => (BRIEF_CATEGORY_ORDER[a.category] ?? 2.5) - (BRIEF_CATEGORY_ORDER[b.category] ?? 2.5));
 
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
@@ -6072,16 +6077,15 @@ function TodayView({ user, items, measurements, schedules, outfits, inspirations
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* Greeting + weather */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="brass-rule" aria-hidden="true"></span>
-          <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
-            {getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ''}
-          </p>
-        </div>
+      {/* Greeting + weather — weather sits beside the greeting, not stranded
+          across the full width. */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="brass-rule" aria-hidden="true"></span>
+        <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
+          {getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ''}
+        </p>
         {weatherSettled && weather && (
-          <span className="text-stone-500 text-xs sm:text-sm shrink-0">{weatherLabelStr}</span>
+          <span className="text-stone-400 text-[10px] sm:text-xs tracking-[0.2em] uppercase">· {weatherLabelStr}</span>
         )}
       </div>
 
@@ -6550,7 +6554,10 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
       <div className="lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:items-start space-y-8 lg:space-y-0">
 
       {/* ─── MAIN COLUMN: search, filters, grid ─── */}
-      <div className="lg:col-span-8 lg:col-start-1 lg:row-start-1 space-y-6 md:space-y-8 min-w-0">
+      {/* Full width now (was col-span-8). The Daily Brief left the right rail
+          in Effort 2; the wardrobe grid reclaims the space. Today's Pick +
+          Tomorrow sit as a slim strip above (row-start-1); the grid is row-start-2. */}
+      <div className="lg:col-span-12 lg:col-start-1 lg:row-start-2 space-y-6 md:space-y-8 min-w-0">
 
       <div className="flex flex-col gap-4 md:gap-6">
         {/* Mobile-only search. On lg+ search has moved into the unified
@@ -6635,7 +6642,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         setColorFilter={setColorFilter}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-10">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8 md:gap-x-6 md:gap-y-10">
         {sortedItems.map(item => {
           const isSelected = selectedIds.has(item.id);
           return (
@@ -6803,7 +6810,7 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           desktop toolbar at the top of the wardrobe view (above the grid),
           so this column no longer needs its own sticky bar. Cards flow
           naturally and scroll with the page. */}
-      <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 flex-col gap-3 lg:pr-1 lg:pb-6">
+      <aside className="hidden lg:grid lg:grid-cols-2 lg:col-span-12 lg:col-start-1 lg:row-start-1 gap-3 lg:pb-2 items-start">
         {/* Daily Brief / Today tile / digest moved to the Today home (Effort 2).
             This rail now carries only "Today's Pick" — a weather-aware nudge
             from your own pieces, which stays with the wardrobe. */}

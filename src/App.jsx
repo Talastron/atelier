@@ -587,9 +587,14 @@ ${items.map(summarize).join('\n')}
 Respond ONLY with valid JSON in this exact shape:
 {"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100, "tags": ["3-5 short descriptive labels"]}
 
-Marker rule for the reasoning field: when you mention a specific piece by name in the reasoning text, wrap it as <<item:ID|display name>> using the id from your itemIds list. Example:
-- "The <<item:i_xyz|ivory silk shirt>> pairs cleanly with the <<item:i_abc|charcoal trouser>>."
-Wrap only the piece itself, not the surrounding sentence. Do not invent ids. If a piece is too generic to wrap, leave it as plain text.
+Marker rule for the reasoning field — STRICT. The pictured look (your itemIds) and the written look (this reasoning) MUST be identical:
+- EVERY garment or accessory you name in the reasoning MUST be one of the items in your itemIds array, and MUST be wrapped as <<item:ID|display name>> using that exact item's id.
+- NEVER name a piece that is not in itemIds. If you describe wearing something, it has to be in itemIds — no exceptions, including the main garment (dress / top / bottom).
+- NEVER leave a named piece as plain text. There is no "too generic to wrap" exception — if it is part of the look, it is in itemIds and it is wrapped.
+- Lead the reasoning with the actual clothing (the dress, or the top and bottom), then layer in shoes, bag, and jewellery — describe the outfit as worn, garments first.
+- Do not invent ids.
+- Example: "The <<item:i_xyz|ivory silk shirt>> pairs cleanly with the <<item:i_abc|charcoal trouser>>."
+Wrap only the piece itself, not the surrounding sentence.
 
 Tags guidance:
 - 3 to 5 short labels (1-2 words each, lowercase, no punctuation)

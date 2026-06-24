@@ -4392,7 +4392,6 @@ function DigitalWardrobe() {
                       onAddOutfitToCollection={handleAddOutfitToCollection}
                       onRemoveOutfitFromCollection={handleRemoveOutfitFromCollection}
                       onDeleteCollection={handleDeleteCollection}
-                      onDeleteTrip={handleDeleteTrip}
                     />
                   )}
                   {activeTab === 'calendar' && (
@@ -4407,6 +4406,7 @@ function DigitalWardrobe() {
                       styleProfile={summariseStyleProfile(measurements)}
                       autoActivateRangeMode={false}
                       initialSelectedDate={calendarJumpDate}
+                      onDeleteTrip={handleDeleteTrip}
                     />
                   )}
                   {activeTab === 'finance' && <FinanceView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('calendar')} />}
@@ -10175,7 +10175,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   );
 }
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences, collections = [], onCreateCollection = null, onAddOutfitToCollection = null, onRemoveOutfitFromCollection = null, onDeleteCollection = null, onDeleteTrip = null }) {
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences, collections = [], onCreateCollection = null, onAddOutfitToCollection = null, onRemoveOutfitFromCollection = null, onDeleteCollection = null }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -10196,15 +10196,6 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   }, [initialTab]);
   const [currentOutfit, setCurrentOutfit] = useState(emptyOutfit);
   const [outfitName, setOutfitName] = useState('');
-  // Transient flag: when the user clicks "+ Plan a trip" from TripsListView,
-  // this switches the tab to Diary and tells DiaryView → WearCalendar to
-  // auto-activate range mode. Clears itself after WearCalendar consumes it.
-  const [autoActivateRange, setAutoActivateRange] = useState(false);
-  const handlePlanTripFromTrips = () => {
-    setTab('diary');
-    setAutoActivateRange(true);
-    setTimeout(() => setAutoActivateRange(false), 200);
-  };
   // Studio archives: by default only owned items appear in slot pools.
   // When includeWishlist is ON, wishlist items are also eligible and get
   // a brass "WISHLIST" badge so the user knows they're composing around
@@ -10291,43 +10282,6 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
   const [activeCollection, setActiveCollection] = useState(null); // collectionId or null
   const [newCollectionOpen, setNewCollectionOpen] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
-  // Trips sub-tab: open trip detail portal
-  const [openTripId, setOpenTripId] = useState(null);
-  // Aggregate schedule entries that have trip metadata (added in P3.1).
-  // Groups by trip.id so each trip appears once with its list of days.
-  const trips = useMemo(() => {
-    const map = new Map();
-    for (const [dateISO, entry] of Object.entries(schedules || {})) {
-      if (!entry || !entry.trip || !entry.trip.id) continue;
-      if (!map.has(entry.trip.id)) {
-        map.set(entry.trip.id, {
-          id: entry.trip.id,
-          name: entry.trip.name || 'Trip',
-          startISO: entry.trip.startISO,
-          endISO: entry.trip.endISO,
-          location: entry.trip.location || null,
-          days: [],
-        });
-      }
-      const t = map.get(entry.trip.id);
-      t.days.push({ dateISO, outfitId: entry.outfitId });
-    }
-    const today = todayISO();
-    const list = [...map.values()].map((t) => {
-      t.days.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
-      let status = 'upcoming';
-      if (t.startISO <= today && t.endISO >= today) status = 'active';
-      else if (t.endISO < today) status = 'past';
-      return { ...t, status };
-    });
-    // Sort: active first, then upcoming (closest first), then past (most recent first)
-    return list.sort((a, b) => {
-      const order = { active: 0, upcoming: 1, past: 2 };
-      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
-      if (a.status === 'past') return b.startISO.localeCompare(a.startISO);
-      return a.startISO.localeCompare(b.startISO);
-    });
-  }, [schedules]);
   // Sort by user-arranged `order` field (set via Lookbook drag-to-reorder).
   // Outfits without `order` fall back to createdAt-descending so newly-saved
   // looks land at the top before the user has explicitly arranged anything.
@@ -10970,8 +10924,8 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
           {(isLookbook
             ? [
-                ['saved', `Lookbook${outfits.length ? ` · ${outfits.length}` : ''}`],
-                ['trips', `Trips${trips.length > 0 ? ` · ${trips.length}` : ''}`],
+                ['saved', `Outfits${outfits.length ? ` · ${outfits.length}` : ''}`],
+                ['collections', `Collections${collections.length ? ` · ${collections.length}` : ''}`],
               ]
             : [
                 ['create', 'Compose'],
@@ -11206,32 +11160,6 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         />
       )}
 
-      {isLookbook && tab === 'trips' && (
-        <TripsListView
-          trips={trips}
-          outfits={outfits}
-          items={items}
-          onOpenTrip={(tripId) => setOpenTripId(tripId)}
-          onPlanTrip={handlePlanTripFromTrips}
-        />
-      )}
-
-      {openTripId && (() => {
-        const trip = trips.find((t) => t.id === openTripId);
-        if (!trip) return null;
-        return (
-          <TripDetailView
-            trip={trip}
-            outfits={outfits}
-            items={items}
-            schedules={schedules}
-            onClose={() => setOpenTripId(null)}
-            onOpenOutfit={(id) => { setOpenTripId(null); onOpenOutfit?.(id); }}
-            onDeleteTrip={onDeleteTrip ? async () => { await onDeleteTrip(trip); setOpenTripId(null); } : null}
-          />
-        );
-      })()}
-
       {isLookbook && tab === 'diary' ? (
         // DIARY — the wear journal + calendar living inside Lookbook.
         // Conceptually paired: Lookbook = outfits (curated), Diary =
@@ -11245,7 +11173,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
           onSaveOutfit={saveOutfit}
           onOpenItem={onOpenItem}
           styleProfile={styleProfile}
-          autoActivateRangeMode={autoActivateRange}
+          autoActivateRangeMode={false}
         />
       ) : !isLookbook && tab === 'create' ? (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -11551,9 +11479,9 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             )}
           </DragOverlay>
         </DndContext>
-      ) : isLookbook && tab === 'saved' ? (
+      ) : isLookbook && (tab === 'saved' || tab === 'collections') ? (
         <div className="space-y-6 md:space-y-8">
-          {outfits.length > 0 && (
+          {tab === 'saved' && outfits.length > 0 && (
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
                 {[['all','All'],['favorites','★ Favourites']].map(([f, label]) => (
@@ -11581,6 +11509,22 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               )}
             </div>
           )}
+          {/* Active-collection filter banner — shown on the Outfits tab when a
+              collection was tapped over on the Collections tab. Tells the user
+              why the grid is narrowed and lets them clear it without leaving. */}
+          {tab === 'saved' && activeCollection && (() => {
+            const coll = collections.find((c) => c.id === activeCollection);
+            if (!coll) return null;
+            return (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] tracking-widest uppercase text-stone-500">Collection</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase">
+                  {coll.name}
+                  <button type="button" onClick={() => setActiveCollection(null)} className="text-white/60 hover:text-white ml-0.5 leading-none" aria-label="Clear collection filter">×</button>
+                </span>
+              </div>
+            );
+          })()}
           {/* Collections strip — named outfit moodboards. Sits ABOVE the
               tag-chip + sort row so it reads as primary navigation pivot
               (choose a named collection) before secondary filtering
@@ -11588,7 +11532,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               of the first piece image from up to 4 outfits in that
               collection. On desktop (lg+) the strip becomes a 4-col
               inline grid. */}
-          {isLookbook && collections.length > 0 && (
+          {tab === 'collections' && (
             <section className="mb-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -11629,7 +11573,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
                     <button
                       key={coll.id}
                       type="button"
-                      onClick={() => setActiveCollection(isActive ? null : coll.id)}
+                      onClick={() => { const next = isActive ? null : coll.id; setActiveCollection(next); if (next) setTab('saved'); }}
                       className={`shrink-0 lg:shrink w-48 lg:w-auto text-left bg-white border rounded-2xl overflow-hidden transition-colors ${
                         isActive ? 'border-stone-900 shadow-sm' : 'border-stone-200 hover:border-stone-500'
                       }`}
@@ -11724,6 +11668,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               as a single control surface. Revealed once there are >5
               looks so the controls don't dominate empty collections. */}
           {(() => {
+            if (tab !== 'saved') return null;
             const untagged = outfits.filter((o) => !Array.isArray(o.tags) || o.tags.length === 0);
             return (
               <>
@@ -11822,7 +11767,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               top). Cream gradient surface so the items pop. Serif name
               below in display weight. Mirrors a magazine spread, not a
               dashboard. */}
-          {activeTagFilter && collectionFilteredOutfits.length === 0 ? (
+          {tab === 'saved' && (activeTagFilter && collectionFilteredOutfits.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-stone-500 text-sm">No looks tagged "{activeTagFilter}"{ activeCollection ? ' in this collection' : ''} yet.</p>
               <button
@@ -11890,7 +11835,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               </div>
             </SortableContext>
           </DndContext>
-          )}
+          ))}
           {selectMode && selectedOutfits.size > 0 && createPortal(
             // Top-pinned action bar — was previously bottom-pinned but users
             // missed it (attention on the items being clicked, not the bar
@@ -13224,7 +13169,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
   );
 }
 
-function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '', onOpenItem = null, autoActivateRangeMode = false, initialSelectedDate = null }) {
+function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '', onOpenItem = null, autoActivateRangeMode = false, initialSelectedDate = null, planTripNonce = 0 }) {
   const today = new Date();
   const [cursor, setCursor] = useState(
     initialSelectedDate
@@ -13291,6 +13236,21 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
       setTimeout(() => setShowRangeHint(false), 8000);
     }
   }, [autoActivateRangeMode]);
+
+  // Re-fires each time the parent's "Plan a trip" is tapped (nonce changes),
+  // so range-select reopens even if the calendar is already showing.
+  useEffect(() => {
+    if (planTripNonce > 0) {
+      setRangeMode(true);
+      setRangeStart(null);
+      setRangeEnd(null);
+      setSelectedDate(null);
+      setShowRangeHint(true);
+      const t = setTimeout(() => setShowRangeHint(false), 8000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [planTripNonce]);
 
   const toggleRangeMode = () => {
     setRangeMode((on) => !on);
@@ -13992,7 +13952,9 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 
     const html = buildPackingListHtml({ startLabel, endLabel, totalDays, totalPieces, categorySections });
 
-    const w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
+    // NOTE: no 'noopener' here — with noopener, window.open returns null, so
+    // we could never write the HTML and the tab stayed at about:blank.
+    const w = window.open('', '_blank', 'width=900,height=1000');
     if (!w) {
       toast.show('Pop-up blocked — allow pop-ups for this site and try again', { kind: 'error', duration: 6000 });
       return;
@@ -14914,8 +14876,38 @@ function DiaryStatsRow({ daysCount, wears, streak, mostWorn, onOpenItem }) {
 // numerals, polaroid item thumbnails, italic pull-quote notes, photo
 // lightbox. The diary is now a SINGLE keepsake destination, not a feature
 // fractured across Studio + Insights.
-function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, onOpenItem, styleProfile = '', autoActivateRangeMode = false, initialSelectedDate = null }) {
+function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, onOpenItem, styleProfile = '', autoActivateRangeMode = false, initialSelectedDate = null, onDeleteTrip = null }) {
   const [tab, setTab] = useState(initialSelectedDate ? 'calendar' : 'journal');
+  const [openTripId, setOpenTripId] = useState(null);
+  // "Plan a trip" hand-off: switch to the Month lens and pulse WearCalendar
+  // into range-select mode. (Was handlePlanTripFromTrips in OutfitBuilder.)
+  const [planTripNonce, setPlanTripNonce] = useState(0);
+  const handlePlanTrip = () => { setTab('calendar'); setPlanTripNonce((n) => n + 1); };
+  // Trips are derived from scheduled days sharing a trip.id. Owned here now
+  // (was in OutfitBuilder) so Trips live on the Calendar surface.
+  const trips = useMemo(() => {
+    const map = new Map();
+    for (const [dateISO, entry] of Object.entries(schedules || {})) {
+      if (!entry || !entry.trip || !entry.trip.id) continue;
+      if (!map.has(entry.trip.id)) {
+        map.set(entry.trip.id, { id: entry.trip.id, name: entry.trip.name || 'Trip', startISO: entry.trip.startISO, endISO: entry.trip.endISO, location: entry.trip.location || null, days: [] });
+      }
+      map.get(entry.trip.id).days.push({ dateISO, outfitId: entry.outfitId });
+    }
+    const today = todayISO();
+    return [...map.values()].map((t) => {
+      t.days.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+      let status = 'upcoming';
+      if (t.startISO <= today && t.endISO >= today) status = 'active';
+      else if (t.endISO < today) status = 'past';
+      return { ...t, status };
+    }).sort((a, b) => {
+      const order = { active: 0, upcoming: 1, past: 2 };
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status];
+      if (a.status === 'past') return b.startISO.localeCompare(a.startISO);
+      return a.startISO.localeCompare(b.startISO);
+    });
+  }, [schedules]);
   const [filter, setFilter] = useState('all');
 
   // When a "Plan a trip" CTA fires from TripsListView, switch to the
@@ -15030,7 +15022,7 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
       <header className="mb-8 sm:mb-12">
         <div className="flex items-center gap-3 mb-4">
           <span className="brass-rule" aria-hidden="true" />
-          <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500 font-medium">The Diary</span>
+          <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500 font-medium">Calendar</span>
         </div>
         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-stone-900 tracking-tight leading-[0.95]">
           Every wear, every plan
@@ -15049,12 +15041,38 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
         </div>
       )}
 
+      {/* UPCOMING TRIPS — Trips now live on the Calendar (was a Lookbook tab).
+          A slim strip of active/upcoming trips + a Plan-a-trip entry. */}
+      {trips.filter((t) => t.status !== 'past').length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <span className="brass-rule" aria-hidden="true" />
+              <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Upcoming trips</span>
+            </div>
+            <button type="button" onClick={handlePlanTrip} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-500 transition-colors">＋ Plan a trip</button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+            {trips.filter((t) => t.status !== 'past').map((t) => (
+              <button key={t.id} type="button" onClick={() => setOpenTripId(t.id)} className="shrink-0 text-left bg-white border border-stone-200/60 rounded-2xl p-4 smooth-shadow hover:border-brass-300 transition-colors min-w-[220px]">
+                <p className="text-[9px] tracking-[0.25em] uppercase text-brass-600 mb-1">{t.status === 'active' ? 'Active' : 'Upcoming'}</p>
+                <p className="font-display text-stone-900 text-lg leading-tight truncate">{t.name}</p>
+                {t.location && <p className="text-[11px] text-stone-500 truncate">{t.location}</p>}
+                <p className="text-[10px] text-stone-400 mt-1 tracking-wide">
+                  {new Date(t.startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → {new Date(t.endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {t.days.length} day{t.days.length === 1 ? '' : 's'}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* TAB TOGGLE — segmented control matching the app's tab convention */}
       <div className="flex justify-center mb-8 sm:mb-10">
         <div className="flex bg-stone-200/50 p-1.5 rounded-full">
           {[
             { id: 'journal', label: 'Journal' },
-            { id: 'calendar', label: 'Calendar' },
+            { id: 'calendar', label: 'Month' },
           ].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
@@ -15082,6 +15100,7 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
             onOpenItem={onOpenItem}
             autoActivateRangeMode={autoActivateRangeMode}
             initialSelectedDate={initialSelectedDate}
+            planTripNonce={planTripNonce}
           />
         </div>
       ) : (
@@ -15272,6 +15291,24 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
           </div>
         </div>
       )}
+
+      {/* Trip detail — opened from the Upcoming-trips strip. Lives on the
+          Calendar surface now (was in OutfitBuilder / Lookbook). */}
+      {openTripId && (() => {
+        const trip = trips.find((t) => t.id === openTripId);
+        if (!trip) return null;
+        return (
+          <TripDetailView
+            trip={trip}
+            outfits={outfits}
+            items={items}
+            schedules={schedules}
+            onClose={() => setOpenTripId(null)}
+            onOpenOutfit={(id) => { setOpenTripId(null); onOpenOutfit?.(id); }}
+            onDeleteTrip={onDeleteTrip ? async () => { await onDeleteTrip(trip); setOpenTripId(null); } : null}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -16631,7 +16668,9 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
 
     const html = buildPackingListHtml({ startLabel, endLabel, totalDays: dayCount, totalPieces, categorySections });
 
-    const w = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
+    // NOTE: no 'noopener' here — with noopener, window.open returns null, so
+    // we could never write the HTML and the tab stayed at about:blank.
+    const w = window.open('', '_blank', 'width=900,height=1000');
     if (!w) {
       alert('Pop-up blocked — please allow pop-ups for this site and try again.');
       return;

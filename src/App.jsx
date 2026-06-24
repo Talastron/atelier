@@ -49,6 +49,13 @@ import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
 import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini } from './lib/ai.js';
+import EditorialHeader from './ui/EditorialHeader.jsx';
+import { useToast, ToastProvider } from './ui/toast.jsx';
+import { useEscapeKey, useCountUp } from './ui/hooks.js';
+import Input from './ui/Input.jsx';
+import { SHOP_SEEDS } from './lib/seeds.js';
+import ShoppingDirectory from './views/ShoppingDirectory.jsx';
+import InspirationView from './views/InspirationView.jsx';
 
 // Owners can invite/revoke other users. Must match the rules file exactly.
 // (The rules are the real security boundary — this is just so the UI knows
@@ -60,44 +67,6 @@ const OWNER_EMAILS = (import.meta.env.VITE_OWNER_EMAILS || '')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
-// Seeded into a new user's directory on first sign-in, and available via
-// "Restore preset brands" in the Directory page for existing users.
-// Edit / extend whenever you want different defaults.
-const SHOP_SEEDS = [
-  // Designer brands
-  { name: '& Other Stories', url: 'https://www.stories.com', category: 'Trend-led' },
-  { name: 'Adidas', url: 'https://www.adidas.co.uk', category: 'Sportswear' },
-  { name: 'All Saints', url: 'https://www.allsaints.com', category: 'Modern Edgy' },
-  { name: 'Barbour', url: 'https://www.barbour.com', category: 'British Heritage Country' },
-  { name: 'Cartier', url: 'https://www.cartier.com', category: 'Luxury Jewellery & Watches' },
-  { name: 'Chanel', url: 'https://www.chanel.com', category: 'Luxury Couture' },
-  { name: 'COS', url: 'https://www.cos.com', category: 'Minimalist Modern' },
-  { name: 'Hobbs', url: 'https://www.hobbs.com', category: 'British Workwear' },
-  { name: 'Holland Cooper', url: 'https://www.hollandcooper.com', category: 'Luxury Heritage' },
-  { name: 'Mango', url: 'https://shop.mango.com/gb', category: 'Trend-led High Street' },
-  { name: 'ME+EM', url: 'https://www.meandem.com', category: 'British Modern' },
-  { name: 'Monica Vinader', url: 'https://www.monicavinader.com', category: 'Fine Jewellery' },
-  { name: 'Mountain Warehouse', url: 'https://www.mountainwarehouse.com', category: 'Outdoor Activewear' },
-  { name: 'Nike', url: 'https://www.nike.com/gb', category: 'Sportswear' },
-  { name: 'Ralph Lauren', url: 'https://www.ralphlauren.co.uk', category: 'American Heritage Preppy' },
-  { name: 'Reformation', url: 'https://www.thereformation.com', category: 'Sustainable' },
-  { name: 'Reiss', url: 'https://www.reiss.com', category: 'Modern Tailoring' },
-  { name: 'Sézane', url: 'https://www.sezane.com', category: 'French Romantic' },
-  { name: 'Sweaty Betty', url: 'https://www.sweatybetty.com', category: 'Activewear Premium' },
-  { name: 'Tommy Hilfiger', url: 'https://uk.tommy.com', category: 'American Preppy' },
-  { name: 'Topshop', url: 'https://www.topshop.com', category: 'Trend-led High Street' },
-  { name: 'Veja', url: 'https://www.veja-store.com', category: 'Sustainable Sneakers' },
-
-  // Multi-brand boutiques & department stores
-  { name: 'Debenhams', url: 'https://www.debenhams.com', category: 'Department Store' },
-  { name: 'Fenwick', url: 'https://www.fenwick.co.uk', category: 'Department Store' },
-  { name: 'John Lewis', url: 'https://www.johnlewis.com', category: 'Department Store' },
-  { name: 'Lodgeway Countrywear', url: 'https://www.lodgewaycountrywear.co.uk', category: 'Countrywear Multi-brand' },
-  { name: 'Net-a-Porter', url: 'https://www.net-a-porter.com', category: 'Luxury Multi-brand' },
-  { name: 'Norton Barrie', url: 'https://www.nortonbarrie.co.uk', category: 'Designer Multi-brand' },
-  { name: 'Oxygen Clothing', url: 'https://www.oxygenclothing.co.uk', category: 'Designer Multi-brand' },
-  { name: 'Zalando', url: 'https://www.zalando.co.uk', category: 'Online Multi-brand' },
-];
 
 // Build a self-contained HTML document for a printable packing list page.
 // Called by both TravelPlannerModal and PackingListModal so that print output
@@ -165,26 +134,6 @@ function buildPackingListHtml({ startLabel, endLabel, totalDays, totalPieces, ca
 
 
 
-// Tiny a11y hook: closes a modal when the user hits Escape. Mount once per
-// modal — multiple stacked modals receive the event in mount order, so the
-// outermost-rendered closes last. Skipped when typing in an input field if
-// the user is mid-edit (avoids ejecting them out of a date picker etc).
-function useEscapeKey(onClose) {
-  useEffect(() => {
-    if (!onClose) return;
-    const onKey = (e) => {
-      if (e.key !== 'Escape') return;
-      const t = e.target;
-      const tag = t?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      e.preventDefault();
-      onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-}
-
 // Brief vibration on confirmable actions (save, log-wear, favourite, scan).
 // Skipped if the OS reports reduced motion, if the Vibration API isn't
 // available, or on desktop where there's no haptic motor. `kind` selects a
@@ -202,125 +151,6 @@ function haptic(kind = 'tap') {
   } catch { /* iOS Safari may throw — swallow */ }
 }
 
-// Atelier monogram — wire-hanger silhouette with a brass charm hanging from
-// Editorial section header. Pattern: brass rule + small-caps eyebrow + Playfair
-// title + optional muted subtitle. Used at the top of every primary tab view
-// to give the app a unified printed-magazine voice.
-function EditorialHeader({ eyebrow, title, subtitle, right, className = '' }) {
-  return (
-    <header className={`flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 ${className}`}>
-      <div className="min-w-0">
-        {eyebrow && (
-          <div className="flex items-center gap-3 mb-3">
-            <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">{eyebrow}</span>
-          </div>
-        )}
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-display text-stone-900 tracking-tight leading-[1.05]">{title}</h2>
-        {subtitle && <p className="text-stone-500 mt-3 text-sm tracking-wide max-w-xl leading-relaxed truncate min-w-0">{subtitle}</p>}
-      </div>
-      {right && <div className="shrink-0 self-start md:self-auto">{right}</div>}
-    </header>
-  );
-}
-
-// --- Toast notifications -------------------------------------------------
-// EDITORIAL CARD TOASTS — a luxury app's confirmations shouldn't read
-// as utility chrome. Each toast is a small floating card:
-//   • brass-rule eyebrow with a short tag (e.g., SAVED, WORN, ERROR)
-//   • serif message (display font), display: italic for soft messages
-//   • soft layered shadow + warm-white surface
-// The shape is the same as a polaroid frame in the rest of the app —
-// the toast reads as the same product, not a system alert.
-const ToastContext = createContext({ show: () => {} });
-function useToast() { return useContext(ToastContext); }
-
-function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
-  const show = useCallback((message, opts = {}) => {
-    const id = Math.random().toString(36).slice(2);
-    // opts.eyebrow overrides the auto-derived eyebrow; lets call sites
-    // pass 'WORN' or 'SHARED' instead of the default kind-based label.
-    const toast = { id, message, kind: opts.kind || 'default', eyebrow: opts.eyebrow || null, duration: opts.duration ?? 2800 };
-    setToasts((prev) => [...prev, toast]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), toast.duration);
-  }, []);
-  // Default eyebrow per kind. Call sites that want something more
-  // specific (WORN, SCHEDULED, SAVED) pass { eyebrow: '...' }.
-  const eyebrowFor = (t) => t.eyebrow || (
-    t.kind === 'error' ? 'ATTENTION'
-    : t.kind === 'success' ? 'CONFIRMED'
-    : 'NOTED'
-  );
-  return (
-    <ToastContext.Provider value={{ show }}>
-      {children}
-      <div className="fixed left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2.5 items-center pointer-events-none w-full px-4 sm:px-0 sm:w-auto sm:max-w-md"
-           style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 6rem)' }}
-           aria-live="polite" aria-atomic="true" role="status">
-        {toasts.map((t) => {
-          const isError = t.kind === 'error';
-          return (
-            <div key={t.id}
-              className={`pointer-events-auto w-full sm:w-auto sm:min-w-[280px] sm:max-w-md rounded-2xl px-5 py-4 backdrop-blur-md animate-in slide-in-from-bottom-3 fade-in duration-300 ring-1 ${
-                isError
-                  ? 'bg-red-50/95 ring-red-200/70 shadow-[0_2px_8px_rgba(127,29,29,0.08),0_16px_36px_-12px_rgba(127,29,29,0.18)]'
-                  : 'bg-white/95 ring-stone-200/70 shadow-[0_2px_8px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]'
-              }`}
-              role={isError ? 'alert' : undefined}>
-              <div className="flex items-center gap-2.5 mb-1">
-                <span className={`inline-block w-4 h-px ${isError ? 'bg-red-400' : 'bg-brass-400'}`} aria-hidden="true" />
-                <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${isError ? 'text-red-600' : 'text-stone-500'}`}>
-                  {eyebrowFor(t)}
-                </span>
-              </div>
-              <p className={`font-display text-base leading-tight ${isError ? 'text-red-900' : 'text-stone-900'}`}>
-                {t.message}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-    </ToastContext.Provider>
-  );
-}
-
-// useCountUp — animates a numeric value from 0 → `target` over `duration` ms
-// using requestAnimationFrame + an ease-out curve. Returns the current
-// in-flight value (an integer) for direct rendering.
-//
-// The single most luxury-feeling micro-interaction in the app: stat
-// numbers in the Diary header, Insights cards, anywhere they appear
-// will count up instead of just snapping into place on view-mount. The
-// brain perceives this as 'careful' rather than 'static data'.
-//
-// Respects prefers-reduced-motion: when the user has opted out of motion,
-// the hook returns the target instantly with no animation.
-function useCountUp(target, duration = 800) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    const t = Number(target) || 0;
-    // Reduced-motion: snap to final value, no animation.
-    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setValue(t);
-      return;
-    }
-    let raf = 0;
-    let start = null;
-    const step = (ts) => {
-      if (start === null) start = ts;
-      const elapsed = ts - start;
-      const progress = Math.min(1, elapsed / duration);
-      // ease-out cubic — fast at first, settles softly at target
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(t * eased));
-      if (progress < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return value;
-}
 // Editorial in-app preview before the system share sheet. Replaces the
 // previous "tap Share → OS dialog jumps in" flow which felt like an
 // abrupt brand handover. New flow: tap Share → Atelier-styled modal
@@ -3867,10 +3697,17 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
             </button>
           )}
         </div>
-        {/* Select button kept in header on mobile (the bottom nav has no Select).
-            On desktop, Select has moved into the sticky aside next to Add — kept
-            here on mobile only via lg:hidden so the header stays clean on lg+. */}
+        {/* Add + Select controls on mobile. The bottom-nav FAB is the Concierge,
+            so "add an item" lives here in the Wardrobe header (mirrors the
+            desktop command toolbar's Add · Select pairing). lg:hidden because
+            lg+ gets the same controls in the sticky command toolbar below. */}
         <div className="flex items-center gap-3 self-start md:self-auto lg:hidden">
+          <button
+            onClick={openAddModal}
+            className="h-11 inline-flex items-center justify-center gap-2 px-5 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-700 transition-colors duration-200"
+          >
+            <Plus size={16} strokeWidth={1.75} /> Add
+          </button>
           {items.length > 0 && (
             selectMode ? (
               <button onClick={exitSelectMode} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 px-4 py-2 border border-stone-200 rounded-full hover:border-stone-500 transition-colors">
@@ -7269,15 +7106,6 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
   );
 }
 
-function Input({ label, ...props }) {
-  return (
-    <div>
-      <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">{label}</label>
-      <input className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors" {...props} />
-    </div>
-  );
-}
-
 // Strict 1:1 — items can ONLY fill a slot matching their actual category +
 // subcategory where relevant. Jewellery is split into three slots so an outfit
 // can carry earrings + a necklace + a bracelet at the same time without one
@@ -9531,211 +9359,6 @@ function AIProgressModal({ open, stage, title = 'Putting together your outfit' }
       </div>
     </div>,
     document.body
-  );
-}
-
-function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, onDelete, defaultFilter = 'all', wishlistCount = 0, onJumpToWishlist }) {
-  // Filter: 'all' or 'unanalysed'. Initialised from defaultFilter so the
-  // digest can target the user straight to unanalysed inspirations.
-  const [filter, setFilter] = useState(defaultFilter);
-  useEffect(() => { setFilter(defaultFilter); }, [defaultFilter]);
-  const unanalysed = inspirations.filter((i) => !i.analysis);
-  const visible = filter === 'unanalysed' ? unanalysed : inspirations;
-
-  return (
-    <div className="space-y-6 md:space-y-10">
-      <EditorialHeader
-        eyebrow="Mood board"
-        title="Inspiration"
-        subtitle={`${inspirations.length} ${inspirations.length === 1 ? 'look' : 'looks'} saved${unanalysed.length > 0 ? ` · ${unanalysed.length} unanalysed` : ''}`}
-        right={
-          <button onClick={onAddInspiration}
-            className="bg-stone-900 text-white px-6 py-3 rounded-full text-sm font-medium inline-flex items-center gap-2 hover:bg-stone-700 transition-all shadow-lg active:scale-[0.98]">
-            <Plus size={16} strokeWidth={1.5} /> Save inspiration
-          </button>
-        }
-      />
-
-      {inspirations.length === 0 ? (
-        <div className="py-24 flex flex-col items-center justify-center text-center bg-white/50 border border-dashed border-stone-300 rounded-3xl px-6">
-          <div className="mb-6 text-brass-400">
-            <Bookmark size={40} strokeWidth={1.25} />
-          </div>
-          <div className="w-8 h-px bg-brass-300 mb-5" aria-hidden="true" />
-          <p className="font-display text-2xl text-stone-700">Your moodboard begins here</p>
-          <p className="text-sm text-stone-500 mt-3 max-w-xs leading-relaxed italic">
-            Save inspiration by tapping the button above — Concierge analyses each look to find what's in your wardrobe and what's missing.
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Sticky filter strip — same pattern as the wardrobe view's
-              filter/sort toolbar. Stays visible while scrolling a long
-              inspiration grid so the user can switch between All and
-              Unanalysed without scrolling back to the top. */}
-          <div className="flex items-center gap-2 flex-wrap sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
-               style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-            {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
-              <button key={f} onClick={() => setFilter(f)}
-                className={`shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border ${
-                  filter === f
-                    ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-700'
-                    : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
-                }`}>{label}</button>
-            ))}
-            {/* Cross-link to wishlist */}
-            {wishlistCount > 0 && onJumpToWishlist && (
-              <button onClick={onJumpToWishlist}
-                className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 inline-flex items-center gap-1.5 ml-auto">
-                <Heart size={11} strokeWidth={1.5} /> Wishlist · {wishlistCount}
-                <ChevronRight size={11} strokeWidth={1.5} className="-mr-0.5" />
-              </button>
-            )}
-            {unanalysed.length > 0 && (
-              <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2 w-full sm:w-auto">
-                <Sparkles size={11} strokeWidth={1.5} className="inline -mt-0.5 mr-1 text-brass-400" />
-                Tap any card to analyse it with the Concierge
-              </span>
-            )}
-          </div>
-
-          {visible.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center text-center px-6">
-              <div className="mb-4 text-brass-400">
-                <Bookmark size={32} strokeWidth={1.25} />
-              </div>
-              <div className="w-6 h-px bg-brass-300 mb-4" aria-hidden="true" />
-              <p className="font-display text-xl text-stone-700">
-                {filter === 'unanalysed' ? 'All looks analysed' : 'Nothing here yet'}
-              </p>
-              <p className="text-sm text-stone-500 mt-2 max-w-xs leading-relaxed italic">
-                {filter === 'unanalysed'
-                  ? 'Every saved look has been analysed by the Concierge.'
-                  : 'Save a look to get started.'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {visible.map((insp) => {
-                const isAnalysed = !!insp.analysis;
-                const garmentList = isAnalysed ? (insp.analysis.garments || []) : [];
-                const matchCount = garmentList.filter((g) => g.matchedItemId).length;
-                const totalGarments = garmentList.length;
-                const cardPalette = isAnalysed
-                  ? derivePaletteFromGarments(garmentList).slice(0, 5)
-                  : [];
-                const sourceHost = (() => {
-                  const src = insp.sourceUrl || insp.caption || '';
-                  return parseSourceUrl(src)?.hostname || null;
-                })();
-                return (
-                  <div key={insp.id} className="group relative">
-                    <button
-                      type="button"
-                      onClick={() => onOpenInspiration(insp.id)}
-                      className="block w-full text-left"
-                    >
-                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/60 transition-all duration-300 lg:group-hover:border-brass-300 lg:group-hover:shadow-lg lg:group-hover:scale-[1.015]">
-                        {insp.image ? (
-                          <img
-                            src={insp.image}
-                            alt={insp.caption || ''}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover transition-transform duration-700 ease-out lg:group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-300">
-                            <Bookmark size={32} strokeWidth={1} />
-                          </div>
-                        )}
-
-                        {/* Top-left: analysis state */}
-                        <div className="absolute top-2.5 left-2.5">
-                          {isAnalysed ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-sm text-[9px] tracking-[0.22em] uppercase font-medium text-stone-800">
-                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-brass-500" aria-hidden="true" />
-                              Analysed
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-900/80 backdrop-blur-sm text-[9px] tracking-[0.22em] uppercase font-medium text-white animate-pulse">
-                              <Sparkles size={9} strokeWidth={2} />
-                              Tap to analyse
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Top-right: source hostname (when imported from URL) */}
-                        {sourceHost && (
-                          <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-white/85 backdrop-blur-sm text-[8px] tracking-[0.22em] uppercase text-stone-600">
-                            {sourceHost}
-                          </span>
-                        )}
-
-                        {/* Bottom gradient overlay: caption + palette dots + match chip */}
-                        {(insp.caption || cardPalette.length > 0 || (isAnalysed && totalGarments > 0)) && (
-                          <div className="absolute inset-x-0 bottom-0 p-3 sm:p-3.5 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
-                            {insp.caption && !parseSourceUrl(insp.caption) && (
-                              <p className="font-display text-white text-[13px] sm:text-sm leading-snug truncate mb-1.5 drop-shadow-sm">
-                                {insp.caption}
-                              </p>
-                            )}
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1">
-                                {cardPalette.map((color, i) => {
-                                  const swatch = COLOR_SWATCHES[color];
-                                  const style = swatch
-                                    ? (swatch.startsWith('linear') ? { background: swatch } : { backgroundColor: swatch })
-                                    : { backgroundColor: '#d6d3d1' };
-                                  return (
-                                    <span
-                                      key={`${color}-${i}`}
-                                      className="block w-3 h-3 rounded-full border border-white/40 shrink-0"
-                                      style={style}
-                                      aria-label={color}
-                                    />
-                                  );
-                                })}
-                              </div>
-                              {isAnalysed && totalGarments > 0 && (
-                                <span className={`text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
-                                  matchCount === 0
-                                    ? 'bg-amber-500/20 text-amber-100'
-                                    : matchCount === totalGarments
-                                      ? 'bg-emerald-500/30 text-emerald-50'
-                                      : 'bg-white/15 text-white'
-                                }`}>
-                                  {matchCount} / {totalGarments} owned
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </button>
-
-                    {/* Desktop hover quick-action: Delete */}
-                    {onDelete && (
-                      <div className="hidden lg:flex absolute -top-3 right-2 gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); onDelete(insp.id); }}
-                          className="w-7 h-7 rounded-full bg-white shadow-lg border border-stone-200 flex items-center justify-center text-stone-500 hover:text-red-600 hover:border-red-200 transition-colors"
-                          aria-label="Delete inspiration"
-                          title="Delete inspiration"
-                        >
-                          <Trash2 size={12} strokeWidth={1.75} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
-    </div>
   );
 }
 
@@ -17580,204 +17203,6 @@ function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist,
   );
 }
 
-function ShopRow({ shop, saveShop, deleteShop }) {
-  const [editingChart, setEditingChart] = useState(false);
-  const [rows, setRows] = useState(shop.sizes || []);
-  const chartCount = (shop.sizes || []).length;
-
-  const updateRow = (i, field, value) => setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
-  const addRow = () => setRows((prev) => [...prev, { label: '', bust: '', waist: '', hips: '' }]);
-  const removeRow = (i) => setRows((prev) => prev.filter((_, idx) => idx !== i));
-  const saveChart = async () => {
-    const cleaned = rows.filter((r) => r.label?.trim()).map((r) => ({
-      label: r.label.trim(),
-      bust: r.bust ? Number(r.bust) : null,
-      waist: r.waist ? Number(r.waist) : null,
-      hips: r.hips ? Number(r.hips) : null,
-    }));
-    await saveShop({ ...shop, sizes: cleaned });
-    setEditingChart(false);
-  };
-
-  return (
-    <div className="bg-white border border-stone-200/60 rounded-2xl p-6 hover:shadow-lg transition-all group duration-300">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h4 className="font-display text-xl text-stone-900">{shop.name}</h4>
-          <div className="flex items-center gap-4 mt-2 flex-wrap">
-            <a href={shop.url} target="_blank" rel="noopener noreferrer" className="text-xs tracking-wider uppercase font-semibold text-stone-500 hover:text-stone-900 transition-colors flex items-center gap-1.5">
-              <LinkIcon size={12} strokeWidth={2} /> Visit Store
-            </a>
-            {shop.category && (<>
-              <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-              <span className="text-stone-500 text-xs tracking-widest uppercase">{shop.category}</span>
-            </>)}
-            {chartCount > 0 && (<>
-              <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-              <span className="text-emerald-700 text-xs tracking-widest uppercase font-medium">{chartCount} sizes</span>
-            </>)}
-          </div>
-        </div>
-        <div className="flex gap-1 shrink-0">
-          <button onClick={() => { setRows(shop.sizes || []); setEditingChart((v) => !v); }}
-            className="px-3 py-2 rounded-full text-xs tracking-widest uppercase text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
-          >
-            {editingChart ? 'Cancel' : 'Sizes'}
-          </button>
-          <button onClick={() => deleteShop(shop.id)} className="text-stone-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors">
-            <Trash2 size={16} strokeWidth={1.5} />
-          </button>
-        </div>
-      </div>
-
-      {editingChart && (
-        <div className="mt-6 pt-6 border-t border-stone-100">
-          <div className="flex items-baseline justify-between mb-4">
-            <p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">Size Chart (cm)</p>
-            <p className="text-[10px] text-stone-400">Enter what you can — partial rows are fine.</p>
-          </div>
-          <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 mb-2 text-[10px] tracking-widest uppercase text-stone-400 font-semibold">
-            <span>Size</span><span>Bust</span><span>Waist</span><span>Hips</span><span></span>
-          </div>
-          <div className="space-y-3 sm:space-y-2">
-            {rows.map((row, i) => (
-              <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-center">
-                <input value={row.label || ''} onChange={(e) => updateRow(i, 'label', e.target.value)} placeholder="Size" aria-label="Size label" className="min-w-0 px-2 sm:px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:border-stone-900 outline-none transition-colors" />
-                <input value={row.bust || ''} onChange={(e) => updateRow(i, 'bust', e.target.value)} placeholder="Bust" aria-label="Bust cm" type="number" inputMode="decimal" className="min-w-0 px-2 sm:px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:border-stone-900 outline-none transition-colors" />
-                <input value={row.waist || ''} onChange={(e) => updateRow(i, 'waist', e.target.value)} placeholder="Waist" aria-label="Waist cm" type="number" inputMode="decimal" className="min-w-0 px-2 sm:px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:border-stone-900 outline-none transition-colors" />
-                <input value={row.hips || ''} onChange={(e) => updateRow(i, 'hips', e.target.value)} placeholder="Hips" aria-label="Hips cm" type="number" inputMode="decimal" className="min-w-0 px-2 sm:px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:border-stone-900 outline-none transition-colors" />
-                <button onClick={() => removeRow(i)} className="text-stone-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"><X size={14} strokeWidth={1.5} /></button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 mt-4">
-            <button onClick={addRow} className="flex-1 px-4 py-3 rounded-xl text-sm bg-white border border-dashed border-stone-300 text-stone-500 hover:border-stone-500 hover:text-stone-900 transition-all flex items-center justify-center gap-2">
-              <Plus size={14} strokeWidth={1.5} /> Add size row
-            </button>
-            <button onClick={saveChart} className="px-6 py-3 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-all font-medium">
-              Save chart
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ShoppingDirectory({ shops, saveShop, deleteShop }) {
-  const [newShop, setNewShop] = useState({ name: '', url: '', category: '' });
-  const [restoring, setRestoring] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const existingShopNames = new Set(shops.map((s) => (s.name || '').toLowerCase()));
-  const missingPresets = SHOP_SEEDS.filter((s) => !existingShopNames.has(s.name.toLowerCase()));
-
-  // Simple search filter — name OR category. Stays empty by default
-  // (most users have a small directory; search only earns its place
-  // once you've added enough brands for scanning to be slow).
-  const filteredShops = searchQuery.trim()
-    ? shops.filter((s) => {
-        const q = searchQuery.trim().toLowerCase();
-        return (s.name || '').toLowerCase().includes(q)
-            || (s.category || '').toLowerCase().includes(q);
-      })
-    : shops;
-
-  const addShop = async (e) => {
-    e.preventDefault();
-    if (!newShop.name || !newShop.url) return;
-    const id = newId();
-    await saveShop({ ...newShop, id });
-    setNewShop({ name: '', url: '', category: '' });
-  };
-
-  const restorePresets = async () => {
-    setRestoring(true);
-    try {
-      for (const preset of missingPresets) {
-        const id = newId();
-        await saveShop({ ...preset, id });
-      }
-    } finally {
-      setRestoring(false);
-    }
-  };
-
-  return (
-    <div className="space-y-10 md:space-y-12 max-w-5xl">
-      <EditorialHeader
-        eyebrow="Curated houses"
-        title="Directory"
-        subtitle="Your trusted designers and boutiques."
-        right={missingPresets.length > 0 ? (
-          <button onClick={restorePresets} disabled={restoring}
-            className="bg-white border border-stone-300 text-stone-700 px-5 py-3 rounded-full text-xs tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50"
-          >
-            {restoring ? 'Adding…' : `Add ${missingPresets.length} preset ${missingPresets.length === 1 ? 'brand' : 'brands'}`}
-          </button>
-        ) : null}
-      />
-
-      {/* Sticky search strip — same bg/bleed pattern as the Wardrobe /
-          Inspiration / Insights / Profile sticky bars. Only renders the
-          search input when there are 3+ shops (below that, scanning the
-          short list is faster than typing). Anchor consistency across all
-          content views: a sticky strip below the editorial header. */}
-      {shops.length >= 3 && (
-        <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
-             style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-          <div className="relative max-w-md">
-            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search boutiques by name or aesthetic…"
-              className="w-full h-10 pl-9 pr-9 bg-white border border-stone-300 rounded-full text-sm placeholder:text-stone-400 focus:border-stone-900 outline-none transition-colors"
-            />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-base pointer-events-none leading-none">⌕</span>
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-stone-400 hover:text-stone-900 hover:bg-stone-100 rounded-full transition-colors"
-                aria-label="Clear search">
-                <X size={14} strokeWidth={1.5} />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-5">
-          {/* Canonical card padding (p-6 md:p-8) + heading sizing matches
-              every other section card across the app. sticky top-20 leaves
-              room for the sticky search strip above (when it renders) —
-              same offset Studio's Current Look uses below its sticky tabs. */}
-          <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow lg:sticky lg:top-20">
-            <h3 className="font-display text-xl md:text-2xl mb-6 text-stone-900">Add Boutique</h3>
-            <form onSubmit={addShop} className="space-y-5">
-              <Input label="Boutique Name" value={newShop.name} onChange={e => setNewShop({...newShop, name: e.target.value})} type="text" required />
-              <Input label="Website Link" value={newShop.url} onChange={e => setNewShop({...newShop, url: e.target.value})} type="url" placeholder="https://" required />
-              <Input label="Aesthetic / Category" value={newShop.category} onChange={e => setNewShop({...newShop, category: e.target.value})} type="text" placeholder="e.g. Minimalist Basics" />
-              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-medium hover:bg-stone-700 transition-colors duration-200 mt-4">Save to Directory</button>
-            </form>
-          </div>
-        </div>
-
-        <div className="lg:col-span-7 grid gap-4 align-top content-start">
-          {filteredShops.map(shop => (
-            <ShopRow key={shop.id} shop={shop} saveShop={saveShop} deleteShop={deleteShop} />
-          ))}
-          {shops.length === 0 && <p className="text-stone-400 italic text-center py-10 border border-dashed border-stone-300 rounded-2xl">No boutiques added yet.</p>}
-          {shops.length > 0 && filteredShops.length === 0 && (
-            <p className="text-stone-400 italic text-center py-10 border border-dashed border-stone-300 rounded-2xl">
-              No boutiques match "{searchQuery}".
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Quick verdict on today's wear — chips for common reactions plus free-text.
-// Debounces saves so typing doesn't write to Firestore on every keystroke.
 const QUICK_VERDICT_CHIPS = ['Felt great', 'Too warm', 'Too cold', 'Restyle', 'Waistband loose', 'Compliments'];
 function WearVerdictInput({ initial, onSave, initialOccasion, onSaveOccasion }) {
   const [text, setText] = useState(initial || '');

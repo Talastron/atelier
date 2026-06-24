@@ -23,6 +23,8 @@ import AppCheckDevBanner from './AppCheckDevBanner.jsx';
 import AtelierMark from './components/AtelierMark.jsx';
 import BottomBar from './nav/BottomBar.jsx';
 import Sidebar from './nav/Sidebar.jsx';
+import WeekStrip from './components/WeekStrip.jsx';
+import ConciergePrompt from './components/ConciergePrompt.jsx';
 
 const SEASONS = ['All Seasons', 'Spring', 'Summer', 'Autumn', 'Winter'];
 const TOP_SUBCATEGORIES = ['T-Shirts', 'Blouses', 'Shirts', 'Sleeveless', 'Jumpers', 'Sweaters', 'Cardigans', 'Hoodies', 'Sweatshirts', 'Vests', 'Other'];
@@ -1885,7 +1887,9 @@ ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.o
           if (!byDay.has(key)) byDay.set(key, []);
           byDay.get(key).push(e);
         }
-        const today = todayISO();
+        // LOCAL today (matches the grouping keys, which are local). Using the
+        // UTC todayISO() here would mislabel days near the date boundary.
+        const today = new Date().toLocaleDateString('en-CA');
         const days = [...byDay.entries()]
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([key, evs]) => {
@@ -1898,7 +1902,8 @@ ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.o
             return `${heading}:\n${items}`;
           })
           .join('\n');
-        return `\nON THE CLIENT'S CALENDAR (next 7 days):\n${days}\n\nWhen the client asks what to wear on a particular day, dress for THAT day's events — match formality to the occasion (a board meeting or presentation calls for sharper tailoring than a coffee catch-up). Only reference an event when it's relevant to the wardrobe question; don't shoehorn it in.\n`;
+        const hasTodayEvents = byDay.has(today);
+        return `\nON THE CLIENT'S CALENDAR (next 7 days):\n${days}\n\nThe day marked "(today)" is today. When the client asks what to wear on a particular day, dress for THAT day's events only. ${hasTodayEvents ? '' : 'TODAY HAS NO EVENTS LISTED — so if the client asks about "today", treat it as an open day and do NOT borrow another day\'s events or imply that an upcoming day\'s plans are happening today. '}Match formality to the occasion (a board meeting or presentation calls for sharper tailoring than a coffee catch-up). Only reference an event when it's relevant to the wardrobe question; don't shoehorn it in.\n`;
       })()
     : '';
 
@@ -3193,11 +3198,15 @@ export default function DigitalWardrobeRoot() {
 
 function DigitalWardrobe() {
   const toast = useToast();
-  const [activeTab, setActiveTab] = useState('wardrobe');
+  const [activeTab, setActiveTab] = useState('today');
   // Hint to OutfitBuilder (Lookbook mode) for which internal tab to open
   // on the next render. Used when navigating in from the Insights diary
   // hand-off — clears itself once consumed.
   const [lookbookInitialTab, setLookbookInitialTab] = useState(null);
+  // Deep-link target for the Calendar pillar — set by the Today "Your week"
+  // strip so tapping a day opens the calendar already on that date.
+  const [calendarJumpDate, setCalendarJumpDate] = useState(null);
+  const jumpToCalendarDay = (dateISO) => { setCalendarJumpDate(dateISO); setActiveTab('calendar'); };
   // Atelier Concierge — AI chat stylist. Opens as a right-edge slide-in
   // panel; reachable from the sidebar (desktop) and a hero card on the
   // Wardrobe landing page (mobile + desktop).
@@ -4292,6 +4301,26 @@ function DigitalWardrobe() {
                 // position:sticky for descendants (they end up scoped to this
                 // wrapper instead of the main scroll ancestor). Fade-in only.
                 <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
+                  {activeTab === 'today' && (
+                    <TodayView
+                      user={user}
+                      items={liveItems}
+                      measurements={measurements}
+                      schedules={schedules}
+                      outfits={outfits}
+                      inspirations={inspirations}
+                      aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
+                      onSaveOutfit={handleSaveOutfit}
+                      onLogOutfitWear={handleLogOutfitWear}
+                      onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }}
+                      onItemClick={setSelectedItemId}
+                      onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
+                      onOpenConcierge={() => setIsConciergeOpen(true)}
+                      onOpenInspiration={setSelectedInspirationId}
+                      onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }}
+                      onSelectCalendarDay={jumpToCalendarDay}
+                    />
+                  )}
                   {activeTab === 'wardrobe' && <WardrobeView items={liveItems} deleteItem={handleDeleteItem} openAddModal={() => setIsAddItemModalOpen(true)} measurements={measurements} onItemClick={setSelectedItemId} user={user} onToggleFavorite={handleToggleFavorite} schedules={schedules} outfits={outfits} onOpenOutfit={setOpenOutfitId} onBulkUpdate={handleBulkUpdateItems} onBulkDelete={handleBulkDeleteItems} onScheduleOutfit={handleScheduleOutfit} onSaveOutfit={handleSaveOutfit} onLogOutfitWear={handleLogOutfitWear} inspirations={inspirations} onOpenInspiration={setSelectedInspirationId} onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }} aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7} onScrollTop={scrollMainToTop} jumpFilter={wardrobeJump.filter} jumpCategory={wardrobeJump.category} jumpNonce={wardrobeJump.nonce} onOpenConcierge={() => setIsConciergeOpen(true)} onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }} onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }} />}
                   {activeTab === 'outfits' && (
                     <OutfitBuilder
@@ -4359,6 +4388,7 @@ function DigitalWardrobe() {
                       onOpenItem={setSelectedItemId}
                       styleProfile={summariseStyleProfile(measurements)}
                       autoActivateRangeMode={false}
+                      initialSelectedDate={calendarJumpDate}
                     />
                   )}
                   {activeTab === 'finance' && <FinanceView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('calendar')} />}
@@ -6003,6 +6033,108 @@ function sortWardrobeItems(items, sortBy) {
   return arr.sort((a, b) => favBoost(a, b) || comparator(a, b));
 }
 
+// The Today home — the daily fused planning+styling hero. Lives in App.jsx
+// (not src/views/) for now because DailyBriefCard and its helper cluster are
+// module-local here; extracting the whole cluster is a later modularization
+// step. Owns the weather fetch + the coming-week event fetch.
+function TodayView({ user, items, measurements, schedules, outfits, inspirations, aiTemperature, onSaveOutfit, onLogOutfitWear, onOpenBrief, onItemClick, onEditPreferences, onOpenConcierge, onOpenInspiration, onOpenInspirationTab, onSelectCalendarDay }) {
+  const [weather, setWeather] = useState(null);
+  const [weatherSettled, setWeatherSettled] = useState(false);
+  useEffect(() => {
+    fetchTodaysWeather().then((data) => { setWeather(data); setWeatherSettled(true); });
+  }, []);
+
+  // Season (same computation WardrobeView used).
+  const month = new Date().getMonth();
+  const currentSeason = month <= 1 || month === 11 ? 'Winter' : month <= 4 ? 'Spring' : month <= 7 ? 'Summer' : 'Autumn';
+
+  // The coming week's calendar events — powers the Week-strip markers and the
+  // Concierge prompt's suggestion. Best-effort; silent when not connected.
+  const [weekEvents, setWeekEvents] = useState([]);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    (async () => {
+      try {
+        const connected = await isCalendarConnected(user);
+        if (!connected || !alive) return;
+        const start = new Date(); start.setHours(0, 0, 0, 0);
+        const end = new Date(start); end.setDate(end.getDate() + 7); end.setHours(23, 59, 59, 999);
+        const { events = [], reason } = await fetchCalendarEvents(start.toISOString(), end.toISOString());
+        if (alive && reason !== 'revoked') setWeekEvents(events);
+      } catch { /* best-effort */ }
+    })();
+    return () => { alive = false; };
+  }, [user]);
+
+  const ownedAvailable = items.filter((it) => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged');
+  const weatherLabelStr = weather ? `${weather.temp}°` + (weather.precipProb != null ? ` · ${weatherLabel(weather.code, weather.precipProb)}` : '') : '';
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* Greeting + weather */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
+            {getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ''}
+          </p>
+        </div>
+        {weatherSettled && weather && (
+          <span className="text-stone-500 text-xs sm:text-sm shrink-0">{weatherLabelStr}</span>
+        )}
+      </div>
+
+      {/* Daily Brief — the centrepiece */}
+      <DailyBriefCard
+        user={user}
+        items={ownedAvailable}
+        measurements={measurements}
+        weather={weather}
+        weatherSettled={weatherSettled}
+        season={currentSeason}
+        aiTemperature={aiTemperature}
+        isAiEnabled={isAIEnabled()}
+        onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents }) => {
+          return generateOutfitWithGemini({
+            items,
+            intent,
+            weather,
+            season: currentSeason,
+            styleProfile: summariseStyleProfile(measurements),
+            temperature,
+            previousOutfit: previous ? (previous.itemIds || []).map((id) => items.find((it) => it.id === id)).filter(Boolean) : null,
+            calendarEvents,
+          });
+        }}
+        onSaveOutfit={onSaveOutfit}
+        onLogOutfitWear={onLogOutfitWear}
+        onOpenOutfit={onOpenBrief}
+        onOpenItem={onItemClick}
+        onEditPreferences={onEditPreferences}
+      />
+
+      {/* Your week */}
+      <WeekStrip events={weekEvents} schedules={schedules} onSelectDay={onSelectCalendarDay} />
+
+      {/* Ask your stylist */}
+      <ConciergePrompt events={weekEvents} onOpen={onOpenConcierge} />
+
+      {/* Daily digest — nudges (care-due, price drops, etc.) */}
+      <DailyDigest
+        items={items}
+        outfits={outfits}
+        schedules={schedules}
+        inspirations={inspirations}
+        onOpenItem={onItemClick}
+        onOpenOutfit={onOpenBrief}
+        onOpenInspiration={onOpenInspiration}
+        onOpenInspirationTab={onOpenInspirationTab}
+      />
+    </div>
+  );
+}
+
 function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge, onOpenBrief, onEditPreferences }) {
   // Header counts — owned only for the primary count; wishlist as secondary.
   // items here is liveItems (all non-deleted) so WardrobeView can show its own
@@ -6306,14 +6438,13 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           {/* Weather chip removed — the Today card on the right owns the
               daily brief (and now uses MAX temp, which is what you dress
               for, not the current reading). One source of truth. */}
-          {user && (
-            <div className="flex items-center gap-3 flex-wrap mb-2 lg:mb-1">
-              <span className="brass-rule" aria-hidden="true"></span>
-              <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
-                {getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ''}
-              </p>
-            </div>
-          )}
+          {/* Greeting now lives on the Today home; Wardrobe is pure inventory. */}
+          <div className="flex items-center gap-3 flex-wrap mb-2 lg:mb-1">
+            <span className="brass-rule" aria-hidden="true"></span>
+            <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
+              Your Wardrobe
+            </p>
+          </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-3xl xl:text-4xl font-display text-stone-900 tracking-tight leading-[1.05]">Your Collection</h2>
           <p className="text-stone-500 mt-2 md:mt-3 lg:mt-1 text-xs md:text-sm tracking-wide uppercase font-medium">
             {ownedCount} Pieces Curated{wishlistCount > 0 && <span className="normal-case tracking-normal font-normal text-stone-400 ml-1.5">· {wishlistCount} on wishlist</span>}
@@ -6349,56 +6480,8 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
         </div>
       </header>
 
-      {/* Mobile-only Today strip: TodayTile + DailyDigest rendered at TOP of
-          the wardrobe view on small screens. The full sidebar is hidden on
-          mobile (was rendering at the bottom, which felt buried). Keeps the
-          most useful daily actions one tap away without burying search. */}
-      <div className="lg:hidden space-y-4">
-        <DailyBriefCard
-          user={user}
-          items={items.filter(it => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged')}
-          measurements={measurements}
-          weather={weather}
-          weatherSettled={weatherSettled}
-          season={currentSeason}
-          aiTemperature={aiTemperature}
-          isAiEnabled={isAIEnabled()}
-          onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents }) => {
-            return generateOutfitWithGemini({
-              items,
-              intent,
-              weather,
-              season: currentSeason,
-              styleProfile: summariseStyleProfile(measurements),
-              temperature,
-              previousOutfit: previous ? (previous.itemIds || []).map(id => items.find(it => it.id === id)).filter(Boolean) : null,
-              calendarEvents,
-            });
-          }}
-          onSaveOutfit={onSaveOutfit}
-          onLogOutfitWear={onLogOutfitWear}
-          onOpenOutfit={onOpenBrief}
-          onOpenItem={onItemClick}
-          onEditPreferences={onEditPreferences}
-        />
-        <TodayTile
-          items={items}
-          outfits={outfits}
-          schedules={schedules}
-          weather={weather}
-          onOpenOutfit={onOpenOutfit}
-        />
-        <DailyDigest
-          items={items}
-          outfits={outfits}
-          schedules={schedules}
-          inspirations={inspirations}
-          onOpenItem={onItemClick}
-          onOpenOutfit={onOpenOutfit}
-          onOpenInspiration={onOpenInspiration}
-          onOpenInspirationTab={onOpenInspirationTab}
-        />
-      </div>
+      {/* Daily Brief / Today tile / digest moved to the Today home (Effort 2).
+          Wardrobe is now pure inventory. */}
 
       {/* ─── DESKTOP COMMAND TOOLBAR ────────────────────────────────────
           One unified sticky bar spanning the full content width, containing
@@ -6721,53 +6804,9 @@ function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemCli
           so this column no longer needs its own sticky bar. Cards flow
           naturally and scroll with the page. */}
       <aside className="hidden lg:flex lg:col-span-4 lg:col-start-9 lg:row-start-1 flex-col gap-3 lg:pr-1 lg:pb-6">
-        <DailyBriefCard
-          user={user}
-          items={items.filter(it => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged')}
-          measurements={measurements}
-          weather={weather}
-          weatherSettled={weatherSettled}
-          season={currentSeason}
-          aiTemperature={aiTemperature}
-          isAiEnabled={isAIEnabled()}
-          onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents }) => {
-            return generateOutfitWithGemini({
-              items,
-              intent,
-              weather,
-              season: currentSeason,
-              styleProfile: summariseStyleProfile(measurements),
-              temperature,
-              previousOutfit: previous ? (previous.itemIds || []).map(id => items.find(it => it.id === id)).filter(Boolean) : null,
-              calendarEvents,
-            });
-          }}
-          onSaveOutfit={onSaveOutfit}
-          onLogOutfitWear={onLogOutfitWear}
-          onOpenOutfit={onOpenBrief}
-          onOpenItem={onItemClick}
-          onEditPreferences={onEditPreferences}
-        />
-
-        <TodayTile
-          items={items}
-          outfits={outfits}
-          schedules={schedules}
-          weather={weather}
-          onOpenOutfit={onOpenOutfit}
-        />
-
-        <DailyDigest
-          items={items}
-          outfits={outfits}
-          schedules={schedules}
-          inspirations={inspirations}
-          onOpenItem={onItemClick}
-          onOpenOutfit={onOpenOutfit}
-          onOpenInspiration={onOpenInspiration}
-          onOpenInspirationTab={onOpenInspirationTab}
-        />
-
+        {/* Daily Brief / Today tile / digest moved to the Today home (Effort 2).
+            This rail now carries only "Today's Pick" — a weather-aware nudge
+            from your own pieces, which stays with the wardrobe. */}
         {recommendation && (() => {
           const reasons = [];
           const tempC = weather?.temp ?? null;
@@ -13128,10 +13167,21 @@ function CapsuleBuilder({ onClose, onGenerate }) {
   );
 }
 
-function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '', onOpenItem = null, autoActivateRangeMode = false }) {
+function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, styleProfile = '', onOpenItem = null, autoActivateRangeMode = false, initialSelectedDate = null }) {
   const today = new Date();
-  const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [cursor, setCursor] = useState(
+    initialSelectedDate
+      ? { year: Number(initialSelectedDate.slice(0, 4)), month: Number(initialSelectedDate.slice(5, 7)) - 1 }
+      : { year: today.getFullYear(), month: today.getMonth() }
+  );
+  const [selectedDate, setSelectedDate] = useState(initialSelectedDate || null);
+  useEffect(() => {
+    // Deep-link: re-select when the parent hands us a new date (Week strip).
+    if (initialSelectedDate) {
+      setSelectedDate(initialSelectedDate);
+      setCursor({ year: Number(initialSelectedDate.slice(0, 4)), month: Number(initialSelectedDate.slice(5, 7)) - 1 });
+    }
+  }, [initialSelectedDate]);
   const [schedulingDate, setSchedulingDate] = useState(null);
   const [rangeMode, setRangeMode] = useState(false);
   const [rangeStart, setRangeStart] = useState(null);
@@ -14807,8 +14857,8 @@ function DiaryStatsRow({ daysCount, wears, streak, mostWorn, onOpenItem }) {
 // numerals, polaroid item thumbnails, italic pull-quote notes, photo
 // lightbox. The diary is now a SINGLE keepsake destination, not a feature
 // fractured across Studio + Insights.
-function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, onOpenItem, styleProfile = '', autoActivateRangeMode = false }) {
-  const [tab, setTab] = useState('journal');
+function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit, onOpenOutfit, onSaveOutfit, onOpenItem, styleProfile = '', autoActivateRangeMode = false, initialSelectedDate = null }) {
+  const [tab, setTab] = useState(initialSelectedDate ? 'calendar' : 'journal');
   const [filter, setFilter] = useState('all');
 
   // When a "Plan a trip" CTA fires from TripsListView, switch to the
@@ -14974,6 +15024,7 @@ function DiaryView({ items = [], outfits = [], schedules = {}, onScheduleOutfit,
             styleProfile={styleProfile}
             onOpenItem={onOpenItem}
             autoActivateRangeMode={autoActivateRangeMode}
+            initialSelectedDate={initialSelectedDate}
           />
         </div>
       ) : (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutGrid, Camera, Calendar, BookOpen, Sparkles } from 'lucide-react';
+import { Home, LayoutGrid, Calendar, BookOpen, Sparkles } from 'lucide-react';
 
 function MobileNavItem({ icon: Icon, label, id, activeTab, setTab, onScrollTop }) {
   const isActive = activeTab === id;
@@ -145,8 +145,8 @@ function MobileFAB({ onTap, onLongPress }) {
 export default function BottomBar({ activeTab, setActiveTab, onScrollTop, onOpenConcierge }) {
   return (
     <div className="grid grid-cols-5 max-w-lg mx-auto py-1 items-center">
+      <MobileNavItem id="today" icon={Home} label="Today" activeTab={activeTab} setTab={setActiveTab} onScrollTop={onScrollTop} />
       <MobileNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} onScrollTop={onScrollTop} />
-      <MobileNavItem id="outfits" icon={Camera} label="Studio" activeTab={activeTab} setTab={setActiveTab} onScrollTop={onScrollTop} />
       <MobileFAB onTap={onOpenConcierge} onLongPress={onOpenConcierge} />
       <MobileNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} onScrollTop={onScrollTop} />
       <MobileNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} onScrollTop={onScrollTop} />

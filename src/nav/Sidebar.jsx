@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, LayoutGrid, Camera, Calendar, BookOpen, Bookmark, PoundSterling, Store, ChevronRight, LogOut } from 'lucide-react';
+import { Sparkles, Home, LayoutGrid, Camera, Calendar, BookOpen, Bookmark, PoundSterling, Store, ChevronRight, LogOut } from 'lucide-react';
 import AtelierMark from '../components/AtelierMark.jsx';
 
 function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
@@ -67,6 +67,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
           <span className="ml-auto text-[9px] tracking-[0.25em] uppercase text-stone-400 group-hover:text-brass-500 transition-colors">Ask</span>
         </button>
         {/* Primary pillars */}
+        <DesktopNavItem id="today" icon={Home} label="Today" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="wardrobe" icon={LayoutGrid} label="Wardrobe" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="outfits" icon={Camera} label="Styling Studio" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} />

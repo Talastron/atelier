@@ -92,12 +92,46 @@ Tags guidance:
 - Avoid restating the items themselves; tags describe the LOOK, not its parts
 - No duplicates, no marketing fluff
 
-Confidence reflects how strongly the available wardrobe matches the intent (100 = perfect fit, 50 = workable but not ideal, low = thin matches).`;
+Confidence reflects how strongly the available wardrobe matches the intent (100 = perfect fit, 50 = workable but not ideal, low = thin matches).
 
-  const text = await geminiText(prompt, { temperature, jsonMode: true }, 'suggest-look');
-  let parsed;
-  try { parsed = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
-  if (!parsed.itemIds?.length) throw new Error('The Concierge could not compose a look from this wardrobe');
+FINAL SELF-CHECK before you respond — all three must be true, or fix itemIds and retry yourself:
+1. itemIds contains a real clothing base: a Dress, OR a Top AND a Bottom. (A look of only shoes/bag/jewellery is invalid.)
+2. Every garment and accessory named in the reasoning is in itemIds and wrapped as <<item:ID|name>> — including the main garment.
+3. Nothing in itemIds is left unnamed in the reasoning, and nothing named in the reasoning is missing from itemIds.`;
+
+  // Run the model and parse. Pulled into a helper so we can re-run with a
+  // correction if the first attempt comes back without a clothing base.
+  const runOnce = async (promptText, temp) => {
+    const text = await geminiText(promptText, { temperature: temp, jsonMode: true }, 'suggest-look');
+    let p;
+    try { p = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
+    if (!p.itemIds?.length) throw new Error('The Concierge could not compose a look from this wardrobe');
+    return p;
+  };
+
+  // CODE-LEVEL COMPLETENESS GUARD. The prompt already demands a full clothing
+  // base, but the model intermittently names a garment in the prose (e.g. "the
+  // black linen shirt dress") yet omits its id from itemIds — leaving a look of
+  // pure accessories with no actual clothes. Prompt rules alone don't stop this
+  // reliably, so we verify in code: the resolved itemIds MUST contain either a
+  // Dress, or BOTH a Top and a Bottom. If not, re-compose once with a stern
+  // correction (and a nudge up in temperature to break the failure mode).
+  const hasClothingBase = (ids) => {
+    const picked = (ids || []).map((id) => items.find((i) => i.id === id)).filter(Boolean);
+    const has = (cat) => picked.some((i) => i.category === cat);
+    return has('Dresses') || (has('Tops') && has('Bottoms'));
+  };
+
+  let parsed = await runOnce(prompt, temperature);
+  if (!hasClothingBase(parsed.itemIds)) {
+    const correction = `${prompt}
+
+CRITICAL CORRECTION — your previous attempt is INVALID: it returned a look with NO clothing base (no dress, or a top without a bottom / a bottom without a top). A look of only accessories is a hard failure. Re-compose now. itemIds MUST contain the actual garment(s): EITHER one Dress, OR BOTH a Top AND a Bottom, drawn from the wardrobe list. Before you respond, read back your own itemIds and confirm a real garment is present.`;
+    try {
+      const retry = await runOnce(correction, Math.min(0.9, temperature + 0.1));
+      if (hasClothingBase(retry.itemIds)) parsed = retry;
+    } catch { /* keep the first attempt if the retry itself errors */ }
+  }
   const tags = Array.isArray(parsed.tags)
     ? parsed.tags
         .map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))

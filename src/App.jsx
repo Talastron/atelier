@@ -561,6 +561,7 @@ Stylist rules:
 - Pick AT MOST one item per category slot for: Tops, Outerwear, Bottoms, Dresses, Shoes, Bags, Accessories.
 - Jewellery is layered — you MAY pick MULTIPLE items per jewellery slot (Earrings, Necklaces, Wrist). A complete look can carry two stacked necklaces, layered bracelets, or both pearl studs and a small drop earring. Compose jewellery as a curated stack, not a single piece — but only when the items genuinely work together.
 - A Dress REPLACES Tops + Bottoms — never include all three.
+- COMPLETE THE LOOK — non-negotiable: itemIds MUST contain a full clothing base — EITHER one Dress, OR BOTH a Top AND a Bottom. Never return a look that is missing its bottom (a top with no trousers/skirt/shorts) or missing its top. If you describe trousers, shorts, a skirt or a top in the reasoning, that exact item MUST be in itemIds (see the marker rule) — a garment mentioned in prose but absent from itemIds is a hard failure.
 - Pick ONLY items whose category matches the slot — never put a bag in the shoes slot.
 
 WEATHER-DRIVEN RULES (this is NON-NEGOTIABLE — temperature is the strongest filter):
@@ -573,6 +574,7 @@ WEATHER-DRIVEN RULES (this is NON-NEGOTIABLE — temperature is the strongest fi
 - The reasoning sentence MUST mention the temperature and weather conditions explicitly so the user can see the call was made deliberately.
 
 - Colour palette must be cohesive: neutrals + 1-2 accent colours, avoid clashes (red+pink, red+orange, etc.).
+- Metal cohesion: keep the jewellery and metal hardware in ONE metal family per look — all yellow gold, OR all rose gold, OR all silver/white gold/platinum. Do NOT mix yellow gold with rose gold, or gold with silver, in the same look (a yellow-gold necklace with a rose-gold pendant reads as a mistake, not a choice). Match watch, earrings, necklaces, and bracelets to the same metal.
 - Style cohesion: a smart blazer doesn't go with sports leggings.
 - Skip Outerwear unless the weather/season warrants it.
 - Skip optional slots (Bags, Accessories, Jewellery) if nothing genuinely complements the look — better empty than wrong.
@@ -4071,6 +4073,16 @@ function DigitalWardrobe() {
     }
   };
 
+  // Delete a whole trip: a trip is derived from the scheduled days that share
+  // its trip.id, so removing it means deleting each of those scheduled docs.
+  // One toast (not one per day). The trips list re-derives once the schedule
+  // snapshot updates.
+  const handleDeleteTrip = async (trip) => {
+    if (!user || !trip?.days?.length) return;
+    await Promise.all(trip.days.map((d) => deleteDoc(userScheduleDoc(user.uid, d.dateISO))));
+    toast.show(`Trip removed · ${trip.name}`, { kind: 'default' });
+  };
+
   const handleSaveInspiration = async (insp) => {
     if (!user) return;
     await setDoc(doc(userInspirationRef(user.uid), insp.id), insp);
@@ -4380,6 +4392,7 @@ function DigitalWardrobe() {
                       onAddOutfitToCollection={handleAddOutfitToCollection}
                       onRemoveOutfitFromCollection={handleRemoveOutfitFromCollection}
                       onDeleteCollection={handleDeleteCollection}
+                      onDeleteTrip={handleDeleteTrip}
                     />
                   )}
                   {activeTab === 'calendar' && (
@@ -5390,8 +5403,10 @@ function AccessDeniedScreen({ user, onSignOut }) {
 // final stage (the call usually returns before reaching it).
 const COMPOSE_STAGES = [
   'Reading your wardrobe…',
-  'Checking the day…',
-  'Considering colour & cohesion…',
+  'Checking the weather…',
+  'Weighing colour & cohesion…',
+  'Balancing the silhouette…',
+  'Layering the finishing touches…',
   'Composing the look…',
 ];
 function useComposingStage(active) {
@@ -5399,32 +5414,46 @@ function useComposingStage(active) {
   useEffect(() => {
     if (!active) { setStage(0); return; }
     let i = 0;
+    // ~2.2s per line, and more lines, so the narration moves at a calm,
+    // readable pace and only parks on the final line if compose runs long.
     const id = setInterval(() => {
       i = Math.min(i + 1, COMPOSE_STAGES.length - 1);
       setStage(i);
       if (i === COMPOSE_STAGES.length - 1) clearInterval(id);
-    }, 1200);
+    }, 2200);
     return () => clearInterval(id);
   }, [active]);
   return COMPOSE_STAGES[stage];
 }
 
 function ComposingPlaceholder({ title = 'The Daily Brief', stage }) {
+  // Calm, editorial wait: a slow soft sheen sweeps across refined skeleton
+  // cells (gently staggered into a wave), with the narration in the display
+  // serif. Deliberately quiet — no flickering, no shuffling images.
   return (
-    <div className="rounded-2xl border border-stone-200 bg-stone-50 p-6">
-      <p className="text-sm uppercase tracking-widest text-stone-500">{title}</p>
-      <div className="mt-2 flex items-center gap-2 text-stone-700">
-        {/* Spinner — pure CSS, no SVG dependency */}
-        <span
-          aria-hidden="true"
-          className="inline-block h-4 w-4 rounded-full border-2 border-stone-300 border-t-stone-700 animate-spin"
-        />
-        <p className="text-sm italic text-stone-700">{stage}</p>
+    <div className="rounded-2xl border border-stone-200/70 bg-white p-6 sm:p-8 smooth-shadow">
+      <style>{`@keyframes atelierSheen{0%{background-position:-150% 0}100%{background-position:250% 0}}`}</style>
+      <p className="text-[10px] tracking-[0.28em] uppercase text-stone-400">{title}</p>
+      <div className="mt-5 flex items-center gap-3">
+        <span className="brass-rule" aria-hidden="true" />
+        <p className="font-display italic text-lg sm:text-xl text-stone-700">{stage}</p>
       </div>
-      <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-5 animate-pulse">
-        {[0,1,2,3,4].map(i => <div key={i} className="aspect-square rounded-lg bg-stone-200" />)}
+      <div className="mt-6 grid grid-cols-4 gap-3 sm:grid-cols-5">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="aspect-square rounded-xl"
+            aria-hidden="true"
+            style={{
+              backgroundImage: 'linear-gradient(110deg, #efece7 25%, #f7f5f2 45%, #efece7 65%)',
+              backgroundSize: '250% 100%',
+              animation: 'atelierSheen 2.6s ease-in-out infinite',
+              animationDelay: `${i * 0.18}s`,
+            }}
+          />
+        ))}
       </div>
-      <p className="mt-3 text-xs text-stone-400">This usually takes a few seconds.</p>
+      <p className="mt-5 text-xs text-stone-400 tracking-wide">A considered look takes a moment.</p>
     </div>
   );
 }
@@ -10146,7 +10175,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   );
 }
 
-function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences, collections = [], onCreateCollection = null, onAddOutfitToCollection = null, onRemoveOutfitFromCollection = null, onDeleteCollection = null }) {
+function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences, collections = [], onCreateCollection = null, onAddOutfitToCollection = null, onRemoveOutfitFromCollection = null, onDeleteCollection = null, onDeleteTrip = null }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -11198,6 +11227,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
             schedules={schedules}
             onClose={() => setOpenTripId(null)}
             onOpenOutfit={(id) => { setOpenTripId(null); onOpenOutfit?.(id); }}
+            onDeleteTrip={onDeleteTrip ? async () => { await onDeleteTrip(trip); setOpenTripId(null); } : null}
           />
         );
       })()}
@@ -12045,9 +12075,10 @@ function TripsListView({ trips, outfits, items, onOpenTrip, onPlanTrip }) {
 // ---------------------------------------------------------------------------
 // TripDetailView — full-screen portal showing day-by-day outfits for a trip
 // ---------------------------------------------------------------------------
-function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit }) {
+function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit, onDeleteTrip = null }) {
   useEscapeKey(onClose);
   const [packingOpen, setPackingOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const tripOutfits = trip.days
     .map((d) => ({ dateISO: d.dateISO, outfit: outfits.find((o) => o.id === d.outfitId) }))
@@ -12076,14 +12107,28 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
             <span className="hidden sm:inline">Back to Trips</span>
             <span className="sm:hidden">Back</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setPackingOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-[12px] tracking-wide hover:bg-stone-700 transition-colors"
-          >
-            <Download size={14} strokeWidth={1.5} />
-            View packing list
-          </button>
+          <div className="flex items-center gap-2">
+            {onDeleteTrip && (
+              <button
+                type="button"
+                onClick={() => { if (confirmDelete) { onDeleteTrip(); } else { setConfirmDelete(true); } }}
+                onBlur={() => setConfirmDelete(false)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[12px] tracking-wide transition-colors ${confirmDelete ? 'bg-red-600 text-white hover:bg-red-700' : 'border border-stone-200 text-stone-500 hover:border-red-300 hover:text-red-600'}`}
+                title={`${trip.days?.length || 0} planned day${(trip.days?.length || 0) === 1 ? '' : 's'} will be removed`}
+              >
+                <Trash2 size={14} strokeWidth={1.5} />
+                {confirmDelete ? 'Confirm delete' : 'Delete trip'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setPackingOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-[12px] tracking-wide hover:bg-stone-700 transition-colors"
+            >
+              <Download size={14} strokeWidth={1.5} />
+              View packing list
+            </button>
+          </div>
         </div>
       </div>
 

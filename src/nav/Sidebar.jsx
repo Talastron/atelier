@@ -28,7 +28,7 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
 
 export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user, demoMode, signOutUser, setInspirationDefaultFilter }) {
   return (
-    <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+    <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full overflow-y-auto hide-scrollbar" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
       {/* Logo block height + this margin is tuned so the first nav pill
           (Wardrobe) sits at the same Y as the search bar in the main
           column. Math: main scroll-container has the page header

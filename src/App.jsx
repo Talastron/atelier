@@ -4147,6 +4147,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 }
 
 function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
+  const scrollRef = useRef(null);
   if (!allItems?.length) return null;
 
   // Slots to suggest = OUTFIT_SLOTS minus the slot this item occupies
@@ -4243,7 +4244,21 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
   return (
     <div className="pt-6 border-t border-stone-200">
       <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-4">Wear with</h2>
-      <div className="flex gap-3 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 pb-3">
+      <div className="relative group/wearwith">
+        {/* Desktop scroll arrows — mobile scrolls by swipe, but on desktop the
+            hidden scrollbar leaves no affordance, so reveal chevrons on hover
+            that nudge the strip one card-cluster at a time. */}
+        <button type="button" aria-label="Scroll back"
+          onClick={() => scrollRef.current?.scrollBy({ left: -320, behavior: 'smooth' })}
+          className="hidden lg:flex absolute -left-3 top-[38%] -translate-y-1/2 z-10 w-9 h-9 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-stone-200 text-stone-700 hover:text-stone-900 opacity-0 group-hover/wearwith:opacity-100 transition-opacity duration-200">
+          <ChevronRight size={18} strokeWidth={1.75} className="rotate-180" />
+        </button>
+        <button type="button" aria-label="Scroll forward"
+          onClick={() => scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' })}
+          className="hidden lg:flex absolute -right-3 top-[38%] -translate-y-1/2 z-10 w-9 h-9 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-stone-200 text-stone-700 hover:text-stone-900 opacity-0 group-hover/wearwith:opacity-100 transition-opacity duration-200">
+          <ChevronRight size={18} strokeWidth={1.75} />
+        </button>
+        <div ref={scrollRef} className="flex gap-3 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 pb-3">
         {suggestions.map(({ item: s, reasons }) => (
           <button key={s.id} onClick={() => onOpenItem?.(s.id)}
             className="flex-none w-28 sm:w-32 text-left group transition-transform active:scale-[0.97]">
@@ -4266,6 +4281,7 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
             )}
           </button>
         ))}
+        </div>
       </div>
       <p className="text-[10px] text-stone-400 italic mt-2">Suggested by brand, palette, style, season and what you've already paired.</p>
     </div>

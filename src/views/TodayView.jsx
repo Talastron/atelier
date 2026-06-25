@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
-import { summariseStyleProfile, todayISO } from "../lib/items.js";
+import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose } from "../dailyBrief";

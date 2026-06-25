@@ -572,7 +572,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
   ];
 
   return (
-    <div className="space-y-10 md:space-y-12 max-w-3xl">
+    <div className="space-y-10 md:space-y-12">
       <EditorialHeader eyebrow="Your atelier" title="Profile" subtitle="Account, measurements, style, and preferences." />
 
       {/* Sticky sub-section nav — matches the Insights pattern. Same

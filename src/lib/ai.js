@@ -872,7 +872,7 @@ ${hasEstimated ? `Some days fall beyond the 14-day forecast window. For those, d
 - Compose ONE outfit per forecast day (every date above) — never skip a day, never return an empty itemIds array.
 - Each day's itemIds MUST be drawn from the "Available items" list below. NEVER invent IDs. If you're not sure, pick the closest match from the list.
 - Each outfit needs AT MINIMUM: top + bottom + shoes, OR dress + shoes. Aim for 4-7 pieces total per day (add outerwear / bag / accessories / jewellery to complete the look).
-- Reuse pieces across days where it makes sense — that's the point of a capsule. Aim to keep TOTAL distinct pieces under 1.5× the number of days.
+- Capsule logic: reuse BOTTOMS, SHOES, outerwear and bags freely across days (that is the point of a capsule). But ROTATE the hero pieces — tops and dresses — for visible variety: aim for a different top or dress on MOST days where the wardrobe allows it. Do not repeat the same dress or the same top more than about twice across the whole trip when weather-appropriate alternatives exist. Only fall back to repeating a hero piece when the wardrobe genuinely lacks other suitable options for that day's weather.
 - Each outfit follows the standard slot rules: at most one item per category, dresses replace tops+bottoms.
 - A short reasoning line per day (max 12 words) that mentions the day's temperature range so the user can see the call was made deliberately.
 - One summary line about the overall capsule choices that mentions the destination's overall climate.
@@ -882,7 +882,7 @@ WEATHER-DRIVEN RULES (use the DAILY MAX temperature for each outfit, this is NON
 - 5-12°C max: REQUIRE outerwear (coat/jacket), long sleeves, mid-weight, closed shoes.
 - 12-18°C max: light outerwear (blazer/cardigan), long sleeves or layerable.
 - 18-24°C max: optional light layer, t-shirt weight, dresses welcome.
-- Above 24°C max: NO outerwear, linen/cotton only, sleeveless/shorts/dresses preferred, sandals OK.
+- Above 24°C max: NO outerwear; light linen/cotton only; STRONGLY prefer shorts, skirts, and light dresses with sandals; sleeveless and bare legs are good. AVOID long trousers and especially jeans in this heat — only use a long bottom if it is lightweight linen AND no shorts, skirt or dress is available for that day.
 - Rain/snow forecast code: pick darker pieces, prefer water-resistant outerwear if owned, closed shoes.
 - A day's min temperature near 0 with warm max needs versatile layering — include a transportable outer layer even if not worn all day.
 

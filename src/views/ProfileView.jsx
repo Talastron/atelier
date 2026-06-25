@@ -579,12 +579,16 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           'Pattern B' pill sizing (px-3 py-1.5 text-[10px] sm:text-xs)
           established in the unification commit so all sticky-bar pills
           across the app speak one language. */}
-      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+        {/* Contents — wraps to fit (never clips) and reads like a magazine
+            contents line: quiet small-caps anchors that warm to a brass pill
+            on hover, rather than a row of hard-bordered boxes. */}
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-1.5">
+          <span className="text-[10px] tracking-[0.28em] uppercase text-stone-400 mr-2 pl-0.5">Jump to</span>
           {PROFILE_SECTIONS.map((s) => (
             <a key={s.id} href={`#${s.id}`}
-              className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
+              className="text-[10px] tracking-[0.18em] uppercase px-2.5 py-1 rounded-full text-stone-500 hover:text-stone-900 hover:bg-white hover:ring-1 hover:ring-brass-200 transition-all duration-200">
               {s.label}
             </a>
           ))}
@@ -592,42 +596,43 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       </nav>
 
       {user && (
-        <div id="profile-account" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow flex items-center gap-5">
-          {user.photoURL ? (
-            <img src={user.photoURL} alt="" className="w-16 h-16 rounded-full ring-2 ring-stone-100" referrerPolicy="no-referrer" />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-2xl">
-              {(user.displayName || user.email || '?').charAt(0).toUpperCase()}
+        <div id="profile-account" className="scroll-mt-24 relative overflow-hidden bg-white rounded-[2rem] ring-1 ring-stone-200/70 smooth-shadow">
+          {/* Brass hairline crowns the identity card — the one warm accent that
+              tells you this is the top of your account, not just another box. */}
+          <div className="h-1 bg-gradient-to-r from-brass-200 via-brass-400 to-brass-200" aria-hidden="true" />
+          <div className="p-6 md:p-8 flex items-center gap-5">
+            {user.photoURL ? (
+              <img src={user.photoURL} alt="" className="w-16 h-16 md:w-20 md:h-20 rounded-full ring-2 ring-brass-200 shrink-0" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-2xl md:text-3xl ring-2 ring-brass-200 shrink-0">
+                {(user.displayName || user.email || '?').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-400 mb-1.5">Signed in</p>
+              <p className="font-display text-2xl md:text-3xl text-stone-900 leading-tight truncate">{user.displayName || 'Your account'}</p>
+              <p className="text-stone-500 text-xs tracking-wide mt-1 truncate">{user.email}</p>
+              {isOwner && subStatus && <div className="mt-2"><SubscriptionPill state={subStatus} /></div>}
             </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-xl text-stone-900 truncate">{user.displayName || 'Signed in'}</p>
-            <p className="text-stone-500 text-xs tracking-wide mt-1 truncate">{user.email}</p>
-            {isOwner && subStatus && <SubscriptionPill state={subStatus} />}
-          </div>
-          {/* Icon-only on mobile (label would crowd the small account card),
-              full pill with label on sm+. The icon alone is universally
-              understood for sign-out (door-with-arrow) so this stays
-              accessible without a label. */}
-          {/* Insights is a sidebar pillar on desktop; on mobile (no sidebar)
-              it's reached here, from the Profile screen. */}
-          {onOpenInsights && (
+            {/* Insights is a desktop sidebar pillar; on mobile it's reached here. */}
+            {onOpenInsights && (
+              <button
+                onClick={onOpenInsights}
+                className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full border border-stone-200 text-stone-500 hover:border-brass-400 hover:text-stone-900 transition-colors shrink-0"
+                aria-label="Insights"
+              >
+                <BarChart3 size={16} strokeWidth={1.5} />
+              </button>
+            )}
             <button
-              onClick={onOpenInsights}
-              className="lg:hidden flex items-center gap-2 px-3 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors shrink-0"
-              aria-label="Insights"
+              onClick={signOutUser}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-full border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-900 text-[10px] tracking-[0.2em] uppercase transition-colors shrink-0"
+              aria-label="Sign out"
             >
-              <BarChart3 size={14} strokeWidth={1.5} />
+              <LogOut size={14} strokeWidth={1.5} />
+              <span className="hidden sm:inline">Sign out</span>
             </button>
-          )}
-          <button
-            onClick={signOutUser}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-xs tracking-wide transition-colors shrink-0"
-            aria-label="Sign out"
-          >
-            <LogOut size={14} strokeWidth={1.5} />
-            <span className="hidden sm:inline">Sign out</span>
-          </button>
+          </div>
         </div>
       )}
 
@@ -917,39 +922,50 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         </div>
       )}
 
-      <div id="profile-measurements" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-        <div className="bg-stone-50 border border-stone-200 text-stone-600 p-5 rounded-2xl text-sm flex gap-4 mb-10 leading-relaxed">
-          <AlertCircle className="shrink-0 mt-0.5 text-stone-900" size={20} strokeWidth={1.5} />
-          <p>Fill in <strong>chest, waist and hips</strong> to unlock your body-shape guidance below, and to get <strong>AI fit estimates</strong> on wishlist items (open any wishlist piece → "Will it fit?"). Stored privately under your account.</p>
+      <section id="profile-measurements" className="scroll-mt-24 space-y-6 md:space-y-8">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Measurements</h2>
+        </div>
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          <p className="text-stone-500 text-sm leading-relaxed mb-8 max-w-2xl">
+            Fill in <span className="text-stone-800 font-medium">chest, waist and hips</span> to unlock your body-shape guidance below, and AI fit estimates on wishlist items (open any wishlist piece → "Will it fit?"). Stored privately under your account.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
+            {[
+              { id: 'height', label: 'Height', unit: 'cm' }, { id: 'weight', label: 'Weight', unit: 'kg' },
+              { id: 'chest', label: 'Chest', unit: 'cm', fit: true }, { id: 'waist', label: 'Waist', unit: 'cm', fit: true },
+              { id: 'hips', label: 'Hips', unit: 'cm', fit: true }, { id: 'shoeSize', label: 'Shoe size', unit: 'EU' },
+            ].map(field => (
+              <div key={field.id} className="relative">
+                <label className="flex items-center gap-1.5 text-[10px] tracking-[0.2em] font-semibold text-stone-500 uppercase mb-2 ml-1">
+                  {field.label}
+                  {field.fit && <span className="w-1 h-1 rounded-full bg-brass-400" title="Powers fit predictions" aria-hidden="true" />}
+                </label>
+                <div className="relative">
+                  <input type="number" name={field.id} value={localMeasurements[field.id] || ''} onChange={handleChange}
+                    className="w-full pl-5 pr-12 py-4 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 outline-none transition-all text-stone-900 text-lg font-display"
+                  />
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[11px] tracking-widest uppercase text-stone-400 pointer-events-none">{field.unit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 pt-8 border-t border-stone-100 flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-brass-400" aria-hidden="true" /> Powers fit &amp; body shape
+            </p>
+            <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-7 py-3.5 rounded-full font-medium text-sm flex items-center gap-2.5 hover:bg-stone-700 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]">
+              <Save size={16} strokeWidth={1.5} /> Update Profile
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-          {[
-            { id: 'height', label: 'Height (cm)' }, { id: 'weight', label: 'Weight (kg)' },
-            { id: 'chest', label: 'Chest (cm)' }, { id: 'waist', label: 'Waist (cm)' },
-            { id: 'hips', label: 'Hips (cm)' }, { id: 'shoeSize', label: 'Shoe Size (EU)' },
-          ].map(field => (
-            <div key={field.id} className="relative">
-              <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2 ml-1">{field.label}</label>
-              <input type="number" name={field.id} value={localMeasurements[field.id] || ''} onChange={handleChange}
-                className="w-full px-5 py-4 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-stone-900 outline-none transition-all text-stone-900"
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-12 pt-8 border-t border-stone-100 flex justify-end">
-          <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-medium flex items-center gap-3 hover:bg-stone-700 transition-all shadow-lg hover:shadow-xl">
-            <Save size={18} strokeWidth={1.5} /> Update Profile
-          </button>
-        </div>
-
-        {/* Body-shape guidance sits directly under the inputs that feed it, so
-            filling chest/waist/hips updates it in place — no hunting across the page. */}
-        <div className="mt-10">
-          <FitProfileCard measurements={measurements} />
-        </div>
-      </div>
+        {/* Body-shape guidance — its own card, fed live by the inputs above. */}
+        <FitProfileCard measurements={measurements} />
+      </section>
     </div>
   );
 }

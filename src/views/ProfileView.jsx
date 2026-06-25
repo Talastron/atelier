@@ -864,8 +864,6 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         </div>
       </div>
 
-      <FitProfileCard measurements={measurements} />
-
       <BackfillCard items={items} shops={shops} onUpdateItem={onUpdateItem} />
 
       <RehostCard items={items} onUpdateItem={onUpdateItem} />
@@ -922,7 +920,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       <div id="profile-measurements" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="bg-stone-50 border border-stone-200 text-stone-600 p-5 rounded-2xl text-sm flex gap-4 mb-10 leading-relaxed">
           <AlertCircle className="shrink-0 mt-0.5 text-stone-900" size={20} strokeWidth={1.5} />
-          <p>Recording your measurements here makes it quick to <strong>cross-check brand size charts</strong> before buying anything on your wishlist. Stored privately under your account.</p>
+          <p>Fill in <strong>chest, waist and hips</strong> to unlock your body-shape guidance below, and to get <strong>AI fit estimates</strong> on wishlist items (open any wishlist piece → "Will it fit?"). Stored privately under your account.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -944,6 +942,12 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-medium flex items-center gap-3 hover:bg-stone-700 transition-all shadow-lg hover:shadow-xl">
             <Save size={18} strokeWidth={1.5} /> Update Profile
           </button>
+        </div>
+
+        {/* Body-shape guidance sits directly under the inputs that feed it, so
+            filling chest/waist/hips updates it in place — no hunting across the page. */}
+        <div className="mt-10">
+          <FitProfileCard measurements={measurements} />
         </div>
       </div>
     </div>

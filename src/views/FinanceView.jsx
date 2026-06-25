@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
-import { ChevronRight, Heart, Shirt, TrendingDown, Wand2 } from "lucide-react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { ChevronRight, Heart, Shirt, TrendingDown, Wand2, Sparkles } from "lucide-react";
 import { daysSinceLastWorn, itemColors, itemCostPerWear, itemImages, itemSeasons, itemWearCount, itemWearHistory, itemWearNotes, todayISO } from "../lib/items.js";
-import { analyzeWardrobeGapsWithGemini } from "../lib/ai.js";
+import { analyzeWardrobeGapsWithGemini, generateStyleManifestoWithGemini } from "../lib/ai.js";
 import { isAIEnabled } from "../firebase.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
@@ -690,7 +690,127 @@ function WearTimelineCard({ ownedItems, timeline }) {
   );
 }
 
-export default function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit, onOpenDiary }) {
+// Style manifesto — an AI-written three-paragraph reading of the user's taste,
+// generated from most-worn pieces, outfit pairings, and saved inspirations.
+// Lives on Insights (it's a reflective wardrobe *output*, not a setting). The
+// generated text persists onto measurements.styleManifesto via saveMeasurements.
+function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfits = [], inspirations = [] }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [streamingText, setStreamingText] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const cancelledRef = useRef(false);
+  const toast = useToast();
+  const manifesto = measurements?.styleManifesto || '';
+  const generatedAt = measurements?.styleManifestoAt || null;
+
+  useEffect(() => () => { cancelledRef.current = true; }, []);
+
+  // 90-day seasonal nudge: compute age of the current manifesto so we can
+  // show a quiet inline prompt to refresh when it's been more than a season.
+  const manifestoAgeDays = generatedAt
+    ? Math.floor((Date.now() - new Date(generatedAt).getTime()) / (24 * 3600 * 1000))
+    : null;
+  const manifestoStale = manifesto && manifestoAgeDays !== null && manifestoAgeDays >= 90;
+
+  const run = async () => {
+    if (busy) return;
+    setBusy(true); setError(null); setStreamingText(''); setIsStreaming(true);
+    let accumulated = '';
+    try {
+      const text = await generateStyleManifestoWithGemini({
+        items,
+        outfits,
+        inspirations,
+        onChunk: (chunk) => {
+          if (cancelledRef.current) return;
+          accumulated += chunk;
+          setStreamingText(accumulated);
+        },
+      });
+      if (cancelledRef.current) return;
+      await saveMeasurements({ ...measurements, styleManifesto: text, styleManifestoAt: new Date().toISOString() });
+      toast.show('Manifesto refreshed', { kind: 'success' });
+    } catch (e) {
+      if (cancelledRef.current) return;
+      setError(e?.message || 'Failed.');
+    } finally {
+      setIsStreaming(false);
+      setBusy(false);
+    }
+  };
+
+  const WEARS_THRESHOLD = 30;
+  const totalWears = items.reduce((sum, it) => sum + itemWearCount(it), 0);
+
+  return (
+    <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-8 relative overflow-hidden">
+      <div className="absolute -right-10 -bottom-10 opacity-[0.04] pointer-events-none">
+        <Sparkles size={220} strokeWidth={0.8} />
+      </div>
+      <div className="relative z-10 flex items-start justify-between gap-4 flex-wrap mb-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="brass-rule" aria-hidden="true"></span>
+            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-medium">A private brief, by the Concierge</span>
+          </div>
+          <h3 className="font-display text-2xl md:text-3xl text-white">Style manifesto</h3>
+          <p className="text-stone-400 text-sm leading-relaxed max-w-xl mt-3">
+            The Concierge reads your most-worn pieces, outfit pairings, and saved inspirations — and writes a private three-paragraph brief of your aesthetic. Refresh when your taste shifts.
+          </p>
+          {!manifesto && !isStreaming && totalWears < WEARS_THRESHOLD && (
+            <div className="mt-4 flex items-center gap-3 max-w-xs">
+              <div className="flex-1 h-1 rounded-full bg-stone-700 overflow-hidden">
+                <div
+                  className="h-full bg-brass-400 transition-[width] duration-700"
+                  style={{ width: `${Math.min(100, (totalWears / WEARS_THRESHOLD) * 100)}%` }}
+                />
+              </div>
+              <span className="text-[11px] tracking-wide tabular-nums text-stone-400 shrink-0">
+                {totalWears} / {WEARS_THRESHOLD} wears
+              </span>
+            </div>
+          )}
+        </div>
+        <button onClick={run} disabled={busy} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 flex items-center gap-2 shrink-0 font-medium">
+          <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Writing…' : (manifesto ? 'Refresh' : 'Generate')}
+        </button>
+      </div>
+
+      {error && <p className="relative z-10 mt-4 text-sm text-red-200 bg-red-950/40 border border-red-900/40 px-4 py-3 rounded-xl">{error}</p>}
+
+      {manifestoStale && (
+        <div className="relative z-10 mt-5 mb-1 rounded-lg border border-stone-600 bg-stone-800 px-4 py-2 text-sm text-stone-300">
+          Your manifesto is {Math.floor(manifestoAgeDays / 30)} months old. A fresh reading?{' '}
+          <button
+            type="button"
+            onClick={run}
+            className="font-medium underline hover:no-underline"
+          >
+            Refresh it
+          </button>
+        </div>
+      )}
+
+      {(manifesto || isStreaming) && (
+        <div className="relative z-10 mt-6 bg-[#F7F5F2] text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] whitespace-pre-line font-display italic">
+          {isStreaming ? streamingText : manifesto}
+          {isStreaming && (
+            <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />
+          )}
+          {!isStreaming && generatedAt && (
+            <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic flex items-center gap-3">
+              <span className="brass-rule" aria-hidden="true"></span>
+              Written {new Date(generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, saveMeasurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit, onOpenDiary }) {
   const [diaryOpen, setDiaryOpen] = useState(false);
   const ownedItems = items.filter(i => i.status === 'owned');
   const wishlistItems = items.filter(i => i.status === 'wishlist');
@@ -865,6 +985,7 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
     { id: 'insights-composition', label: 'Composition' },
     { id: 'insights-diary', label: 'Diary' },
     { id: 'insights-leaders', label: 'Leaderboards' },
+    { id: 'insights-manifesto', label: 'Manifesto' },
   ];
 
   return (
@@ -1350,6 +1471,10 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
           </div>
         </div>
       )}
+
+      <div id="insights-manifesto" className="scroll-mt-24">
+        <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
+      </div>
 
     </div>
   );

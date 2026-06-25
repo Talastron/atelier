@@ -15,6 +15,7 @@ import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { useEscapeKey } from "../ui/hooks.js";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
+import { renderTextWithChips } from "../components/ItemChip.jsx";
 import AIProgressModal from "../components/AIProgressModal.jsx";
 import DiaryView from "./Calendar.jsx";
 
@@ -751,7 +752,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           await saveAIHistory({
             id: newId(),
             intent,
-            itemIds: Object.values(next).filter(Boolean).map((i) => i.id),
+            itemIds: Object.values(next).flatMap(slotItems).map((i) => i.id),
             reasoning: result.reasoning || '',
             confidence: typeof result.confidence === 'number' ? result.confidence : null,
             refined: refine,
@@ -1088,7 +1089,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             <div className="bg-stone-900 text-white rounded-2xl p-4 text-sm leading-relaxed animate-in fade-in duration-300">
               <div className="flex items-start gap-3">
                 <Sparkles size={14} strokeWidth={1.5} className="shrink-0 mt-0.5 text-brass-300" />
-                <p className="flex-1 italic">{aiNote}</p>
+                <p className="flex-1 italic">{renderTextWithChips(aiNote, { items, onOpenItem })}</p>
                 <button onClick={() => setAiNote(null)} className="text-stone-400 hover:text-white shrink-0"><X size={14} /></button>
               </div>
               {typeof aiConfidence === 'number' && (
@@ -1168,7 +1169,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               saveAIHistory({
                 id: newId(),
                 intent: abPair.intent,
-                itemIds: Object.values(choice.outfit).filter(Boolean).map((i) => i.id),
+                itemIds: Object.values(choice.outfit).flatMap(slotItems).map((i) => i.id),
                 reasoning: choice.reasoning || '',
                 confidence: choice.confidence ?? null,
                 createdAt: new Date().toISOString(),

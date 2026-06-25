@@ -978,21 +978,18 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
   // Sub-section anchors so the sticky nav below the header can jump
   // straight to a section without a 4000px scroll. Each major section
   // sets its id={anchor.X.id}; the nav <a> hrefs target #{id}.
-  // Order mirrors the page: a stylist's read leads (your aesthetic, your
-  // palette, how you wear it), and the financial picture closes it out.
+  // Four numbered groups, matching the Profile page's header system. Order is
+  // a stylist's read: who you are → how you wear it → standout pieces → money.
   const SECTIONS = [
-    { id: 'insights-manifesto', label: 'Manifesto' },
-    { id: 'insights-composition', label: 'Palette' },
-    { id: 'insights-behaviour', label: 'Behaviour' },
-    { id: 'insights-diary', label: 'Diary' },
-    { id: 'insights-leaders', label: 'Leaderboards' },
-    { id: 'insights-value', label: 'Value' },
-    { id: 'insights-spending', label: 'Spending' },
+    { id: 'group-signature', label: 'Signature' },
+    { id: 'group-wear', label: 'How You Wear It' },
+    { id: 'group-standout', label: 'Standout Pieces' },
+    { id: 'group-ledger', label: 'The Ledger' },
   ];
 
   return (
     <div className="space-y-10 md:space-y-12 max-w-5xl">
-      <EditorialHeader eyebrow="The Ledger" title="Insights" subtitle="Your aesthetic, how you wear it, and what it's worth." />
+      <EditorialHeader eyebrow="The Dossier" title="Insights" subtitle="Your aesthetic, how you wear it, and what it's worth." />
 
       {/* Sticky sub-section nav. Long page; without this the user
           scrolls forever to find e.g. the colour profile or the wear
@@ -1002,18 +999,26 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
           -mb-2 which pulled the hero cards up by 8px AND the nav sits
           at z-20, so the top of the cards was visually clipped behind
           the bar. Natural space-y spacing from the parent does the job. */}
-      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+        <div className="flex flex-wrap gap-2">
           {SECTIONS.map((s) => (
             <a key={s.id} href={`#${s.id}`}
-              className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
+              className="text-[10px] sm:text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors duration-200">
               {s.label}
             </a>
           ))}
         </div>
       </nav>
 
+      <section id="group-signature" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">01</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">Signature</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
       <div id="insights-manifesto" className="scroll-mt-24">
         <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
       </div>
@@ -1113,6 +1118,16 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
         </div>
       )}
 
+      </section>
+
+      <section id="group-wear" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">02</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">How You Wear It</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
       {/* Season coverage — % of in-season pieces actually worn this season,
           plus a curated row of unworn-but-in-season items as a nudge to
           surface them. The anti-overconsumption companion to the spending
@@ -1250,6 +1265,17 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
         </div>
       </div>
 
+      </section>
+
+      {(bestCpw.length > 0 || worstValue.length > 0 || mostWorn.length > 0 || gaps.length > 0 || stale.length > 0) && (
+      <section id="group-standout" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">03</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">Standout Pieces</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
       {bestCpw.length > 0 && (
         <div id="insights-leaders" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
@@ -1366,6 +1392,17 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
         </div>
       )}
 
+      </section>
+      )}
+
+      <section id="group-ledger" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">04</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">The Ledger</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
       <div id="insights-value" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 scroll-mt-24">
         {/* Hero value cards. Two design notes:
             • Dark card uses NO shadow — a dark surface against the light
@@ -1485,6 +1522,7 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
         </button>
       ) : null}
 
+      </section>
     </div>
   );
 }

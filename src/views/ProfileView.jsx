@@ -337,7 +337,10 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
     <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
       <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
         <div className="min-w-0">
-          <h3 className="font-display text-xl md:text-2xl text-stone-900">Style profile</h3>
+          <div className="flex items-center gap-3 mb-1">
+            <span className="brass-rule shrink-0" aria-hidden="true"></span>
+            <h3 className="font-display text-xl md:text-2xl text-stone-900">Style profile</h3>
+          </div>
           <p className="text-stone-500 text-sm leading-relaxed max-w-xl mt-2">
             Tell the Concierge how you actually dress. Every suggestion (Today tile, Styling Studio, Travel packing) gets sharper when these are set.
           </p>
@@ -712,7 +715,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           so we link to the generic store entry. */}
       {!isOwner && (
         <div id="profile-subscription" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <h3 className="font-display text-2xl text-stone-900 mb-2">Membership</h3>
+          <div className="flex items-center gap-3 mb-2">
+            <span className="brass-rule shrink-0" aria-hidden="true"></span>
+            <h3 className="font-display text-2xl text-stone-900">Membership</h3>
+          </div>
           {subStatus && <SubscriptionPill state={subStatus} />}
           <p className="text-stone-500 text-sm leading-relaxed mb-6 mt-4">
             Update your payment method, view past invoices, change plan, or cancel — all through your secure customer portal.
@@ -733,9 +739,12 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
 
       {isOwner && (
         <div id="profile-people" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <div className="flex items-baseline justify-between mb-6">
-            <h3 className="font-display text-xl md:text-2xl text-stone-900">Invited Friends</h3>
-            <span className="text-xs text-stone-400 tracking-widest uppercase">{allowlist.length} {allowlist.length === 1 ? 'person' : 'people'}</span>
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <div className="flex items-center gap-3">
+              <span className="brass-rule shrink-0" aria-hidden="true"></span>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Invited Friends</h3>
+            </div>
+            <span className="text-xs text-stone-400 tracking-widest uppercase shrink-0">{allowlist.length} {allowlist.length === 1 ? 'person' : 'people'}</span>
           </div>
           <p className="text-stone-500 text-sm leading-relaxed mb-8">
             Add someone's Google email to give them access. They'll get their own private wardrobe inside this app — they won't see yours, you won't see theirs.
@@ -781,7 +790,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       )}
 
       <div id="profile-settings" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-        <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-6">Settings</h3>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="brass-rule shrink-0" aria-hidden="true"></span>
+          <h3 className="font-display text-xl md:text-2xl text-stone-900">Settings</h3>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
@@ -854,7 +866,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       <div id="profile-cutouts" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
-            <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-2">Photo cutouts <span className="text-[10px] tracking-widest uppercase text-brass-600 ml-2 align-middle">Beta</span></h3>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="brass-rule shrink-0" aria-hidden="true"></span>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Photo cutouts <span className="text-[10px] tracking-widest uppercase text-brass-600 ml-2 align-middle">Beta</span></h3>
+            </div>
             <p className="text-stone-500 text-sm leading-relaxed max-w-xl">
               Auto-remove the background from item photos so pieces sit on a clean transparent surface. Heavy in-browser model — first use will be slow while it downloads (~5MB). If anything fails, the original photo is kept.
             </p>
@@ -876,7 +891,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       <div id="profile-backup" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
-            <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-2">Backup &amp; export</h3>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="brass-rule shrink-0" aria-hidden="true"></span>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Backup &amp; export</h3>
+            </div>
             <p className="text-stone-500 text-sm leading-relaxed max-w-xl">
               Download your entire wardrobe — items, photos, outfits, shops, size charts, measurements — as a single JSON file. Portable to any database, future-proof against vendor changes.
             </p>
@@ -892,8 +910,11 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
 
       {deletedItems.length > 0 && (
         <div id="profile-trash" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
-            <h3 className="font-display text-xl md:text-2xl text-stone-900">Trash</h3>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <span className="brass-rule shrink-0" aria-hidden="true"></span>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Trash</h3>
+            </div>
             <span className="text-[10px] tracking-widest uppercase text-stone-500">{deletedItems.length} item{deletedItems.length === 1 ? '' : 's'}</span>
           </div>
           <p className="text-stone-500 text-sm mb-6">Deleted items live here for 30 days. Restore anything, or remove forever.</p>

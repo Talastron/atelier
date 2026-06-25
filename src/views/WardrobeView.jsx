@@ -126,8 +126,9 @@ const CONDITION_OPTIONS = [
   { key: 'unavailable', label: 'In wash / etc' },
   { key: 'lent', label: 'Lent out' },
   { key: 'stale', label: 'Stale 90+ days' },
+  { key: 'untagged', label: 'No colour tags' },
 ];
-const CONDITION_KEYS = new Set(['unavailable', 'lent', 'stale']);
+const CONDITION_KEYS = new Set(['unavailable', 'lent', 'stale', 'untagged']);
 const CONDITION_LABEL_BY_KEY = Object.fromEntries(CONDITION_OPTIONS.map((o) => [o.key, o.label]));
 
 function WardrobeFiltersSheet({
@@ -434,6 +435,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
       : filter === 'favorites' ? !!item.favorite
       : filter === 'lent' ? !!item.lentTo
       : filter === 'unavailable' ? (item.status === 'owned' && !isItemAvailable(item))
+      : filter === 'untagged' ? (item.status === 'owned' && itemColors(item).length === 0)
       : item.status === filter;
     const matchCategory = categoryFilter === 'All' || item.category === categoryFilter;
     const itemS = itemSeasons(item);

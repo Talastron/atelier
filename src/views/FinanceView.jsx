@@ -978,19 +978,21 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
   // Sub-section anchors so the sticky nav below the header can jump
   // straight to a section without a 4000px scroll. Each major section
   // sets its id={anchor.X.id}; the nav <a> hrefs target #{id}.
+  // Order mirrors the page: a stylist's read leads (your aesthetic, your
+  // palette, how you wear it), and the financial picture closes it out.
   const SECTIONS = [
-    { id: 'insights-value', label: 'Value' },
-    { id: 'insights-spending', label: 'Spending' },
+    { id: 'insights-manifesto', label: 'Manifesto' },
+    { id: 'insights-composition', label: 'Palette' },
     { id: 'insights-behaviour', label: 'Behaviour' },
-    { id: 'insights-composition', label: 'Composition' },
     { id: 'insights-diary', label: 'Diary' },
     { id: 'insights-leaders', label: 'Leaderboards' },
-    { id: 'insights-manifesto', label: 'Manifesto' },
+    { id: 'insights-value', label: 'Value' },
+    { id: 'insights-spending', label: 'Spending' },
   ];
 
   return (
     <div className="space-y-10 md:space-y-12 max-w-5xl">
-      <EditorialHeader eyebrow="The Ledger" title="Insights" subtitle="Value, wear data, and gaps across your collection." />
+      <EditorialHeader eyebrow="The Ledger" title="Insights" subtitle="Your aesthetic, how you wear it, and what it's worth." />
 
       {/* Sticky sub-section nav. Long page; without this the user
           scrolls forever to find e.g. the colour profile or the wear
@@ -1012,124 +1014,104 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
         </div>
       </nav>
 
-      <div id="insights-value" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 scroll-mt-24">
-        {/* Hero value cards. Two design notes:
-            • Dark card uses NO shadow — a dark surface against the light
-              page already reads as elevated; smooth-shadow on dark is
-              redundant decoration. Light card keeps smooth-shadow because
-              it needs the depth cue against the same-tone page.
-            • Both cards lead with the brass-rule + eyebrow editorial
-              pattern used in every main-column header so the page speaks
-              one typographic language. */}
-        <div className="bg-stone-900 text-white p-7 md:p-9 rounded-[2rem] relative overflow-hidden">
-          <div className="flex items-center gap-3 mb-5">
-            <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
-            <p className="text-stone-400 text-[10px] font-semibold tracking-[0.28em] uppercase">Current Archive Value</p>
-          </div>
-          <h3 className="text-5xl md:text-6xl font-display font-medium tracking-tight">£{ownedTotal.toLocaleString()}</h3>
-          <p className="text-xs text-stone-400 mt-6 tracking-widest uppercase">
-            Across {ownedItems.length} curated pieces
-          </p>
-        </div>
-
-        {/* Wishlist Target — clickable, jumps to Wardrobe filtered to wishlist.
-            No wrapper transforms (anti-pattern fixed elsewhere). */}
-        <button
-          onClick={() => onJumpToWardrobe?.({ filter: 'wishlist' })}
-          disabled={!onJumpToWardrobe || wishlistItems.length === 0}
-          className="text-left bg-white border border-stone-200/60 p-7 md:p-9 rounded-[2rem] smooth-shadow transition-colors duration-200 enabled:hover:border-stone-500 disabled:cursor-default group"
-        >
-          <div className="flex items-center justify-between gap-3 mb-5">
-            <div className="flex items-center gap-3">
-              <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
-              <p className="text-stone-500 text-[10px] font-semibold tracking-[0.28em] uppercase">Wishlist Target</p>
-            </div>
-            {wishlistItems.length > 0 && (
-              <span className="text-[10px] tracking-widest uppercase text-stone-400 group-hover:text-stone-900 transition-colors inline-flex items-center gap-1">
-                View <ChevronRight size={12} strokeWidth={1.5} />
-              </span>
-            )}
-          </div>
-          <h3 className="text-5xl md:text-6xl font-display text-stone-900 font-medium tracking-tight">£{wishlistTotal.toLocaleString()}</h3>
-          <p className="text-xs text-stone-500 mt-6 tracking-widest uppercase inline-flex items-center gap-1.5">
-            <Heart size={11} strokeWidth={1.5} className="text-stone-400" />
-            {wishlistItems.length} pieces desired
-          </p>
-        </button>
+      <div id="insights-manifesto" className="scroll-mt-24">
+        <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
       </div>
 
-      {/* Spending meter — shows month-to-date spend against the user's
-          monthly budget. Hidden entirely if no budget set; a soft prompt
-          card with a link to Profile if there's no budget but they have
-          purchases this month. */}
-      {monthlyBudget > 0 ? (
-        <div id="insights-spending" className="scroll-mt-24 rounded-[2rem] p-6 md:p-8 smooth-shadow relative overflow-hidden border bg-white border-stone-200/60">
-          {/* Editorial alert: NO tonal-flip backgrounds. The whole card stays
-              cream/white; the warning lives in one bar fill colour + one italic
-              caption. Stone → brass → claret, the three editorial steps. */}
-          {(() => {
-            const accent = budgetTone === 'green' ? 'var(--color-stone-900, #1c1917)'
-              : budgetTone === 'amber' ? 'var(--color-brass-500, #b08349)'
-              : 'var(--color-claret-700, #56241f)';
-            const accentClass = budgetTone === 'green' ? 'text-stone-900'
-              : budgetTone === 'amber' ? 'text-brass-700'
-              : 'text-claret-700';
-            const eyebrow = budgetTone === 'green' ? 'Spending'
-              : budgetTone === 'amber' ? 'Spending · approaching budget'
-              : 'Spending · over budget';
-            return (
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="inline-block w-5 h-px" style={{ backgroundColor: accent, opacity: 0.7 }} aria-hidden="true" />
-                  <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">{eyebrow} · {monthName}</p>
-                </div>
-                <div className="flex items-baseline justify-between gap-3 mb-5 flex-wrap">
-                  <div>
-                    <h3 className="font-display text-3xl sm:text-4xl text-stone-900">
-                      £{monthSpend.toLocaleString()}
-                      <span className="text-base sm:text-lg text-stone-400 font-normal ml-2">of £{monthlyBudget.toLocaleString()}</span>
-                    </h3>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-xl sm:text-2xl font-display ${accentClass}`}>{budgetPct.toFixed(0)}%</p>
-                    <p className="text-[10px] tracking-widest uppercase text-stone-500">{monthSpendItems.length} item{monthSpendItems.length === 1 ? '' : 's'}</p>
-                  </div>
-                </div>
-                <DialBar value={budgetPct} fill={accent} height={6} />
-                <p className={`text-xs mt-4 leading-relaxed ${budgetTone === 'red' ? 'italic text-claret-700' : 'text-stone-500'}`}>
-                  {budgetTone === 'green' && monthSpend === 0 && `No purchases this month yet — you have £${monthlyBudget.toLocaleString()} of headroom.`}
-                  {budgetTone === 'green' && monthSpend > 0 && `£${(monthlyBudget - monthSpend).toLocaleString()} left until you hit your budget for ${monthName.split(' ')[0]}.`}
-                  {budgetTone === 'amber' && `Approaching your budget — £${(monthlyBudget - monthSpend).toLocaleString()} of headroom before you tip over.`}
-                  {budgetTone === 'red' && `Over by £${(monthSpend - monthlyBudget).toLocaleString()} — worth a quiet look at what you've added this month.`}
-                </p>
-              </>
-            );
-          })()}
-          {monthSpendItems.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-5">
-              {monthSpendItems.slice(0, 8).map((i) => (
-                <span key={i.id} className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600">
-                  {i.name}{i.price ? ` · £${Number(i.price).toLocaleString()}` : ''}
-                </span>
-              ))}
-              {monthSpendItems.length > 8 && (
-                <span className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full text-stone-500">+ {monthSpendItems.length - 8} more</span>
-              )}
+      <div id="insights-composition" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+        <div className="flex items-baseline justify-between gap-3 mb-6 flex-wrap">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
+              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Composition</p>
             </div>
+            <h3 className="font-display text-2xl text-stone-900">Investment by category</h3>
+          </div>
+          {Object.keys(categoryBreakdown).length > 0 && onJumpToWardrobe && (
+            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">Tap a tile to open in your wardrobe</span>
           )}
         </div>
-      ) : monthSpendItems.length > 0 && onOpenProfile ? (
-        <button onClick={onOpenProfile}
-          id="insights-spending"
-          className="scroll-mt-24 w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-500 transition-colors group">
-          <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-2">Spending · {monthName}</p>
-          <h3 className="font-display text-2xl text-stone-900">£{monthSpend.toLocaleString()} added this month</h3>
-          <p className="text-sm text-stone-500 mt-3 leading-relaxed">
-            Set a monthly budget in Profile → Settings to track headroom and get alerts when you approach the limit.
-            <span className="block mt-2 text-stone-900 group-hover:underline text-xs tracking-widest uppercase">Open Profile →</span>
-          </p>
-        </button>
-      ) : null}
+        <CategoryTreemap
+          categoryBreakdown={categoryBreakdown}
+          ownedItems={ownedItems}
+          onJumpToWardrobe={onJumpToWardrobe}
+        />
+      </div>
+
+      {sortedColors.length > 0 && (
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
+                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Palette</p>
+              </div>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Colour profile</h3>
+            </div>
+            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
+              {sortedColors.length} colour {sortedColors.length === 1 ? 'family' : 'families'}
+            </span>
+          </div>
+
+          {/* Wheel + legend: side-by-side at md+, stacked on mobile. The wheel
+              is the icon; the legend is the index — together they read like
+              a Pantone fan opened across two pages. */}
+          <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-8 md:gap-10 items-center">
+            <ColourWheel
+              sortedColors={sortedColors}
+              colorTotal={colorTotal}
+              ownedCount={ownedItems.length}
+              taggedCount={taggedItemsCount}
+            />
+            <div className="space-y-3.5">
+              {sortedColors.slice(0, 8).map(([color, count]) => {
+                const pct = colorTotal > 0 ? (count / colorTotal) * 100 : 0;
+                const swatch = COLOR_SWATCHES[color];
+                return (
+                  <div key={color}>
+                    <div className="flex justify-between items-center text-sm mb-1.5 gap-3">
+                      <span className="flex items-center gap-2.5 font-medium text-stone-800 min-w-0">
+                        <span
+                          className="w-3.5 h-3.5 rounded-sm border border-stone-300/60 shrink-0"
+                          style={swatch?.startsWith('linear') ? { background: swatch } : { backgroundColor: swatch }}
+                        />
+                        <span className="truncate">{color}</span>
+                      </span>
+                      <span className="text-stone-500 text-xs shrink-0 tabular-nums">
+                        {count} <span className="text-stone-300 ml-1.5">{pct.toFixed(0)}%</span>
+                      </span>
+                    </div>
+                    <HairlineBar
+                      value={pct}
+                      height={4}
+                      track="#f5f5f4"
+                      fill={swatch || 'var(--color-stone-900, #1c1917)'}
+                    />
+                  </div>
+                );
+              })}
+              {sortedColors.length > 8 && (
+                <p className="text-[10px] tracking-widest uppercase text-stone-400 italic pt-1">
+                  + {sortedColors.length - 8} more in your palette
+                </p>
+              )}
+            </div>
+          </div>
+
+          {taggedItemsCount < ownedItems.length && (
+            <button
+              type="button"
+              onClick={() => onJumpToWardrobe?.({ filter: 'untagged' })}
+              disabled={!onJumpToWardrobe}
+              className="group mt-8 inline-flex items-center gap-1.5 text-[11px] text-stone-500 italic font-display enabled:hover:text-stone-900 transition-colors disabled:cursor-default"
+            >
+              <span className="not-italic font-sans tabular-nums font-semibold text-stone-700 group-enabled:group-hover:text-stone-900">{ownedItems.length - taggedItemsCount}</span>
+              item{ownedItems.length - taggedItemsCount === 1 ? '' : 's'} without colour tags — review &amp; fix
+              <ChevronRight size={13} strokeWidth={1.5} className="opacity-0 -translate-x-1 transition-all group-enabled:group-hover:opacity-100 group-enabled:group-hover:translate-x-0" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Season coverage — % of in-season pieces actually worn this season,
           plus a curated row of unworn-but-in-season items as a nudge to
@@ -1244,94 +1226,6 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
             </div>
           </div>
         </button>
-      )}
-
-      <div id="insights-composition" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-        <div className="flex items-baseline justify-between gap-3 mb-6 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
-              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Composition</p>
-            </div>
-            <h3 className="font-display text-2xl text-stone-900">Investment by category</h3>
-          </div>
-          {Object.keys(categoryBreakdown).length > 0 && onJumpToWardrobe && (
-            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">Tap a tile to open in your wardrobe</span>
-          )}
-        </div>
-        <CategoryTreemap
-          categoryBreakdown={categoryBreakdown}
-          ownedItems={ownedItems}
-          onJumpToWardrobe={onJumpToWardrobe}
-        />
-      </div>
-
-      {sortedColors.length > 0 && (
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <div className="flex items-baseline justify-between mb-6 flex-wrap gap-2">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
-                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Palette</p>
-              </div>
-              <h3 className="font-display text-xl md:text-2xl text-stone-900">Colour profile</h3>
-            </div>
-            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
-              {sortedColors.length} colour {sortedColors.length === 1 ? 'family' : 'families'}
-            </span>
-          </div>
-
-          {/* Wheel + legend: side-by-side at md+, stacked on mobile. The wheel
-              is the icon; the legend is the index — together they read like
-              a Pantone fan opened across two pages. */}
-          <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-8 md:gap-10 items-center">
-            <ColourWheel
-              sortedColors={sortedColors}
-              colorTotal={colorTotal}
-              ownedCount={ownedItems.length}
-              taggedCount={taggedItemsCount}
-            />
-            <div className="space-y-3.5">
-              {sortedColors.slice(0, 8).map(([color, count]) => {
-                const pct = colorTotal > 0 ? (count / colorTotal) * 100 : 0;
-                const swatch = COLOR_SWATCHES[color];
-                return (
-                  <div key={color}>
-                    <div className="flex justify-between items-center text-sm mb-1.5 gap-3">
-                      <span className="flex items-center gap-2.5 font-medium text-stone-800 min-w-0">
-                        <span
-                          className="w-3.5 h-3.5 rounded-sm border border-stone-300/60 shrink-0"
-                          style={swatch?.startsWith('linear') ? { background: swatch } : { backgroundColor: swatch }}
-                        />
-                        <span className="truncate">{color}</span>
-                      </span>
-                      <span className="text-stone-500 text-xs shrink-0 tabular-nums">
-                        {count} <span className="text-stone-300 ml-1.5">{pct.toFixed(0)}%</span>
-                      </span>
-                    </div>
-                    <HairlineBar
-                      value={pct}
-                      height={4}
-                      track="#f5f5f4"
-                      fill={swatch || 'var(--color-stone-900, #1c1917)'}
-                    />
-                  </div>
-                );
-              })}
-              {sortedColors.length > 8 && (
-                <p className="text-[10px] tracking-widest uppercase text-stone-400 italic pt-1">
-                  + {sortedColors.length - 8} more in your palette
-                </p>
-              )}
-            </div>
-          </div>
-
-          {taggedItemsCount < ownedItems.length && (
-            <p className="text-[11px] text-stone-400 mt-8 italic font-display text-center md:text-left">
-              {ownedItems.length - taggedItemsCount} item{ownedItems.length - taggedItemsCount === 1 ? '' : 's'} without colour tags — open them and save to auto-detect colours from photos.
-            </p>
-          )}
-        </div>
       )}
 
       {totalWears > 0 && (
@@ -1472,9 +1366,124 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
         </div>
       )}
 
-      <div id="insights-manifesto" className="scroll-mt-24">
-        <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
+      <div id="insights-value" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 scroll-mt-24">
+        {/* Hero value cards. Two design notes:
+            • Dark card uses NO shadow — a dark surface against the light
+              page already reads as elevated; smooth-shadow on dark is
+              redundant decoration. Light card keeps smooth-shadow because
+              it needs the depth cue against the same-tone page.
+            • Both cards lead with the brass-rule + eyebrow editorial
+              pattern used in every main-column header so the page speaks
+              one typographic language. */}
+        <div className="bg-stone-900 text-white p-7 md:p-9 rounded-[2rem] relative overflow-hidden">
+          <div className="flex items-center gap-3 mb-5">
+            <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
+            <p className="text-stone-400 text-[10px] font-semibold tracking-[0.28em] uppercase">Current Archive Value</p>
+          </div>
+          <h3 className="text-5xl md:text-6xl font-display font-medium tracking-tight">£{ownedTotal.toLocaleString()}</h3>
+          <p className="text-xs text-stone-400 mt-6 tracking-widest uppercase">
+            Across {ownedItems.length} curated pieces
+          </p>
+        </div>
+
+        {/* Wishlist Target — clickable, jumps to Wardrobe filtered to wishlist.
+            No wrapper transforms (anti-pattern fixed elsewhere). */}
+        <button
+          onClick={() => onJumpToWardrobe?.({ filter: 'wishlist' })}
+          disabled={!onJumpToWardrobe || wishlistItems.length === 0}
+          className="text-left bg-white border border-stone-200/60 p-7 md:p-9 rounded-[2rem] smooth-shadow transition-colors duration-200 enabled:hover:border-stone-500 disabled:cursor-default group"
+        >
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3">
+              <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
+              <p className="text-stone-500 text-[10px] font-semibold tracking-[0.28em] uppercase">Wishlist Target</p>
+            </div>
+            {wishlistItems.length > 0 && (
+              <span className="text-[10px] tracking-widest uppercase text-stone-400 group-hover:text-stone-900 transition-colors inline-flex items-center gap-1">
+                View <ChevronRight size={12} strokeWidth={1.5} />
+              </span>
+            )}
+          </div>
+          <h3 className="text-5xl md:text-6xl font-display text-stone-900 font-medium tracking-tight">£{wishlistTotal.toLocaleString()}</h3>
+          <p className="text-xs text-stone-500 mt-6 tracking-widest uppercase inline-flex items-center gap-1.5">
+            <Heart size={11} strokeWidth={1.5} className="text-stone-400" />
+            {wishlistItems.length} pieces desired
+          </p>
+        </button>
       </div>
+
+      {/* Spending meter — shows month-to-date spend against the user's
+          monthly budget. Hidden entirely if no budget set; a soft prompt
+          card with a link to Profile if there's no budget but they have
+          purchases this month. */}
+      {monthlyBudget > 0 ? (
+        <div id="insights-spending" className="scroll-mt-24 rounded-[2rem] p-6 md:p-8 smooth-shadow relative overflow-hidden border bg-white border-stone-200/60">
+          {/* Editorial alert: NO tonal-flip backgrounds. The whole card stays
+              cream/white; the warning lives in one bar fill colour + one italic
+              caption. Stone → brass → claret, the three editorial steps. */}
+          {(() => {
+            const accent = budgetTone === 'green' ? 'var(--color-stone-900, #1c1917)'
+              : budgetTone === 'amber' ? 'var(--color-brass-500, #b08349)'
+              : 'var(--color-claret-700, #56241f)';
+            const accentClass = budgetTone === 'green' ? 'text-stone-900'
+              : budgetTone === 'amber' ? 'text-brass-700'
+              : 'text-claret-700';
+            const eyebrow = budgetTone === 'green' ? 'Spending'
+              : budgetTone === 'amber' ? 'Spending · approaching budget'
+              : 'Spending · over budget';
+            return (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="inline-block w-5 h-px" style={{ backgroundColor: accent, opacity: 0.7 }} aria-hidden="true" />
+                  <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">{eyebrow} · {monthName}</p>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 mb-5 flex-wrap">
+                  <div>
+                    <h3 className="font-display text-3xl sm:text-4xl text-stone-900">
+                      £{monthSpend.toLocaleString()}
+                      <span className="text-base sm:text-lg text-stone-400 font-normal ml-2">of £{monthlyBudget.toLocaleString()}</span>
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-xl sm:text-2xl font-display ${accentClass}`}>{budgetPct.toFixed(0)}%</p>
+                    <p className="text-[10px] tracking-widest uppercase text-stone-500">{monthSpendItems.length} item{monthSpendItems.length === 1 ? '' : 's'}</p>
+                  </div>
+                </div>
+                <DialBar value={budgetPct} fill={accent} height={6} />
+                <p className={`text-xs mt-4 leading-relaxed ${budgetTone === 'red' ? 'italic text-claret-700' : 'text-stone-500'}`}>
+                  {budgetTone === 'green' && monthSpend === 0 && `No purchases this month yet — you have £${monthlyBudget.toLocaleString()} of headroom.`}
+                  {budgetTone === 'green' && monthSpend > 0 && `£${(monthlyBudget - monthSpend).toLocaleString()} left until you hit your budget for ${monthName.split(' ')[0]}.`}
+                  {budgetTone === 'amber' && `Approaching your budget — £${(monthlyBudget - monthSpend).toLocaleString()} of headroom before you tip over.`}
+                  {budgetTone === 'red' && `Over by £${(monthSpend - monthlyBudget).toLocaleString()} — worth a quiet look at what you've added this month.`}
+                </p>
+              </>
+            );
+          })()}
+          {monthSpendItems.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-5">
+              {monthSpendItems.slice(0, 8).map((i) => (
+                <span key={i.id} className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600">
+                  {i.name}{i.price ? ` · £${Number(i.price).toLocaleString()}` : ''}
+                </span>
+              ))}
+              {monthSpendItems.length > 8 && (
+                <span className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full text-stone-500">+ {monthSpendItems.length - 8} more</span>
+              )}
+            </div>
+          )}
+        </div>
+      ) : monthSpendItems.length > 0 && onOpenProfile ? (
+        <button onClick={onOpenProfile}
+          id="insights-spending"
+          className="scroll-mt-24 w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-500 transition-colors group">
+          <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-2">Spending · {monthName}</p>
+          <h3 className="font-display text-2xl text-stone-900">£{monthSpend.toLocaleString()} added this month</h3>
+          <p className="text-sm text-stone-500 mt-3 leading-relaxed">
+            Set a monthly budget in Profile → Settings to track headroom and get alerts when you approach the limit.
+            <span className="block mt-2 text-stone-900 group-hover:underline text-xs tracking-widest uppercase">Open Profile →</span>
+          </p>
+        </button>
+      ) : null}
 
     </div>
   );

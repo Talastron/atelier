@@ -379,33 +379,41 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
   );
 }
 
+// Body-shape result — designed to sit as the bottom panel INSIDE the
+// Measurements card (parent has overflow-hidden), not as its own free card.
+// Until chest/waist/hips are filled it's a quiet ivory prompt; once we can
+// classify a shape it becomes a dark "reveal" that crowns the inputs above it.
 function FitProfileCard({ measurements }) {
   const shape = classifyBodyShape(measurements);
   if (!shape) {
     return (
-      <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-        <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-3">Your Fit Profile</h3>
-        <p className="text-stone-500 text-sm leading-relaxed">
-          Add your <strong>chest, waist, and hips</strong> on the <strong>Account</strong> tab to unlock body-shape-based styling guidance — the same approach M&S, ASOS and Stitch Fix use as the foundation of their fit tools.
+      <div className="border-t border-stone-100 bg-[#FBFAF8] px-6 md:px-8 py-7">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule shrink-0" aria-hidden="true"></span>
+          <h4 className="font-display text-lg md:text-xl text-stone-900">Your fit profile</h4>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Locked</span>
+        </div>
+        <p className="text-stone-500 text-sm leading-relaxed mt-3 max-w-2xl">
+          Fill in your <strong className="text-stone-700">chest, waist, and hips</strong> above to unlock body-shape styling guidance — the same foundation M&amp;S, ASOS and Stitch Fix build their fit tools on.
         </p>
       </div>
     );
   }
   const guide = BODY_SHAPE_GUIDES[shape];
   return (
-    <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-10 smooth-shadow">
+    <div className="bg-stone-900 text-white px-6 md:px-10 py-8 md:py-10">
       <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-        <h3 className="font-display text-xl md:text-2xl">Your Fit Profile</h3>
-        <span className="text-[10px] uppercase tracking-[0.2em] text-stone-400">Body shape based</span>
+        <span className="text-[10px] uppercase tracking-[0.28em] text-brass-300">Your fit profile</span>
+        <span className="text-[10px] uppercase tracking-[0.2em] text-stone-500">Body shape based</span>
       </div>
-      <p className="text-4xl md:text-5xl font-display font-medium mt-4 mb-2">{shape}</p>
+      <p className="text-4xl md:text-5xl font-display font-medium mt-2 mb-2">{shape}</p>
       <p className="text-stone-300 text-sm leading-relaxed mb-8 max-w-2xl">{guide.blurb}</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <h4 className="text-[10px] font-semibold tracking-[0.2em] uppercase text-stone-400 mb-4">Styles that flatter</h4>
+          <h4 className="text-[10px] font-semibold tracking-[0.2em] uppercase text-brass-300 mb-4">Styles that flatter</h4>
           <ul className="space-y-2 text-sm text-stone-100 leading-relaxed">
-            {guide.flatter.map((tip) => <li key={tip} className="flex gap-3"><span className="text-stone-500">·</span>{tip}</li>)}
+            {guide.flatter.map((tip) => <li key={tip} className="flex gap-3"><span className="text-brass-400">·</span>{tip}</li>)}
           </ul>
         </div>
         <div>
@@ -646,6 +654,49 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </p>
         </div>
       )}
+      {/* Calendar — optional Google Calendar connection, read-only. An account
+          connection (like sign-in / billing), so it lives under Account rather
+          than Preferences. The Concierge reads upcoming events to dress you. */}
+      <section id="profile-calendar" className="scroll-mt-24 space-y-6 md:space-y-8">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule shrink-0" aria-hidden="true"></span>
+          <h3 className="font-display text-stone-900 text-xl md:text-2xl">Calendar</h3>
+        </div>
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          {calConnected === null ? (
+            <p className="text-stone-400 text-sm">Checking…</p>
+          ) : calConnected ? (
+            <div>
+              <div className="flex items-center gap-2 text-stone-900">
+                <Check size={18} strokeWidth={2} className="text-emerald-600" />
+                <span className="font-display text-lg">Connected</span>
+              </div>
+              <p className="text-stone-500 text-sm mt-2">Primary calendar · read-only.</p>
+              <button
+                onClick={handleDisconnectCalendar}
+                disabled={calBusy}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-sm tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {calBusy ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p className="text-stone-700 leading-relaxed mb-6">
+                Connect your Google Calendar and the Concierge will dress you for what's actually on — a board meeting, a long lunch, a quiet day in. Read-only: Atelier never edits or deletes anything on your calendar. Primary calendar only.
+              </p>
+              <button
+                onClick={handleConnectCalendar}
+                disabled={calBusy}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Calendar size={16} strokeWidth={1.5} />
+                {calBusy ? 'Connecting…' : 'Connect Google Calendar'}
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
       </section>
 
       <section id="group-you" className="scroll-mt-24 space-y-8 md:space-y-10">
@@ -658,10 +709,15 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         </div>
       <section id="profile-measurements" className="scroll-mt-24 space-y-6 md:space-y-8">
         <div className="flex items-center gap-3">
-          <span className="brass-rule" aria-hidden="true"></span>
-          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Measurements</h2>
+          <span className="brass-rule shrink-0" aria-hidden="true"></span>
+          <h3 className="font-display text-stone-900 text-xl md:text-2xl">Measurements &amp; Fit</h3>
         </div>
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+        {/* One card: light inputs on top → dark body-shape "reveal" at the
+            bottom (FitProfileCard renders full-bleed; overflow-hidden clips
+            its corners to the card radius). The inputs and the fit profile
+            are the same idea — what you enter and what it tells us. */}
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] smooth-shadow overflow-hidden">
+          <div className="p-6 md:p-8">
           <p className="text-stone-500 text-sm leading-relaxed mb-8 max-w-2xl">
             Fill in <span className="text-stone-800 font-medium">chest, waist and hips</span> to unlock your body-shape guidance below, and AI fit estimates on wishlist items (open any wishlist piece → "Will it fit?"). Stored privately under your account.
           </p>
@@ -695,10 +751,11 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               <Save size={16} strokeWidth={1.5} /> Update Profile
             </button>
           </div>
-        </div>
+          </div>
 
-        {/* Body-shape guidance — its own card, fed live by the inputs above. */}
-        <FitProfileCard measurements={measurements} />
+          {/* Body-shape guidance — full-bleed bottom panel, fed live by the inputs above. */}
+          <FitProfileCard measurements={measurements} />
+        </div>
       </section>
       <div id="profile-style" className="scroll-mt-24 space-y-10 md:space-y-12">
         <StyleProfileCard measurements={measurements} saveMeasurements={saveMeasurements} />
@@ -782,48 +839,6 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </div>
         </div>
       </div>
-      {/* Calendar — optional Google Calendar connection. Read-only: the
-          Concierge uses upcoming events to dress you for what's on. */}
-      <section id="profile-calendar" className="scroll-mt-24 space-y-6 md:space-y-8">
-        <div className="flex items-center gap-3">
-          <span className="brass-rule" aria-hidden="true"></span>
-          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Calendar</h2>
-        </div>
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          {calConnected === null ? (
-            <p className="text-stone-400 text-sm">Checking…</p>
-          ) : calConnected ? (
-            <div>
-              <div className="flex items-center gap-2 text-stone-900">
-                <Check size={18} strokeWidth={2} className="text-emerald-600" />
-                <span className="font-display text-lg">Connected</span>
-              </div>
-              <p className="text-stone-500 text-sm mt-2">Primary calendar · read-only.</p>
-              <button
-                onClick={handleDisconnectCalendar}
-                disabled={calBusy}
-                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-sm tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {calBusy ? 'Disconnecting…' : 'Disconnect'}
-              </button>
-            </div>
-          ) : (
-            <div>
-              <p className="text-stone-700 leading-relaxed mb-6">
-                Connect your Google Calendar and the Concierge will dress you for what's actually on — a board meeting, a long lunch, a quiet day in. Read-only: Atelier never edits or deletes anything on your calendar. Primary calendar only.
-              </p>
-              <button
-                onClick={handleConnectCalendar}
-                disabled={calBusy}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Calendar size={16} strokeWidth={1.5} />
-                {calBusy ? 'Connecting…' : 'Connect Google Calendar'}
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
       <div id="profile-cutouts" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
@@ -859,18 +874,22 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           (brass-rule + small-caps headers, white card with soft border). */}
       <section id="profile-privacy" className="scroll-mt-24 space-y-6 md:space-y-8">
         <div className="flex items-center gap-3">
-          <span className="brass-rule" aria-hidden="true"></span>
-          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Privacy</h2>
+          <span className="brass-rule shrink-0" aria-hidden="true"></span>
+          <h3 className="font-display text-stone-900 text-xl md:text-2xl">Privacy</h3>
         </div>
-        <div className="bg-white border border-stone-200/60 rounded-2xl p-6 sm:p-8">
-          <p className="text-stone-700 leading-relaxed mb-4">
-            Atelier is a private wardrobe. Your pieces, your wears, your photos — they live in your account, encrypted in transit and at rest. We do not sell, share, or train on your data. The Concierge sees only what you've added; the model never receives your personal details beyond the wardrobe and notes you've written.
+        {/* Editorial treatment — a warm ivory panel with a brass spine, set
+            apart from the functional white cards. This is a statement of
+            position, so it should read like a printed note, not a settings box. */}
+        <div className="relative bg-[#FBFAF8] border border-stone-200/70 rounded-[2rem] p-7 sm:p-10 overflow-hidden smooth-shadow">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-brass-200 via-brass-400 to-brass-200" aria-hidden="true" />
+          <p className="font-display text-lg md:text-xl text-stone-800 leading-relaxed mb-5">
+            Atelier is a private wardrobe. Your pieces, your wears, your photos — they live in your account, encrypted in transit and at rest. We do not sell, share, or train on your data.
           </p>
-          <p className="text-stone-700 leading-relaxed mb-4">
-            You can export your full wardrobe at any time from the Backup section below, and delete your account permanently from the Settings section. Deletions are immediate and irrecoverable — we keep no archive.
+          <p className="text-stone-600 text-sm leading-relaxed mb-4">
+            The Concierge sees only what you've added; the model never receives your personal details beyond the wardrobe and notes you've written. You can export your full wardrobe any time from Backup below, and delete your account permanently from Settings — deletions are immediate and irrecoverable, we keep no archive.
           </p>
           {founderCount !== null && (
-            <div className="mt-6 pt-6 border-t border-stone-200 flex items-center gap-3">
+            <div className="mt-7 pt-6 border-t border-stone-200/80 flex items-center gap-3">
               <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
               <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">
                 Atelier · {founderCount.toLocaleString()} founder{founderCount === 1 ? '' : 's'} to date

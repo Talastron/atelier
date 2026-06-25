@@ -7,6 +7,30 @@ import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { COLOR_SWATCHES } from "../lib/taxonomy.js";
 
+// Heuristic gap analysis: counts owned items per category and flags the
+// underrepresented ones plus missing season coverage. Returns up to 5 gaps.
+function computeWardrobeGaps(ownedItems) {
+  const desiredCategories = ['Tops', 'Bottoms', 'Outerwear', 'Shoes', 'Bags', 'Accessories'];
+  const counts = Object.fromEntries(desiredCategories.map((c) => [c, 0]));
+  for (const item of ownedItems) if (counts[item.category] !== undefined) counts[item.category]++;
+  const gaps = [];
+  for (const cat of desiredCategories) {
+    if (counts[cat] === 0) gaps.push({ kind: 'missing-category', label: `No ${cat.toLowerCase()} yet`, detail: `Even a single piece anchors the rest of the wardrobe.`, priority: 3 });
+    else if (counts[cat] < 3) gaps.push({ kind: 'sparse-category', label: `Only ${counts[cat]} ${cat.toLowerCase()}`, detail: `Common rule of thumb is 3+ to give yourself outfit choice.`, priority: 1 });
+  }
+  // Seasonal coverage of owned outerwear
+  const outerwearBySeason = { Spring: 0, Summer: 0, Autumn: 0, Winter: 0 };
+  for (const item of ownedItems.filter((i) => i.category === 'Outerwear')) {
+    const seasons = itemSeasons(item);
+    if (seasons.length === 0) ['Spring', 'Summer', 'Autumn', 'Winter'].forEach((s) => outerwearBySeason[s]++);
+    else for (const s of seasons) if (outerwearBySeason[s] !== undefined) outerwearBySeason[s]++;
+  }
+  for (const [season, n] of Object.entries(outerwearBySeason)) {
+    if (n === 0) gaps.push({ kind: 'season-gap', label: `No outerwear for ${season}`, detail: `Wishlist a layer suited to ${season.toLowerCase()} weather.`, priority: 2 });
+  }
+  return gaps.sort((a, b) => b.priority - a.priority).slice(0, 5);
+}
+
 // Gemini-driven gap audit panel. Idle until the user taps Analyse — keeps the
 // Insights tab fast on load and avoids a Gemini call every time it mounts.
 // Caches the result in component state; the user can re-analyse anytime.

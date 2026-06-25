@@ -576,6 +576,68 @@ Reply with the narrative only — no preamble, no quotes.`;
   return result.trim().split('\n').filter(Boolean).join(' ').replace(/^["'`]+|["'`]+$/g, '');
 }
 
+// AI fit estimate for a wishlist item — replaces the manual per-brand size-chart
+// approach. Reasons from the user's body measurements AND, most importantly,
+// from items they ALREADY OWN from the same brand (whose sizes demonstrably fit
+// them). `ownedSameBrand` is [{ category, subCategory, name, size }]. Returns
+// { verdict, recommendation, confidence } or null.
+export async function generateFitEstimateWithGemini({ item, measurements = {}, ownedSameBrand = [] }) {
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
+  if (!item?.brand) return null;
+  const m = measurements || {};
+  const bodyBits = [
+    m.height ? `height ${m.height}cm` : null,
+    m.weight ? `weight ${m.weight}kg` : null,
+    m.chest ? `chest/bust ${m.chest}cm` : null,
+    m.waist ? `waist ${m.waist}cm` : null,
+    m.hips ? `hips ${m.hips}cm` : null,
+    m.shoeSize ? `usual shoe size ${m.shoeSize}` : null,
+  ].filter(Boolean).join(', ') || 'no body measurements recorded';
+
+  // Same-category owned pieces are the strongest signal; list them first.
+  const sameCat = ownedSameBrand.filter((o) => o.category === item.category);
+  const otherCat = ownedSameBrand.filter((o) => o.category !== item.category);
+  const ownedList = [...sameCat, ...otherCat]
+    .slice(0, 12)
+    .map((o) => `- ${o.category}${o.subCategory ? '/' + o.subCategory : ''} "${o.name}" — size ${o.size}`)
+    .join('\n');
+
+  const ownedBlock = ownedSameBrand.length
+    ? `WHAT THEY ALREADY OWN FROM ${item.brand} (these sizes already fit them — this is your STRONGEST signal, weight same-category matches the most):
+${ownedList}
+Reason from these: if a ${item.brand} ${item.category} in a known size fits them, infer whether labelled size "${item.size || '?'}" of this new piece will sit looser, tighter, or the same.`
+    : `They own nothing from ${item.brand} yet, so reason from general knowledge of how ${item.brand} and this garment type typically run, plus their body measurements. Be candid that confidence is lower without owned references.`;
+
+  const prompt = `You are a precise, honest fit advisor for a personal wardrobe app. Estimate how a wishlist garment will fit this person and give ONE practical sizing recommendation.
+
+GARMENT THEY ARE CONSIDERING:
+- ${item.brand} ${item.name || ''}
+- category: ${item.category}${item.subCategory ? '/' + item.subCategory : ''}
+- labelled size: ${item.size || '(no size recorded — note this in the recommendation)'}
+
+THEIR BODY: ${bodyBits}
+
+${ownedBlock}
+
+RULES:
+- Be honest about uncertainty. If you genuinely cannot tell, verdict = "unsure".
+- verdict ∈ "runs small" | "true to size" | "runs large" | "unsure" (how this BRAND/garment runs, not whether they should buy it).
+- recommendation: ONE practical sentence, max 160 chars, e.g. "Your other Holland Cooper trousers are a 10 and fit, so this 12 will sit a touch loose — size down for a tailored look."
+- confidence (0-100): high only when same-brand same-category owned pieces anchor it; low when reasoning from body measurements alone.
+
+Respond ONLY with JSON: {"verdict": "...", "recommendation": "...", "confidence": 0}`;
+
+  const text = await geminiText(prompt, { temperature: 0.4, jsonMode: true }, 'fit-estimate');
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { return null; }
+  if (!parsed?.recommendation) return null;
+  return {
+    verdict: typeof parsed.verdict === 'string' ? parsed.verdict : 'unsure',
+    recommendation: String(parsed.recommendation),
+    confidence: typeof parsed.confidence === 'number' ? parsed.confidence : null,
+  };
+}
+
 // generateConciergeReply — multi-turn chat with the user's personal
 // stylist. Builds a single prompt that concatenates system context
 // (wardrobe inventory, most-worn pieces, style profile, owner name,

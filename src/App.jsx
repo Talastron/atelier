@@ -48,7 +48,7 @@ import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExpor
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
-import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini } from './lib/ai.js';
+import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini } from './lib/ai.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
@@ -3440,6 +3440,9 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [itemLogDate, setItemLogDate] = useState(todayISO());
   const [itemLogDateOpen, setItemLogDateOpen] = useState(false);
+  const [fitEstimate, setFitEstimate] = useState(null);
+  const [fitEstimateBusy, setFitEstimateBusy] = useState(false);
+  const [fitEstimateError, setFitEstimateError] = useState(null);
   const images = itemImages(item);
   // Touch swipe between items in the wardrobe list. Only horizontal gestures
   // (≥60px) on the page background trigger nav — vertical scrolls and gestures
@@ -3503,10 +3506,30 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   useEffect(() => {
     swipeRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     setActivePhoto(0);
+    setFitEstimate(null);
+    setFitEstimateError(null);
   }, [item.id]);
 
   const seasons = itemSeasons(item);
   const fit = computeFitAgainstChart({ item, shops, measurements });
+  // Owned pieces from the same brand whose sizes already fit — the strongest
+  // signal for the AI fit estimate (no per-brand size chart required).
+  const ownedSameBrand = (allItems || [])
+    .filter((i) => i.id !== item.id && i.status !== 'wishlist' && i.size?.trim()
+      && i.brand && item.brand && i.brand.toLowerCase().trim() === item.brand.toLowerCase().trim())
+    .map((i) => ({ category: i.category, subCategory: i.subCategory, name: i.name, size: i.size }));
+  const runFitEstimate = async () => {
+    setFitEstimateBusy(true); setFitEstimateError(null);
+    try {
+      const est = await generateFitEstimateWithGemini({ item, measurements, ownedSameBrand });
+      if (est) setFitEstimate(est);
+      else setFitEstimateError('Could not estimate fit this time — try again.');
+    } catch (e) {
+      setFitEstimateError(e?.message || 'Fit estimate failed.');
+    } finally {
+      setFitEstimateBusy(false);
+    }
+  };
   const wears = itemWearCount(item);
   const cpw = itemCostPerWear(item);
   const wornToday = itemWearHistory(item).includes(todayISO());
@@ -3929,25 +3952,48 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             })()}
 
             {!fit && item.status === 'wishlist' && item.brand && (() => {
-              const matchingShop = (shops || []).find((s) => s.name?.toLowerCase().trim() === item.brand?.toLowerCase().trim());
-              const hasChart = !!matchingShop?.sizes?.length;
               const hasMeasurements = measurements?.chest || measurements?.waist || measurements?.hips;
-              const hasSize = !!item.size?.trim();
+              const verdictTone = fitEstimate?.verdict === 'true to size' ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                : fitEstimate?.verdict === 'runs small' ? 'text-orange-700 bg-orange-50 border-orange-200'
+                : fitEstimate?.verdict === 'runs large' ? 'text-sky-700 bg-sky-50 border-sky-200'
+                : 'text-stone-600 bg-stone-100 border-stone-200';
               return (
                 <div className="bg-stone-50 border border-stone-200 rounded-2xl p-5">
-                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-2">Fit prediction</h2>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles size={13} strokeWidth={1.5} className="text-brass-500" />
+                    <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">Will it fit?</h2>
+                  </div>
                   {!hasMeasurements ? (
-                    <p className="text-sm text-stone-700">Add your <span className="font-medium">chest, waist and hips</span> in Profile to unlock fit predictions.</p>
-                  ) : !hasSize ? (
-                    <p className="text-sm text-stone-700">Add a <span className="font-medium">size</span> on this item (Edit → Size) to see fit predictions.</p>
-                  ) : !hasChart ? (
-                    <p className="text-sm text-stone-700">
-                      Add a size chart for <span className="font-medium">{item.brand}</span> in the Directory to see bust/waist/hip deltas vs your measurements.
-                    </p>
+                    <p className="text-sm text-stone-700">Add your <span className="font-medium">chest, waist and hips</span> on the Account tab in Profile, then the Concierge can estimate the fit.</p>
+                  ) : fitEstimate ? (
+                    <div className="animate-in fade-in duration-300">
+                      <span className={`inline-block text-[10px] tracking-widest uppercase font-medium px-2.5 py-1 rounded-full border ${verdictTone}`}>{fitEstimate.verdict}</span>
+                      <p className="text-sm text-stone-800 leading-relaxed mt-3">{fitEstimate.recommendation}</p>
+                      <div className="flex items-center gap-3 mt-3">
+                        {typeof fitEstimate.confidence === 'number' && (
+                          <span className="text-[10px] tracking-widest uppercase text-stone-400">{fitEstimate.confidence}% confidence</span>
+                        )}
+                        <button onClick={runFitEstimate} disabled={fitEstimateBusy}
+                          className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline disabled:opacity-50">
+                          {fitEstimateBusy ? 'Re-estimating…' : 'Re-estimate'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-stone-400 italic mt-3">AI estimate — not a guarantee. Best when you own pieces from this brand.</p>
+                    </div>
                   ) : (
-                    <p className="text-sm text-stone-700">
-                      No matching size row in {item.brand}'s chart for "<span className="font-medium">{item.size}</span>". Try editing the chart or the item's size label.
-                    </p>
+                    <>
+                      <p className="text-sm text-stone-600 leading-relaxed mb-3">
+                        {ownedSameBrand.length > 0
+                          ? <>The Concierge will estimate the fit using your measurements and the <span className="font-medium">{ownedSameBrand.length}</span> {item.brand} piece{ownedSameBrand.length === 1 ? '' : 's'} you already own.</>
+                          : <>The Concierge will estimate the fit from your measurements and how {item.brand} typically runs.{!item.size?.trim() && ' Add a size (Edit → Size) for a sharper read.'}</>}
+                      </p>
+                      <button onClick={runFitEstimate} disabled={fitEstimateBusy}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-xs font-medium hover:bg-stone-700 transition-colors disabled:opacity-60">
+                        <Sparkles size={13} strokeWidth={1.5} className="text-brass-300" />
+                        {fitEstimateBusy ? 'Asking the Concierge…' : 'Estimate my fit'}
+                      </button>
+                      {fitEstimateError && <p className="text-xs text-red-600 mt-2">{fitEstimateError}</p>}
+                    </>
                   )}
                 </div>
               );

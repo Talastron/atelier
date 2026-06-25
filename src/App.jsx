@@ -5985,7 +5985,10 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
         : month >= 5 && month <= 7 ? 'Summer'
         : month >= 8 && month <= 10 ? 'Autumn' : 'Winter';
       const cached = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
-      const intent = intentOverride || buildIntent();
+      // Guard: only accept a string override. A bare onClick={handleAIStyle}
+      // would pass the click event here, and that non-serializable object then
+      // poisoned the saved AI-history `intent` field (Firestore setDoc failure).
+      const intent = (typeof intentOverride === 'string' ? intentOverride : null) || buildIntent();
       const previousOutfit = refine
         ? OUTFIT_SLOTS.flatMap((s) => slotItems(currentOutfit[s.toLowerCase()]))
         : null;
@@ -6308,7 +6311,7 @@ function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit,
               dark pill) — it's what most users actually want. Quick is a
               secondary affordance for users who explicitly want a non-AI
               suggestion, sized smaller as a text-link-style action below. */}
-          <button onClick={handleAIStyle} disabled={aiBusy || abComparing || !isAIEnabled()}
+          <button onClick={() => handleAIStyle()} disabled={aiBusy || abComparing || !isAIEnabled()}
             className="w-full px-4 py-3.5 rounded-xl text-sm bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 inline-flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 font-medium">
             <Sparkles size={14} strokeWidth={1.5} />
             {aiBusy ? 'Styling…' : isAIEnabled() ? 'Style with Concierge' : 'Concierge — setup'}

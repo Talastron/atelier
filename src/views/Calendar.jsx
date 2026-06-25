@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Bookmark, Calendar, ChevronRight, Copy, Download, Plus, Printer, Shirt, Sparkles, Trash2, Wand2 } from "lucide-react";
+import { Bookmark, Calendar, ChevronRight, Copy, Download, Plus, Printer, Shirt, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import { itemImages, itemWearHistory, itemWearNotes, resolveOutfitItems, todayISO, newId } from "../lib/items.js";
 import { weatherLabel, fetchTravelForecast } from "../lib/weather.js";
 import { generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini } from "../lib/ai.js";
-import { fetchCalendarEvents } from "../firebase.js";
+import { fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { useToast } from "../ui/toast.jsx";
 import { useEscapeKey, useCountUp } from "../ui/hooks.js";
 import { renderTextWithChips } from "../components/ItemChip.jsx";

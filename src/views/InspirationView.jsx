@@ -3,6 +3,7 @@ import { Bookmark, ChevronRight, Heart, Plus, Sparkles, Trash2 } from "lucide-re
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { derivePaletteFromGarments } from "../lib/color.js";
 import { parseSourceUrl } from "../lib/canvas.js";
+import { COLOR_SWATCHES } from "../lib/taxonomy.js";
 
 export default function InspirationView({ inspirations, onOpenInspiration, onAddInspiration, onDelete, defaultFilter = 'all', wishlistCount = 0, onJumpToWishlist }) {
   // Filter: 'all' or 'unanalysed'. Initialised from defaultFilter so the

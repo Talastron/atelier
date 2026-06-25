@@ -4,11 +4,11 @@ import { classifyBodyShape, itemImages, itemWearCount, summariseStyleProfile, to
 import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini, generateStyleManifestoWithGemini } from "../lib/ai.js";
-import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled } from "../firebase.js";
+import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser } from "../firebase.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
-import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, BODY_SHAPE_GUIDES, MATERIALS } from "../lib/taxonomy.js";
+import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, BODY_SHAPE_GUIDES, MATERIALS, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
 
 // Complete-my-data backfill: scan the wardrobe for items missing key fields
 // (category set to generic "Tops" with no other tags, or no colour, or no

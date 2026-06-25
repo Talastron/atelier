@@ -383,7 +383,7 @@ function FitProfileCard({ measurements }) {
       <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-3">Your Fit Profile</h3>
         <p className="text-stone-500 text-sm leading-relaxed">
-          Add your <strong>chest, waist, and hips</strong> below to unlock body-shape-based styling guidance — the same approach M&S, ASOS and Stitch Fix use as the foundation of their fit tools.
+          Add your <strong>chest, waist, and hips</strong> on the <strong>Account</strong> tab to unlock body-shape-based styling guidance — the same approach M&S, ASOS and Stitch Fix use as the foundation of their fit tools.
         </p>
       </div>
     );

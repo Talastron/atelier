@@ -555,49 +555,29 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     }
   };
 
-  // Sub-section anchors — same pattern as Insights: long page with many
-  // discrete cards, sticky chip nav jumps directly to the relevant one.
-  // 'People' only appears for owners (matches the conditional Invited
-  // Friends section). 'Subscription' only appears for non-owners (owners
-  // don't pay).
-  const PROFILE_SECTIONS = [
-    { id: 'profile-account', label: 'Account' },
-    { id: 'profile-privacy', label: 'Privacy' },
-    { id: 'profile-calendar', label: 'Calendar' },
-    ...(isOwner ? [{ id: 'profile-people', label: 'People' }] : [{ id: 'profile-subscription', label: 'Subscription' }]),
-    { id: 'profile-settings', label: 'Settings' },
-    { id: 'profile-style', label: 'Style' },
-    { id: 'profile-cutouts', label: 'Cutouts' },
-    { id: 'profile-storage', label: 'Storage' },
-    { id: 'profile-backup', label: 'Backup' },
-    { id: 'profile-trash', label: 'Trash' },
-    { id: 'profile-measurements', label: 'Measurements' },
-  ];
-
   return (
     <div className="space-y-10 md:space-y-12">
       <EditorialHeader eyebrow="Your atelier" title="Profile" subtitle="Account, measurements, style, and preferences." />
 
-      {/* Sticky sub-section nav — matches the Insights pattern. Same
-          'Pattern B' pill sizing (px-3 py-1.5 text-[10px] sm:text-xs)
-          established in the unification commit so all sticky-bar pills
-          across the app speak one language. */}
-      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60"
-           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-        {/* Contents — wraps to fit (never clips) and reads like a magazine
-            contents line: quiet small-caps anchors that warm to a brass pill
-            on hover, rather than a row of hard-bordered boxes. */}
-        <div className="flex flex-wrap items-center gap-x-1 gap-y-1.5">
-          <span className="text-[10px] tracking-[0.28em] uppercase text-stone-400 mr-2 pl-0.5">Jump to</span>
-          {PROFILE_SECTIONS.map((s) => (
-            <a key={s.id} href={`#${s.id}`}
-              className="text-[10px] tracking-[0.18em] uppercase px-2.5 py-1 rounded-full text-stone-500 hover:text-stone-900 hover:bg-white hover:ring-1 hover:ring-brass-200 transition-all duration-200">
-              {s.label}
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="flex flex-wrap gap-2">
+          {[['group-account', 'Account'], ['group-you', 'Style & Fit'], ['group-preferences', 'Preferences'], ['group-data', 'Your Data'], ...(isOwner ? [['group-people', 'People']] : [])].map(([gid, label]) => (
+            <a key={gid} href={`#${gid}`}
+              className="text-[10px] sm:text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors duration-200">
+              {label}
             </a>
           ))}
         </div>
       </nav>
 
+      <section id="group-account" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">01</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">Account</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
       {user && (
         <div id="profile-account" className="scroll-mt-24 relative overflow-hidden bg-white rounded-[2rem] ring-1 ring-stone-200/70 smooth-shadow">
           {/* Brass hairline crowns the identity card — the one warm accent that
@@ -638,76 +618,6 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </div>
         </div>
       )}
-
-      {/* Privacy — surfaces data-handling position and live founder cohort
-          counter. Matches the editorial chrome used throughout the profile
-          (brass-rule + small-caps headers, white card with soft border). */}
-      <section id="profile-privacy" className="scroll-mt-24 space-y-6 md:space-y-8">
-        <div className="flex items-center gap-3">
-          <span className="brass-rule" aria-hidden="true"></span>
-          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Privacy</h2>
-        </div>
-        <div className="bg-white border border-stone-200/60 rounded-2xl p-6 sm:p-8">
-          <p className="text-stone-700 leading-relaxed mb-4">
-            Atelier is a private wardrobe. Your pieces, your wears, your photos — they live in your account, encrypted in transit and at rest. We do not sell, share, or train on your data. The Concierge sees only what you've added; the model never receives your personal details beyond the wardrobe and notes you've written.
-          </p>
-          <p className="text-stone-700 leading-relaxed mb-4">
-            You can export your full wardrobe at any time from the Backup section below, and delete your account permanently from the Settings section. Deletions are immediate and irrecoverable — we keep no archive.
-          </p>
-          {founderCount !== null && (
-            <div className="mt-6 pt-6 border-t border-stone-200 flex items-center gap-3">
-              <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
-              <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">
-                Atelier · {founderCount.toLocaleString()} founder{founderCount === 1 ? '' : 's'} to date
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Calendar — optional Google Calendar connection. Read-only: the
-          Concierge uses upcoming events to dress you for what's on. */}
-      <section id="profile-calendar" className="scroll-mt-24 space-y-6 md:space-y-8">
-        <div className="flex items-center gap-3">
-          <span className="brass-rule" aria-hidden="true"></span>
-          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Calendar</h2>
-        </div>
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          {calConnected === null ? (
-            <p className="text-stone-400 text-sm">Checking…</p>
-          ) : calConnected ? (
-            <div>
-              <div className="flex items-center gap-2 text-stone-900">
-                <Check size={18} strokeWidth={2} className="text-emerald-600" />
-                <span className="font-display text-lg">Connected</span>
-              </div>
-              <p className="text-stone-500 text-sm mt-2">Primary calendar · read-only.</p>
-              <button
-                onClick={handleDisconnectCalendar}
-                disabled={calBusy}
-                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-sm tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {calBusy ? 'Disconnecting…' : 'Disconnect'}
-              </button>
-            </div>
-          ) : (
-            <div>
-              <p className="text-stone-700 leading-relaxed mb-6">
-                Connect your Google Calendar and the Concierge will dress you for what's actually on — a board meeting, a long lunch, a quiet day in. Read-only: Atelier never edits or deletes anything on your calendar. Primary calendar only.
-              </p>
-              <button
-                onClick={handleConnectCalendar}
-                disabled={calBusy}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Calendar size={16} strokeWidth={1.5} />
-                {calBusy ? 'Connecting…' : 'Connect Google Calendar'}
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* Subscription — non-owners only. Owners don't pay. The customer portal
           link goes to Lemon Squeezy's hosted billing UI where customers sign
           in with their email and can update card, change plan, view invoices,
@@ -736,59 +646,74 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </p>
         </div>
       )}
+      </section>
 
-      {isOwner && (
-        <div id="profile-people" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <div className="flex items-center justify-between mb-6 gap-3">
-            <div className="flex items-center gap-3">
-              <span className="brass-rule shrink-0" aria-hidden="true"></span>
-              <h3 className="font-display text-xl md:text-2xl text-stone-900">Invited Friends</h3>
-            </div>
-            <span className="text-xs text-stone-400 tracking-widest uppercase shrink-0">{allowlist.length} {allowlist.length === 1 ? 'person' : 'people'}</span>
+      <section id="group-you" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">02</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">Style & Fit</h2>
           </div>
-          <p className="text-stone-500 text-sm leading-relaxed mb-8">
-            Add someone's Google email to give them access. They'll get their own private wardrobe inside this app — they won't see yours, you won't see theirs.
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
+      <section id="profile-measurements" className="scroll-mt-24 space-y-6 md:space-y-8">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Measurements</h2>
+        </div>
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          <p className="text-stone-500 text-sm leading-relaxed mb-8 max-w-2xl">
+            Fill in <span className="text-stone-800 font-medium">chest, waist and hips</span> to unlock your body-shape guidance below, and AI fit estimates on wishlist items (open any wishlist piece → "Will it fit?"). Stored privately under your account.
           </p>
 
-          <form onSubmit={handleInviteSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end mb-8">
-            <div className="sm:col-span-5">
-              <Input label="Google email" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="friend@gmail.com" required />
-            </div>
-            <div className="sm:col-span-4">
-              <Input label="Name (optional)" type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Anna" />
-            </div>
-            <div className="sm:col-span-3">
-              <button type="submit" disabled={inviteBusy} className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 transition-all disabled:opacity-50">
-                {inviteBusy ? 'Adding…' : 'Invite'}
-              </button>
-            </div>
-            {inviteError && <p className="sm:col-span-12 text-xs text-red-700">{inviteError}</p>}
-          </form>
-
-          <div className="space-y-2">
-            {allowlist.length === 0 && (
-              <p className="text-stone-400 italic text-sm py-6 text-center border border-dashed border-stone-200 rounded-2xl">
-                No invited friends yet. Owners ({OWNER_EMAILS.join(', ')}) always have access.
-              </p>
-            )}
-            {allowlist.map((entry) => (
-              <div key={entry.email} className="flex items-center justify-between py-3 px-4 bg-stone-50 border border-stone-200/60 rounded-xl group">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-stone-900 truncate">{entry.displayName || entry.email}</p>
-                  {entry.displayName && <p className="text-[10px] text-stone-500 uppercase tracking-wider mt-0.5 truncate">{entry.email}</p>}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
+            {[
+              { id: 'height', label: 'Height', unit: 'cm' }, { id: 'weight', label: 'Weight', unit: 'kg' },
+              { id: 'chest', label: 'Chest', unit: 'cm', fit: true }, { id: 'waist', label: 'Waist', unit: 'cm', fit: true },
+              { id: 'hips', label: 'Hips', unit: 'cm', fit: true }, { id: 'shoeSize', label: 'Shoe size', unit: 'EU' },
+            ].map(field => (
+              <div key={field.id} className="relative">
+                <label className="flex items-center gap-1.5 text-[10px] tracking-[0.2em] font-semibold text-stone-500 uppercase mb-2 ml-1">
+                  {field.label}
+                  {field.fit && <span className="w-1 h-1 rounded-full bg-brass-400" title="Powers fit predictions" aria-hidden="true" />}
+                </label>
+                <div className="relative">
+                  <input type="number" name={field.id} value={localMeasurements[field.id] || ''} onChange={handleChange}
+                    className="w-full pl-5 pr-12 py-4 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 outline-none transition-all text-stone-900 text-lg font-display"
+                  />
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[11px] tracking-widest uppercase text-stone-400 pointer-events-none">{field.unit}</span>
                 </div>
-                <button onClick={() => removeInvite(entry.email).catch((e) => alert(e.message))}
-                  className="text-stone-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-                  aria-label={`Revoke access for ${entry.email}`}
-                >
-                  <X size={16} strokeWidth={1.5} />
-                </button>
               </div>
             ))}
           </div>
-        </div>
-      )}
 
+          <div className="mt-10 pt-8 border-t border-stone-100 flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-brass-400" aria-hidden="true" /> Powers fit &amp; body shape
+            </p>
+            <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-7 py-3.5 rounded-full font-medium text-sm flex items-center gap-2.5 hover:bg-stone-700 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]">
+              <Save size={16} strokeWidth={1.5} /> Update Profile
+            </button>
+          </div>
+        </div>
+
+        {/* Body-shape guidance — its own card, fed live by the inputs above. */}
+        <FitProfileCard measurements={measurements} />
+      </section>
+      <div id="profile-style" className="scroll-mt-24 space-y-10 md:space-y-12">
+        <StyleProfileCard measurements={measurements} saveMeasurements={saveMeasurements} />
+        <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
+      </div>
+      </section>
+
+      <section id="group-preferences" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">03</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">Preferences</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
       <div id="profile-settings" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-center gap-3 mb-6">
           <span className="brass-rule shrink-0" aria-hidden="true"></span>
@@ -857,12 +782,48 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </div>
         </div>
       </div>
-
-      <div id="profile-style" className="scroll-mt-24 space-y-10 md:space-y-12">
-        <StyleProfileCard measurements={measurements} saveMeasurements={saveMeasurements} />
-        <StyleManifestoCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} outfits={outfits} inspirations={inspirations} />
-      </div>
-
+      {/* Calendar — optional Google Calendar connection. Read-only: the
+          Concierge uses upcoming events to dress you for what's on. */}
+      <section id="profile-calendar" className="scroll-mt-24 space-y-6 md:space-y-8">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Calendar</h2>
+        </div>
+        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          {calConnected === null ? (
+            <p className="text-stone-400 text-sm">Checking…</p>
+          ) : calConnected ? (
+            <div>
+              <div className="flex items-center gap-2 text-stone-900">
+                <Check size={18} strokeWidth={2} className="text-emerald-600" />
+                <span className="font-display text-lg">Connected</span>
+              </div>
+              <p className="text-stone-500 text-sm mt-2">Primary calendar · read-only.</p>
+              <button
+                onClick={handleDisconnectCalendar}
+                disabled={calBusy}
+                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 text-sm tracking-wide transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {calBusy ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p className="text-stone-700 leading-relaxed mb-6">
+                Connect your Google Calendar and the Concierge will dress you for what's actually on — a board meeting, a long lunch, a quiet day in. Read-only: Atelier never edits or deletes anything on your calendar. Primary calendar only.
+              </p>
+              <button
+                onClick={handleConnectCalendar}
+                disabled={calBusy}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-stone-900 text-white text-sm font-medium hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Calendar size={16} strokeWidth={1.5} />
+                {calBusy ? 'Connecting…' : 'Connect Google Calendar'}
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
       <div id="profile-cutouts" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
@@ -883,11 +844,43 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </label>
         </div>
       </div>
+      </section>
 
+      <section id="group-data" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">04</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">Your Data</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
+        </div>
+      {/* Privacy — surfaces data-handling position and live founder cohort
+          counter. Matches the editorial chrome used throughout the profile
+          (brass-rule + small-caps headers, white card with soft border). */}
+      <section id="profile-privacy" className="scroll-mt-24 space-y-6 md:space-y-8">
+        <div className="flex items-center gap-3">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Privacy</h2>
+        </div>
+        <div className="bg-white border border-stone-200/60 rounded-2xl p-6 sm:p-8">
+          <p className="text-stone-700 leading-relaxed mb-4">
+            Atelier is a private wardrobe. Your pieces, your wears, your photos — they live in your account, encrypted in transit and at rest. We do not sell, share, or train on your data. The Concierge sees only what you've added; the model never receives your personal details beyond the wardrobe and notes you've written.
+          </p>
+          <p className="text-stone-700 leading-relaxed mb-4">
+            You can export your full wardrobe at any time from the Backup section below, and delete your account permanently from the Settings section. Deletions are immediate and irrecoverable — we keep no archive.
+          </p>
+          {founderCount !== null && (
+            <div className="mt-6 pt-6 border-t border-stone-200 flex items-center gap-3">
+              <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
+              <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">
+                Atelier · {founderCount.toLocaleString()} founder{founderCount === 1 ? '' : 's'} to date
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
       <BackfillCard items={items} shops={shops} onUpdateItem={onUpdateItem} />
-
       <RehostCard items={items} onUpdateItem={onUpdateItem} />
-
       <div id="profile-backup" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex-1 min-w-0">
@@ -907,7 +900,6 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </button>
         </div>
       </div>
-
       {deletedItems.length > 0 && (
         <div id="profile-trash" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -942,51 +934,71 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           </div>
         </div>
       )}
+      </section>
 
-      <section id="profile-measurements" className="scroll-mt-24 space-y-6 md:space-y-8">
-        <div className="flex items-center gap-3">
-          <span className="brass-rule" aria-hidden="true"></span>
-          <h2 className="font-display text-stone-900 text-2xl sm:text-3xl">Measurements</h2>
+      {isOwner && (
+      <section id="group-people" className="scroll-mt-24 space-y-8 md:space-y-10">
+        <div>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-2xl md:text-3xl text-brass-400 tabular-nums leading-none">05</span>
+            <h2 className="font-display text-3xl md:text-4xl text-stone-900 tracking-tight">People</h2>
+          </div>
+          <div className="mt-3 h-px bg-gradient-to-r from-stone-300 via-stone-200 to-transparent" aria-hidden="true"></div>
         </div>
-        <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
-          <p className="text-stone-500 text-sm leading-relaxed mb-8 max-w-2xl">
-            Fill in <span className="text-stone-800 font-medium">chest, waist and hips</span> to unlock your body-shape guidance below, and AI fit estimates on wishlist items (open any wishlist piece → "Will it fit?"). Stored privately under your account.
+      {isOwner && (
+        <div id="profile-people" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <div className="flex items-center gap-3">
+              <span className="brass-rule shrink-0" aria-hidden="true"></span>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Invited Friends</h3>
+            </div>
+            <span className="text-xs text-stone-400 tracking-widest uppercase shrink-0">{allowlist.length} {allowlist.length === 1 ? 'person' : 'people'}</span>
+          </div>
+          <p className="text-stone-500 text-sm leading-relaxed mb-8">
+            Add someone's Google email to give them access. They'll get their own private wardrobe inside this app — they won't see yours, you won't see theirs.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-7">
-            {[
-              { id: 'height', label: 'Height', unit: 'cm' }, { id: 'weight', label: 'Weight', unit: 'kg' },
-              { id: 'chest', label: 'Chest', unit: 'cm', fit: true }, { id: 'waist', label: 'Waist', unit: 'cm', fit: true },
-              { id: 'hips', label: 'Hips', unit: 'cm', fit: true }, { id: 'shoeSize', label: 'Shoe size', unit: 'EU' },
-            ].map(field => (
-              <div key={field.id} className="relative">
-                <label className="flex items-center gap-1.5 text-[10px] tracking-[0.2em] font-semibold text-stone-500 uppercase mb-2 ml-1">
-                  {field.label}
-                  {field.fit && <span className="w-1 h-1 rounded-full bg-brass-400" title="Powers fit predictions" aria-hidden="true" />}
-                </label>
-                <div className="relative">
-                  <input type="number" name={field.id} value={localMeasurements[field.id] || ''} onChange={handleChange}
-                    className="w-full pl-5 pr-12 py-4 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 outline-none transition-all text-stone-900 text-lg font-display"
-                  />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[11px] tracking-widest uppercase text-stone-400 pointer-events-none">{field.unit}</span>
+          <form onSubmit={handleInviteSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end mb-8">
+            <div className="sm:col-span-5">
+              <Input label="Google email" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="friend@gmail.com" required />
+            </div>
+            <div className="sm:col-span-4">
+              <Input label="Name (optional)" type="text" value={inviteName} onChange={(e) => setInviteName(e.target.value)} placeholder="Anna" />
+            </div>
+            <div className="sm:col-span-3">
+              <button type="submit" disabled={inviteBusy} className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 transition-all disabled:opacity-50">
+                {inviteBusy ? 'Adding…' : 'Invite'}
+              </button>
+            </div>
+            {inviteError && <p className="sm:col-span-12 text-xs text-red-700">{inviteError}</p>}
+          </form>
+
+          <div className="space-y-2">
+            {allowlist.length === 0 && (
+              <p className="text-stone-400 italic text-sm py-6 text-center border border-dashed border-stone-200 rounded-2xl">
+                No invited friends yet. Owners ({OWNER_EMAILS.join(', ')}) always have access.
+              </p>
+            )}
+            {allowlist.map((entry) => (
+              <div key={entry.email} className="flex items-center justify-between py-3 px-4 bg-stone-50 border border-stone-200/60 rounded-xl group">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-stone-900 truncate">{entry.displayName || entry.email}</p>
+                  {entry.displayName && <p className="text-[10px] text-stone-500 uppercase tracking-wider mt-0.5 truncate">{entry.email}</p>}
                 </div>
+                <button onClick={() => removeInvite(entry.email).catch((e) => alert(e.message))}
+                  className="text-stone-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                  aria-label={`Revoke access for ${entry.email}`}
+                >
+                  <X size={16} strokeWidth={1.5} />
+                </button>
               </div>
             ))}
           </div>
-
-          <div className="mt-10 pt-8 border-t border-stone-100 flex items-center justify-between gap-4 flex-wrap">
-            <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-brass-400" aria-hidden="true" /> Powers fit &amp; body shape
-            </p>
-            <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-7 py-3.5 rounded-full font-medium text-sm flex items-center gap-2.5 hover:bg-stone-700 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]">
-              <Save size={16} strokeWidth={1.5} /> Update Profile
-            </button>
-          </div>
         </div>
-
-        {/* Body-shape guidance — its own card, fed live by the inputs above. */}
-        <FitProfileCard measurements={measurements} />
+      )}
       </section>
+      )}
+
     </div>
   );
 }

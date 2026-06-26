@@ -1,10 +1,24 @@
 // All Gemini model calls — outfit generation, item/label/receipt/inspiration
 // vision analysis, naming/tagging, concierge chat, style manifesto, travel
 // capsule. Wired via Firebase AI Logic (App Check verified, no API key in bundle).
-import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream } from "../firebase.js";
+import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream, Schema } from "../firebase.js";
 import { itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
 import { weatherLabel } from "./weather.js";
+import { ensureClothingBase, hasClothingBase } from "./outfit.js";
 import { CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
+
+// Locks the shape of a composed-outfit reply: all four fields required, with
+// the right types. Stops malformed/partial JSON at the source (fix A); the
+// deterministic clothing-base backstop (ensureClothingBase) handles the
+// semantic guarantee a schema can't express ("at least one garment").
+const OUTFIT_RESPONSE_SCHEMA = Schema.object({
+  properties: {
+    itemIds: Schema.array({ items: Schema.string() }),
+    reasoning: Schema.string(),
+    confidence: Schema.number(),
+    tags: Schema.array({ items: Schema.string() }),
+  },
+});
 
 export async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null, calendarEvents = [] }) {
   if (!isAIEnabled()) {
@@ -36,6 +50,19 @@ ${calendarEvents.map((e) => `- ${e.allDay ? 'All day' : new Date(e.startISO).toL
 
 Dress for the most demanding event of the day — if there's a board meeting AND a casual lunch, dress for the board meeting. Reflect this in the reasoning sentence.\n`
     : '';
+
+  // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed
+  // FIRST, with everything else as complementary pieces after. An accessory-/
+  // jewellery-heavy wardrobe otherwise buries the handful of garments in one flat
+  // list, and the model drifts to composing pure accessories. Bases are listed in
+  // full (the look must be built from them); the deterministic ensureClothingBase
+  // backstop below still guarantees correctness if the model slips anyway.
+  const isClothingBase = (i) => i.category === 'Dresses' || i.category === 'Tops' || i.category === 'Bottoms';
+  const baseItems = items.filter(isClothingBase);
+  const otherItems = items.filter((i) => !isClothingBase(i));
+  const baseBlock = baseItems.length
+    ? baseItems.map(summarize).join('\n')
+    : '(none — the wardrobe has no dress/top/bottom; a complete look cannot be built)';
 
   const prompt = `You are an expert personal stylist. From the user's wardrobe below, build ONE coherent outfit that genuinely works together visually.${refinementBlock}${mustIncludeBlock}
 
@@ -71,8 +98,13 @@ WEATHER-DRIVEN RULES (this is NON-NEGOTIABLE — temperature is the strongest fi
 Reasoning rules:
 - The reasoning is saved with the look long-term — write it as a STANDALONE description of the final outfit. Describe why this combination works as a complete look (palette, silhouette, occasion). Do NOT reference the user's previous outfit, what was swapped, replaced, or kept — that context is meaningless when the user opens the saved look weeks later.
 
-Available items (id|name|brand|category|attributes):
-${items.map(summarize).join('\n')}
+Available items — build the look from these. Choose the clothing FOUNDATION first, then add complementary pieces.
+
+CLOTHING BASES — the look MUST be built on one of these: EITHER one Dress, OR one Top AND one Bottom. Select the base BEFORE anything else, and put its id(s) in itemIds first (id|name|brand|category|attributes):
+${baseBlock}
+
+COMPLEMENTARY PIECES — shoes, bags, outerwear, belts, accessories and jewellery to FINISH the look. These NEVER replace the clothing base; add only what genuinely completes it (id|name|brand|category|attributes):
+${otherItems.map(summarize).join('\n')}
 
 Respond ONLY with valid JSON in this exact shape:
 {"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100, "tags": ["3-5 short descriptive labels"]}
@@ -102,35 +134,45 @@ FINAL SELF-CHECK before you respond — all three must be true, or fix itemIds a
   // Run the model and parse. Pulled into a helper so we can re-run with a
   // correction if the first attempt comes back without a clothing base.
   const runOnce = async (promptText, temp) => {
-    const text = await geminiText(promptText, { temperature: temp, jsonMode: true }, 'suggest-look');
+    const text = await geminiText(promptText, { temperature: temp, jsonMode: true, responseSchema: OUTFIT_RESPONSE_SCHEMA }, 'suggest-look');
     let p;
     try { p = JSON.parse(text); } catch { throw new Error('The Concierge replied in an unexpected format'); }
     if (!p.itemIds?.length) throw new Error('The Concierge could not compose a look from this wardrobe');
     return p;
   };
 
-  // CODE-LEVEL COMPLETENESS GUARD. The prompt already demands a full clothing
-  // base, but the model intermittently names a garment in the prose (e.g. "the
-  // black linen shirt dress") yet omits its id from itemIds — leaving a look of
-  // pure accessories with no actual clothes. Prompt rules alone don't stop this
-  // reliably, so we verify in code: the resolved itemIds MUST contain either a
-  // Dress, or BOTH a Top and a Bottom. If not, re-compose once with a stern
-  // correction (and a nudge up in temperature to break the failure mode).
-  const hasClothingBase = (ids) => {
-    const picked = (ids || []).map((id) => items.find((i) => i.id === id)).filter(Boolean);
-    const has = (cat) => picked.some((i) => i.category === cat);
-    return has('Dresses') || (has('Tops') && has('Bottoms'));
-  };
+  // CODE-LEVEL COMPLETENESS GUARD — defense in depth. The prompt already demands
+  // a full clothing base, but the model intermittently names a garment in the
+  // prose (e.g. "the black linen shirt dress") yet omits its id from itemIds —
+  // leaving a look of pure accessories with no actual clothes. Two layers:
+  //   1. Re-compose once with a stern correction (and a nudge up in temperature
+  //      to break the failure mode) when the first attempt lacks a base.
+  //   2. ensureClothingBase — a DETERMINISTIC final backstop. If the model and
+  //      its retry both fail, it recovers the garment the model named in its own
+  //      prose (the accessories were chosen for it), or injects a
+  //      weather-appropriate base. The user never sees an accessories-only look.
+  const baseOk = (ids) => hasClothingBase(ids, items);
 
   let parsed = await runOnce(prompt, temperature);
-  if (!hasClothingBase(parsed.itemIds)) {
+  if (!baseOk(parsed.itemIds)) {
     const correction = `${prompt}
 
 CRITICAL CORRECTION — your previous attempt is INVALID: it returned a look with NO clothing base (no dress, or a top without a bottom / a bottom without a top). A look of only accessories is a hard failure. Re-compose now. itemIds MUST contain the actual garment(s): EITHER one Dress, OR BOTH a Top AND a Bottom, drawn from the wardrobe list. Before you respond, read back your own itemIds and confirm a real garment is present.`;
     try {
       const retry = await runOnce(correction, Math.min(0.9, temperature + 0.1));
-      if (hasClothingBase(retry.itemIds)) parsed = retry;
+      if (baseOk(retry.itemIds)) parsed = retry;
     } catch { /* keep the first attempt if the retry itself errors */ }
+  }
+
+  // Final deterministic guarantee — recovers from prose or injects a base so an
+  // accessories-only look can never reach the user, even if the model fails twice.
+  if (!baseOk(parsed.itemIds)) {
+    const fixed = ensureClothingBase(
+      { itemIds: parsed.itemIds, reasoning: parsed.reasoning },
+      items,
+      { weather, season },
+    );
+    parsed.itemIds = fixed.itemIds;
   }
   const tags = Array.isArray(parsed.tags)
     ? parsed.tags

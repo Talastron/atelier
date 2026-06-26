@@ -23,11 +23,15 @@ export default function WeekStrip({ events = [], schedules = {}, onSelectDay }) 
     events.map((e) => (e.allDay ? String(e.startISO).slice(0, 10) : new Date(e.startISO).toLocaleDateString('en-CA')))
   );
 
+  const first = new Date(days[0] + 'T00:00:00');
+  const last = new Date(days[6] + 'T00:00:00');
+  const range = `${first.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${last.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+
   return (
-    <div>
-      <div className="flex items-center gap-2.5 mb-2">
-        <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
-        <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500">Your week</span>
+    <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-7 smooth-shadow">
+      <div className="mb-5 flex items-baseline justify-between">
+        <h3 className="font-display text-lg sm:text-xl text-stone-900">Your week</h3>
+        <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">{range}</span>
       </div>
       <div className="flex gap-1.5">
         {days.map((iso) => {

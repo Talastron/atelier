@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose } from "../dailyBrief";
+import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
+import EditorialHeader from "../ui/EditorialHeader.jsx";
+import { hasClothingBase } from "../lib/outfit.js";
 
 const COMPOSE_STAGES = [
   'Reading your wardrobe…',
@@ -107,6 +110,22 @@ function DailyBriefCard({
   const [saveState, setSaveState] = useState('idle'); // idle | saving | saved
   const [wearState, setWearState] = useState('idle'); // idle | wearing | done
   useEffect(() => { setSaveState('idle'); setWearState('idle'); }, [brief?.savedAt]);
+
+  // One-time validation of the cached brief: if today's cached look has no
+  // clothing base (e.g. it was composed before the clothing-base guarantee, or
+  // is an accessories-only result), discard it so the day re-composes through
+  // the current pipeline — which always injects a garment. Runs once so a
+  // genuinely clothing-less wardrobe can't loop.
+  const validatedRef = useRef(false);
+  useEffect(() => {
+    if (validatedRef.current) return;
+    if (!brief || !(items?.length)) return;
+    validatedRef.current = true;
+    if (!hasClothingBase(brief.itemIds, items)) {
+      clearDailyBrief(uid);
+      setBrief(null);
+    }
+  }, [brief, items, uid]);
 
   // Best-effort: pull today's calendar events so the brief can dress for
   // what's on. Guarded so non-connected users never fire the callable.
@@ -282,9 +301,41 @@ function DailyBriefCard({
     .filter(Boolean)
     .sort((a, b) => (BRIEF_CATEGORY_ORDER[a.category] ?? 2.5) - (BRIEF_CATEGORY_ORDER[b.category] ?? 2.5));
 
+  // Lookbook tiles — ALL pieces shown at equal size on one aligned grid (the
+  // marketing site's OutfitPreview language). Clothing leads (briefItems is already
+  // clothing-first sorted), then accessories; jewellery collapses into one "stack"
+  // tile when there are 2+ so it doesn't overrun the grid. Equal sizing is what
+  // gives clean alignment with no ragged whitespace — emphasis comes from order +
+  // the brass caption, not size.
+  const GARMENT_CATS = new Set(['Dresses', 'Tops', 'Bottoms', 'Outerwear', 'Sportswear', 'Swimwear']);
+  const imgOf = (it) => it?.images?.[0] || it?.imageUrl || null;
+  const allJewels = briefItems.filter(it => it.category === 'Jewellery');
+  const stackJewels = allJewels.length >= 2 ? allJewels : [];
+  const lookTiles = [
+    ...briefItems.filter(it => it.category !== 'Jewellery'),
+    ...(stackJewels.length ? [{ __stack: true, id: 'jewel-stack', items: stackJewels }] : (allJewels.length === 1 ? allJewels : [])),
+  ].slice(0, 8);
+
+  const conf = brief.confidence;
+
+  // A short, honest lead line from data we already hold — the dense rationale
+  // moves behind "Why this".
+  const leadLine = weather
+    ? `A considered look for ${weather.temp}°, ${weatherLabel(weather.code, weather.precipProb)}${season ? ` · ${season.toLowerCase()}` : ''}.`
+    : 'A considered look for today.';
+
+  // Slim "on today" footer — ties the brief to the day's most demanding event.
+  const leadEvent = (calendarEvents || [])[0] || null;
+  const eventTime = leadEvent && !leadEvent.allDay
+    ? new Date(leadEvent.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : leadEvent ? 'All day' : null;
+
+  const openBrief = () => onOpenOutfit?.(brief);
+
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
     if (wearState !== 'idle') return; // already in flight or done — block double-tap
+    haptic('tap');
     setWearState('wearing');
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
@@ -299,6 +350,7 @@ function DailyBriefCard({
       if (onSaveOutfit) await onSaveOutfit(outfit);
       if (onLogOutfitWear) await onLogOutfitWear(outfit, todayISO(), '');
       setWearState('done');
+      haptic('success');
       toast?.show?.(`Logged today's wear · ${briefItems.length} pieces`, { kind: 'success' });
       // Slight delay so the user sees confirmation before the card disappears
       setTimeout(() => {
@@ -307,6 +359,7 @@ function DailyBriefCard({
       }, 700);
     } catch (err) {
       setWearState('idle');
+      haptic('error');
       toast?.show?.(err?.message || 'Could not log wear.', { kind: 'error' });
     }
   };
@@ -314,6 +367,7 @@ function DailyBriefCard({
   const handleSaveAsLook = async () => {
     if (!brief.itemIds?.length) return;
     if (saveState !== 'idle') return; // already saved (or saving) — prevent dupes
+    haptic('tap');
     setSaveState('saving');
     const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
@@ -328,65 +382,106 @@ function DailyBriefCard({
     try {
       if (onSaveOutfit) await onSaveOutfit(outfit);
       setSaveState('saved');
+      haptic('success');
       toast?.show?.('Saved to your Lookbook', { kind: 'success' });
     } catch (err) {
       setSaveState('idle');
+      haptic('error');
       toast?.show?.(err?.message || 'Could not save.', { kind: 'error' });
     }
   };
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-6">
-      <div className="flex items-baseline justify-between">
-        <p className="text-sm uppercase tracking-widest text-stone-500">The Daily Brief</p>
-        <p className="text-xs text-stone-400">{brief.confidence ?? '—'}% confidence</p>
-      </div>
-      <h3 className="mt-2 text-2xl font-serif text-stone-900">
-        Styled for today.
-      </h3>
-      <p className="mt-2 text-sm italic text-stone-700">{renderTextWithChips(brief.reasoning, { items, onOpenItem })}</p>
+    <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-8 smooth-shadow">
+      {/* Section headline only — the page header above already carries the
+          greeting + weather, so the card doesn't repeat an eyebrow or the
+          weather line (that read as duplication). */}
+      <h3 className="font-display text-2xl sm:text-3xl text-stone-900">Styled for today.</h3>
 
-      <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-5">
-        {briefItems.map(it => (
+      {/* The look — equal tiles on one aligned grid, clothing first, captioned,
+          LEFT-aligned with the headline. Flat tiles, object-cover (no seams). */}
+      <div className="mt-5 flex flex-wrap justify-start gap-x-4 gap-y-5">
+        {lookTiles.map((t, i) => {
+          const isStack = !!t.__stack;
+          const garment = !isStack && GARMENT_CATS.has(t.category);
+          const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={openBrief}
+              className="animate-in flex w-[clamp(116px,15vw,152px)] flex-col gap-2 text-left"
+              style={{ animationDelay: `${i * 60}ms` }}
+              aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
+            >
+              <div className="aspect-[3/4] overflow-hidden rounded-2xl bg-stone-100">
+                {isStack ? (
+                  <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-stone-200/50">
+                    {t.items.slice(0, 4).map((j) => (
+                      <div key={j.id} className="overflow-hidden bg-stone-100">
+                        {imgOf(j) ? <img src={imgOf(j)} alt={j.name} className="h-full w-full object-cover" /> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : imgOf(t) ? (
+                  <img src={imgOf(t)} alt={t.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
+                )}
+              </div>
+              <div>
+                <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
+                <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Stylist's note — cream panel (mirrors the marketing site): the narrative on
+          the left, the confidence figure on the right. */}
+      <div className="mt-7 flex flex-col gap-4 rounded-2xl bg-stone-50 p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
+        <Sparkles size={20} strokeWidth={1.4} className="hidden shrink-0 text-brass-500 sm:block" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">Stylist's note</p>
+          <p className="mt-1.5 text-sm italic leading-relaxed text-stone-700">{renderTextWithChips(brief.reasoning, { items, onOpenItem })}</p>
           <button
-            key={it.id}
-            type="button"
-            onClick={() => onOpenOutfit?.(brief)}
-            className="aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-50 hover:border-stone-400 transition-colors"
-            aria-label={`Open ${it.name} in Studio`}
+            onClick={() => setWhyOpen(o => !o)}
+            className="mt-4 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-stone-500 underline-offset-4 hover:text-stone-800"
           >
-            {(it.images?.[0] || it.imageUrl) ? (
-              <img src={it.images?.[0] || it.imageUrl} alt={it.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">{it.category}</div>
-            )}
+            <ChevronRight size={13} strokeWidth={1.5} className={`transition-transform ${whyOpen ? 'rotate-90' : ''}`} />
+            {whyOpen ? 'Hide details' : 'What the Concierge saw'}
           </button>
-        ))}
+          {whyOpen && (
+            <div className="animate-in mt-3">
+              <WhyThisPanel
+                weather={weather}
+                season={season}
+                styleProfile={measurements}
+                temperature={aiTemperature}
+                itemCount={items?.length ?? 0}
+                onEditPreferences={onEditPreferences}
+              />
+            </div>
+          )}
+        </div>
+        {conf != null && (
+          <div className="shrink-0 border-stone-200 sm:border-l sm:pl-6 sm:text-right">
+            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">Confidence</p>
+            <p className="mt-0.5 font-display text-3xl leading-none text-stone-900" style={{ fontFeatureSettings: '"onum" on' }}>
+              {conf}<span className="text-base text-stone-400">%</span>
+            </p>
+          </div>
+        )}
       </div>
 
-      <button
-        onClick={() => setWhyOpen(o => !o)}
-        className="mt-3 text-xs uppercase tracking-widest text-stone-500 underline-offset-4 hover:underline"
-      >
-        {whyOpen ? 'Hide reasoning' : 'Why this?'}
-      </button>
-      {whyOpen && (
-        <WhyThisPanel
-          weather={weather}
-          season={season}
-          styleProfile={measurements}
-          temperature={aiTemperature}
-          itemCount={items?.length ?? 0}
-          onEditPreferences={onEditPreferences}
-        />
-      )}
-
-      <div className="mt-4 flex flex-wrap gap-2">
+      {/* Actions */}
+      <div className="mt-6 flex flex-wrap gap-2.5">
         <button
           type="button"
           onClick={handleWearThis}
           disabled={wearState !== 'idle'}
-          className="rounded-full bg-stone-900 px-4 py-2 text-sm text-white hover:bg-stone-800 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="rounded-full bg-stone-900 px-5 py-2.5 text-sm text-white transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {wearState === 'wearing' ? 'Logging…' : wearState === 'done' ? '✓ Logged' : 'Wear this'}
         </button>
@@ -394,7 +489,7 @@ function DailyBriefCard({
           type="button"
           onClick={composeAnother}
           disabled={loading}
-          className="rounded-full border border-stone-300 px-4 py-2 text-sm hover:bg-stone-50 disabled:opacity-50"
+          className="rounded-full border border-stone-300 px-5 py-2.5 text-sm transition-colors hover:bg-stone-50 disabled:opacity-50"
         >
           {loading ? 'Composing…' : 'Compose another'}
         </button>
@@ -402,7 +497,7 @@ function DailyBriefCard({
           type="button"
           onClick={handleSaveAsLook}
           disabled={saveState !== 'idle'}
-          className={`rounded-full border px-4 py-2 text-sm transition-colors disabled:cursor-not-allowed ${
+          className={`rounded-full border px-5 py-2.5 text-sm transition-colors disabled:cursor-not-allowed ${
             saveState === 'saved'
               ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
               : 'border-stone-300 hover:bg-stone-50 disabled:opacity-60'
@@ -411,6 +506,18 @@ function DailyBriefCard({
           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? '✓ Saved to Lookbook' : 'Save as a Look'}
         </button>
       </div>
+
+      {/* On today — ties the brief to the day's calendar */}
+      {leadEvent && (
+        <div className="mt-5 flex flex-wrap items-center gap-2.5 border-t border-stone-100 pt-4">
+          <Calendar size={15} strokeWidth={1.5} className="text-brass-500" />
+          <span className="text-xs uppercase tracking-[0.16em] text-stone-400">On today</span>
+          <span className="text-sm text-stone-700">{eventTime} · {leadEvent.title}</span>
+          {calendarEvents.length > 1 && (
+            <span className="ml-auto text-[11px] text-stone-400">dressed for the day's most demanding moment</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -465,17 +572,17 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
   if (cards.length === 0) return null;
 
   return (
-    <div className="bg-white border border-stone-200/60 rounded-3xl p-4 sm:p-5 smooth-shadow">
-      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
-        <h3 className="font-display text-base sm:text-lg text-stone-900">Needs attention</h3>
-        <span className="text-[10px] tracking-widest uppercase text-stone-500">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
+    <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-7 smooth-shadow">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="font-display text-lg sm:text-xl text-stone-900">Needs attention</h3>
+        <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
       </div>
       <ul className="space-y-1">
         {cards.map((c, i) => {
           const Row = ({ icon, accent, title, sub, onClick }) => (
             <li>
               <button onClick={onClick}
-                className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100transition-colors">
+                className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
                 <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-stone-900 truncate">{title}</p>
@@ -559,21 +666,20 @@ export default function TodayView({ user, items, measurements, schedules, outfit
   }, [user]);
 
   const ownedAvailable = items.filter((it) => it.status === 'owned' && !it.deletedAt && it.condition !== 'in_wash' && it.condition !== 'damaged');
-  const weatherLabelStr = weather ? `${weather.temp}°` + (weather.precipProb != null ? ` · ${weatherLabel(weather.code, weather.precipProb)}` : '') : '';
+  const todayStandfirst = weather
+    ? `${weatherLabel(weather.code, weather.precipProb)} and ${weather.temp}° — your day, considered.`
+    : 'Your day, considered.';
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* Greeting + weather — weather sits beside the greeting, not stranded
-          across the full width. */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="brass-rule" aria-hidden="true"></span>
-        <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
-          {getGreeting()}{firstName(user) ? `, ${firstName(user)}` : ''}
-        </p>
-        {weatherSettled && weather && (
-          <span className="text-stone-400 text-[10px] sm:text-xs tracking-[0.2em] uppercase">· {weatherLabelStr}</span>
-        )}
-      </div>
+      {/* Editorial page header — uses the SAME shared component as Studio /
+          Lookbook, so the title sizing and eyebrow are identical across pages.
+          The greeting is the title; the weather rides the (small) standfirst. */}
+      <EditorialHeader
+        eyebrow="Today"
+        title={`${getGreeting()}${firstName(user) ? `, ${firstName(user)}` : ''}.`}
+        subtitle={todayStandfirst}
+      />
 
       {/* Daily Brief — the centrepiece */}
       <DailyBriefCard
@@ -604,23 +710,27 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         onEditPreferences={onEditPreferences}
       />
 
-      {/* Your week */}
-      <WeekStrip events={weekEvents} schedules={schedules} onSelectDay={onSelectCalendarDay} />
-
-      {/* Ask your stylist */}
+      {/* Ask your stylist — a slim concierge bar directly under the hero (it only
+          opens the stylist sidebar, so it's a line, not a panel). */}
       <ConciergePrompt events={weekEvents} onOpen={onOpenConcierge} />
 
-      {/* Daily digest — nudges (care-due, price drops, etc.) */}
-      <DailyDigest
-        items={items}
-        outfits={outfits}
-        schedules={schedules}
-        inspirations={inspirations}
-        onOpenItem={onItemClick}
-        onOpenOutfit={onOpenBrief}
-        onOpenInspiration={onOpenInspiration}
-        onOpenInspirationTab={onOpenInspirationTab}
-      />
+      {/* Two-up: the week ahead beside what needs attention — content-sized columns
+          rather than two ballooned full-width cards. Flex (not grid) so that if
+          "Needs attention" renders nothing, the week strip grows to full width
+          instead of leaving a dead column. */}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch [&>*]:min-w-0 lg:[&>*]:flex-1">
+        <WeekStrip events={weekEvents} schedules={schedules} onSelectDay={onSelectCalendarDay} />
+        <DailyDigest
+          items={items}
+          outfits={outfits}
+          schedules={schedules}
+          inspirations={inspirations}
+          onOpenItem={onItemClick}
+          onOpenOutfit={onOpenBrief}
+          onOpenInspiration={onOpenInspiration}
+          onOpenInspirationTab={onOpenInspirationTab}
+        />
+      </div>
     </div>
   );
 }

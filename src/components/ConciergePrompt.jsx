@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 // Picks a suggested question from the coming week's events. If an event exists
 // beyond today, suggest that weekday; else default to "today".
@@ -19,22 +19,26 @@ function suggestQuestion(events = []) {
   return { text: 'What should I wear today?', hint: 'Your stylist is one tap away' };
 }
 
+// A slim concierge command bar — this only opens the stylist sidebar, so it's a
+// single elegant line, not a full panel. The one deliberate dark accent on the
+// page; its brevity is the point (no ballooned whitespace).
 export default function ConciergePrompt({ events = [], onOpen }) {
   const { text, hint } = suggestQuestion(events);
   return (
     <button
       type="button"
       onClick={() => onOpen?.()}
-      className="w-full text-left bg-stone-900 rounded-2xl p-5 hover:bg-stone-800 transition-colors group"
+      className="group flex w-full items-center gap-4 rounded-2xl bg-stone-900 px-5 py-4 text-left transition-colors hover:bg-stone-800 sm:px-6"
     >
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles size={14} className="text-brass-300" strokeWidth={1.5} />
-        <span className="text-[10px] tracking-[0.28em] uppercase text-brass-300">Ask your stylist</span>
+      <Sparkles size={18} strokeWidth={1.4} className="shrink-0 text-brass-300" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] uppercase tracking-[0.22em] text-brass-300">Ask your stylist</p>
+        <p className="mt-0.5 truncate text-sm text-stone-100">
+          <span className="font-display italic">“{text}”</span>
+          <span className="text-stone-500"> · {hint}</span>
+        </p>
       </div>
-      <div className="inline-block bg-stone-800 group-hover:bg-stone-700 rounded-full px-4 py-2 text-stone-100 text-sm italic transition-colors">
-        “{text}”
-      </div>
-      <p className="text-stone-400 text-[11px] mt-3">{hint}</p>
+      <ArrowRight size={16} strokeWidth={1.5} className="shrink-0 text-stone-400 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
     </button>
   );
 }

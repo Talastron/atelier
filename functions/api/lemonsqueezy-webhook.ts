@@ -127,6 +127,8 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     variantId: String(attrs.variant_id ?? ''),
     currentPeriodEnd: attrs.renews_at ?? attrs.ends_at ?? new Date().toISOString(),
     cancelledAt: attrs.cancelled ? new Date().toISOString() : undefined,
+    // Only set while on trial; cleared automatically once it converts.
+    trialEndsAt: attrs.trial_ends_at ?? undefined,
   };
 
   try {

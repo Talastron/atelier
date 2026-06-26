@@ -9,6 +9,10 @@ export interface SubscriptionRecord {
   variantId: string;
   currentPeriodEnd: string;
   cancelledAt?: string;
+  // Present only while the subscription is in its free trial (Lemon Squeezy
+  // `trial_ends_at`). Lets the app show a trial countdown — status is
+  // normalised to 'active' during trial, so this is the only trial signal.
+  trialEndsAt?: string;
 }
 
 export async function upsertSubscription(
@@ -19,7 +23,7 @@ export async function upsertSubscription(
   const docPath = `projects/${projectId}/databases/(default)/documents/subscriptions/${sub.subscriptionId}`;
   const updateMask = [
     'userId', 'email', 'status', 'productId', 'variantId',
-    'currentPeriodEnd', 'cancelledAt', 'updatedAt',
+    'currentPeriodEnd', 'cancelledAt', 'trialEndsAt', 'updatedAt',
   ];
 
   const fields: Record<string, unknown> = {
@@ -32,6 +36,9 @@ export async function upsertSubscription(
     updatedAt: { timestampValue: new Date().toISOString() },
   };
   if (sub.cancelledAt) fields.cancelledAt = { timestampValue: sub.cancelledAt };
+  // trialEndsAt is in updateMask but omitted from fields when absent, so
+  // Firestore clears it the moment a trial converts to paid.
+  if (sub.trialEndsAt) fields.trialEndsAt = { timestampValue: sub.trialEndsAt };
 
   const url = `${FIRESTORE_BASE}/${docPath}?${
     updateMask.map((f) => `updateMask.fieldPaths=${f}`).join('&')
@@ -64,7 +71,7 @@ export async function upsertSubscriberAccess(
   const docPath = `projects/${projectId}/databases/(default)/documents/subscriberAccess/${sub.userId}`;
   const updateMask = [
     'subscriptionId', 'email', 'status',
-    'currentPeriodEnd', 'cancelledAt', 'updatedAt',
+    'currentPeriodEnd', 'cancelledAt', 'trialEndsAt', 'updatedAt',
   ];
 
   const fields: Record<string, unknown> = {
@@ -75,6 +82,9 @@ export async function upsertSubscriberAccess(
     updatedAt: { timestampValue: new Date().toISOString() },
   };
   if (sub.cancelledAt) fields.cancelledAt = { timestampValue: sub.cancelledAt };
+  // trialEndsAt is in updateMask but omitted from fields when absent, so
+  // Firestore clears it the moment a trial converts to paid.
+  if (sub.trialEndsAt) fields.trialEndsAt = { timestampValue: sub.trialEndsAt };
 
   const url = `${FIRESTORE_BASE}/${docPath}?${
     updateMask.map((f) => `updateMask.fieldPaths=${f}`).join('&')

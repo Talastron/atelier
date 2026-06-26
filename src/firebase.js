@@ -9,7 +9,10 @@ import {
   collection, doc, addDoc, setDoc, getDoc, serverTimestamp, increment,
   getCountFromServer,
 } from 'firebase/firestore';
-import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
+import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'firebase/ai';
+// Re-exported so AI feature code (src/lib/ai.js) can declare response schemas
+// without importing the Firebase SDK directly — keeps all SDK imports centralised here.
+export { Schema };
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const firebaseConfig = {
@@ -267,6 +270,16 @@ export async function isCalendarConnected(user) {
 export async function disconnectGoogleCalendar() {
   const fn = httpsCallable(calendarFns, 'disconnectCalendar');
   await fn();
+}
+
+// Permanent account deletion (GDPR). The callable (Admin SDK) recursively
+// deletes the user's Firestore subtree, Storage objects, integration secrets,
+// subscriber index, and the Auth account itself — work the client can't do.
+// Afterwards the local session is signed out so the app returns to sign-in.
+export async function deleteMyAccount() {
+  const fn = httpsCallable(calendarFns, 'deleteAccount');
+  await fn();
+  try { await signOutUser(); } catch { /* token already invalid — fine */ }
 }
 
 // ─── Gemini via Firebase AI Logic ────────────────────────────────────────
@@ -637,6 +650,10 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
       generationConfig: {
         temperature: opts.temperature ?? 0.7,
         ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
+        // A responseSchema locks the JSON shape (required fields, array types)
+        // so the model can't return a malformed or partial object. Requires
+        // JSON mode (responseMimeType above). Only passed by callers that opt in.
+        ...(opts.responseSchema ? { responseSchema: opts.responseSchema } : {}),
       },
     });
     const result = await model.generateContent(prompt);

@@ -2198,7 +2198,7 @@ function SignInScreen({ onSignIn }) {
   // before. justify-center on a min-h-screen flex broke on mobile when the
   // keyboard opened — content scrolled off-screen.
   return (
-    <div className="min-h-screen flex flex-col items-center bg-[#F7F5F2] px-6 py-12 sm:py-0 sm:justify-center font-sans">
+    <div className="relative min-h-screen flex flex-col items-center bg-[#F7F5F2] px-6 py-12 sm:py-0 sm:justify-center font-sans">
       <div className="mb-8"><AtelierMark size={88} /></div>
       <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier<span className="text-[#D4B378]">.</span></h1>
       <p className="text-stone-500 text-sm tracking-wide mb-10 text-center max-w-sm">
@@ -2268,6 +2268,12 @@ function SignInScreen({ onSignIn }) {
       )}
 
       {error && <p className="mt-6 text-xs text-red-700 max-w-sm text-center leading-relaxed">{error}</p>}
+
+      <p className="absolute bottom-6 inset-x-0 text-center text-[11px] tracking-wide text-stone-400">
+        <a href="https://myatelier.style/legal/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-stone-700 transition-colors">Privacy</a>
+        <span className="mx-2" aria-hidden="true">·</span>
+        <a href="https://myatelier.style/legal/terms" target="_blank" rel="noopener noreferrer" className="hover:text-stone-700 transition-colors">Terms</a>
+      </p>
     </div>
   );
 }

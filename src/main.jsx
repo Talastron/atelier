@@ -3,7 +3,15 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.jsx';
 import MagicLinkComplete from './MagicLinkComplete.jsx';
+import ErrorBoundary from './ErrorBoundary.jsx';
 import { auth, isSignInWithEmailLink, isDemoMode } from './firebase.js';
+
+// Catch stray promise rejections that never reach a try/catch (e.g. a Firestore
+// write that fails with no .catch). Without this they vanish silently; here we
+// at least log them so production issues leave a trace.
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[unhandledrejection]', e.reason);
+});
 
 // Mobile viewport fix: pin --app-vh to the actual visible pixel height so
 // position:fixed bottom-anchored elements (bottom nav) sit above iOS Safari's
@@ -33,6 +41,8 @@ const isMagicLink = !isDemoMode && isSignInWithEmailLink(auth, window.location.h
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {isMagicLink ? <MagicLinkComplete /> : <App />}
+    <ErrorBoundary>
+      {isMagicLink ? <MagicLinkComplete /> : <App />}
+    </ErrorBoundary>
   </StrictMode>
 );

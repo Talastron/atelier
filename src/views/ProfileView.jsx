@@ -4,7 +4,7 @@ import { classifyBodyShape, itemImages, summariseStyleProfile, todayISO, live } 
 import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
-import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser } from "../firebase.js";
+import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser, deleteMyAccount } from "../firebase.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
@@ -385,6 +385,23 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
   const profileToast = useToast();
   const [calConnected, setCalConnected] = useState(null);
   const [calBusy, setCalBusy] = useState(false);
+
+  // Permanent account deletion (GDPR). Guarded by a type-your-email modal.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const runDeleteAccount = async () => {
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      await deleteMyAccount(); // signs out on success → this view unmounts
+    } catch (e) {
+      setDeleteError(e?.message || 'Could not delete your account. Please try again.');
+      setDeleteBusy(false);
+    }
+  };
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -765,7 +782,12 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
             Atelier is a private wardrobe. Your pieces, your wears, your photos — they live in your account, encrypted in transit and at rest. We do not sell, share, or train on your data.
           </p>
           <p className="text-stone-600 text-sm leading-relaxed mb-4">
-            The Concierge sees only what you've added; the model never receives your personal details beyond the wardrobe and notes you've written. You can export your full wardrobe any time from Backup below, and delete your account permanently from Settings — deletions are immediate and irrecoverable, we keep no archive.
+            The Concierge sees only what you've added; the model never receives your personal details beyond the wardrobe and notes you've written. You can export your full wardrobe any time from Backup below, and delete your account permanently from the Delete account section below — deletions are immediate and irrecoverable, we keep no archive.
+          </p>
+          <p className="text-sm">
+            <a href="https://myatelier.style/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-stone-700 underline underline-offset-2 hover:text-stone-900 transition-colors">Privacy Policy</a>
+            <span className="text-stone-300 mx-2" aria-hidden="true">·</span>
+            <a href="https://myatelier.style/legal/terms" target="_blank" rel="noopener noreferrer" className="text-stone-700 underline underline-offset-2 hover:text-stone-900 transition-colors">Terms of Service</a>
           </p>
           {founderCount !== null && (
             <div className="mt-7 pt-6 border-t border-stone-200/80 flex items-center gap-3">
@@ -829,6 +851,64 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Danger zone — permanent account deletion (GDPR right-to-erasure). */}
+      <div id="profile-delete" className="scroll-mt-24 rounded-[2rem] border border-red-200 bg-red-50/50 p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="brass-rule shrink-0" aria-hidden="true"></span>
+          <h3 className="font-display text-xl md:text-2xl text-red-800">Delete account</h3>
+        </div>
+        <p className="text-stone-600 text-sm leading-relaxed max-w-xl">
+          Permanently erase your account and everything in it — items, photos, outfits, measurements, and history. Immediate and irreversible; we keep no archive.
+        </p>
+        {subStatus?.kind === 'subscriber' && (
+          <p className="mt-3 text-xs leading-relaxed text-red-700 flex items-start gap-2 max-w-xl">
+            <AlertCircle size={14} strokeWidth={1.5} className="shrink-0 mt-0.5" />
+            You have an active subscription. Cancel it first under Account → Membership so you aren't billed again — deleting here does not stop billing.
+          </p>
+        )}
+        <button
+          onClick={() => { setDeleteText(''); setDeleteError(null); setDeleteOpen(true); }}
+          className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-red-300 text-red-700 text-sm font-medium hover:bg-red-600 hover:text-white hover:border-red-600 transition-colors"
+        >
+          <X size={15} strokeWidth={2} /> Delete my account
+        </button>
+      </div>
+
+      {deleteOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-stone-900/70 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] max-w-md w-full p-7 md:p-8 shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <AlertCircle size={20} strokeWidth={1.5} className="text-red-600" />
+              <h3 className="font-display text-2xl text-stone-900">Delete your account?</h3>
+            </div>
+            <p className="text-stone-600 text-sm leading-relaxed mb-5">
+              This erases everything permanently and cannot be undone. To confirm, type your email
+              <span className="font-medium text-stone-900"> {user?.email}</span> below.
+            </p>
+            <input
+              type="email" autoFocus value={deleteText}
+              onChange={(e) => setDeleteText(e.target.value)}
+              placeholder={user?.email}
+              className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-red-500 outline-none transition-colors text-stone-900"
+            />
+            {deleteError && <p className="mt-3 text-sm text-red-700">{deleteError}</p>}
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button onClick={() => setDeleteOpen(false)} disabled={deleteBusy}
+                className="px-5 py-2.5 rounded-full text-stone-600 hover:text-stone-900 text-sm transition-colors disabled:opacity-50">
+                Cancel
+              </button>
+              <button
+                onClick={runDeleteAccount}
+                disabled={deleteBusy || deleteText.trim().toLowerCase() !== (user?.email || '').toLowerCase()}
+                className="px-6 py-2.5 rounded-full bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {deleteBusy ? 'Deleting…' : 'Delete forever'}
+              </button>
+            </div>
           </div>
         </div>
       )}

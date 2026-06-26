@@ -327,3 +327,56 @@ exports.disconnectCalendar = onCall(
     return { ok: true };
   }
 );
+
+// Permanent account deletion — GDPR right-to-erasure. Removes ALL of the user's
+// data (Firestore subtree, server-only integration secrets, subscriber index,
+// Storage objects) and the Firebase Auth account itself. Irreversible.
+//
+// Does NOT cancel a Lemon Squeezy subscription (that lives in the marketing
+// repo / LS and needs the LS API key we don't hold here) — the client warns
+// the user to cancel billing first. Order matters: data first (the
+// privacy-critical part), auth account last (once gone the client token dies).
+exports.deleteAccount = onCall(
+  { region: REGION },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError('unauthenticated', 'Sign in required.');
+    }
+
+    const db = admin.firestore();
+
+    // 1. Firestore — recursive delete of the private subtree + server-only
+    //    integration secrets, plus the subscriber-access index doc and any
+    //    subscription cache rows for this user. This is the load-bearing step.
+    try {
+      await db.recursiveDelete(db.doc(`users/${uid}`));
+      await db.recursiveDelete(db.doc(`integrationSecrets/${uid}`));
+      await db.doc(`subscriberAccess/${uid}`).delete();
+      const subs = await db.collection('subscriptions').where('userId', '==', uid).get();
+      await Promise.all(subs.docs.map((d) => d.ref.delete()));
+    } catch (err) {
+      logger.error('deleteAccount: Firestore delete failed', { uid, ...safeErr(err) });
+      throw new HttpsError('internal', 'Could not delete your data — nothing was removed. Please try again.');
+    }
+
+    // 2. Storage — every object under the user's prefix. Best-effort: a storage
+    //    failure must not strand a half-deleted account.
+    try {
+      await admin.storage().bucket().deleteFiles({ prefix: `users/${uid}/` });
+    } catch (err) {
+      logger.warn('deleteAccount: storage cleanup failed (continuing)', { uid, ...safeErr(err) });
+    }
+
+    // 3. Auth account — last, because it invalidates the caller's token.
+    try {
+      await admin.auth().deleteUser(uid);
+    } catch (err) {
+      logger.error('deleteAccount: auth deleteUser failed', { uid, ...safeErr(err) });
+      throw new HttpsError('internal', 'Your data was removed but the account record could not be deleted. Please contact support.');
+    }
+
+    logger.info('deleteAccount: account fully deleted', { uid });
+    return { ok: true };
+  }
+);

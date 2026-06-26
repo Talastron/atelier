@@ -7,17 +7,18 @@
 // Owners (sibylle, martin) bypass — they have permanent access via firestore
 // rules' isOwner() and don't have a /subscriberAccess doc.
 //
-// Schema of /subscriberAccess/{uid}:
+// Schema of /subscriberAccess/{uid} (authoritative source: the webhook in the
+// atelier-website monorepo, functions/lib/firestore.ts → upsertSubscriberAccess):
 //   {
-//     status: 'trialing' | 'active' | 'cancelled' | 'expired' | 'past_due',
-//     currentPeriodEnd: Timestamp,    // when the current paid period ends
-//     trialEndsAt?: Timestamp,        // present while status === 'trialing'
-//     plan?: 'monthly' | 'annual' | 'founding',
+//     status: 'active' | 'cancelled' | 'expired' | 'past_due' | 'paused',
+//     currentPeriodEnd: Timestamp,    // renewal date (= trial end while on trial)
+//     trialEndsAt?: Timestamp,        // present ONLY during the free trial
+//     cancelledAt?: Timestamp,
+//     subscriptionId, email, updatedAt,
 //   }
-//
-// If the schema in subscriberAccess is different from the above (the webhook
-// is authoritative — read it from the atelier-website repo's functions/
-// directory), adjust the field names here. The hook structure stays the same.
+// NOTE: Lemon Squeezy 'on_trial' is normalised to status:'active' by the
+// webhook — there is no 'trialing' status. A trial is detected purely by a
+// future `trialEndsAt`. There is currently no `plan` field on this doc.
 
 import { useEffect, useState } from 'react';
 import { db } from './firebase';
@@ -58,7 +59,11 @@ export function useSubscriptionStatus(user) {
         const periodEnd = data.currentPeriodEnd?.toDate?.() || null;
         const trialEnd = data.trialEndsAt?.toDate?.() || null;
         const now = new Date();
-        const isTrial = data.status === 'trialing';
+        // The webhook normalises Lemon Squeezy 'on_trial' to status:'active'
+        // and writes trial_ends_at, so a future trialEndsAt is the ONLY trial
+        // signal. Once the trial converts, the webhook clears the field and
+        // this flips to false on its own.
+        const isTrial = !!trialEnd && trialEnd.getTime() > now.getTime();
         const relevantEnd = isTrial ? trialEnd : periodEnd;
         setState({
           loading: false,

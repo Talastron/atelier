@@ -15,6 +15,7 @@
 - **The tail risk is now capped.** ✅ DONE (2026-06-26): the per-user AI cap was switched from 75/day to **500 calls/MONTH** (`src/firebase.js`, `USER_MONTHLY_CAP`). Worst-case AI cost per user is now ~£2/month instead of ~£9. Invisible to real users (a heavy "power" user runs ~300/month).
 - **✅ Paid Gemini tier — CONFIRMED.** The project is on the **Blaze** plan, billing account **"Talastron Ltd"**, and the Google Cloud billing report shows real Gemini ("AI spend") cost accruing (~£1.28 in June 2026). Real billing = paid tier = Google does **not** use prompts/photos to improve its models, so the privacy-policy claim holds. (The stale `// free tier` comment in `src/firebase.js` is just wrong wording.)
 - **Storage is cheap but architected oddly** — images are base64 **inside Firestore docs**, not Cloud Storage. Works fine now; it inflates read/egress costs at scale and is the one structural lever worth revisiting later.
+- **Real data (June 2026, ~1 week of owner testing):** the GCP bill was **£1.29, of which Gemini API was £1.26** — i.e. AI *is* the cost, infra is noise. A single day (June 22) was £0.575, almost certainly a **Closet Sweep bulk import** (each photo = one of the pricier *vision* calls). Takeaway: vision + bulk features (Closet Sweep, label scan, inspiration analysis) are the real cost drivers, and "a few clicks" of a bulk feature fan out into dozens–hundreds of calls. Steady-state per *typical* user is still small, but onboarding (bulk import) is a real one-time AI cost.
 
 ---
 

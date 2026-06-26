@@ -857,7 +857,7 @@ const FEATURES = [
     title: 'A wardrobe with a',
     titleEm: 'calendar.',
     description:
-      'Schedule outfits to days. Repeat what worked, vary what didn’t. The week ahead becomes a quiet act of editing.',
+      'Schedule outfits to days, and — if you choose — connect your Google Calendar so Atelier reads your upcoming events to suggest outfits suited to your day: a board meeting, a long lunch, a quiet day in. Read-only: we never edit, delete, or share anything on your calendar.',
     demo: <CalendarDemo />,
   },
 ];

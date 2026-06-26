@@ -5,6 +5,7 @@ import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } 
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose } from "../dailyBrief";
+import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
@@ -211,6 +212,7 @@ function DailyBriefCard({
   async function composeAnother() {
     setLoading(true);
     setError(null);
+    bumpRegen(); // counts re-rolls toward the gentle "save one you love" nudge
     try {
       const slot = nextSlotIndex(uid);
       const out = await onGenerateOutfit({
@@ -506,6 +508,12 @@ function DailyBriefCard({
           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? '✓ Saved to Lookbook' : 'Save as a Look'}
         </button>
       </div>
+
+      {softNudgeActive() && (
+        <p className="mt-3 text-xs italic text-stone-400">
+          You've composed a few looks today — when one feels right, save it to your Lookbook.
+        </p>
+      )}
 
       {/* On today — ties the brief to the day's calendar */}
       {leadEvent && (

@@ -352,13 +352,13 @@ function checkRateLimit() {
   const log = pruneCallLog(readCallLog(), now);
   if (log.length >= MAX_PER_DAY) {
     const retryAt = log[0] + DAY_MS;
-    throw new Error(`You've reached today's AI limit (${MAX_PER_DAY} calls). It resets in ${formatWait(retryAt - now)}.`);
+    throw new Error(`You've reached today's styling allowance — it refreshes in ${formatWait(retryAt - now)}.`);
   }
   const minuteAgo = now - MINUTE_MS;
   const inWindow = log.filter((t) => t > minuteAgo);
   if (inWindow.length >= MAX_PER_MINUTE) {
     const retryAt = inWindow[0] + MINUTE_MS;
-    throw new Error(`Slow down — Atelier paces AI calls to keep costs low. Try again in ${formatWait(retryAt - now)}.`);
+    throw new Error(`One moment — the Concierge is composing thoughtfully. Try again in ${formatWait(retryAt - now)}.`);
   }
 }
 function recordCall() {
@@ -457,7 +457,7 @@ function checkUserMonthlyCap() {
   }
   if (_userMonthlyCount === null) return; // not hydrated yet → fail open
   if (_userMonthlyCount >= USER_MONTHLY_CAP) {
-    throw new Error(`You've used this month's Concierge allocation (${USER_MONTHLY_CAP} compositions). It resets on the 1st.`);
+    throw new Error(`You've made the most of Atelier this month — your styling allowance refreshes on the 1st.`);
   }
 }
 

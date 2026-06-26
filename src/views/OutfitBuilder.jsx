@@ -9,6 +9,7 @@ import { MOOD_PRESETS, STYLES } from "../lib/taxonomy.js";
 import { colorsHarmonize, hexFromColorName } from "../lib/color.js";
 import { daysSinceLastWorn, itemColors, itemImages, itemSeasons, itemStyles, live, newId, resolveOutfitItems } from "../lib/items.js";
 import { generateOutfitWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini } from "../lib/ai.js";
+import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { isAIEnabled } from "../firebase.js";
 import { haptic } from "../lib/haptic.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
@@ -706,6 +707,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
   };
 
   const handleAIStyle = async (intentOverride = null, { refine = false } = {}) => {
+    bumpRegen(); // counts Studio composes toward the gentle session "save one" nudge
     setAiBusy(true); setAiNote(null); setAiTags([]);
     setAiStage(AI_STAGES[0]);
     // Cycle stage labels every 1.2s so the user sees forward motion
@@ -1051,6 +1053,11 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             <Sparkles size={14} strokeWidth={1.5} />
             {aiBusy ? 'Styling…' : isAIEnabled() ? 'Style with Concierge' : 'Concierge — setup'}
           </button>
+          {softNudgeActive() && (
+            <p className="text-center text-[11px] italic text-stone-400">
+              You've styled a few looks — save one you love to your Lookbook.
+            </p>
+          )}
           <div className="flex items-center justify-center gap-4 text-[11px] tracking-widest uppercase">
             <button onClick={handleQuickStyle} disabled={aiBusy || abComparing}
               className="text-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50 inline-flex items-center gap-1.5">

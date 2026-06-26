@@ -9,7 +9,6 @@ dist-ssr/
 .env.*.local
 .firebaserc
 .firebase/
-firestore.rules
 
 .DS_Store
 *.log

@@ -368,59 +368,62 @@ function recordCall() {
   writeCallLog(log);
 }
 
-// ─── Per-user daily Concierge cap ────────────────────────────────────────
-// Firestore-backed daily call count per signed-in user. Two reasons this
+// ─── Per-user monthly Concierge cap ──────────────────────────────────────
+// Firestore-backed MONTHLY call count per signed-in user. Two reasons this
 // matters more than the client-side localStorage limiter above:
 //
 //   1. Project-wide protection at multi-user scale. Firebase AI Logic
 //      quotas (RPM / RPD / TPM) are PROJECT-WIDE, not per-user. Without
 //      a per-user cap, a single user's runaway browser (or a deliberate
-//      abuser) can drain the project's RPD allocation, blocking AI for
-//      EVERY other user. This cap means each user's blast radius is
-//      capped at USER_DAILY_CAP — predictable, fair, billable.
+//      abuser) can drain the project's allocation, blocking AI for EVERY
+//      other user. Each user's blast radius is capped at USER_MONTHLY_CAP.
 //
-//   2. Unit economics. At ~£0.0016 per call blended Gemini 2.5 Flash
-//      pricing, USER_DAILY_CAP = 75 means worst-case £0.12/user/day,
-//      or ~£43/user/year. Well under the £79 founding-tier revenue
-//      after Lemon Squeezy fees + VAT. Without a cap, a power user
-//      doing 500+ calls/day could wipe their entire subscription
-//      margin in a single month.
+//   2. Unit economics. Even at a heavy ~$0.005/call (travel capsule /
+//      Concierge), USER_MONTHLY_CAP = 500 bounds worst-case AI cost at
+//      ~$2.50/user/month (~£2) — a comfortable fraction of the £12/mo
+//      subscription after Lemon Squeezy fees. A MONTHLY window (vs daily)
+//      is deliberate: it's invisible to real users — even a heavy "power"
+//      user runs ~300 calls/month — while still capping a scripted abuser.
+//      The per-minute / per-day browser limits above remain the burst guard.
 //
 // Hydrated once at auth-state-change from the existing aiUsageMonthly
-// rollup doc (which logAiUsage already writes). No extra Firestore
-// reads per AI call — count lives in module memory after first load,
-// kept in sync by local increments. Worst case after a fresh login the
-// in-memory count is stale by a few calls (if user had calls from
-// another session same day); that's acceptable slop.
-const USER_DAILY_CAP = 75;
-let _userDailyCount = null;        // null = not hydrated yet → fail-open
-let _userDailyCountDate = null;    // YYYY-MM-DD this count was scoped to
-let _userDailyCountUid = null;     // uid the count belongs to
+// rollup doc's `totalCalls` (which logAiUsage already increments). No extra
+// Firestore reads per AI call — the count lives in module memory after first
+// load, kept in sync by local increments.
+const USER_MONTHLY_CAP = 500;
+let _userMonthlyCount = null;       // null = not hydrated yet → fail-open
+let _userMonthlyCountMonth = null;  // YYYY-MM this count was scoped to
+let _userMonthlyCountUid = null;    // uid the count belongs to
 
+function utcMonthKey(d) {
+  // UTC month — matches the aiUsageMonthly doc id and Google's quota window.
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+// UTC calendar date (YYYY-MM-DD) for the byDay.{date} telemetry field in the
+// monthly rollup. The monthly cap reads totalCalls, not byDay — this is just
+// the per-day breakdown shown in Insights.
 function localISODate(d) {
-  // UTC date — matches what we write to byDay.{key} in the rollup, and
-  // matches Google's quota reset window (midnight UTC).
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
-async function loadUserDailyCount() {
+async function loadUserMonthlyCount() {
   const user = auth.currentUser;
-  if (!user?.uid) { _userDailyCount = 0; _userDailyCountUid = null; return; }
-  const today = localISODate(new Date());
-  const monthKey = today.slice(0, 7);
+  if (!user?.uid) { _userMonthlyCount = 0; _userMonthlyCountUid = null; return; }
+  const monthKey = utcMonthKey(new Date());
   try {
     const snap = await getDoc(doc(db, 'users', user.uid, 'aiUsageMonthly', monthKey));
     const data = snap.data() || {};
-    _userDailyCount = data.byDay?.[today] || 0;
-    _userDailyCountDate = today;
-    _userDailyCountUid = user.uid;
+    _userMonthlyCount = data.totalCalls || 0;
+    _userMonthlyCountMonth = monthKey;
+    _userMonthlyCountUid = user.uid;
   } catch (err) {
-    // Failed read (offline, rules, etc.) — fail open with 0 count so a
-    // logging glitch doesn't lock the user out entirely.
-    console.warn('[ai-cap] could not load daily count:', err?.message || err);
-    _userDailyCount = 0;
-    _userDailyCountDate = today;
-    _userDailyCountUid = user.uid;
+    // Failed read (offline, rules, etc.) — fail open with 0 so a logging
+    // glitch doesn't lock the user out entirely.
+    console.warn('[ai-cap] could not load monthly count:', err?.message || err);
+    _userMonthlyCount = 0;
+    _userMonthlyCountMonth = monthKey;
+    _userMonthlyCountUid = user.uid;
   }
 }
 
@@ -428,38 +431,38 @@ async function loadUserDailyCount() {
 // or switches accounts (incognito test pattern).
 onAuthStateChanged(auth, (user) => {
   if (!user) {
-    _userDailyCount = null;
-    _userDailyCountDate = null;
-    _userDailyCountUid = null;
+    _userMonthlyCount = null;
+    _userMonthlyCountMonth = null;
+    _userMonthlyCountUid = null;
     return;
   }
-  loadUserDailyCount();
+  loadUserMonthlyCount();
 });
 
-function checkUserDailyCap() {
+function checkUserMonthlyCap() {
   const user = auth.currentUser;
   if (!user?.uid) return; // demo / unsigned — fail open, client-side cap handles burst protection
-  // Roll over at UTC midnight without needing another Firestore read
-  const today = localISODate(new Date());
-  if (_userDailyCountDate && _userDailyCountDate !== today) {
-    _userDailyCount = 0;
-    _userDailyCountDate = today;
+  // Roll over at the UTC month boundary without needing another Firestore read
+  const monthKey = utcMonthKey(new Date());
+  if (_userMonthlyCountMonth && _userMonthlyCountMonth !== monthKey) {
+    _userMonthlyCount = 0;
+    _userMonthlyCountMonth = monthKey;
   }
   // Different user logged in than we hydrated — re-hydrate next call
-  if (_userDailyCountUid && _userDailyCountUid !== user.uid) {
-    _userDailyCount = null;
-    _userDailyCountUid = null;
-    loadUserDailyCount(); // fire-and-forget, fail open this call
+  if (_userMonthlyCountUid && _userMonthlyCountUid !== user.uid) {
+    _userMonthlyCount = null;
+    _userMonthlyCountUid = null;
+    loadUserMonthlyCount(); // fire-and-forget, fail open this call
     return;
   }
-  if (_userDailyCount === null) return; // not hydrated yet → fail open
-  if (_userDailyCount >= USER_DAILY_CAP) {
-    throw new Error(`You've used today's Concierge allocation (${USER_DAILY_CAP} compositions). It resets at midnight UTC.`);
+  if (_userMonthlyCount === null) return; // not hydrated yet → fail open
+  if (_userMonthlyCount >= USER_MONTHLY_CAP) {
+    throw new Error(`You've used this month's Concierge allocation (${USER_MONTHLY_CAP} compositions). It resets on the 1st.`);
   }
 }
 
 function recordUserCall() {
-  if (_userDailyCount !== null) _userDailyCount += 1;
+  if (_userMonthlyCount !== null) _userMonthlyCount += 1;
 }
 
 // ─── Friendly error mapping ──────────────────────────────────────────────
@@ -565,7 +568,9 @@ async function logAiUsage({ feature, model, hasVision, inputTokens, outputTokens
 
   const estCostUsd = computeAiCost(model, inputTokens, outputTokens);
   const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  // Same UTC key the monthly cap reads back, so writer and reader agree on the
+  // doc even across a month boundary in a non-UTC timezone.
+  const monthKey = utcMonthKey(now);
 
   try {
     // 1. Per-call detail doc
@@ -584,10 +589,9 @@ async function logAiUsage({ feature, model, hasVision, inputTokens, outputTokens
     //    FieldValue.increment at any nesting depth, so the byFeature map
     //    builds up correctly across calls.
     //
-    //    byDay.{YYYY-MM-DD} is also incremented — this is what the
-    //    per-user daily cap (checkUserDailyCap) reads back on hydration
-    //    after a fresh sign-in. Without this field the cap can't be
-    //    enforced across browser sessions.
+    //    byDay.{YYYY-MM-DD} is also incremented — per-day telemetry that
+    //    powers the Insights usage breakdown. (The monthly cap enforces off
+    //    totalCalls, hydrated once per session.)
     const todayKey = localISODate(now);
     await setDoc(
       doc(db, 'users', uid, 'aiUsageMonthly', monthKey),
@@ -641,7 +645,7 @@ function isConfigError(err) {
 // working; pass the real label to enable per-feature cost breakdown.
 export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
   checkRateLimit();      // per-browser burst limit
-  checkUserDailyCap();   // per-user daily cap (Firestore-backed)
+  checkUserMonthlyCap();   // per-user monthly cap (Firestore-backed)
   try {
     const modelName = opts.model || 'gemini-2.5-flash';
     const ai = getAiSafe();
@@ -698,7 +702,7 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
 // streaming UI without changing the call site signature).
 export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled', onChunk = null) {
   checkRateLimit();      // per-browser burst limit (same as geminiText)
-  checkUserDailyCap();   // per-user daily cap (same as geminiText)
+  checkUserMonthlyCap();   // per-user monthly cap (same as geminiText)
   try {
     const modelName = opts.model || 'gemini-2.5-flash';
     const ai = getAiSafe();
@@ -729,12 +733,32 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
         // structured output.
       },
     });
+    // Stall guard. The Firebase AI Logic streaming proxy can occasionally hang
+    // (no first token, or a mid-stream stall), which freezes the Concierge with
+    // no resolution. We race EACH step (open + every chunk + final response)
+    // against an idle timeout, so a genuine stall fails fast with a friendly
+    // error — while a long-but-healthy reply is never cut off (the timer resets
+    // on every chunk). `promise.catch(()=>{})` swallows any late rejection from
+    // a step we abandon, preventing an unhandled-rejection warning.
+    const stallMs = opts.stallTimeoutMs ?? 30000;
+    const raceStall = (promise, label) => {
+      promise.catch(() => {});
+      let timer;
+      const stall = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`stream-stall:${label}`)), stallMs);
+      });
+      return Promise.race([promise, stall]).finally(() => clearTimeout(timer));
+    };
+
     const t0 = performance.now();
     let tFirstChunk = 0;
-    const result = await model.generateContentStream(prompt);
+    const result = await raceStall(model.generateContentStream(prompt), 'open');
     let accumulated = '';
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
+    const iterator = result.stream[Symbol.asyncIterator]();
+    while (true) {
+      const { value: chunk, done } = await raceStall(iterator.next(), 'chunk');
+      if (done) break;
+      const text = chunk?.text?.() || '';
       if (!text) continue;
       if (!tFirstChunk) tFirstChunk = performance.now();
       accumulated += text;
@@ -752,7 +776,7 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
     const firstChunkMs = tFirstChunk ? Math.round(tFirstChunk - t0) : null;
     const totalMs = Math.round(tEnd - t0);
     // Stream complete. Resolve the final response for token counting.
-    const finalResponse = await result.response;
+    const finalResponse = await raceStall(result.response, 'response');
     recordCall();        // record only on successful API reach (matches geminiText pattern)
     recordUserCall();
 
@@ -769,6 +793,12 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
     });
     return accumulated;
   } catch (err) {
+    // A stall is a real API reach (record it so a stuck loop isn't "free"),
+    // surfaced as a friendly, actionable message rather than a raw error.
+    if (String(err?.message || '').startsWith('stream-stall')) {
+      recordCall();
+      throw new Error('The stylist is taking longer than usual — please try again.');
+    }
     if (!isConfigError(err)) recordCall();
     throw mapGeminiError(err);
   }
@@ -778,7 +808,7 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
 // `feature`: short identifier for usage tracking.
 export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature = 'unlabeled') {
   checkRateLimit();
-  checkUserDailyCap();
+  checkUserMonthlyCap();
   try {
     const ai = getAiSafe();
     const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -841,7 +871,7 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
 // to try grounded mode first and fall back here.
 export async function findProductListingFromPhoto(imageDataUrl, opts = {}, feature = 'find-listing') {
   checkRateLimit();
-  checkUserDailyCap();
+  checkUserMonthlyCap();
   try {
     const ai = getAiSafe();
     const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);

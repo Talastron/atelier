@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, createContext, useContext, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, createContext, useContext, useCallback, useRef, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
@@ -54,19 +54,19 @@ import { useToast, ToastProvider } from './ui/toast.jsx';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
 import Input from './ui/Input.jsx';
 import { SHOP_SEEDS } from './lib/seeds.js';
-import ShoppingDirectory from './views/ShoppingDirectory.jsx';
-import InspirationView from './views/InspirationView.jsx';
+const ShoppingDirectory = lazy(() => import('./views/ShoppingDirectory.jsx'));
+const InspirationView = lazy(() => import('./views/InspirationView.jsx'));
 import WhyThisPanel from './components/WhyThisPanel.jsx';
 import { renderTextWithChips } from './components/ItemChip.jsx';
 import TodayView from './views/TodayView.jsx';
-import DiaryView from './views/Calendar.jsx';
-import WardrobeView from './views/WardrobeView.jsx';
-import ProfileView from './views/ProfileView.jsx';
-import FinanceView from './views/FinanceView.jsx';
+const DiaryView = lazy(() => import('./views/Calendar.jsx'));
+const WardrobeView = lazy(() => import('./views/WardrobeView.jsx'));
+const ProfileView = lazy(() => import('./views/ProfileView.jsx'));
+const FinanceView = lazy(() => import('./views/FinanceView.jsx'));
 import { OUTFIT_SLOTS, SLOT_FILTER, itemFitsSlot, slotForItem, MULTI_SLOTS, isMultiSlot, slotItems, SLOT_CATEGORIES, emptyOutfit } from './lib/outfit.js';
 import AIProgressModal from './components/AIProgressModal.jsx';
 import { haptic } from './lib/haptic.js';
-import OutfitBuilder from './views/OutfitBuilder.jsx';
+const OutfitBuilder = lazy(() => import('./views/OutfitBuilder.jsx'));
 
 // Owners can invite/revoke other users. Must match the rules file exactly.
 // (The rules are the real security boundary — this is just so the UI knows
@@ -1452,6 +1452,11 @@ function DigitalWardrobe() {
                 // position:sticky for descendants (they end up scoped to this
                 // wrapper instead of the main scroll ancestor). Fade-in only.
                 <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
+                  {/* Lazy-loaded views: each non-home view is a separate chunk
+                      fetched on first navigation. Suspense shows a brief loader
+                      while a view's chunk downloads (once, then cached). Today
+                      stays eager so the home screen paints instantly. */}
+                  <Suspense fallback={<div className="flex items-center justify-center py-32"><div className="w-8 h-8 rounded-full border-2 border-stone-200 border-t-stone-900 animate-spin" /></div>}>
                   {activeTab === 'today' && (
                     <TodayView
                       user={user}
@@ -1583,6 +1588,7 @@ function DigitalWardrobe() {
                       onJumpToWishlist={() => jumpToWardrobe({ filter: 'wishlist' })}
                     />
                   )}
+                  </Suspense>
                 </div>
               )}
             </div>

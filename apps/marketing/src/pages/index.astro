@@ -50,6 +50,43 @@ const softwareLd = {
     {/* ── Hero ──────────────────────────────────────────────────────── */}
     <Hero client:load />
 
+    {/* ── What Atelier does — plain-language purpose + Google Calendar use.
+        Deliberately explicit (not editorial): Google OAuth verification
+        requires the homepage to clearly describe the app's functionality AND
+        explain why it accesses Google user data (the Calendar scope). ── */}
+    <section
+      id="what-atelier-does"
+      style="background: var(--atelier-cream); padding-block: clamp(3rem, 6vw, 5rem); padding-inline: var(--atelier-page-padding); border-top: 1px solid rgba(212, 179, 120, 0.18);"
+    >
+      <div class="mx-auto" style="max-width: 760px;">
+        <div class="flex items-center gap-3 mb-5">
+          <BrassRule client:load />
+          <p class="text-[10px] uppercase font-medium" style="letter-spacing: 0.28em; color: var(--atelier-brass-600);">
+            What Atelier does
+          </p>
+        </div>
+        <h2
+          style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.12; color: var(--atelier-stone-900); letter-spacing: -0.01em; margin-bottom: 1.5rem;"
+        >
+          A digital wardrobe with an AI stylist.
+        </h2>
+        <p style="font-size: 1.0625rem; line-height: 1.7; color: var(--atelier-stone-700); margin-bottom: 1.25rem;">
+          Atelier is a personal styling app. You catalogue the clothes you already own —
+          by photographing pieces or importing them — and log what you wear. An AI stylist
+          (the Concierge) then composes head-to-toe outfits from <em>your own</em> wardrobe,
+          plans your week, helps you pack for trips, and shows you the cost-per-wear of every piece.
+        </p>
+        <p style="font-size: 1.0625rem; line-height: 1.7; color: var(--atelier-stone-700);">
+          <strong>Google Calendar connection (optional).</strong> If you choose to connect your
+          Google Calendar, Atelier reads your upcoming events — <strong>read-only</strong> — to
+          suggest outfits suited to your day: a tailored look for a board meeting, relaxed pieces
+          for a long lunch. We never create, edit, delete, store, or share your calendar data, and
+          you can disconnect at any time. See our
+          <a href="/legal/privacy/" style="color: var(--atelier-brass-600); text-decoration: underline;">Privacy Policy</a>.
+        </p>
+      </div>
+    </section>
+
     {/* ── Section 2: Meet the Concierge ─────────────────────────────── */}
     <section
       style="background: var(--atelier-stone-50); min-height: 100vh; display: flex; align-items: center; padding-block: clamp(3rem, 6vw, 5rem); padding-inline: var(--atelier-page-padding);"

@@ -1637,9 +1637,10 @@ function DigitalWardrobe() {
           </button>
 
           {/* MOBILE MORE BUTTON — second floating pill below the Profile button,
-              reveals Insights / Directory which have no bottom-nav slot.
-              Same visual treatment: stone-900/85 + backdrop-blur, hides when
-              the user scrolls down (matches Profile button behaviour). */}
+              reveals the destinations with no bottom-nav slot: Lookbook,
+              Insights, Inspiration, Directory. (Styling Studio is now a primary
+              bottom-bar tab.) Same visual treatment: stone-900/85 + backdrop-blur,
+              hides when the user scrolls down (matches Profile button behaviour). */}
           <button
             type="button"
             aria-label="More destinations"
@@ -1664,6 +1665,8 @@ function DigitalWardrobe() {
                 onClick={(e) => e.stopPropagation()}
               >
                 {[
+                  { id: 'lookbook', label: 'Lookbook', icon: BookOpen },
+                  { id: 'finance', label: 'Insights', icon: PoundSterling },
                   { id: 'inspiration', label: 'Inspiration', icon: Bookmark },
                   { id: 'shops', label: 'Directory', icon: Store },
                 ].map(({ id, label, icon: Icon }) => (

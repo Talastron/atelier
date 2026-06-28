@@ -4,11 +4,17 @@ _Last updated: 2026-06-28_
 
 ## Context (the constraints this strategy is built for)
 
-- **Stage:** Pre-launch (~0 external users; product built, payments wired via Lemon Squeezy, free trial live).
+- **Stage:** **Launched but undiscovered** — the product is fully live, not pre-launch in the build sense. Live and working today at [myatelier.style](https://myatelier.style): marketing site, Studio (`edit.myatelier.style`), 14-day trial, Lemon Squeezy checkout, the Founding Member offer, and a Journal with ~8–9 published essays. What's missing is **demand** (~0 external users; no GTM motion has driven traffic yet). So the entire job is top-of-funnel + conversion, NOT building. **There is no payments/approval blocker — drive traffic straight to the 14-day trial.**
 - **Beachhead audience:** Affluent style enthusiasts — women ~32–55 with real disposable fashion budgets who treat style as identity, not utility.
 - **Budget:** Bootstrapped / organic (~£0–200/mo). Success = first paying subscribers via content, community, and founder-led effort.
 - **Geography:** Global, no hard preference (£ pricing, UK-anchored).
 - **Founder commitment:** Fully founder-led (on-camera + writing in public).
+
+### Live assets & the gaps that matter
+- **Marketing site** (About, Journal, Pricing, Privacy, Sign In) — exists. Hero currently leads with the AI-stylist angle (Wedge A); the Style DNA / Manifesto wedge (C) should be made more prominent as the shareable hook.
+- **Journal** — ~8–9 on-brand essays (ON COLOUR, ON VALUE, ON SELF-KNOWLEDGE, ON THE SELF, ON TRAVEL, ON ENDURANCE…), meditative voice, ~1/month. **GAP: no email capture and no visible distribution on any essay.** This is the #1 fixable leak — demand-gen content with no demand-capture.
+- **Founding Member offer** — live (first 100 at £79/yr for life, code `KYMDE3NG`) but invisible: no traffic hitting it, no scarcity surfacing ("X of 100 claimed").
+- **Studio** — live; the place the Style DNA share card now lives.
 
 ## The strategic bet
 
@@ -29,12 +35,17 @@ Woman, ~32–55, buys £150+ pieces without flinching. Thinks in taste and ident
 
 **Copy test:** write to one such woman. If a 19-year-old fast-fashion shopper would also nod, it's off-target.
 
-## 3. Pricing & packaging
+## 3. Pricing & packaging — ALREADY LIVE (validated)
 
-- **One simple paid tier.** Free **trial → paid**. No free/pro matrix pre-launch (it splits a tiny funnel).
-- **Annual-forward.** Suggest monthly ~£8–10 _or_ annual ~£70–80 (annual clearly better). Anchor: "less than one impulse top a year." _Validate exact number; structure matters more._
-- **Founding Member offer** (pre-launch weapon): first ~100–250 subscribers lock a permanent discount + a "Founding Member" badge + invite passes to give away. Scarcity + status + referral in one move.
-- **Referral rails already exist:** `subscriptionStatus.js` handles an `'invited'` path (`isInvited` rule) — friends get access without a `/subscriberAccess` doc. Invite-passes can ship on existing rails.
+Current live pricing on [/pricing](https://myatelier.style/pricing) — it matches what this strategy would have recommended, so **no change needed**:
+- **Monthly:** £12/mo, no commitment.
+- **Annual:** £108/yr (≈£9/mo, 25% saving) — the annual-forward anchor.
+- **Founding Members:** first 100 at **£79/yr locked for life** (code `KYMDE3NG`).
+- **14-day free trial** on all tiers, cancellable anytime.
+
+Refinements (tactics, not price changes):
+- **Surface the Founding scarcity.** Add a live "X of 100 claimed" / countdown wherever the offer appears — scarcity only works if it's visible and credibly running down.
+- **Give Founding Members invite passes.** `subscriptionStatus.js` already handles an `'invited'` path (`isInvited` rule) — friends get access without a `/subscriberAccess` doc, so invite-passes ship on existing rails. Highest-converting acquisition channel for a premium product.
 
 ## 4. The growth engine — the shareable-artifact loop
 
@@ -64,11 +75,15 @@ Artifacts ranked by shareability:
 - **Creator gifting (not paying)** — free Founding Member access + invites to ~15–30 mid-tier (10k–80k) quiet-luxury/capsule creators. Genuine, no contract.
 - **Communities** — r/femalefashionadvice, r/capsulewardrobe, capsule Facebook groups, niche Discords. Show up helpful, never spam.
 
-## 6. Pre-launch (current focus)
+## 6. Current focus — plug the leaks, then drive traffic
 
-- **Waitlist landing page** with the Wedge-C promise + email capture. Offer: "First 200 become Founding Members — locked price, badge, invites."
-- **Style DNA lead magnet** before signups open (mini quiz / "drop your 5 most-worn pieces → palette read") that outputs a shareable card. Seeds the loop pre-launch.
-- **Build in public from today** — the road-to-launch story *is* content and earns the first few hundred followers who become the launch cohort.
+The product is live, so there is **no waitlist** — the funnel is: traffic → site/Journal → **14-day trial** → paid. Fix the conversion path first, then pour traffic in.
+
+- **Add email capture to the Journal and every essay** (#1 fix). A quiet, on-brand "subscribe to the Journal" + a soft "see your own Style DNA → start your trial" CTA at the end of each piece. Stops the leak before spending on traffic.
+- **Distribute the existing Journal essays.** Each one is already written — turn each into 3–5 Pinterest pins + a short-form video + a social thread. The content exists; it just isn't reaching anyone.
+- **Surface the Founding Member scarcity** on the site ("X of 100 founding keys claimed").
+- **Make the Style DNA wedge visible on the site** — a sample Style DNA card on the landing/About page as the shareable hook, driving to trial.
+- **Build in public from today** — the founder story *is* content and earns the first few hundred followers who become the first trial cohort.
 
 ## 7. The 90-day plan
 
@@ -88,8 +103,8 @@ Artifacts ranked by shareability:
 ## 9. Metrics
 
 - **North Star:** weekly active wardrobes that logged a wear.
-- **Pre-launch:** waitlist size + waitlist→trial conversion.
-- **Funnel:** share/impression → waitlist → trial start → activated (generated a Style DNA) → paid → retained 30/90d.
+- **Top-of-funnel now:** Journal/site sessions, email captures, and traffic source (which essay/platform converts).
+- **Funnel:** share/impression → site/Journal visit → email capture OR **trial start** → activated (catalogued ~10 items + generated a Style DNA) → paid → retained 30/90d.
 - **Two numbers that decide everything:** trial→paid (target ≥25–30%) and **share rate** (% who export a Style DNA = the viral coefficient). If share rate is low, fix it before scaling effort.
 - **Credible 6-month outcome:** a few hundred to ~1,000 paying subscribers _if_ the share loop + one channel click. Slower than paid, but durable and profitable.
 

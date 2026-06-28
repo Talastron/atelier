@@ -44,11 +44,11 @@ _Companion to [atelier-gtm-strategy.md](./atelier-gtm-strategy.md) and [phase-1-
 
 | Day | Short-form video | Pinterest pins (3) | Newsletter |
 |---|---|---|---|
-| Mon | "We're almost open. Here's how to be first in." (CTA-forward) | Landing-page CTA pin · Founding Member offer · "be first" graphic | **#4 "We're opening — Founding Members first"** |
+| Mon | "It's live — here's how to start your 14 days." (CTA-forward) | Trial CTA pin · Founding Member offer · "begin curating" graphic | **#4 "It's open — Founding keys, while they last"** |
 | Tue | "Your wardrobe, finally worthy of itself." (brand film, the manifesto of the brand) | Hero brand pin · tagline graphic · editorial flat-lay | — |
 | Wed | "Reader Style DNA marathon" (UGC reel, social proof at volume) | Reader cards ×3 | — |
 | Thu | "Behind the build: the one feature I'm proudest of." (Concierge or Manifesto) | Feature deep-dive ×3 | — |
-| Fri | "Doors are open / list opens [date]. Founding Member price ends at 200." (launch / urgency) | Launch announcement ·  countdown · testimonial pin | — |
+| Fri | "Only [N] of 100 founding keys left at £79/yr for life." (scarcity / urgency) | Founding-key countdown · testimonial pin · trial CTA | — |
 
 ---
 

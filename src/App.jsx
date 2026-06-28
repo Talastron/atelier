@@ -1619,38 +1619,26 @@ function DigitalWardrobe() {
             </button>
           )}
 
-          {/* MOBILE PROFILE PILL — floating top-right. The Diary now lives
-              as a tab inside Lookbook (where it belongs conceptually —
-              outfits + when they were worn), so the matching top-left
-              pill is gone. Profile keeps its floating slot since it's
-              the only destination not represented in the bottom nav. */}
+          {/* MOBILE AVATAR — single top-right gateway to the Account sheet, which
+              holds the lower-frequency, "about you" destinations (Insights,
+              Inspiration, Directory, Profile, Sign out). Replaces the old pair of
+              cryptic pills (a ruler + a bar-chart) — the avatar is the universally
+              understood entry to "me & my data". Daily destinations live in the
+              bottom bar; Calendar folds into Today's week strip + Lookbook's Diary. */}
           <button
             type="button"
-            onClick={() => setActiveTab('profile')}
-            className={`lg:hidden fixed top-0 right-3 z-40 mt-3 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${activeTab === 'profile' ? 'ring-2 ring-brass-300' : ''} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
-            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
-            aria-label="Open profile"
-            aria-hidden={!atTop}
-            tabIndex={atTop ? 0 : -1}
-          >
-            <Ruler size={16} strokeWidth={1.75} />
-          </button>
-
-          {/* MOBILE MORE BUTTON — second floating pill below the Profile button,
-              reveals the destinations with no bottom-nav slot: Lookbook,
-              Insights, Inspiration, Directory. (Styling Studio is now a primary
-              bottom-bar tab.) Same visual treatment: stone-900/85 + backdrop-blur,
-              hides when the user scrolls down (matches Profile button behaviour). */}
-          <button
-            type="button"
-            aria-label="More destinations"
             onClick={() => setMobileMoreOpen(true)}
-            className={`lg:hidden fixed top-0 right-3 z-40 w-10 h-10 rounded-full bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
-            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 3.75rem)' }}
+            className={`lg:hidden fixed top-0 right-3 z-40 mt-3 w-10 h-10 rounded-full overflow-hidden bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${['profile','finance','inspiration','shops'].includes(activeTab) ? 'ring-2 ring-brass-300' : ''} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+            style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
+            aria-label="Account & more"
             aria-hidden={!atTop}
             tabIndex={atTop ? 0 : -1}
           >
-            <BarChart3 size={16} strokeWidth={1.75} />
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="font-display text-sm">{(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}</span>
+            )}
           </button>
 
           {mobileMoreOpen && (
@@ -1660,15 +1648,34 @@ function DigitalWardrobe() {
             >
               <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-sm" />
               <div
-                className="absolute right-3 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200"
-                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 7rem)' }}
+                className="absolute right-3 bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 min-w-[248px] animate-in fade-in slide-in-from-top-2 duration-200"
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}
                 onClick={(e) => e.stopPropagation()}
               >
+                {/* Account header — tap to open Profile */}
+                <button
+                  type="button"
+                  onClick={() => { setMobileMoreOpen(false); setActiveTab('profile'); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-stone-50 transition-colors"
+                >
+                  {user?.photoURL ? (
+                    <img src={user.photoURL} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-sm shrink-0">
+                      {(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
+                    <p className="text-[11px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
+                  </div>
+                </button>
+                <div className="my-1 border-t border-stone-100" />
                 {[
-                  { id: 'lookbook', label: 'Lookbook', icon: BookOpen },
                   { id: 'finance', label: 'Insights', icon: PoundSterling },
                   { id: 'inspiration', label: 'Inspiration', icon: Bookmark },
                   { id: 'shops', label: 'Directory', icon: Store },
+                  { id: 'profile', label: 'Profile & measurements', icon: Ruler },
                 ].map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
@@ -1680,6 +1687,15 @@ function DigitalWardrobe() {
                     <span className="text-sm tracking-wide">{label}</span>
                   </button>
                 ))}
+                <div className="my-1 border-t border-stone-100" />
+                <button
+                  type="button"
+                  onClick={() => { setMobileMoreOpen(false); signOutUser(); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-stone-400 hover:bg-stone-50 hover:text-stone-700 transition-colors"
+                >
+                  <LogOut size={15} strokeWidth={1.5} />
+                  <span className="text-[11px] tracking-widest uppercase">Sign out</span>
+                </button>
               </div>
             </div>
           )}
@@ -7823,9 +7839,6 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                       <Camera size={22} strokeWidth={1.5} />
                       <span className="text-[10px] tracking-widest uppercase">{photoBusy ? 'Adding…' : 'Add photo'}</span>
                     </div>
-                    <p className="text-[10px] text-stone-400 mt-1.5 tracking-wider">
-                      {logDate === todayISO() ? 'For today' : `For ${new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
-                    </p>
                     <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={(e) => handleAddWornPhoto(e, logDate)} />
                   </label>
                 )}

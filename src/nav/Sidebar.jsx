@@ -28,7 +28,7 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
 
 export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user, demoMode, signOutUser, setInspirationDefaultFilter }) {
   return (
-    <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full overflow-y-auto hide-scrollbar" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+    <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
       {/* Logo block height + this margin is tuned so the first nav pill
           (Wardrobe) sits at the same Y as the search bar in the main
           column. Math: main scroll-container has the page header
@@ -50,7 +50,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
           Studio
         </p>
       </div>
-      <nav className="space-y-2 flex-1">
+      <nav className="space-y-2 flex-1 min-h-0 overflow-y-auto hide-scrollbar">
         {/* THE CONCIERGE — flagship AI feature, sits at the top of
             the sidebar as the most luxurious entry point. Not a
             destination tab (it's an overlay), so we use a plain
@@ -73,14 +73,19 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
         <DesktopNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
 
-        {/* Secondary — quieter, below a hairline */}
-        <div className="border-t border-stone-200/60 my-3" aria-hidden="true"></div>
+        {/* Secondary — grouped under an "Account" eyebrow (mirrors the "Studio"
+            eyebrow above), so the supporting destinations read as one zone — the
+            desktop echo of mobile's avatar → Account sheet. */}
+        <div className="flex items-center gap-3 mt-6 mb-3 px-1">
+          <span className="brass-rule" aria-hidden="true"></span>
+          <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">Account</p>
+        </div>
         <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
         <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="shops" icon={Store} label="Directory" activeTab={activeTab} setTab={setActiveTab} />
       </nav>
 
-      <div className="border-t border-stone-200/60 pt-5 mt-6">
+      <div className="shrink-0 border-t border-stone-200/60 pt-5 mt-6">
         <button onClick={() => setActiveTab('profile')}
           // Same hover language as nav items: stone-200/70 on the
           // #F7F5F2 sidebar (stone-100 was invisible against #F7F5F2).

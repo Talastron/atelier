@@ -1755,8 +1755,8 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                   </button>
                 )}
                 {outfits.length > 5 && (
-                  <div className="mb-6 flex items-start justify-between gap-3 flex-wrap">
-                    <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                  <div className="mb-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex flex-wrap gap-1.5 sm:flex-1 sm:min-w-0">
                       <button
                         type="button"
                         onClick={() => setActiveTagFilter(null)}
@@ -1783,7 +1783,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         </button>
                       ))}
                     </div>
-                    <div className="shrink-0">
+                    <div className="shrink-0 self-end sm:self-auto">
                       <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value)}

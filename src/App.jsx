@@ -6982,6 +6982,9 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [editingTags, setEditingTags] = useState(false);
   const [newTag, setNewTag] = useState('');
   const [wearLogExpanded, setWearLogExpanded] = useState(false);
+  // After "I wore this", remember the logged date so we can offer an inline
+  // "add a photo of this wear?" prompt — capture in the same breath as logging.
+  const [justLoggedDate, setJustLoggedDate] = useState(null);
   const [paletteFilter, setPaletteFilter] = useState(null); // colour name or null
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
@@ -7032,29 +7035,33 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
   })() : null;
 
-  const handleAddWornPhoto = async (e) => {
+  const handleAddWornPhoto = async (e, dateISO) => {
     const file = e.target.files?.[0];
+    if (e.target) e.target.value = ''; // reset so re-picking the same file fires onChange again
     if (!file || !onSaveOutfit) return;
     if (wornPhotos.length >= 6) { toast.show('6 photos max per look', { kind: 'error', eyebrow: 'LIMIT' }); return; }
     setPhotoBusy(true);
     try {
       const dataUrl = await compressImageToDataUrl(file, { maxWidth: 700, maxBytes: 80_000, enhance: false });
-      const today = todayISO();
+      // Attach to the wear's ACTUAL date (the selected log date, or a specific
+      // past wear) — not always "today". Otherwise a back-dated wear's photo
+      // files under the wrong day and won't pair with its wear-log entry.
+      const when = dateISO || todayISO();
       // Save the photo immediately so the UI updates fast; then narrate
       // in the background and patch the caption in once Gemini responds.
       // If narration fails, the photo just sits without a caption — no
       // error surfaced. AI is additive flavour, not a critical path.
-      const photoEntry = { date: today, image: dataUrl };
+      const photoEntry = { date: when, image: dataUrl };
       const next = [...wornPhotos, photoEntry];
       await onSaveOutfit({ ...outfit, wornPhotos: next });
+      setJustLoggedDate(null); // a photo answers the post-log prompt
       toast.show('Photo added', { kind: 'success', eyebrow: 'CAPTURED' });
       const itemNames = pieces.map((p) => p.name);
-      const sched = (typeof window !== 'undefined') ? null : null; // no schedule lookup in this scope
       const caption = await generateWearNarration({
         outfit,
         intent: outfit?.intent || '',
         eventName: '',
-        dateISO: today,
+        dateISO: when,
         itemNames,
       });
       if (caption) {
@@ -7677,6 +7684,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                               : `Logged for ${new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
                             { kind: 'success' }
                           );
+                          setJustLoggedDate(logDate); // offer the photo prompt for this wear
                           setLogVerdict(''); setLogOccasion(''); setLogDate(todayISO()); setWearLogExpanded(false);
                         } catch (err) {
                           toast.show(err?.message || 'Could not log wear', { kind: 'error' });
@@ -7746,6 +7754,24 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     </button>
                   </div>
                 )}
+
+                {/* Post-log prompt — capture a photo in the same moment as logging,
+                    attached to the wear's actual date. */}
+                {justLoggedDate && wornPhotos.length < 6 && (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brass-200 bg-brass-50/60 p-3 animate-in fade-in duration-200">
+                    <span className="flex items-center gap-2 min-w-0 text-xs text-stone-700">
+                      <Check size={14} strokeWidth={2} className="shrink-0 text-emerald-600" />
+                      Logged{justLoggedDate === todayISO() ? ' for today' : ` for ${new Date(justLoggedDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}. Add a photo of this wear?
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-stone-900 px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-white transition-colors hover:bg-stone-700">
+                        <Camera size={13} strokeWidth={1.5} /> {photoBusy ? 'Adding…' : 'Add photo'}
+                        <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={(e) => handleAddWornPhoto(e, justLoggedDate)} />
+                      </label>
+                      <button type="button" onClick={() => setJustLoggedDate(null)} className="text-[10px] uppercase tracking-widest text-stone-400 transition-colors hover:text-stone-700">Not now</button>
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -7761,12 +7787,6 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     )}
                   </span>
                 </div>
-                {wornPhotos.length < 6 && (
-                  <label className="text-[10px] tracking-widests uppercase text-stone-500 hover:text-stone-900 cursor-pointer transition-colors duration-200">
-                    {photoBusy ? 'Adding…' : '＋ Add photo'}
-                    <input type="file" accept="image/*" onChange={handleAddWornPhoto} className="hidden" disabled={photoBusy} />
-                  </label>
-                )}
               </div>
               {/* Date chips for wears that don't have a corresponding photo.
                   Rendered above the photo strip so the user can see ALL
@@ -7777,10 +7797,10 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     .filter((w) => !wornPhotos.find((p) => p.date === w.date))
                     .slice(-8)
                     .map((w) => (
-                      <span
+                      <label
                         key={w.date}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 text-[10px] tracking-wide uppercase"
-                        title={w.occasion ? `${w.date} · ${w.occasion}` : w.date}
+                        className="inline-flex cursor-pointer items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 text-[10px] tracking-wide uppercase hover:border-stone-500 hover:text-stone-900 transition-colors"
+                        title={`Add a photo for ${w.occasion ? `${w.date} · ${w.occasion}` : w.date}`}
                       >
                         <Calendar size={10} strokeWidth={1.75} />
                         {(() => {
@@ -7788,28 +7808,43 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                           return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
                         })()}
                         {w.occasion && <span className="text-stone-400 normal-case tracking-normal">· {w.occasion}</span>}
-                      </span>
+                        <Camera size={10} strokeWidth={1.75} className="text-stone-400" />
+                        <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={(e) => handleAddWornPhoto(e, w.date)} />
+                      </label>
                     ))}
                 </div>
               )}
-              {wornPhotos.length === 0 && totalWears === 0 ? (
-                <p className="text-xs text-stone-400 italic">Snap a photo when you wear this look — track what actually got worn vs styled.</p>
-              ) : wornPhotos.length === 0 ? null : (
-                <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
-                  {wornPhotos.map((p, i) => (
-                    <div key={i} className="flex-none w-24 sm:w-28 group relative">
-                      <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 smooth-shadow">
-                        <img src={p.image} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                      </div>
-                      <p className="text-[10px] text-stone-500 mt-1.5 tracking-wider">
-                        {new Date(p.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </p>
-                      <button onClick={() => removeWornPhoto(i)} className="absolute top-1.5 right-1.5 p-1.5 bg-white/90 backdrop-blur text-stone-400 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
-                        <X size={11} strokeWidth={2} />
-                      </button>
+              <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+                {/* Discoverable capture: a camera tile leads the strip, tied to the
+                    selected log date so the photo files under the right day. */}
+                {wornPhotos.length < 6 && (
+                  <label className="group flex-none w-24 sm:w-28 cursor-pointer">
+                    <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 flex flex-col items-center justify-center gap-1.5 text-stone-400 group-hover:border-stone-500 group-hover:text-stone-700 transition-colors">
+                      <Camera size={22} strokeWidth={1.5} />
+                      <span className="text-[10px] tracking-widest uppercase">{photoBusy ? 'Adding…' : 'Add photo'}</span>
                     </div>
-                  ))}
-                </div>
+                    <p className="text-[10px] text-stone-400 mt-1.5 tracking-wider">
+                      {logDate === todayISO() ? 'For today' : `For ${new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}
+                    </p>
+                    <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={(e) => handleAddWornPhoto(e, logDate)} />
+                  </label>
+                )}
+                {wornPhotos.map((p, i) => (
+                  <div key={i} className="flex-none w-24 sm:w-28 group relative">
+                    <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 smooth-shadow">
+                      <img src={p.image} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                    </div>
+                    <p className="text-[10px] text-stone-500 mt-1.5 tracking-wider">
+                      {new Date(p.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </p>
+                    <button onClick={() => removeWornPhoto(i)} className="absolute top-1.5 right-1.5 p-1.5 bg-white/90 backdrop-blur text-stone-400 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
+                      <X size={11} strokeWidth={2} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {wornPhotos.length === 0 && (
+                <p className="mt-3 text-xs text-stone-400 italic">Snap a photo when you wear this look — your private record of what actually got worn.</p>
               )}
             </div>
           </div>

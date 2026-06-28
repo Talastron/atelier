@@ -70,6 +70,11 @@ export const ACCESSORY_MATERIALS = ['Leather', 'Suede', 'Silk', 'Wool', 'Cashmer
 // Bag materials — leather/canvas/nylon/raffia, not garment fabrics.
 export const BAG_MATERIALS = ['Leather', 'Suede', 'Canvas', 'Nylon', 'Raffia', 'Straw', 'Patent', 'Velvet', 'Synthetic', 'Other'];
 
+// Union of every category's materials — the vocabulary the AI identify/enrich
+// prompts offer, so a watch can come back "Yellow gold" and a tote "Raffia".
+// Validation still narrows to the item's own category via materialsForCategory.
+export const ALL_MATERIALS = [...new Set([...MATERIALS, ...JEWELLERY_MATERIALS, ...SHOE_MATERIALS, ...ACCESSORY_MATERIALS, ...BAG_MATERIALS])];
+
 // Categories that are never laundered or ironed — laundry care tags and the
 // wash/iron statuses don't apply. (Accessories are deliberately NOT here: the
 // category includes washable/ironable pieces like silk scarves and gloves.)

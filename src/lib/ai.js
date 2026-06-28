@@ -5,7 +5,7 @@ import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream, Schema } f
 import { itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
 import { weatherLabel } from "./weather.js";
 import { ensureClothingBase, hasClothingBase } from "./outfit.js";
-import { CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
+import { ALL_MATERIALS, CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
 
 // Locks the shape of a composed-outfit reply: all four fields required, with
 // the right types. Stops malformed/partial JSON at the source (fix A); the
@@ -193,7 +193,7 @@ CRITICAL CORRECTION — your previous attempt is INVALID: it returned a look wit
 // highest-leverage import path — one tap, one photo, form ready.
 export async function identifyItemWithGemini({ imageDataUrl, knownBrands = [] }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
-  const knownMaterials = MATERIALS.filter((m) => m !== 'Other').join(', ');
+  const knownMaterials = ALL_MATERIALS.filter((m) => m !== 'Other').join(', ');
   const knownColors = (typeof COLOR_FAMILIES !== 'undefined' ? COLOR_FAMILIES : []).join(', ');
   const knownStyles = (typeof STYLES !== 'undefined' ? STYLES : []).join(', ');
   const cats = ['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
@@ -206,7 +206,7 @@ Look at the photo and identify:
 - Brand — if a logo or visible tag identifies it. Prefer matches from: ${knownBrands.slice(0, 20).join(', ') || 'any known brand'}. Leave empty if uncertain.
 - Suggested name — short, descriptive: "[colour] [silhouette/cut] [item type]", e.g. "Navy wool blazer", "Cream silk slip dress", "Tan leather crossbody".
 - Colours visible — array, mapped to: ${knownColors}. Include 1-3 dominant colours. If a colour is unusual ("sage", "rust"), pick its closest family ("Green", "Orange").
-- Material best guess from: ${knownMaterials}. Only include if highly confident from visual texture (knit, denim weave, leather sheen, silk drape, etc).
+- Material best guess from: ${knownMaterials}. Pick materials appropriate to the CATEGORY — metals/stones (gold, silver, pearl, diamond) for Jewellery; leather/suede/canvas/etc. for Shoes & Bags; fabrics for garments. Only include if highly confident from visual texture (knit, denim weave, leather sheen, silk drape, metal/stone, etc).
 - Style tags from: ${knownStyles}. Pick the 1-3 best-fitting moods.
 - Season suitability: array from Spring, Summer, Autumn, Winter. Include all that genuinely fit (a wool coat = Autumn + Winter; a linen dress = Spring + Summer).
 - A 1-sentence description noting silhouette, fit, or distinctive detail.
@@ -235,7 +235,7 @@ Respond ONLY with valid JSON in this exact shape:
 
 export async function analyzeLabelWithGemini({ imageDataUrl }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
-  const knownMaterials = MATERIALS.filter((m) => m !== 'Other').join(', ');
+  const knownMaterials = ALL_MATERIALS.filter((m) => m !== 'Other').join(', ');
   const knownColors = (typeof COLOR_FAMILIES !== 'undefined' ? COLOR_FAMILIES : []).join(', ');
 
   const prompt = `You are reading a clothing care label, brand tag, or product barcode label.

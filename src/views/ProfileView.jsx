@@ -8,7 +8,7 @@ import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, g
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
-import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, BODY_SHAPE_GUIDES, MATERIALS, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
+import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, BODY_SHAPE_GUIDES, MATERIALS, materialsForCategory, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
 
 // Complete-my-data backfill: scan the wardrobe for items missing key fields
 // (category set to generic "Tops" with no other tags, or no colour, or no
@@ -40,7 +40,7 @@ function BackfillCard({ items = [], shops = [], onUpdateItem, onReviewManually }
         const src = (Array.isArray(it.images) ? it.images : [it.image]).filter(Boolean)[0];
         if (!src) { setProgress((p) => ({ ...p, done: p.done + 1 })); continue; }
         const r = await identifyItemWithGemini({ imageDataUrl: src, knownBrands });
-        const validMaterials = (r.materials || []).filter((m) => MATERIALS.includes(m));
+        const validMaterials = (r.materials || []).filter((m) => materialsForCategory(it.category).includes(m));
         const validColours = (r.colors || []).map((c) => matchColorFamily(c)).filter(Boolean);
         const validStyles = (r.styles || []).filter((s) => STYLES.includes(s));
         const validSeasons = (r.seasons || []).filter((s) => ['Spring', 'Summer', 'Autumn', 'Winter'].includes(s));

@@ -2519,8 +2519,9 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       const dataUrl = await compressImageToDataUrl(file, { maxWidth: 1400, maxBytes: 600_000, enhance: false });
       const result = await analyzeLabelWithGemini({ imageDataUrl: dataUrl });
 
+      const allowedMaterials = materialsForCategory(formData.category);
       const validMaterials = Array.isArray(result.materials)
-        ? result.materials.filter((m) => MATERIALS.includes(m))
+        ? result.materials.filter((m) => allowedMaterials.includes(m))
         : [];
 
       // Care: map each phrase to a chip when possible; collect unmapped phrases
@@ -2589,7 +2590,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       const knownBrands = Array.from(new Set((shops || []).map((s) => s.name).filter(Boolean)));
       const result = await identifyItemWithGemini({ imageDataUrl: dataUrl, knownBrands });
 
-      const validMaterials = (result.materials || []).filter((m) => MATERIALS.includes(m));
+      const validMaterials = (result.materials || []).filter((m) => materialsForCategory(result.category).includes(m));
       const validColours = (result.colors || []).map((c) => matchColorFamily(c)).filter(Boolean);
       const validStyles = (result.styles || []).filter((s) => STYLES.includes(s));
       const validSeasons = (result.seasons || []).filter((s) => ['Spring', 'Summer', 'Autumn', 'Winter'].includes(s));

@@ -60,20 +60,39 @@ export const MATERIALS = ['Cotton', 'Linen', 'Silk', 'Wool', 'Cashmere', 'Leathe
 // Cartier watch never offers "In the wash" or "Cotton".
 export const JEWELLERY_MATERIALS = ['Yellow gold', 'White gold', 'Rose gold', 'Silver', 'Platinum', 'Gold-plated', 'Stainless steel', 'Pearl', 'Diamond', 'Gemstone', 'Enamel', 'Beads', 'Other'];
 
+// Footwear materials — leather/suede/canvas etc., not cotton/wool/silk.
+export const SHOE_MATERIALS = ['Leather', 'Suede', 'Nubuck', 'Patent', 'Canvas', 'Mesh', 'Rubber', 'Satin', 'Espadrille', 'Synthetic', 'Other'];
+
+// Accessories span fabrics (scarves, gloves) AND hard goods (belts, sunglasses,
+// hats), so the list keeps the fabrics but adds straw/metal/acetate/resin.
+export const ACCESSORY_MATERIALS = ['Leather', 'Suede', 'Silk', 'Wool', 'Cashmere', 'Cotton', 'Linen', 'Canvas', 'Straw', 'Metal', 'Acetate', 'Resin', 'Beads', 'Velvet', 'Synthetic', 'Other'];
+
+// Bag materials — leather/canvas/nylon/raffia, not garment fabrics.
+export const BAG_MATERIALS = ['Leather', 'Suede', 'Canvas', 'Nylon', 'Raffia', 'Straw', 'Patent', 'Velvet', 'Synthetic', 'Other'];
+
+// Categories that are never laundered or ironed — laundry care tags and the
+// wash/iron statuses don't apply. (Accessories are deliberately NOT here: the
+// category includes washable/ironable pieces like silk scarves and gloves.)
+const NON_LAUNDERED = new Set(['Jewellery', 'Shoes', 'Bags']);
+
 export function materialsForCategory(category) {
-  return category === 'Jewellery' ? JEWELLERY_MATERIALS : MATERIALS;
+  if (category === 'Jewellery') return JEWELLERY_MATERIALS;
+  if (category === 'Shoes') return SHOE_MATERIALS;
+  if (category === 'Bags') return BAG_MATERIALS;
+  if (category === 'Accessories') return ACCESSORY_MATERIALS;
+  return MATERIALS;
 }
 
-// Jewellery can't be washed or ironed — only the wearable/damaged states apply.
+// Non-laundered categories only offer the wearable/damaged states.
 export function conditionsForCategory(category) {
-  return category === 'Jewellery'
+  return NON_LAUNDERED.has(category)
     ? ITEM_CONDITIONS.filter((c) => c.key === 'available' || c.key === 'damaged')
     : ITEM_CONDITIONS;
 }
 
-// Laundry care tags only make sense for garments — hide them for jewellery.
+// Laundry care tags only make sense for laundered categories.
 export function careAppliesToCategory(category) {
-  return category !== 'Jewellery';
+  return !NON_LAUNDERED.has(category);
 }
 
 // Care reminders: when wears-since-last-care crosses these thresholds, the

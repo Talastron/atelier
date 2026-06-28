@@ -214,3 +214,12 @@ export function itemSeasons(item) {
   }
   return [];
 }
+
+// True when an OWNED item is missing the descriptive tags the Concierge relies
+// on — colour, material, or style. Single source of truth shared by the
+// "Complete my data" backfill (Profile) and the Wardrobe "Needs detail" filter,
+// so the bulk-AI path and the manual-review path agree on what's incomplete.
+export function itemNeedsDetail(item) {
+  if (!item || item.status !== 'owned') return false;
+  return itemColors(item).length === 0 || itemMaterials(item).length === 0 || itemStyles(item).length === 0;
+}

@@ -432,6 +432,7 @@ function DigitalWardrobe() {
   // gets it out of the way; it returns when they scroll back to the top.
   const [atTop, setAtTop] = useState(true);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [desktopAccountOpen, setDesktopAccountOpen] = useState(false);
   useEffect(() => {
     const el = mainScrollRef.current;
     if (!el) return;
@@ -1568,6 +1569,7 @@ function DigitalWardrobe() {
                       onUpdateItem={handleAddItem}
                       subStatus={subStatus}
                       onOpenInsights={() => setActiveTab('finance')}
+                      onReviewManually={() => jumpToWardrobe({ filter: 'untagged' })}
                     />
                   )}
                   {activeTab === 'shops' && (
@@ -1618,6 +1620,58 @@ function DigitalWardrobe() {
               <ChevronUp size={20} strokeWidth={2} />
             </button>
           )}
+
+          {/* DESKTOP ACCOUNT AVATAR — fixed top-right, fades on scroll (like the
+              mobile pattern). Opens a small menu (Profile + Sign out). Lives here,
+              not in the sidebar, so it reads as the conventional top-right account
+              corner and keeps the sidebar a clean nav column. */}
+          <div className="hidden lg:block">
+            <button
+              type="button"
+              onClick={() => setDesktopAccountOpen((o) => !o)}
+              className={`fixed right-12 z-40 w-10 h-10 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','finance','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+              style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
+              aria-label="Account"
+              aria-haspopup="menu"
+              aria-expanded={desktopAccountOpen}
+              aria-hidden={!atTop}
+              tabIndex={atTop ? 0 : -1}
+            >
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="font-display text-sm">{(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}</span>
+              )}
+            </button>
+            {desktopAccountOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setDesktopAccountOpen(false)} aria-hidden="true" />
+                <div className="fixed right-12 z-50 w-60 rounded-2xl border border-stone-200 bg-white py-2 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 5rem)' }}>
+                  <button type="button" onClick={() => { setDesktopAccountOpen(false); setActiveTab('profile'); }} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-stone-50 transition-colors">
+                    {user?.photoURL ? (
+                      <img src={user.photoURL} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-sm shrink-0">{(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}</div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
+                      <p className="text-[11px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
+                    </div>
+                  </button>
+                  <div className="my-1 border-t border-stone-100" />
+                  <button type="button" onClick={() => { setDesktopAccountOpen(false); setActiveTab('profile'); }} className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-stone-50 transition-colors ${activeTab === 'profile' ? 'text-brass-700' : 'text-stone-700'}`}>
+                    <Ruler size={16} strokeWidth={1.5} />
+                    <span className="text-sm tracking-wide">Profile &amp; measurements</span>
+                  </button>
+                  <div className="my-1 border-t border-stone-100" />
+                  <button type="button" onClick={() => { setDesktopAccountOpen(false); signOutUser(); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-stone-400 hover:bg-stone-50 hover:text-stone-700 transition-colors">
+                    <LogOut size={15} strokeWidth={1.5} />
+                    <span className="text-[11px] tracking-widest uppercase">Sign out</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* MOBILE AVATAR — single top-right gateway to the Account sheet, which
               holds the lower-frequency, "about you" destinations (Insights,

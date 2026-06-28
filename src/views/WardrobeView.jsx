@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, ArrowUpDown, Check, ChevronDown, ChevronRight, Heart, Plus, Shirt, SlidersHorizontal, Sparkles, Star, Trash2, X } from "lucide-react";
-import { daysSinceLastWorn, isItemAvailable, itemColors, itemCondition, itemImages, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemCostPerWear, live, resolveOutfitItems, todayISO } from "../lib/items.js";
+import { daysSinceLastWorn, isItemAvailable, itemColors, itemCondition, itemImages, itemNeedsDetail, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemCostPerWear, live, resolveOutfitItems, todayISO } from "../lib/items.js";
 import { fetchTodaysWeather, pickTodaysRecommendation, weatherToSeasons, weatherAppropriatenessScore } from "../lib/weather.js";
 import { CATEGORIES, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES, DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES, SPORTSWEAR_SUBCATEGORIES, BAG_SUBCATEGORIES, SHOE_SUBCATEGORIES, SWIMWEAR_SUBCATEGORIES, STYLES, SEASONS, COLOR_SWATCHES, ITEM_CONDITIONS } from "../lib/taxonomy.js";
 
@@ -126,7 +126,7 @@ const CONDITION_OPTIONS = [
   { key: 'unavailable', label: 'In wash / etc' },
   { key: 'lent', label: 'Lent out' },
   { key: 'stale', label: 'Stale 90+ days' },
-  { key: 'untagged', label: 'No colour tags' },
+  { key: 'untagged', label: 'Needs detail' },
 ];
 const CONDITION_KEYS = new Set(['unavailable', 'lent', 'stale', 'untagged']);
 const CONDITION_LABEL_BY_KEY = Object.fromEntries(CONDITION_OPTIONS.map((o) => [o.key, o.label]));
@@ -435,7 +435,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
       : filter === 'favorites' ? !!item.favorite
       : filter === 'lent' ? !!item.lentTo
       : filter === 'unavailable' ? (item.status === 'owned' && !isItemAvailable(item))
-      : filter === 'untagged' ? (item.status === 'owned' && itemColors(item).length === 0)
+      : filter === 'untagged' ? itemNeedsDetail(item)
       : item.status === filter;
     const matchCategory = categoryFilter === 'All' || item.category === categoryFilter;
     const itemS = itemSeasons(item);

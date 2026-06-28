@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Home, LayoutGrid, Camera, Calendar, BookOpen, Bookmark, PoundSterling, Store, ChevronRight, LogOut } from 'lucide-react';
+import { Sparkles, Home, LayoutGrid, Camera, Calendar, BookOpen, Bookmark, PoundSterling, Store, ChevronRight } from 'lucide-react';
 import AtelierMark from '../components/AtelierMark.jsx';
 
 function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
@@ -28,14 +28,10 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
 
 export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user, demoMode, signOutUser, setInspirationDefaultFilter }) {
   return (
-    <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-8 h-full overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
-      {/* Logo block height + this margin is tuned so the first nav pill
-          (Wardrobe) sits at the same Y as the search bar in the main
-          column. Math: main scroll-container has the page header
-          (~144px tall) + 8px gap; sidebar has 48px top padding +
-          ~42px logo. So mb ≈ 144 + 8 - 48 - 42 ≈ 62px → mb-[3.875rem]
-          rounded to mb-16 (4rem) for the cleanest visual baseline. */}
-      <div className="flex items-center gap-3 mb-16">
+    <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-6 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}>
+      {/* Logo block. The account avatar lives as a fixed top-right pill (App.jsx,
+          desktop) so the sidebar is a clean nav column and nothing clips. */}
+      <div className="flex items-center gap-3 mb-8">
         <AtelierMark size={42} />
         <h1 className="text-3xl font-display font-medium tracking-wide">Atelier<span className="text-[#D4B378]">.</span></h1>
       </div>
@@ -73,46 +69,17 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
         <DesktopNavItem id="calendar" icon={Calendar} label="Calendar" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="lookbook" icon={BookOpen} label="Lookbook" activeTab={activeTab} setTab={setActiveTab} />
 
-        {/* Secondary — grouped under an "Account" eyebrow (mirrors the "Studio"
-            eyebrow above), so the supporting destinations read as one zone — the
-            desktop echo of mobile's avatar → Account sheet. */}
+        {/* Secondary — grouped under a "More" eyebrow (mirrors the "Studio"
+            eyebrow above). "Account" identity actions live in the avatar menu at
+            the top, so this group stays purely supporting destinations. */}
         <div className="flex items-center gap-3 mt-6 mb-3 px-1">
           <span className="brass-rule" aria-hidden="true"></span>
-          <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">Account</p>
+          <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">More</p>
         </div>
         <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
         <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="shops" icon={Store} label="Directory" activeTab={activeTab} setTab={setActiveTab} />
       </nav>
-
-      <div className="shrink-0 border-t border-stone-200/60 pt-5 mt-6">
-        <button onClick={() => setActiveTab('profile')}
-          // Same hover language as nav items: stone-200/70 on the
-          // #F7F5F2 sidebar (stone-100 was invisible against #F7F5F2).
-          className="w-full flex items-center gap-3.5 px-2 py-2.5 rounded-2xl hover:bg-stone-200/70 transition-colors duration-200 group"
-        >
-          {user?.photoURL ? (
-            <img src={user.photoURL} alt="" className="w-12 h-12 rounded-full ring-2 ring-stone-100 shrink-0" referrerPolicy="no-referrer" />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-stone-900 text-white flex items-center justify-center font-display text-base shrink-0">
-              {(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
-            <p className="text-[11px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
-          </div>
-          <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500 transition-colors shrink-0" strokeWidth={1.5} />
-        </button>
-        {/* Sign out — left-aligned with profile-row content above (matches
-            the 12px avatar + 14px gap so the icon lines up under the name). */}
-        <button onClick={signOutUser} className="w-full flex items-center gap-2 mt-2 px-2 py-2 rounded-xl text-[10px] tracking-widest uppercase text-stone-400 hover:bg-stone-200/70 hover:text-stone-900 transition-colors duration-200">
-          <span className="w-12 flex items-center justify-center shrink-0">
-            <LogOut size={12} strokeWidth={1.5} />
-          </span>
-          <span>Sign out</span>
-        </button>
-      </div>
     </aside>
   );
 }

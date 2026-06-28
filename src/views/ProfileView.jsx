@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AlertCircle, BarChart3, Calendar, Check, Download, LogOut, Save, Sparkles, X } from "lucide-react";
-import { classifyBodyShape, itemImages, summariseStyleProfile, todayISO, live } from "../lib/items.js";
+import { classifyBodyShape, itemImages, itemNeedsDetail, summariseStyleProfile, todayISO, live } from "../lib/items.js";
 import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
@@ -14,20 +14,20 @@ import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMAL
 // (category set to generic "Tops" with no other tags, or no colour, or no
 // material), re-analyse the main photo via Gemini Vision, and fill the gaps.
 // One-tap enrichment for sparse legacy items.
-function BackfillCard({ items = [], shops = [], onUpdateItem }) {
+function BackfillCard({ items = [], shops = [], onUpdateItem, onReviewManually }) {
   const [stage, setStage] = useState('idle'); // idle | running | done
   const [progress, setProgress] = useState({ done: 0, total: 0, updated: 0 });
   const toast = useToast();
 
+  // AI candidates: incomplete AND has a photo to analyse. The manual-review
+  // path (Wardrobe "Needs detail" filter) uses the same itemNeedsDetail rule but
+  // doesn't require a photo — you can type the tags in yourself.
   const isSparse = (i) => {
     const hasImage = (Array.isArray(i.images) && i.images.length > 0) || i.image;
-    if (!hasImage) return false; // can't analyse without a photo
-    const noColours = !Array.isArray(i.colors) || i.colors.length === 0;
-    const noMaterials = !Array.isArray(i.materials) || i.materials.length === 0;
-    const noStyles = !Array.isArray(i.styles) || i.styles.length === 0;
-    return noColours || noMaterials || noStyles;
+    return hasImage && itemNeedsDetail(i);
   };
   const candidates = items.filter(isSparse);
+  const incompleteCount = items.filter(itemNeedsDetail).length;
 
   const run = async () => {
     if (!isAIEnabled() || candidates.length === 0) return;
@@ -74,6 +74,15 @@ function BackfillCard({ items = [], shops = [], onUpdateItem }) {
               ? 'Every item has at least one colour, material, and style tagged. Nothing to backfill.'
               : `${candidates.length} item${candidates.length === 1 ? '' : 's'} ${candidates.length === 1 ? 'is' : 'are'} missing colours, materials, or styles. Atelier can analyse each one's photo and fill the gaps — won't overwrite anything you've already set.`}
           </p>
+          {incompleteCount > 0 && onReviewManually && (
+            <button
+              type="button"
+              onClick={onReviewManually}
+              className="mt-3 text-xs tracking-wide uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+            >
+              Or review &amp; fill them in yourself →
+            </button>
+          )}
         </div>
         {candidates.length > 0 && stage !== 'running' && (
           <button onClick={run} disabled={!isAIEnabled()}
@@ -360,7 +369,7 @@ function SubscriptionPill({ state }) {
   return <p className="mt-2 text-sm text-stone-400">Membership status unavailable.</p>;
 }
 
-export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights }) {
+export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights, onReviewManually }) {
   const currency = measurements?.currency || 'GBP';
   const aiTempPreset = measurements?.aiTemperaturePreset || 'balanced';
   const setCurrency = (v) => saveMeasurements({ ...measurements, currency: v });
@@ -799,7 +808,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           )}
         </div>
       </section>
-      <BackfillCard items={items} shops={shops} onUpdateItem={onUpdateItem} />
+      <BackfillCard items={items} shops={shops} onUpdateItem={onUpdateItem} onReviewManually={onReviewManually} />
       <RehostCard items={items} onUpdateItem={onUpdateItem} />
       <div id="profile-backup" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
         <div className="flex items-start justify-between gap-4 flex-wrap">

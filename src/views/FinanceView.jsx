@@ -1,11 +1,114 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { ChevronRight, Heart, Shirt, TrendingDown, Wand2, Sparkles } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ChevronRight, Heart, Shirt, TrendingDown, Wand2, Sparkles, Share2, Download, X } from "lucide-react";
 import { daysSinceLastWorn, itemColors, itemCostPerWear, itemImages, itemSeasons, itemWearCount, itemWearHistory, itemWearNotes, todayISO } from "../lib/items.js";
 import { analyzeWardrobeGapsWithGemini, generateStyleManifestoWithGemini } from "../lib/ai.js";
+import { composeStyleDNAExportImage, shareOrDownloadImage } from "../lib/canvas.js";
 import { isAIEnabled } from "../firebase.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { COLOR_SWATCHES } from "../lib/taxonomy.js";
+
+// Share-your-Style-DNA modal. Composes the 1080×1920 colour-wheel card on mount,
+// previews it, then offers the native share sheet (with download fallback) via
+// the same shareOrDownloadImage used by the outfit export. This is the primary
+// share artifact of the GTM growth loop — it renders day one, no wear data.
+function StyleDNAShareModal({ items, measurements, onClose }) {
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageBlob, setImageBlob] = useState(null);
+  const [composing, setComposing] = useState(true);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    let cancelled = false;
+    setComposing(true); setError(null);
+    composeStyleDNAExportImage(items, measurements)
+      .then((blob) => {
+        if (cancelled) return;
+        setImageBlob(blob);
+        setImageUrl(URL.createObjectURL(blob));
+        setComposing(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'Could not compose your Style DNA.');
+        setComposing(false);
+      });
+    return () => { cancelled = true; };
+  }, [items, measurements]);
+  useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
+
+  const filename = 'style-dna-atelier.png';
+  const handleShare = async () => {
+    if (!imageBlob || busy) return;
+    setBusy(true);
+    try {
+      const r = await shareOrDownloadImage(imageBlob, filename, { title: 'My Style DNA', text: 'My Style DNA — read by Atelier.' });
+      if (r === 'shared') { toast.show('Shared', { kind: 'success' }); onClose(); }
+      else if (r === 'downloaded') { toast.show('Saved to downloads', { kind: 'success' }); }
+    } catch (e) {
+      toast.show(e?.message || 'Could not share', { kind: 'error' });
+    } finally { setBusy(false); }
+  };
+  const handleDownload = () => {
+    if (!imageBlob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(imageBlob);
+    a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    toast.show('Saved to downloads', { kind: 'success' });
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-[#F7F5F2] w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
+           onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
+            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Share your Style DNA</span>
+          </div>
+          <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors" aria-label="Close">
+            <X size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+        <div className="px-6 pt-6 pb-4 overflow-y-auto flex-1">
+          <div className="relative rounded-2xl overflow-hidden bg-white border border-stone-200/60 smooth-shadow" style={{ aspectRatio: '9 / 16' }}>
+            {composing && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-stone-400">
+                <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin" />
+                <p className="text-[10px] tracking-[0.28em] uppercase">Composing</p>
+              </div>
+            )}
+            {error && !composing && (
+              <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-stone-500 text-sm italic">{error}</div>
+            )}
+            {imageUrl && !composing && !error && (
+              <img src={imageUrl} alt="Your Style DNA card" className="w-full h-full object-contain" />
+            )}
+          </div>
+          <p className="text-[10px] tracking-widest uppercase text-stone-400 text-center mt-3">1080 × 1920 · Instagram Story · Pinterest</p>
+        </div>
+        <div className="px-6 py-5 border-t border-stone-200/60 bg-white space-y-3 shrink-0"
+             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}>
+          <button onClick={handleShare} disabled={!imageBlob || busy || !!error}
+            className="w-full h-12 bg-stone-900 text-white rounded-full text-sm font-medium hover:bg-stone-700 transition-colors duration-200 inline-flex items-center justify-center gap-2 disabled:opacity-50">
+            <Share2 size={16} strokeWidth={1.5} className={busy ? 'animate-pulse' : ''} />
+            {busy ? 'Opening share…' : 'Share'}
+          </button>
+          <button onClick={handleDownload} disabled={!imageBlob || busy}
+            className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
+            <Download size={13} strokeWidth={1.5} /> Save image
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 // Heuristic gap analysis: counts owned items per category and flags the
 // underrepresented ones plus missing season coverage. Returns up to 5 gaps.
@@ -812,6 +915,7 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
 
 export default function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, saveMeasurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit, onOpenDiary }) {
   const [diaryOpen, setDiaryOpen] = useState(false);
+  const [dnaShareOpen, setDnaShareOpen] = useState(false);
   const ownedItems = items.filter(i => i.status === 'owned');
   const wishlistItems = items.filter(i => i.status === 'wishlist');
   const ownedTotal = ownedItems.reduce((sum, i) => sum + i.price, 0);
@@ -990,6 +1094,7 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
   return (
     <div className="space-y-10 md:space-y-12 max-w-5xl">
       <EditorialHeader eyebrow="The Dossier" title="Insights" subtitle="Your aesthetic, how you wear it, and what it's worth." />
+      {dnaShareOpen && <StyleDNAShareModal items={items} measurements={measurements} onClose={() => setDnaShareOpen(false)} />}
 
       {/* Sticky sub-section nav. Long page; without this the user
           scrolls forever to find e.g. the colour profile or the wear
@@ -1053,9 +1158,15 @@ export default function FinanceView({ items, inspirations = [], onJumpToWardrobe
               </div>
               <h3 className="font-display text-xl md:text-2xl text-stone-900">Colour profile</h3>
             </div>
-            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
-              {sortedColors.length} colour {sortedColors.length === 1 ? 'family' : 'families'}
-            </span>
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
+                {sortedColors.length} colour {sortedColors.length === 1 ? 'family' : 'families'}
+              </span>
+              <button onClick={() => setDnaShareOpen(true)}
+                className="text-[10px] tracking-widest uppercase px-4 py-2 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5">
+                <Share2 size={12} strokeWidth={1.5} /> Share my Style DNA
+              </button>
+            </div>
           </div>
 
           {/* Wheel + legend: side-by-side at md+, stacked on mobile. The wheel

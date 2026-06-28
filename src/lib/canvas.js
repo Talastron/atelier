@@ -3,6 +3,17 @@
 // background removal, and share/download. Browser APIs only.
 import { itemImages, itemColors } from "./items.js";
 import { hexFromColorName } from "./color.js";
+import { COLOR_SWATCHES } from "./taxonomy.js";
+
+// Resolve a colour-family name to a SOLID, canvas-fillable hex. COLOR_SWATCHES
+// may hold a CSS linear-gradient string (the metallics — Gold, Rose Gold, etc.)
+// which ctx.fillStyle can't accept as a plain string, so those fall back to the
+// approximate solid hex from hexFromColorName.
+function solidSwatch(name) {
+  const sw = COLOR_SWATCHES[name];
+  if (typeof sw === 'string' && !sw.startsWith('linear') && !sw.startsWith('radial')) return sw;
+  return hexFromColorName(name);
+}
 
 // ─── Editorial export ────────────────────────────────────────────────────
 // Compose a saved outfit (or a free-form set of pieces) into a 1080×1920
@@ -316,6 +327,159 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.fillText('myatelier.style', PAD, footerY + 78);
 
   // Blob (PNG, ~95% quality)
+  const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('Could not generate the image. Try again.');
+  return blob;
+}
+
+// Compose the wardrobe "Style DNA" card — colour wheel + dominant pull-quote
+// + palette legend — into a 1080×1920 share PNG. Mirrors the outfit export's
+// chrome (PAGE bg, brass rule, Playfair title, myatelier.style footer) so the
+// two share artifacts read as one family. The colour-wheel geometry is the
+// Canvas port of FinanceView's <ColourWheel> donut.
+export async function composeStyleDNAExportImage(items, measurements = {}) {
+  const owned = (items || []).filter((i) => i.status === 'owned');
+  const colorCounts = {};
+  for (const it of owned) {
+    for (const c of (itemColors(it) || [])) {
+      const k = (c || '').trim();
+      if (k) colorCounts[k] = (colorCounts[k] || 0) + 1;
+    }
+  }
+  const sorted = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]);
+  const total = sorted.reduce((s, [, n]) => s + n, 0);
+  if (sorted.length === 0) throw new Error('Add a few pieces with colours to generate your Style DNA.');
+  const taggedCount = owned.filter((i) => (itemColors(i) || []).length > 0).length;
+
+  if (document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* non-blocking */ }
+  }
+
+  const W = 1080, H = 1920, PAD = 88;
+  const BRASS = '#C9A66B', PAGE = '#F7F5F2', INK = '#1c1917', MUTED = '#78716c';
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  // Background
+  ctx.fillStyle = PAGE;
+  ctx.fillRect(0, 0, W, H);
+
+  // === HEADER ===
+  ctx.fillStyle = BRASS;
+  ctx.fillRect(PAD, 150, 56, 3);
+  ctx.font = '500 22px Jost, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.textBaseline = 'middle';
+  ctx.fillText('YOUR STYLE DNA · ATELIER', PAD + 76, 152);
+  ctx.font = '500 76px "Playfair Display", Georgia, serif';
+  ctx.fillStyle = INK;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Your Style DNA', PAD, 256);
+
+  // === COLOUR WHEEL (donut) ===
+  // Start at 12 o'clock (-90°) and walk clockwise so the dominant colour leads.
+  const cx = W / 2, cy = 760, rOuter = 348, rInner = 224;
+  const gapDeg = sorted.length > 1 ? Math.min(3, 360 / (sorted.length * 6)) : 0;
+  const usableDeg = Math.max(0, 360 - gapDeg * sorted.length);
+  let cursor = -90;
+  for (const [name, count] of sorted) {
+    const pct = total > 0 ? count / total : 0;
+    const arcDeg = usableDeg * pct;
+    const a1 = (cursor * Math.PI) / 180;
+    const a2 = ((cursor + arcDeg) * Math.PI) / 180;
+    cursor += arcDeg + gapDeg;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rOuter, a1, a2, false);
+    ctx.arc(cx, cy, rInner, a2, a1, true);
+    ctx.closePath();
+    ctx.fillStyle = solidSwatch(name);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = PAGE;
+    ctx.stroke();
+  }
+  // Centre well + dominant pull-quote
+  ctx.beginPath();
+  ctx.arc(cx, cy, rInner - 2, 0, Math.PI * 2);
+  ctx.fillStyle = '#F7F5F2';
+  ctx.fill();
+  const dominant = sorted[0];
+  const domPct = total > 0 ? (dominant[1] / total) * 100 : 0;
+  ctx.textAlign = 'center';
+  ctx.font = '500 22px Jost, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.textBaseline = 'middle';
+  ctx.fillText('DOMINANT', cx, cy - 72);
+  ctx.font = 'italic 500 72px "Playfair Display", Georgia, serif';
+  ctx.fillStyle = INK;
+  ctx.fillText(dominant[0], cx, cy);
+  ctx.font = '500 26px "Playfair Display", Georgia, serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText(`${domPct.toFixed(0)}% of palette`, cx, cy + 54);
+  ctx.fillStyle = BRASS;
+  ctx.fillRect(cx - 24, cy + 84, 48, 2);
+  ctx.font = '500 20px Jost, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText(`${taggedCount} OF ${owned.length} PIECES TAGGED`, cx, cy + 110);
+  ctx.textAlign = 'left';
+
+  // === PALETTE LEGEND (top 6 families) ===
+  const legendTop = 1206;
+  const rowH = 84;
+  ctx.fillStyle = BRASS;
+  ctx.fillRect(PAD, legendTop - 42, 36, 2);
+  ctx.font = '500 18px Jost, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`PALETTE · ${sorted.length} ${sorted.length === 1 ? 'FAMILY' : 'FAMILIES'}`, PAD + 52, legendTop - 41);
+  sorted.slice(0, 6).forEach(([name, count], i) => {
+    const y = legendTop + i * rowH;
+    const pct = total > 0 ? (count / total) * 100 : 0;
+    // swatch dot
+    ctx.beginPath();
+    ctx.arc(PAD + 16, y + 16, 16, 0, Math.PI * 2);
+    ctx.fillStyle = solidSwatch(name);
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.stroke();
+    // name (serif)
+    ctx.font = '500 30px "Playfair Display", Georgia, serif';
+    ctx.fillStyle = INK;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, PAD + 52, y + 16);
+    // count · pct (right-aligned)
+    ctx.textAlign = 'right';
+    ctx.font = '500 24px Jost, sans-serif';
+    ctx.fillStyle = MUTED;
+    ctx.fillText(`${count} · ${pct.toFixed(0)}%`, W - PAD, y + 16);
+    ctx.textAlign = 'left';
+    // hairline bar
+    const barY = y + 40, barW = W - PAD * 2;
+    ctx.fillStyle = '#ece9e4';
+    drawRoundedRect(ctx, PAD, barY, barW, 5, 2.5);
+    ctx.fill();
+    ctx.fillStyle = solidSwatch(name);
+    drawRoundedRect(ctx, PAD, barY, Math.max(6, barW * (pct / 100)), 5, 2.5);
+    ctx.fill();
+  });
+
+  // === FOOTER ===
+  const footerY = H - 150;
+  ctx.fillStyle = BRASS;
+  ctx.fillRect(PAD, footerY, 56, 3);
+  ctx.font = '500 22px Jost, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${owned.length} PIECES · ${sorted.length} COLOUR ${sorted.length === 1 ? 'FAMILY' : 'FAMILIES'}`, PAD + 76, footerY + 2);
+  ctx.font = '500 44px "Playfair Display", Georgia, serif';
+  ctx.fillStyle = INK;
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('myatelier.style', PAD, footerY + 78);
+
   const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
   if (!blob) throw new Error('Could not generate the image. Try again.');
   return blob;

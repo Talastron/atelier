@@ -32,7 +32,7 @@ import {
   SWIMWEAR_SUBCATEGORIES, STYLES, MOOD_PRESETS, INITIAL_MEASUREMENTS,
   STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS,
   STYLE_PRINCIPLES, CATEGORIES, ITEM_CONDITIONS, CURRENCY_SYMBOLS,
-  AI_TEMPERATURE_PRESETS, CARE_TAGS, MATERIALS, CARE_RULES, NEUTRAL_COLORS,
+  AI_TEMPERATURE_PRESETS, CARE_TAGS, MATERIALS, materialsForCategory, conditionsForCategory, careAppliesToCategory, CARE_RULES, NEUTRAL_COLORS,
   COLOR_FAMILIES, COLOR_SWATCHES, COLOUR_HEX_MAP, BODY_SHAPE_GUIDES,
 } from './lib/taxonomy.js';
 import { rgbToHsl, classifyColorFromRgb, matchColorFamily, derivePaletteFromGarments, hexFromColorName, colorsHarmonize, extractDominantColors } from './lib/color.js';
@@ -3358,6 +3358,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                 </datalist>
               </div>
 
+              {careAppliesToCategory(formData.category) && (
               <div>
                 <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
                   Care <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">(optional)</span>
@@ -3377,13 +3378,14 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   })}
                 </div>
               </div>
+              )}
 
               <div>
                 <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
                   Materials <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">(optional)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {MATERIALS.map((m) => {
+                  {materialsForCategory(formData.category).map((m) => {
                     const isActive = (formData.materials || []).includes(m);
                     return (
                       <button key={m} type="button" onClick={() => toggleMaterial(m)}
@@ -4113,7 +4115,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 <div>
                   <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-3">Right now</h2>
                   <div className="flex flex-wrap gap-2">
-                    {ITEM_CONDITIONS.map((c) => {
+                    {conditionsForCategory(item.category).map((c) => {
                       const active = current === c.key;
                       const ringByColor = {
                         emerald: 'bg-emerald-100 border-emerald-300 text-emerald-800',

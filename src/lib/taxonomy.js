@@ -54,6 +54,28 @@ export const CARE_TAGS = ['Dry clean', 'Hand wash', 'Cool wash', 'No tumble', 'I
 
 export const MATERIALS = ['Cotton', 'Linen', 'Silk', 'Wool', 'Cashmere', 'Leather', 'Suede', 'Denim', 'Velvet', 'Lace', 'Knit', 'Sequins', 'Tweed', 'Synthetic', 'Other'];
 
+// Jewellery is not a garment: it has its own materials (metals, stones) and
+// none of the laundry-oriented care tags or wash/iron statuses apply. These
+// helpers make the Add/Edit form and the condition picker category-aware so a
+// Cartier watch never offers "In the wash" or "Cotton".
+export const JEWELLERY_MATERIALS = ['Yellow gold', 'White gold', 'Rose gold', 'Silver', 'Platinum', 'Gold-plated', 'Stainless steel', 'Pearl', 'Diamond', 'Gemstone', 'Enamel', 'Beads', 'Other'];
+
+export function materialsForCategory(category) {
+  return category === 'Jewellery' ? JEWELLERY_MATERIALS : MATERIALS;
+}
+
+// Jewellery can't be washed or ironed — only the wearable/damaged states apply.
+export function conditionsForCategory(category) {
+  return category === 'Jewellery'
+    ? ITEM_CONDITIONS.filter((c) => c.key === 'available' || c.key === 'damaged')
+    : ITEM_CONDITIONS;
+}
+
+// Laundry care tags only make sense for garments — hide them for jewellery.
+export function careAppliesToCategory(category) {
+  return category !== 'Jewellery';
+}
+
 // Care reminders: when wears-since-last-care crosses these thresholds, the
 // item detail page surfaces a gentle nudge with the suggested action. Pick the
 // rule for the item's most-fragile material (lowest threshold wins).

@@ -67,7 +67,7 @@ const InsightsView = lazy(() => import('./views/InsightsView.jsx'));
 import { OUTFIT_SLOTS, SLOT_FILTER, itemFitsSlot, slotForItem, MULTI_SLOTS, isMultiSlot, slotItems, SLOT_CATEGORIES, emptyOutfit } from './lib/outfit.js';
 import AIProgressModal from './components/AIProgressModal.jsx';
 import { haptic } from './lib/haptic.js';
-import { buildPinterestUrl, uploadShareCardImage } from './lib/publicShare.js';
+import { buildPinterestUrl, uploadShareCardImage, newShareId } from './lib/publicShare.js';
 const OutfitBuilder = lazy(() => import('./views/OutfitBuilder.jsx'));
 
 // Owners can invite/revoke other users. Must match the rules file exactly.
@@ -315,12 +315,7 @@ const userProfileDoc = (uid) => doc(db, 'users', uid, 'profile', 'measurements')
 const allowlistRef = () => collection(db, 'allowlist');
 const allowlistDoc = (email) => doc(db, 'allowlist', email.toLowerCase().trim());
 const publicShareDoc = (shareId) => doc(db, 'public', shareId);
-
-// Short, URL-safe, lowly-collision share ID. 11 chars of base36 → ~57 bits.
-function newShareId() {
-  return [...crypto.getRandomValues(new Uint32Array(2))]
-    .map((n) => n.toString(36)).join('').slice(0, 11);
-}
+// newShareId is imported from ./lib/publicShare.js (single source of truth).
 
 export default function DigitalWardrobeRoot() {
   // Public share routing: if ?share=ID is in the URL, render the read-only

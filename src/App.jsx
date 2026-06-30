@@ -8428,6 +8428,25 @@ function WearVerdictInput({ initial, onSave, initialOccasion, onSaveOccasion }) 
 // Footer rendered on every public share page. Optionally credits the
 // publisher of this deployment (VITE_PUBLISHER_NAME / VITE_PUBLISHER_URL).
 // Falls back to a plain "Made with Atelier" if no publisher set.
+// Conversion CTA for the public share page — turns a cold visitor (who just
+// admired a shared look) into a trial, instead of punting them to the login wall.
+function PublicShareCTA() {
+  return (
+    <div className="mt-16 sm:mt-20 rounded-[2rem] bg-stone-900 text-white px-6 py-10 sm:px-12 sm:py-14 text-center">
+      <p className="text-[10px] tracking-[0.28em] uppercase text-[#D4B378] mb-3">Styled by Atelier</p>
+      <h2 className="font-display text-2xl sm:text-3xl leading-tight">Build looks like this from your own wardrobe</h2>
+      <p className="text-stone-300 text-sm sm:text-base max-w-md mx-auto leading-relaxed mt-3 mb-7">
+        Atelier styles your real pieces into outfits, reads your colour story, and writes your private Style Manifesto — see your Style DNA in minutes.
+      </p>
+      <a href="https://myatelier.style" target="_blank" rel="noopener noreferrer"
+        className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#D4B378] text-stone-900 text-xs tracking-[0.18em] uppercase font-medium hover:bg-[#c9a85f] transition-colors">
+        Start your free trial
+      </a>
+      <p className="text-[10px] tracking-widest uppercase text-stone-500 mt-4">14-day free trial</p>
+    </div>
+  );
+}
+
 function PublicShareFooter() {
   const publisher = import.meta.env.VITE_PUBLISHER_NAME?.trim();
   const publisherUrl = import.meta.env.VITE_PUBLISHER_URL?.trim();
@@ -8580,6 +8599,7 @@ function PublicShareView({ shareId }) {
               )}
             </div>
           </div>
+          <PublicShareCTA />
           <PublicShareFooter />
         </main>
       </div>
@@ -8674,6 +8694,8 @@ function PublicShareView({ shareId }) {
             ))}
           </div>
         )}
+
+        <PublicShareCTA />
 
         <footer className="mt-20 pt-8 border-t border-stone-200 text-center text-xs tracking-wider uppercase text-stone-400">
           Read-only view · made with Atelier

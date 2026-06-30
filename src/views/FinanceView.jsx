@@ -925,8 +925,9 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
             <ManifestoBody text={manifesto} />
           )}
           {!isStreaming && generatedAt && (
-            <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic">
-              Written {new Date(generatedAt).toLocaleDateString('en-GB')}
+            <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic flex items-center gap-3">
+              <span className="brass-rule" aria-hidden="true"></span>
+              Written {new Date(generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           )}
         </div>

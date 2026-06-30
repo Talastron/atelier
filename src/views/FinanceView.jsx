@@ -847,22 +847,28 @@ function ManifestoShareModal({ manifesto, measurements, onClose }) {
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-5 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-        {error ? (
-          <p className="text-sm text-red-600">{error}</p>
-        ) : imageUrl ? (
-          <img src={imageUrl} alt="Style Manifesto card" className="w-full rounded-lg" />
-        ) : (
-          <p className="text-sm text-stone-500 py-10 text-center">Composing your card…</p>
-        )}
-        <div className="flex gap-2 mt-4">
+  // Portal to <body> so position:fixed is viewport-relative — the card it's
+  // launched from sits inside a transformed/blurred ancestor that would
+  // otherwise become the containing block and push the modal off-screen.
+  return createPortal(
+    <div className="fixed inset-0 z-[60] bg-stone-900/70 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
+      <div className="bg-white w-full sm:max-w-sm rounded-t-[2rem] sm:rounded-[2rem] p-5 shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="overflow-y-auto min-h-0">
+          {error ? (
+            <p className="text-sm text-red-600">{error}</p>
+          ) : imageUrl ? (
+            <img src={imageUrl} alt="Style Manifesto card" className="w-full rounded-lg" />
+          ) : (
+            <p className="text-sm text-stone-500 py-10 text-center">Composing your card…</p>
+          )}
+        </div>
+        <div className="flex gap-2 mt-4 shrink-0">
           <button onClick={handleShare} disabled={!imageBlob} className="flex-1 bg-stone-900 text-white rounded-full py-2.5 text-sm disabled:opacity-40">Share</button>
           <button onClick={onClose} className="px-5 rounded-full border border-stone-300 text-sm">Close</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

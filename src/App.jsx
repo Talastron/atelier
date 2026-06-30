@@ -48,7 +48,8 @@ import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExpor
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
-import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini } from './lib/ai.js';
+import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini } from './lib/ai.js';
+import { isFitStale } from './lib/itemFit.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
@@ -2079,6 +2080,11 @@ function DigitalWardrobe() {
               onMarkWishlist={async () => {
                 await handleAddItem({ ...selectedItem, status: 'wishlist' });
               }}
+              inspirations={inspirations}
+              onSaveFit={(fit) => handleAddItem({
+                ...selectedItem,
+                manifestoFit: { ...fit, manifestoAt: measurements?.styleManifestoAt || null },
+              })}
             />
             );
           })()}
@@ -3521,7 +3527,76 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   );
 }
 
-function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onSetWearOccasion, onMarkCared, onToggleFavorite, onSetCondition, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel }) {
+function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const manifesto = measurements?.styleManifesto || '';
+  const cached = item?.manifestoFit;
+  const stale = isFitStale(item, measurements?.styleManifestoAt || null);
+
+  if (!manifesto) {
+    return (
+      <div className="rounded-2xl border border-stone-200 p-5 text-sm text-stone-500">
+        Generate your <span className="font-medium">Style Manifesto</span> on the Insights tab to unlock a fit reading for this piece.
+      </div>
+    );
+  }
+
+  const run = async () => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      const fit = await generateItemFitWithGemini({
+        item, manifesto, inspirations,
+        styleProfile: summariseStyleProfile(measurements),
+      });
+      onSaveFit(fit);
+    } catch (e) {
+      setError(e?.message || 'Could not read this against your style.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fit = (!stale && cached) ? cached : null;
+
+  return (
+    <div className="rounded-2xl bg-stone-900 text-white p-5">
+      <div className="text-[10px] tracking-[0.18em] uppercase text-[#c9a85f] mb-2">The Concierge's read</div>
+      {fit ? (
+        <>
+          <p className="font-display italic text-[15px] leading-relaxed text-[#F7F5F2]">{fit.verdict}</p>
+          <div className="text-xs text-stone-400 mt-2">{fit.tier}</div>
+          <button onClick={() => setExpanded((v) => !v)} className="text-xs underline text-stone-300 mt-3">
+            {expanded ? 'Hide the detail' : 'Why?'}
+          </button>
+          {expanded && (
+            <div className="mt-3 space-y-2">
+              {fit.dimensions.map((d, idx) => (
+                <div key={idx}>
+                  <div className="flex justify-between text-[11px] text-stone-400"><span>{d.label}</span><span>{d.state}</span></div>
+                  <div className="h-1 rounded-full bg-stone-700 overflow-hidden"><div className="h-full bg-[#c9a85f]" style={{ width: `${Math.round(d.level * 100)}%` }} /></div>
+                </div>
+              ))}
+            </div>
+          )}
+          <button onClick={run} disabled={busy} className="text-[11px] uppercase tracking-wider text-stone-400 mt-4 disabled:opacity-40">{busy ? 'Reading…' : 'Re-read'}</button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-stone-300">See how this piece sits with your style.</p>
+          <button onClick={run} disabled={busy} className="mt-3 bg-[#c9a85f] text-stone-900 rounded-full px-5 py-2 text-xs uppercase tracking-wider disabled:opacity-40">
+            {busy ? 'Reading…' : 'Read against my style'}
+          </button>
+        </>
+      )}
+      {error && <p className="text-xs text-red-300 mt-3">{error}</p>}
+    </div>
+  );
+}
+
+function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onSetWearOccasion, onMarkCared, onToggleFavorite, onSetCondition, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel, inspirations = [], onSaveFit }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -4038,6 +4113,10 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 </div>
               );
             })()}
+
+            {item.status === 'wishlist' && (
+              <FitVerdictSection item={item} measurements={measurements} inspirations={inspirations} onSaveFit={onSaveFit} />
+            )}
 
             {!fit && item.status === 'wishlist' && item.brand && (() => {
               const hasMeasurements = measurements?.chest || measurements?.waist || measurements?.hips;

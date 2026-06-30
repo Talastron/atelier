@@ -9,6 +9,34 @@ import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { COLOR_SWATCHES } from "../lib/taxonomy.js";
 import { splitManifestoParagraphs } from '../lib/manifesto.js';
+import { buildPinterestUrl, createCardShare } from '../lib/publicShare.js';
+
+function PinToPinterestButton({ imageBlob, busy, setBusy, cardType, name, sharedByName, description }) {
+  const toast = useToast();
+  return (
+    <button
+      type="button"
+      disabled={!imageBlob || busy}
+      onClick={async () => {
+        if (!imageBlob || busy) return;
+        setBusy(true);
+        try {
+          const { url, cardImageUrl } = await createCardShare({ cardType, name, sharedByName, blob: imageBlob });
+          const pin = buildPinterestUrl({ url, media: cardImageUrl, description });
+          window.open(pin, '_blank', 'noopener,noreferrer,width=750,height=600');
+        } catch (e) {
+          toast.show('Could not open Pinterest. Try "Save image" and pin it manually.', { kind: 'error' });
+        } finally {
+          setBusy(false);
+        }
+      }}
+      className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+    >
+      <span className="w-4 h-4 rounded-full bg-[#E60023] text-white text-[9px] font-bold flex items-center justify-center" aria-hidden="true">P</span>
+      Pin to Pinterest
+    </button>
+  );
+}
 
 // Share-your-Style-DNA modal. Composes the 1080×1920 colour-wheel card on mount,
 // previews it, then offers the native share sheet (with download fallback) via
@@ -104,6 +132,12 @@ function StyleDNAShareModal({ items, measurements, onClose }) {
             className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
             <Download size={13} strokeWidth={1.5} /> Save image
           </button>
+          <PinToPinterestButton
+            imageBlob={imageBlob} busy={busy} setBusy={setBusy}
+            cardType="styleDNA" name="My Style DNA"
+            sharedByName={measurements?.displayName || ''}
+            description="My Style DNA — read by Atelier"
+          />
         </div>
       </div>
     </div>,
@@ -823,6 +857,7 @@ function ManifestoShareModal({ manifesto, measurements, onClose }) {
   const [imageUrl, setImageUrl] = useState(null);
   const [imageBlob, setImageBlob] = useState(null);
   const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -861,6 +896,13 @@ function ManifestoShareModal({ manifesto, measurements, onClose }) {
           ) : (
             <p className="text-sm text-stone-500 py-10 text-center">Composing your card…</p>
           )}
+        </div>
+        <div className="mt-4">
+          <PinToPinterestButton
+            imageBlob={imageBlob} busy={busy} setBusy={setBusy}
+            cardType="manifesto" name="My Style Manifesto"
+            sharedByName="" description="My Style Manifesto — written by Atelier"
+          />
         </div>
         <div className="flex gap-2 mt-4 shrink-0">
           <button onClick={handleShare} disabled={!imageBlob} className="flex-1 bg-stone-900 text-white rounded-full py-2.5 text-sm disabled:opacity-40">Share</button>

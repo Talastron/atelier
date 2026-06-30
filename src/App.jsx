@@ -7508,14 +7508,14 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 {outfit.reasoning && (
                   <div className="mb-4">
                     <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">On the composition</p>
-                    <p className="text-sm italic text-stone-700 leading-relaxed">"{outfit.reasoning}"</p>
+                    <p className="text-sm italic text-stone-700 leading-relaxed">"{renderTextWithChips(outfit.reasoning, { items, onOpenItem })}"</p>
                   </div>
                 )}
                 {onSaveOutfit && (
                   <div className={outfit.reasoning ? 'pt-4 border-t border-stone-100' : ''}>
                     <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">On your style</p>
                     {outfit.styleFit ? (
-                      <p className="text-sm italic text-stone-700 leading-relaxed">{outfit.styleFit}</p>
+                      <p className="text-sm italic text-stone-700 leading-relaxed">{renderTextWithChips(outfit.styleFit, { items, onOpenItem })}</p>
                     ) : (
                       <button
                         type="button"

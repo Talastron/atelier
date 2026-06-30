@@ -1879,6 +1879,8 @@ function DigitalWardrobe() {
               onOpenReceiptModal={() => { setIsAddItemModalOpen(false); setIsReceiptModalOpen(true); }}
               onOpenBulkImport={() => { setIsAddItemModalOpen(false); setIsBulkImportModalOpen(true); }}
               onOpenSweep={() => { setIsAddItemModalOpen(false); setIsSweepModalOpen(true); }}
+              measurements={measurements}
+              inspirations={inspirations}
             />
           )}
 
@@ -2397,7 +2399,7 @@ function AccessDeniedScreen({ user, onSignOut }) {
 
 
 
-function AddItemModal({ user, shops = [], existingItem = null, removeBackground = false, onClose, onSave, onOpenReceiptModal, onOpenBulkImport, onOpenSweep }) {
+function AddItemModal({ user, shops = [], existingItem = null, removeBackground = false, onClose, onSave, onOpenReceiptModal, onOpenBulkImport, onOpenSweep, measurements, inspirations = [] }) {
   const isEdit = !!existingItem;
   const toast = useToast();
   const [step, setStep] = useState(isEdit ? 2 : 1);
@@ -2450,6 +2452,32 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   // pass it to findProductListingFromPhoto and also add it as the item image
   // if the user does end up importing from a URL.
   const [findPhotoDataUrl, setFindPhotoDataUrl] = useState(null);
+
+  // ── "Should I buy this?" fit check ──────────────────────────────────────────
+  const [fitCheck, setFitCheck] = useState(null);
+  const [fitBusy, setFitBusy] = useState(false);
+  const [fitError, setFitError] = useState(null);
+
+  const runFitCheck = async () => {
+    if (fitBusy) return;
+    setFitBusy(true); setFitError(null);
+    try {
+      const fit = await generateItemFitWithGemini({
+        item: {
+          name: formData.name, brand: formData.brand, category: formData.category,
+          subCategory: formData.subCategory, colors: formData.colors, styles: formData.styles,
+        },
+        manifesto: measurements?.styleManifesto || '',
+        inspirations,
+        styleProfile: summariseStyleProfile(measurements),
+      });
+      setFitCheck(fit);
+    } catch (e) {
+      setFitError(e?.message || 'Could not check the fit.');
+    } finally {
+      setFitBusy(false);
+    }
+  };
 
   const handleFindOnline = async (file) => {
     if (!file) return;
@@ -3493,6 +3521,23 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                     onChange={(e) => setFormData({ ...formData, wishlistReason: e.target.value })}
                     placeholder="e.g. for a wedding · to replace my black blazer · need a winter coat"
                     className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors" />
+                </div>
+              )}
+
+              {measurements?.styleManifesto && (
+                <div className="mt-4 rounded-xl border border-stone-200 p-4">
+                  {fitCheck ? (
+                    <>
+                      <div className="text-[10px] uppercase tracking-[0.18em] text-[#9a7b4f] mb-1">Should you buy this?</div>
+                      <p className="font-display italic text-sm text-stone-800">{fitCheck.verdict}</p>
+                      <div className="text-xs text-stone-500 mt-1">{fitCheck.tier}</div>
+                    </>
+                  ) : (
+                    <button type="button" onClick={runFitCheck} disabled={fitBusy || !formData.name} className="text-sm text-stone-700 underline disabled:opacity-40">
+                      {fitBusy ? 'Reading…' : 'Check this against my style'}
+                    </button>
+                  )}
+                  {fitError && <p className="text-xs text-red-600 mt-2">{fitError}</p>}
                 </div>
               )}
 

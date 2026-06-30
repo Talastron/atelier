@@ -6172,7 +6172,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
 
               {suggestion?.reasoning && (
                 <p className="text-sm text-stone-300 italic mt-5 leading-relaxed bg-white/5 border border-white/10 rounded-xl p-4">
-                  "{suggestion.reasoning}"
+                  "{renderTextWithChips(suggestion.reasoning, { items: allItems })}"
                 </p>
               )}
 
@@ -6284,7 +6284,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
 
               {suggestion?.reasoning && (
                 <p className="text-sm text-stone-300 italic mt-5 leading-relaxed bg-white/5 border border-white/10 rounded-xl p-4">
-                  "{suggestion.reasoning}"
+                  "{renderTextWithChips(suggestion.reasoning, { items: allItems })}"
                 </p>
               )}
 

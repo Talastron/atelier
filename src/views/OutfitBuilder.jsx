@@ -1957,7 +1957,7 @@ function ABCompareModal({ pair, onClose, onPick }) {
             </div>
           ))}
         </div>
-        {side.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed mb-4">{side.reasoning}</p>}
+        {side.reasoning && <p className="text-xs text-stone-600 italic leading-relaxed mb-4">{renderTextWithChips(side.reasoning, { items: pieces })}</p>}
         <button onClick={() => onPick(side)} className="mt-auto w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 transition-all active:scale-[0.98]">
           Pick {label}
         </button>
@@ -2048,7 +2048,7 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
                 </div>
 
                 {entry.reasoning && (
-                  <p className="text-xs text-stone-600 italic leading-relaxed mb-3">{entry.reasoning}</p>
+                  <p className="text-xs text-stone-600 italic leading-relaxed mb-3">{renderTextWithChips(entry.reasoning, { items })}</p>
                 )}
 
                 {resolvedItems.length > 0 ? (

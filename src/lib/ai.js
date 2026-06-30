@@ -3,6 +3,7 @@
 // capsule. Wired via Firebase AI Logic (App Check verified, no API key in bundle).
 import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream, Schema } from "../firebase.js";
 import { itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
+import { buildItemFitPrompt, parseAndNormalizeFit, selectAspirationBasis, buildItemSummaryLine } from './itemFit.js';
 import { weatherLabel } from "./weather.js";
 import { ensureClothingBase, hasClothingBase } from "./outfit.js";
 import { ALL_MATERIALS, CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
@@ -17,6 +18,23 @@ const OUTFIT_RESPONSE_SCHEMA = Schema.object({
     reasoning: Schema.string(),
     confidence: Schema.number(),
     tags: Schema.array({ items: Schema.string() }),
+  },
+});
+
+const FIT_RESPONSE_SCHEMA = Schema.object({
+  properties: {
+    verdict: Schema.string(),
+    coherence: Schema.number(),
+    aspiration: Schema.number(),
+    dimensions: Schema.array({
+      items: Schema.object({
+        properties: {
+          label: Schema.string(),
+          state: Schema.string(),
+          level: Schema.number(),
+        },
+      }),
+    }),
   },
 });
 
@@ -616,6 +634,29 @@ Reply with the narrative only — no preamble, no quotes.`;
   const result = await geminiText(prompt, { temperature: 0.75 }, 'style-fit');
   if (!result) return null;
   return result.trim().split('\n').filter(Boolean).join(' ').replace(/^["'`]+|["'`]+$/g, '');
+}
+
+// Judge how well a single item fits the user's style. Returns the normalised
+// fit object: { verdict, coherence, aspiration, tier, dimensions, basis }.
+export async function generateItemFitWithGemini({ item, manifesto, inspirations = [], styleProfile = '' }) {
+  if (!manifesto) throw new Error('Generate your Style Manifesto first to unlock fit readings.');
+  const basis = selectAspirationBasis(inspirations);
+  const inspirationsSummary = basis === 'inspirations'
+    ? inspirations
+        .filter((i) => i && i.analysis && i.analysis.summary)
+        .slice(0, 12)
+        .map((i) => `- ${i.caption || 'saved'}: ${i.analysis.summary}`)
+        .join('\n')
+    : '';
+  const prompt = buildItemFitPrompt({
+    itemLine: buildItemSummaryLine(item),
+    manifesto,
+    inspirationsSummary,
+    styleProfile,
+    basis,
+  });
+  const text = await geminiText(prompt, { temperature: 0.6, jsonMode: true, responseSchema: FIT_RESPONSE_SCHEMA }, 'item-fit');
+  return parseAndNormalizeFit(text, { basis });
 }
 
 // AI fit estimate for a wishlist item — replaces the manual per-brand size-chart

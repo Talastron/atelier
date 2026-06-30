@@ -1,0 +1,83 @@
+<h2>What should a "fit signal" feel like?</h2>
+<p class="subtitle">Same wishlist item — The Row, Camel Wool Coat — shown three ways. Which one belongs in <em>your</em> product, given you want depth and delight, not a funnel metric?</p>
+
+<style>
+  .fit-mock { background:#F7F5F2; color:#292524; border-radius:18px; padding:22px; height:100%; box-sizing:border-box; font-family:Georgia,'Times New Roman',serif; }
+  .fit-item { display:flex; gap:14px; align-items:center; margin-bottom:18px; }
+  .fit-thumb { width:54px; height:70px; border-radius:8px; background:linear-gradient(160deg,#c9b89a,#a8916b); flex:none; }
+  .fit-name { font-size:15px; font-weight:600; line-height:1.2; }
+  .fit-brand { font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#78716c; margin-bottom:3px; font-family:system-ui,sans-serif;}
+  .ring { width:64px; height:64px; border-radius:50%; background:conic-gradient(#9a7b4f 0 87%, #e7e2da 87% 100%); display:flex; align-items:center; justify-content:center; }
+  .ring-inner { width:48px; height:48px; border-radius:50%; background:#F7F5F2; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; font-family:system-ui,sans-serif;}
+  .verdict { font-style:italic; font-size:14.5px; line-height:1.7; color:#3f3a36; }
+  .verdict .stamp { display:block; font-style:normal; font-family:system-ui,sans-serif; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:#9a7b4f; margin-bottom:10px;}
+  .dims { font-family:system-ui,sans-serif; }
+  .dim { margin:9px 0; }
+  .dim-top { display:flex; justify-content:space-between; font-size:11px; letter-spacing:.04em; color:#57534e; margin-bottom:4px; }
+  .dim-bar { height:5px; border-radius:3px; background:#e7e2da; overflow:hidden;}
+  .dim-fill { height:100%; background:#9a7b4f; }
+  .dim-note { font-family:Georgia,serif; font-style:italic; font-size:12.5px; color:#57534e; margin-top:12px; line-height:1.6;}
+</style>
+
+<div class="cards">
+  <div class="card" data-choice="percentage" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#1c1917;">
+      <div class="fit-mock">
+        <div class="fit-item">
+          <div class="fit-thumb"></div>
+          <div><div class="fit-brand">The Row</div><div class="fit-name">Camel Wool Coat</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div class="ring"><div class="ring-inner">87%</div></div>
+          <div style="font-family:system-ui,sans-serif;font-size:12px;color:#57534e;">Style match<br><strong style="color:#292524;">Strong fit</strong></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · The Percentage</h3>
+      <p>One number, instantly scannable. Familiar, but risks feeling like a dating-app match score — gamified, a little cold.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="verdict" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#1c1917;">
+      <div class="fit-mock">
+        <div class="fit-item">
+          <div class="fit-thumb"></div>
+          <div><div class="fit-brand">The Row</div><div class="fit-name">Camel Wool Coat</div></div>
+        </div>
+        <div class="verdict">
+          <span class="stamp">The Concierge's read</span>
+          "This belongs. It's the quiet, tailored camel your most-worn coats keep circling — and exactly the restraint your saved inspirations reach for."
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · The Verdict</h3>
+      <p>No number — a one-line judgement in the manifesto's own voice. Pure delight, on-brand, but harder to scan or sort.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="dimensional" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:14px;background:#1c1917;">
+      <div class="fit-mock">
+        <div class="fit-item">
+          <div class="fit-thumb"></div>
+          <div><div class="fit-brand">The Row</div><div class="fit-name">Camel Wool Coat</div></div>
+        </div>
+        <div class="dims">
+          <div class="dim"><div class="dim-top"><span>Palette</span><span>Aligned</span></div><div class="dim-bar"><div class="dim-fill" style="width:92%"></div></div></div>
+          <div class="dim"><div class="dim-top"><span>Silhouette</span><span>Aligned</span></div><div class="dim-bar"><div class="dim-fill" style="width:84%"></div></div></div>
+          <div class="dim"><div class="dim-top"><span>Formality</span><span>A reach</span></div><div class="dim-bar"><div class="dim-fill" style="width:58%"></div></div></div>
+          <div class="dim-note">Closes the gap between what you wear and what you save.</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · The Dimensional Read</h3>
+      <p>A few axes (palette, silhouette, formality, aspiration-gap) shown qualitatively. Explains <em>why</em> — analytical and honest, more to build.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:20px">Click the one that feels right — or tell me you'd blend them (e.g. a Verdict that expands into the Dimensional read). There's no wrong answer; I want your gut reaction.</p>

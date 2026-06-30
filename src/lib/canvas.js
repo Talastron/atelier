@@ -485,6 +485,98 @@ export async function composeStyleDNAExportImage(items, measurements = {}) {
   return blob;
 }
 
+// Private text-wrap helper used by the manifesto composer.
+// Draws `text` word-by-word at (x, y), wrapping at maxW, advancing y by
+// lineHeight each time. Returns the new y after the last drawn line.
+function wrapText(ctx, text, x, y, maxW, lineHeight) {
+  const words = text.split(/\s+/);
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line, x, y);
+      y += lineHeight;
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) { ctx.fillText(line, x, y); y += lineHeight; }
+  return y;
+}
+
+// Private rounded-rect path helper (fills/strokes after caller sets style).
+// Named `roundRect` (not `drawRoundedRect`) to avoid a name collision with the
+// exported `drawRoundedRect` used elsewhere in this file.
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// Render the Style Manifesto as a shareable 1080x1920 PNG (Instagram Story).
+export async function composeManifestoExportImage(manifesto, measurements = {}) {
+  const text = (manifesto || measurements?.styleManifesto || '').trim();
+  if (!text) throw new Error('Generate your Style Manifesto first.');
+
+  if (document.fonts?.ready) {
+    try { await document.fonts.ready; } catch { /* non-blocking */ }
+  }
+
+  const W = 1080, H = 1920, PAD = 96;
+  const BRASS = '#C9A66B', PAGE = '#F7F5F2', INK = '#1c1917', MUTED = '#78716c';
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = BRASS;
+  ctx.font = '600 28px Inter, system-ui, sans-serif';
+  ctx.fillText('A PRIVATE BRIEF, BY THE CONCIERGE', PAD, PAD + 40);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = "italic 64px 'Playfair Display', Georgia, serif";
+  ctx.fillText('Style Manifesto', PAD, PAD + 130);
+
+  const panelX = PAD, panelY = PAD + 190, panelW = W - PAD * 2, panelH = H - panelY - PAD - 70;
+  roundRect(ctx, panelX, panelY, panelW, panelH, 36);
+  ctx.fillStyle = PAGE;
+  ctx.fill();
+
+  ctx.fillStyle = '#3f3a36';
+  ctx.font = "italic 38px 'Playfair Display', Georgia, serif";
+  const lineHeight = 60;
+  const innerX = panelX + 56;
+  let y = panelY + 90;
+  const maxTextW = panelW - 112;
+  for (const paragraph of text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)) {
+    y = wrapText(ctx, paragraph, innerX, y, maxTextW, lineHeight);
+    y += lineHeight * 0.6;
+  }
+
+  ctx.fillStyle = MUTED;
+  ctx.font = "italic 32px 'Playfair Display', Georgia, serif";
+  ctx.textAlign = 'right';
+  ctx.fillText('— Your Concierge', panelX + panelW - 56, panelY + panelH - 50);
+  ctx.textAlign = 'left';
+
+  ctx.fillStyle = BRASS;
+  ctx.font = '600 30px Inter, system-ui, sans-serif';
+  ctx.fillText('myatelier.style', PAD, H - PAD + 20);
+
+  const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('Could not generate the image. Try again.');
+  return blob;
+}
+
 // Share an image File via the Web Share API when supported, otherwise
 // fall back to a download. Returns 'shared' | 'downloaded' | 'cancelled'.
 export async function shareOrDownloadImage(blob, filename, shareText = {}) {

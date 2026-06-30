@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronRight, Heart, Shirt, TrendingDown, Wand2, Sparkles, Share2, Download, X } from "lucide-react";
 import { daysSinceLastWorn, itemColors, itemCostPerWear, itemImages, itemSeasons, itemWearCount, itemWearHistory, itemWearNotes, todayISO } from "../lib/items.js";
 import { analyzeWardrobeGapsWithGemini, generateStyleManifestoWithGemini } from "../lib/ai.js";
-import { composeStyleDNAExportImage, shareOrDownloadImage } from "../lib/canvas.js";
+import { composeStyleDNAExportImage, composeManifestoExportImage, shareOrDownloadImage } from "../lib/canvas.js";
 import { isAIEnabled } from "../firebase.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
@@ -819,11 +819,56 @@ function ManifestoBody({ text }) {
 // generated from most-worn pieces, outfit pairings, and saved inspirations.
 // Lives on Insights (it's a reflective wardrobe *output*, not a setting). The
 // generated text persists onto measurements.styleManifesto via saveMeasurements.
+function ManifestoShareModal({ manifesto, measurements, onClose }) {
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageBlob, setImageBlob] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    composeManifestoExportImage(manifesto, measurements)
+      .then((blob) => {
+        if (cancelled) return;
+        setImageBlob(blob);
+        setImageUrl(URL.createObjectURL(blob));
+      })
+      .catch((e) => setError(e?.message || 'Could not compose your manifesto card.'));
+    return () => { cancelled = true; };
+  }, [manifesto, measurements]);
+
+  const handleShare = async () => {
+    if (!imageBlob) return;
+    await shareOrDownloadImage(imageBlob, 'style-manifesto-atelier.png', {
+      title: 'My Style Manifesto',
+      text: 'My Style Manifesto — written by Atelier.',
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-5 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+        {error ? (
+          <p className="text-sm text-red-600">{error}</p>
+        ) : imageUrl ? (
+          <img src={imageUrl} alt="Style Manifesto card" className="w-full rounded-lg" />
+        ) : (
+          <p className="text-sm text-stone-500 py-10 text-center">Composing your card…</p>
+        )}
+        <div className="flex gap-2 mt-4">
+          <button onClick={handleShare} disabled={!imageBlob} className="flex-1 bg-stone-900 text-white rounded-full py-2.5 text-sm disabled:opacity-40">Share</button>
+          <button onClick={onClose} className="px-5 rounded-full border border-stone-300 text-sm">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfits = [], inspirations = [] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [streamingText, setStreamingText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const cancelledRef = useRef(false);
   const toast = useToast();
   const manifesto = measurements?.styleManifesto || '';
@@ -897,9 +942,16 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
             </div>
           )}
         </div>
-        <button onClick={run} disabled={busy} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 flex items-center gap-2 shrink-0 font-medium">
-          <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Writing…' : (manifesto ? 'Refresh' : 'Generate')}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {manifesto && !isStreaming && (
+            <button onClick={() => setShowShare(true)} className="text-xs tracking-wider uppercase px-4 py-2.5 rounded-full border border-stone-600 text-stone-200 inline-flex items-center gap-1.5">
+              Share
+            </button>
+          )}
+          <button onClick={run} disabled={busy} className="text-xs tracking-wider uppercase px-5 py-2.5 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 flex items-center gap-2 font-medium">
+            <Wand2 size={14} strokeWidth={1.5} /> {busy ? 'Writing…' : (manifesto ? 'Refresh' : 'Generate')}
+          </button>
+        </div>
       </div>
 
       {error && <p className="relative z-10 mt-4 text-sm text-red-200 bg-red-950/40 border border-red-900/40 px-4 py-3 rounded-xl">{error}</p>}
@@ -931,6 +983,9 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
             </p>
           )}
         </div>
+      )}
+      {showShare && (
+        <ManifestoShareModal manifesto={manifesto} measurements={measurements} onClose={() => setShowShare(false)} />
       )}
     </div>
   );

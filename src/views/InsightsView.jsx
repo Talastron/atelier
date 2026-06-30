@@ -1000,7 +1000,7 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
   );
 }
 
-export default function FinanceView({ items, inspirations = [], onJumpToWardrobe, measurements, saveMeasurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit, onOpenDiary }) {
+export default function InsightsView({ items, inspirations = [], onJumpToWardrobe, measurements, saveMeasurements, onOpenProfile, onOpenItem, outfits = [], schedules = {}, onOpenOutfit, onOpenDiary }) {
   const [diaryOpen, setDiaryOpen] = useState(false);
   const [dnaShareOpen, setDnaShareOpen] = useState(false);
   const ownedItems = items.filter(i => i.status === 'owned');

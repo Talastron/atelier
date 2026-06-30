@@ -1999,7 +1999,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
   // Compute wearDiary entries — every day with a logged wear, newest
   // first. Joins schedule context (event name, worn photo) so the diary
   // reads as a real record of what was worn day-to-day. Logic extracted
-  // from FinanceView's inline preview and consolidated here.
+  // from InsightsView's inline preview and consolidated here.
   const wearDiary = useMemo(() => {
     const byDate = {};
     for (const it of items) {

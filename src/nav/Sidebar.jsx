@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Home, LayoutGrid, Camera, Calendar, BookOpen, Bookmark, PoundSterling, Store, ChevronRight } from 'lucide-react';
+import { Sparkles, Home, LayoutGrid, Camera, Calendar, BookOpen, Bookmark, FileText, Store, ChevronRight } from 'lucide-react';
 import AtelierMark from '../components/AtelierMark.jsx';
 
 function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
@@ -77,7 +77,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
           <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">More</p>
         </div>
         <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
-        <DesktopNavItem id="finance" icon={PoundSterling} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
+        <DesktopNavItem id="insights" icon={FileText} label="Insights" activeTab={activeTab} setTab={setActiveTab} />
         <DesktopNavItem id="shops" icon={Store} label="Directory" activeTab={activeTab} setTab={setActiveTab} />
       </nav>
     </aside>

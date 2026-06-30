@@ -336,7 +336,7 @@ export async function composeOutfitExportImage(outfit, items) {
 // + palette legend — into a 1080×1920 share PNG. Mirrors the outfit export's
 // chrome (PAGE bg, brass rule, Playfair title, myatelier.style footer) so the
 // two share artifacts read as one family. The colour-wheel geometry is the
-// Canvas port of FinanceView's <ColourWheel> donut.
+// Canvas port of InsightsView's <ColourWheel> donut.
 export async function composeStyleDNAExportImage(items, measurements = {}) {
   const owned = (items || []).filter((i) => i.status === 'owned');
   const colorCounts = {};

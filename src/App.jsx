@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, createContext, useContext, useCall
 import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
-  Heart, PoundSterling, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
+  Heart, FileText, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
   Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer, BarChart3, MoreHorizontal
 } from 'lucide-react';
 import {
@@ -63,7 +63,7 @@ import TodayView from './views/TodayView.jsx';
 const DiaryView = lazy(() => import('./views/Calendar.jsx'));
 const WardrobeView = lazy(() => import('./views/WardrobeView.jsx'));
 const ProfileView = lazy(() => import('./views/ProfileView.jsx'));
-const FinanceView = lazy(() => import('./views/FinanceView.jsx'));
+const InsightsView = lazy(() => import('./views/InsightsView.jsx'));
 import { OUTFIT_SLOTS, SLOT_FILTER, itemFitsSlot, slotForItem, MULTI_SLOTS, isMultiSlot, slotItems, SLOT_CATEGORIES, emptyOutfit } from './lib/outfit.js';
 import AIProgressModal from './components/AIProgressModal.jsx';
 import { haptic } from './lib/haptic.js';
@@ -1550,7 +1550,7 @@ function DigitalWardrobe() {
                       onDeleteTrip={handleDeleteTrip}
                     />
                   )}
-                  {activeTab === 'finance' && <FinanceView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} saveMeasurements={handleSaveProfile} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('calendar')} />}
+                  {activeTab === 'insights' && <InsightsView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} saveMeasurements={handleSaveProfile} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('calendar')} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}
@@ -1569,7 +1569,7 @@ function DigitalWardrobe() {
                       onHardDeleteItem={handleHardDeleteItem}
                       onUpdateItem={handleAddItem}
                       subStatus={subStatus}
-                      onOpenInsights={() => setActiveTab('finance')}
+                      onOpenInsights={() => setActiveTab('insights')}
                       onReviewManually={() => jumpToWardrobe({ filter: 'untagged' })}
                     />
                   )}
@@ -1630,7 +1630,7 @@ function DigitalWardrobe() {
             <button
               type="button"
               onClick={() => setDesktopAccountOpen((o) => !o)}
-              className={`fixed right-12 z-40 w-10 h-10 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','finance','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+              className={`fixed right-12 z-40 w-10 h-10 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
               style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
               aria-label="Account"
               aria-haspopup="menu"
@@ -1683,7 +1683,7 @@ function DigitalWardrobe() {
           <button
             type="button"
             onClick={() => setMobileMoreOpen(true)}
-            className={`lg:hidden fixed top-0 right-3 z-40 mt-3 w-10 h-10 rounded-full overflow-hidden bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${['profile','finance','inspiration','shops'].includes(activeTab) ? 'ring-2 ring-brass-300' : ''} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+            className={`lg:hidden fixed top-0 right-3 z-40 mt-3 w-10 h-10 rounded-full overflow-hidden bg-stone-900/85 backdrop-blur text-white flex items-center justify-center shadow-lg active:scale-90 hover:bg-stone-900 transition-all duration-200 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-2 ring-brass-300' : ''} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
             style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}
             aria-label="Account & more"
             aria-hidden={!atTop}
@@ -1727,7 +1727,7 @@ function DigitalWardrobe() {
                 </button>
                 <div className="my-1 border-t border-stone-100" />
                 {[
-                  { id: 'finance', label: 'Insights', icon: PoundSterling },
+                  { id: 'insights', label: 'Insights', icon: FileText },
                   { id: 'inspiration', label: 'Inspiration', icon: Bookmark },
                   { id: 'shops', label: 'Directory', icon: Store },
                   { id: 'profile', label: 'Profile & measurements', icon: Ruler },

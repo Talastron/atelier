@@ -8,6 +8,7 @@ import { isAIEnabled } from "../firebase.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { COLOR_SWATCHES } from "../lib/taxonomy.js";
+import { splitManifestoParagraphs } from '../lib/manifesto.js';
 
 // Share-your-Style-DNA modal. Composes the 1080×1920 colour-wheel card on mount,
 // previews it, then offers the native share sheet (with download fallback) via
@@ -793,6 +794,27 @@ function WearTimelineCard({ ownedItems, timeline }) {
   );
 }
 
+function ManifestoBody({ text }) {
+  const parts = splitManifestoParagraphs(text);
+  if (!parts) {
+    return <div className="whitespace-pre-line">{text}</div>;
+  }
+  const Label = ({ children }) => (
+    <div className="font-sans text-[10px] tracking-[0.18em] uppercase text-[#9a7b4f] mb-1.5">{children}</div>
+  );
+  return (
+    <div className="not-italic">
+      <Label>Your signature</Label>
+      <p className="italic mb-5">{parts.signature}</p>
+      <Label>Colour and texture</Label>
+      <p className="italic mb-5">{parts.colour}</p>
+      <Label>What you're reaching for</Label>
+      <p className="italic text-[17px] leading-relaxed pl-4 border-l-2 border-[#c9a85f] text-stone-900 mb-4">{parts.aspiration}</p>
+      <div className="font-display italic text-stone-500 text-right">— Your Concierge</div>
+    </div>
+  );
+}
+
 // Style manifesto — an AI-written three-paragraph reading of the user's taste,
 // generated from most-worn pieces, outfit pairings, and saved inspirations.
 // Lives on Insights (it's a reflective wardrobe *output*, not a setting). The
@@ -896,15 +918,15 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
       )}
 
       {(manifesto || isStreaming) && (
-        <div className="relative z-10 mt-6 bg-[#F7F5F2] text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] whitespace-pre-line font-display italic">
-          {isStreaming ? streamingText : manifesto}
-          {isStreaming && (
-            <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />
+        <div className="relative z-10 mt-6 bg-[#F7F5F2] text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] font-display">
+          {isStreaming ? (
+            <div className="whitespace-pre-line italic">{streamingText}<span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" /></div>
+          ) : (
+            <ManifestoBody text={manifesto} />
           )}
           {!isStreaming && generatedAt && (
-            <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic flex items-center gap-3">
-              <span className="brass-rule" aria-hidden="true"></span>
-              Written {new Date(generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic">
+              Written {new Date(generatedAt).toLocaleDateString('en-GB')}
             </p>
           )}
         </div>

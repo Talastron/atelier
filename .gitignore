@@ -20,5 +20,8 @@ dist-ssr/
 # Local Claude Code session state — contains debug tokens, agent transcripts
 .claude/
 
+# Superpowers brainstorming companion artifacts (local mockups + server state)
+.superpowers/
+
 # Generated build artifact, not source
 prod.html

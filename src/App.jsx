@@ -8681,9 +8681,9 @@ function PublicShareView({ shareId }) {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {(l.pieces || []).map((p) => (
                       <div key={p.id} className="flex flex-col gap-3">
-                        <div className="aspect-[3/4] rounded-2xl bg-stone-100 overflow-hidden smooth-shadow">
+                        <div className="aspect-[3/4] rounded-2xl bg-white overflow-hidden smooth-shadow">
                           {(p.images || [])[0] ? (
-                            <img src={p.images[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                            <img src={p.images[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-contain p-2" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={32} strokeWidth={1} /></div>
                           )}

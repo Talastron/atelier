@@ -23,6 +23,16 @@ Your first users come from your hands, not an algorithm. This is unscalable on p
 
 > Rule of thumb: if you'd feel awkward charging them, they're Tier A. If they'd feel flattered to be "let in early," they're Tier B.
 
+### How to actually grant Tier-A free access
+
+In the Studio: **Profile → Invited Friends → enter their Google email (+ name) → Invite.**
+
+- Adds them to the allowlist; they sign in with **that Google account** and get full, **permanent** free access to their own private wardrobe. No 14-day clock, no Lemon Squeezy, no charge.
+- **Revoke** anytime from the same panel (✕ next to their name).
+- Must be the **Google email they sign in with**; it's lowercased automatically.
+- **Who can invite:** only the owners (you + Martin) — enforced in `firestore.rules` (`allow write: if isOwner()`), not just the UI. Invited and paying users **cannot** invite anyone or add themselves.
+- **Cost:** £0 to Lemon Squeezy; only minor metered Firebase + Gemini usage (a few £/month at most for a small cohort). Access is permanent and unmetered, so keep the list intentional — Tier A only.
+
 ---
 
 ## Step 1 — Source 40 names (the ICP worksheet)

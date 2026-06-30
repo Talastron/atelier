@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "deploy": "firebase deploy --only hosting",
     "deploy:rules": "firebase deploy --only firestore:rules",
     "seed:wardrobe": "node scripts/generate-seed-wardrobe.mjs",
@@ -34,6 +36,7 @@
     "sharp": "^0.35.1",
     "tailwindcss": "^4.0.0",
     "vite": "^6.0.0",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^4.1.9"
   }
 }

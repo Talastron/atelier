@@ -10,6 +10,7 @@ import { useToast } from "../ui/toast.jsx";
 import { COLOR_SWATCHES } from "../lib/taxonomy.js";
 import { splitManifestoParagraphs } from '../lib/manifesto.js';
 import { buildPinterestUrl, createCardShare } from '../lib/publicShare.js';
+import { PinterestGlyph } from '../components/BrandGlyphs.jsx';
 
 function PinToPinterestButton({ imageBlob, busy, setBusy, cardType, name, sharedByName, description }) {
   const toast = useToast();
@@ -32,7 +33,7 @@ function PinToPinterestButton({ imageBlob, busy, setBusy, cardType, name, shared
       }}
       className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
     >
-      <span className="w-4 h-4 rounded-full bg-[#E60023] text-white text-[9px] font-bold flex items-center justify-center" aria-hidden="true">P</span>
+      <PinterestGlyph size={16} />
       Pin to Pinterest
     </button>
   );

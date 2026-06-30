@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   Shirt, LayoutGrid, Plus, Link as LinkIcon, Trash2,
   Heart, FileText, Ruler, Store, CheckCircle2, AlertCircle, X, Camera, Save,
-  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer, BarChart3, MoreHorizontal
+  Wand2, ChevronRight, ChevronDown, ChevronUp, LogOut, Calendar, TrendingDown, Star, Download, Sparkles, GripVertical, SlidersHorizontal, Bookmark, BookOpen, Check, Copy, ArrowUpDown, Search, Share2, Printer, BarChart3, MoreHorizontal, Pencil
 } from 'lucide-react';
 import {
   DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor,
@@ -66,6 +66,7 @@ const ProfileView = lazy(() => import('./views/ProfileView.jsx'));
 const InsightsView = lazy(() => import('./views/InsightsView.jsx'));
 import { OUTFIT_SLOTS, SLOT_FILTER, itemFitsSlot, slotForItem, MULTI_SLOTS, isMultiSlot, slotItems, SLOT_CATEGORIES, emptyOutfit } from './lib/outfit.js';
 import AIProgressModal from './components/AIProgressModal.jsx';
+import { PinterestGlyph, InstagramGlyph } from './components/BrandGlyphs.jsx';
 import { haptic } from './lib/haptic.js';
 import { buildPinterestUrl, uploadShareCardImage, newShareId } from './lib/publicShare.js';
 const OutfitBuilder = lazy(() => import('./views/OutfitBuilder.jsx'));
@@ -174,11 +175,8 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
           </button>
         </div>
 
-        {/* Body — title + image preview */}
+        {/* Body — image preview */}
         <div className="px-6 pt-6 pb-4 overflow-y-auto flex-1">
-          <h3 className="font-display text-2xl md:text-3xl text-stone-900 leading-tight mb-1 truncate">
-            {outfit?.name || 'A composed look'}
-          </h3>
           <p className="text-[10px] tracking-widest uppercase text-stone-500 mb-5">
             {(outfit?.itemIds || []).length} {(outfit?.itemIds || []).length === 1 ? 'piece' : 'pieces'} · Composed for sharing
           </p>
@@ -274,7 +272,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
                 disabled={!imageBlob || busy}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
               >
-                <span className="w-4 h-4 rounded-full bg-[#E60023] text-white text-[9px] font-bold flex items-center justify-center" aria-hidden="true">P</span>
+                <PinterestGlyph size={16} />
                 Pin to Pinterest
               </button>
               <button
@@ -286,7 +284,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
                 disabled={!imageBlob || busy}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
               >
-                <span className="w-4 h-4 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white text-[9px] font-bold flex items-center justify-center" aria-hidden="true">i</span>
+                <InstagramGlyph size={16} />
                 Save for Instagram
               </button>
             </div>
@@ -1025,13 +1023,13 @@ function DigitalWardrobe() {
 
   // Save the AI-suggested outfit as a real saved look, close the modal +
   // ItemDetailView, and open the new outfit so the user lands on it.
-  const handleSaveStyledOutfit = async () => {
+  const handleSaveStyledOutfit = async (providedName) => {
     if (!styleSuggestion?.itemIds || !styleSourceItem) return;
     setStyleSaving(true);
     try {
       const outfit = {
         id: newId(),
-        name: `Styled with ${styleSourceItem.name}`,
+        name: providedName || `Styled with ${styleSourceItem.name}`,
         itemIds: styleSuggestion.itemIds,
         reasoning: styleSuggestion.reasoning || '',
         ...(typeof styleSuggestion.confidence === 'number' ? { confidence: styleSuggestion.confidence } : {}),
@@ -6099,6 +6097,13 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
 // regenerate + discard), error.
 function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, allItems = [], onRegenerate, onSave, onClose }) {
   useEscapeKey(busy || saving ? () => {} : onClose);
+  const [name, setName] = useState('');
+  useEffect(() => {
+    if (sourceItem && !name) {
+      setName(`Styled with ${sourceItem.name}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceItem?.name]);
   const pieces = (suggestion?.itemIds || [])
     .map((id) => allItems.find((i) => i.id === id) || (sourceItem.id === id ? sourceItem : null))
     .filter(Boolean);
@@ -6179,8 +6184,18 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
                 </p>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-6">
-                <button onClick={onSave} disabled={saving}
+              <div className="mt-6 mb-2">
+                <label className="block text-[10px] tracking-[0.22em] uppercase text-stone-400 mb-1.5">Name this look</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={`Styled with ${sourceItem.name}`}
+                  className="w-full bg-white/10 text-white text-sm rounded-xl px-4 py-2.5 placeholder-stone-500 border border-white/10 focus:outline-none focus:border-brass-300 transition-colors"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                <button onClick={() => onSave(name.trim() || undefined)} disabled={saving}
                   className="text-xs tracking-widest uppercase px-4 py-3 rounded-full bg-brass-300 text-stone-900 hover:bg-brass-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 font-medium">
                   <Bookmark size={14} strokeWidth={1.5} /> {saving ? 'Saving…' : 'Save this look'}
                 </button>
@@ -7192,6 +7207,8 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
   const [newCollectionNameDetail, setNewCollectionNameDetail] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState('');
   const toast = useToast();
   const pieces = resolveOutfitItems(outfit, items);
   const total = pieces.reduce((sum, it) => sum + Number(it.price || 0), 0);
@@ -7363,6 +7380,14 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <Star size={16} strokeWidth={1.5} className={outfit.favorite ? 'fill-stone-900' : ''} />
                 </button>
               )}
+              {onEdit && (
+                <button onClick={onEdit}
+                  className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap"
+                  title="Edit this look in the Studio">
+                  <Pencil size={15} strokeWidth={1.5} />
+                  <span className="hidden md:inline">Edit</span>
+                </button>
+              )}
               {onVary && isAIEnabled() && (
                 <button onClick={onVary}
                   className="p-2.5 sm:px-4 sm:py-2.5 rounded-full text-xs sm:text-sm bg-brass-300 text-stone-900 hover:bg-brass-200 transition-colors duration-200 inline-flex items-center gap-2 whitespace-nowrap font-medium"
@@ -7394,13 +7419,6 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     {/* Backdrop to dismiss */}
                     <div className="fixed inset-0 z-40" onClick={() => setToolbarMenuOpen(false)} />
                     <div className="absolute right-0 top-full mt-1.5 z-50 bg-white rounded-2xl shadow-2xl border border-stone-200 py-1.5 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-200">
-                      {onEdit && (
-                        <button type="button" onClick={() => { setToolbarMenuOpen(false); onEdit(); }}
-                          className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-3">
-                          <Wand2 size={14} strokeWidth={1.5} className="text-stone-400" />
-                          Restyle in Studio
-                        </button>
-                      )}
                       <button type="button"
                         onClick={async () => { setToolbarMenuOpen(false); await onDuplicate?.(); toast.show('Duplicated · edit anytime', { kind: 'success' }); }}
                         className="w-full text-left px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-3">
@@ -7487,7 +7505,37 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 <span className="brass-rule" aria-hidden="true"></span>
                 <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Saved Look</span>
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-4xl xl:text-5xl font-display text-stone-900 tracking-tight leading-[1.05]">{outfit.name}</h1>
+              {editingName ? (
+                <input
+                  autoFocus
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const trimmed = draftName.trim();
+                      if (trimmed && trimmed !== outfit.name) { onSaveOutfit({ ...outfit, name: trimmed }); }
+                      setEditingName(false);
+                    } else if (e.key === 'Escape') {
+                      setEditingName(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    const trimmed = draftName.trim();
+                    if (trimmed && trimmed !== outfit.name) { onSaveOutfit({ ...outfit, name: trimmed }); }
+                    setEditingName(false);
+                  }}
+                  className="w-full text-4xl sm:text-5xl lg:text-4xl xl:text-5xl font-display text-stone-900 tracking-tight leading-[1.05] bg-transparent border-b-2 border-brass-300 outline-none"
+                />
+              ) : (
+                <h1
+                  className="group text-4xl sm:text-5xl lg:text-4xl xl:text-5xl font-display text-stone-900 tracking-tight leading-[1.05] cursor-text hover:opacity-70 transition-opacity inline-flex items-start gap-2"
+                  onClick={() => { setDraftName(outfit.name || ''); setEditingName(true); }}
+                  title="Click to rename"
+                >
+                  {outfit.name}
+                  <Pencil size={18} strokeWidth={1.5} className="opacity-0 group-hover:opacity-40 transition-opacity mt-2 shrink-0" aria-hidden="true" />
+                </h1>
+              )}
               {(outfit.intent || savedLabel) && (
                 <p className="font-display italic text-stone-500 text-sm sm:text-base mt-3">
                   {[

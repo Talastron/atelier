@@ -70,6 +70,7 @@ import { PinterestGlyph, InstagramGlyph } from './components/BrandGlyphs.jsx';
 import { haptic } from './lib/haptic.js';
 import { buildPinterestUrl, uploadShareCardImage, newShareId } from './lib/publicShare.js';
 const OutfitBuilder = lazy(() => import('./views/OutfitBuilder.jsx'));
+import { itemImageDisplay, revertItemPrimary } from './lib/polish.js';
 
 // Owners can invite/revoke other users. Must match the rules file exactly.
 // (The rules are the real security boundary — this is just so the UI knows
@@ -2071,6 +2072,8 @@ function DigitalWardrobe() {
               onStyleWithItem={() => handleStyleWithItem(selectedItem)}
               onOpenItem={(id) => setSelectedItemId(id)}
               onClose={() => setSelectedItemId(null)}
+              uid={user?.uid}
+              onUpdateItem={(updated) => handleAddItem(updated)}
               onEdit={() => { setEditingItem(selectedItem); setIsAddItemModalOpen(true); setSelectedItemId(null); }}
               onDelete={async () => { await handleDeleteItem(selectedItem.id); setSelectedItemId(null); }}
               onMarkOwned={async () => {
@@ -3645,7 +3648,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
   );
 }
 
-function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onSetWearOccasion, onMarkCared, onToggleFavorite, onSetCondition, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel, inspirations = [], onSaveFit }) {
+function ItemDetailView({ item, shops, measurements, items: allItems = [], outfits = [], onOpenOutfit, onClose, onEdit, onDelete, onMarkOwned, onMarkWishlist, onLogWear, onUnlogWear, onSetWearNote, onSetWearOccasion, onMarkCared, onToggleFavorite, onSetCondition, onDuplicate, onShare, onStyleWithItem, onOpenItem, onPrev, onNext, positionLabel, inspirations = [], onSaveFit, uid, onUpdateItem }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
@@ -3656,6 +3659,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   const [fitEstimateBusy, setFitEstimateBusy] = useState(false);
   const [fitEstimateError, setFitEstimateError] = useState(null);
   const images = itemImages(item);
+  const toast = useToast();
   // Touch swipe between items in the wardrobe list. Only horizontal gestures
   // (≥60px) on the page background trigger nav — vertical scrolls and gestures
   // inside the photo carousel / inputs are ignored.
@@ -3879,7 +3883,27 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             >
               {images.length > 0 ? (
                 <>
-                  <img src={images[Math.min(activePhoto, images.length - 1)]} alt={item.name} className="w-full h-full object-contain transition-transform duration-500 lg:group-hover:scale-[1.02]" />
+                  {(() => {
+                    const idx = Math.min(activePhoto, images.length - 1);
+                    const disp = itemImageDisplay(item, idx);
+                    return (
+                      <div className="w-full h-full bg-white flex items-center justify-center">
+                        <img src={disp.src || images[idx]} alt={item.name}
+                          className="w-full h-full object-contain transition-transform duration-500 lg:group-hover:scale-[1.02]" />
+                      </div>
+                    );
+                  })()}
+                  {item.imageMeta?.[Math.min(activePhoto, images.length - 1)]?.cutoutUrl && (
+                    <button type="button"
+                      onClick={async () => {
+                        const nextMeta = revertItemPrimary(item);
+                        await onUpdateItem({ ...item, imageMeta: nextMeta });
+                        toast.show('Reverted to your original photo', { kind: 'default' });
+                      }}
+                      className="absolute top-3 right-3 lg:top-4 lg:right-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium shadow-sm transition-colors">
+                      Cut-out · revert
+                    </button>
+                  )}
                   {item.imageMeta?.[Math.min(activePhoto, images.length - 1)]?.angle && (
                     <span className="absolute top-3 left-3 lg:top-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium">
                       {item.imageMeta[Math.min(activePhoto, images.length - 1)].angle}

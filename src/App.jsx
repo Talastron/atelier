@@ -3895,7 +3895,9 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   })()}
                   {item.imageMeta?.[Math.min(activePhoto, images.length - 1)]?.cutoutUrl && (
                     <button type="button"
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
                         const nextMeta = revertItemPrimary(item);
                         await onUpdateItem({ ...item, imageMeta: nextMeta });
                         toast.show('Reverted to your original photo', { kind: 'default' });

@@ -48,7 +48,7 @@ export function buildItemSummaryLine(item) {
 export function buildItemFitPrompt({ itemLine, manifesto, inspirationsSummary = '', styleProfile = '', basis = 'profile' }) {
   const aspirationSource = basis === 'inspirations'
     ? `What they SAVE as inspiration (their aspiration):\n${inspirationsSummary}`
-    : `They have no saved inspirations yet, so judge aspiration against the style you’ve described below.`;
+    : `They have no saved inspirations yet, so judge aspiration against the style you’ve described in the profile above.`;
   const verdictGuidance = basis === 'inspirations'
     ? 'Tie the verdict to what you save — name the gap this piece closes.'
     : 'Tie the verdict to the style they’ve described.';

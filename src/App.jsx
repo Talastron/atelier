@@ -3531,6 +3531,9 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       <div className="text-[10px] uppercase tracking-[0.18em] text-[#9a7b4f] mb-1">Should you buy this?</div>
                       <p className="font-display italic text-sm text-stone-800">{fitCheck.verdict}</p>
                       <div className="text-xs text-stone-500 mt-1">{fitCheck.tier}</div>
+                      <button type="button" onClick={runFitCheck} disabled={fitBusy} className="text-[11px] uppercase tracking-wider text-stone-500 underline mt-2 disabled:opacity-40">
+                        {fitBusy ? 'Reading…' : 'Check again'}
+                      </button>
                     </>
                   ) : (
                     <button type="button" onClick={runFitCheck} disabled={fitBusy || !formData.name} className="text-sm text-stone-700 underline disabled:opacity-40">

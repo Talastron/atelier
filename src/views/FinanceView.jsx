@@ -836,6 +836,9 @@ function ManifestoShareModal({ manifesto, measurements, onClose }) {
     return () => { cancelled = true; };
   }, [manifesto, measurements]);
 
+  // Free the object URL when it changes or the modal unmounts (mirrors StyleDNAShareModal).
+  useEffect(() => () => { if (imageUrl) URL.revokeObjectURL(imageUrl); }, [imageUrl]);
+
   const handleShare = async () => {
     if (!imageBlob) return;
     await shareOrDownloadImage(imageBlob, 'style-manifesto-atelier.png', {

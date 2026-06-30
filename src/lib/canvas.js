@@ -505,19 +505,6 @@ function wrapText(ctx, text, x, y, maxW, lineHeight) {
   return y;
 }
 
-// Private rounded-rect path helper (fills/strokes after caller sets style).
-// Named `roundRect` (not `drawRoundedRect`) to avoid a name collision with the
-// exported `drawRoundedRect` used elsewhere in this file.
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 // Render the Style Manifesto as a shareable 1080x1920 PNG (Instagram Story).
 export async function composeManifestoExportImage(manifesto, measurements = {}) {
   const text = (manifesto || measurements?.styleManifesto || '').trim();
@@ -547,7 +534,7 @@ export async function composeManifestoExportImage(manifesto, measurements = {}) 
   ctx.fillText('Style Manifesto', PAD, PAD + 130);
 
   const panelX = PAD, panelY = PAD + 190, panelW = W - PAD * 2, panelH = H - panelY - PAD - 70;
-  roundRect(ctx, panelX, panelY, panelW, panelH, 36);
+  drawRoundedRect(ctx, panelX, panelY, panelW, panelH, 36);
   ctx.fillStyle = PAGE;
   ctx.fill();
 

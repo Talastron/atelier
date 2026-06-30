@@ -67,6 +67,7 @@ const InsightsView = lazy(() => import('./views/InsightsView.jsx'));
 import { OUTFIT_SLOTS, SLOT_FILTER, itemFitsSlot, slotForItem, MULTI_SLOTS, isMultiSlot, slotItems, SLOT_CATEGORIES, emptyOutfit } from './lib/outfit.js';
 import AIProgressModal from './components/AIProgressModal.jsx';
 import { haptic } from './lib/haptic.js';
+import { buildPinterestUrl, uploadShareCardImage } from './lib/publicShare.js';
 const OutfitBuilder = lazy(() => import('./views/OutfitBuilder.jsx'));
 
 // Owners can invite/revoke other users. Must match the rules file exactly.
@@ -225,7 +226,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
               <Download size={13} strokeWidth={1.5} /> Save image
             </button>
             {onCreateLink && (
-              <button onClick={() => { onCreateLink(); onClose(); }}
+              <button onClick={() => { onCreateLink(imageBlob); onClose(); }}
                 className="flex-1 h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5">
                 <LinkIcon size={12} strokeWidth={1.5} /> Public link
               </button>
@@ -245,15 +246,17 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
                   if (!imageBlob || busy) return;
                   setBusy(true);
                   try {
-                    // Need a public URL for Pinterest. Try the existing onCreateLink
-                    // flow first — it generates a shareable link with the image
-                    // hosted on Firebase. Fall back: download the image so the user
-                    // can drag it to Pinterest manually.
                     if (onCreateLink) {
                       try {
-                        const publicUrl = await onCreateLink();
-                        if (publicUrl && typeof publicUrl === 'string') {
-                          const pinterestUrl = `https://www.pinterest.com/pin/create/button/?url=${encodeURIComponent(publicUrl)}&description=${encodeURIComponent(outfit?.name || 'A look from Atelier')}`;
+                        const res = await onCreateLink(imageBlob);
+                        const publicUrl = typeof res === 'string' ? res : res?.url;
+                        const cardImageUrl = typeof res === 'object' ? res?.cardImageUrl : null;
+                        if (publicUrl) {
+                          const pinterestUrl = buildPinterestUrl({
+                            url: publicUrl,
+                            media: cardImageUrl || undefined,
+                            description: outfit?.name || 'A look from Atelier',
+                          });
                           window.open(pinterestUrl, '_blank', 'noopener,noreferrer,width=750,height=600');
                           return;
                         }
@@ -261,7 +264,6 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
                         console.warn('[share] onCreateLink failed:', linkErr?.message);
                       }
                     }
-                    // Fallback: download image + open Pinterest create-pin page
                     handleDownload();
                     window.open('https://www.pinterest.com/pin-builder/', '_blank', 'noopener,noreferrer');
                     toast.show('Image saved — drag it into Pinterest', { kind: 'default', eyebrow: 'TIP' });
@@ -890,7 +892,7 @@ function DigitalWardrobe() {
   // Snapshot the outfit (+ resolved item summaries) into /public/{shareId} so
   // anyone with the link can view, even unauthenticated. Embeds image data URLs
   // directly — the share doc is self-contained, no follow-up reads required.
-  const handleShareOutfit = async (outfit) => {
+  const handleShareOutfit = async (outfit, cardBlob = null) => {
     if (!user) return null;
     const pieces = resolveOutfitItems(outfit, items).map((p) => ({
       id: p.id,
@@ -903,11 +905,17 @@ function DigitalWardrobe() {
     }));
     const shareId = newShareId();
     const title = outfit.name || 'Untitled look';
+    let cardImageUrl = null;
+    if (cardBlob) {
+      try { cardImageUrl = await uploadShareCardImage(shareId, cardBlob); }
+      catch (e) { console.warn('[share] card image upload failed:', e?.message); }
+    }
     const snapshot = {
       v: 1,
       kind: 'outfit',
       name: title,
       reasoning: outfit.reasoning || '',
+      cardImageUrl,
       sharedAt: new Date().toISOString(),
       sharedByName: user.displayName || 'Atelier',
       pieces,
@@ -915,7 +923,7 @@ function DigitalWardrobe() {
     await setDoc(publicShareDoc(shareId), snapshot);
     const url = `${window.location.origin}/?share=${shareId}`;
     setShareTarget({ url, title, kind: 'outfit' });
-    return url;
+    return { url, cardImageUrl };
   };
 
   // Editorial-share flow — opens the in-app preview modal rather than
@@ -1778,7 +1786,7 @@ function DigitalWardrobe() {
               outfit={shareModalOutfit}
               items={items}
               onClose={() => setShareModalOutfit(null)}
-              onCreateLink={() => handleShareOutfit(shareModalOutfit)}
+              onCreateLink={(cardBlob) => handleShareOutfit(shareModalOutfit, cardBlob)}
             />
           )}
 

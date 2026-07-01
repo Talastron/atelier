@@ -398,8 +398,8 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
   const runPolishWardrobe = async () => {
     if (!user) return;
     polishCancelRef.current = false;
+    // Owned + wishlist — polish every item with a photo that isn't cut out yet.
     const targets = (items || []).filter((it) =>
-      it.status !== 'wishlist' &&
       (it.images || []).length > 0 &&
       !(it.imageMeta?.[0]?.cutoutUrl) &&
       it.imageMeta?.[0]?.cutout !== true

@@ -23,9 +23,16 @@ function safeId(s) { return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '').slice
 // cutoutUrl set on index 0. The original images[0] is left untouched. On
 // failure returns { ok:false } and leaves imageMeta unchanged.
 export async function polishItemPrimary(item, uid) {
-  const original = (Array.isArray(item.images) ? item.images : [])[0];
+  let original = (Array.isArray(item.images) ? item.images : [])[0];
   if (!original || !uid) return { ok: false };
-  const { removeImageBackground } = await import('./canvas.js');
+  const { removeImageBackground, rehostExternalImage } = await import('./canvas.js');
+  // External retailer URLs (e.g. cdn.endource.com) display fine but can't be
+  // fetched cross-origin for background removal — rehost to a local data URL
+  // (via proxy) first so the cut-out can read the bytes.
+  if (!original.startsWith('data:')) {
+    const rehosted = await rehostExternalImage(original);
+    if (rehosted && rehosted.startsWith('data:')) original = rehosted;
+  }
   const out = await removeImageBackground(original); // { url, ok }
   if (!out.ok) return { ok: false, error: out.error };
   const { storage } = await import('../firebase.js');

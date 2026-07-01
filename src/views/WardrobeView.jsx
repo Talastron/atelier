@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, ArrowUpDown, Check, ChevronDown, ChevronRight, Heart, Plus, Shirt, SlidersHorizontal, Sparkles, Star, Trash2, X } from "lucide-react";
 import { daysSinceLastWorn, isItemAvailable, itemColors, itemCondition, itemImages, itemNeedsDetail, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemCostPerWear, live, resolveOutfitItems, todayISO } from "../lib/items.js";
+import { useImageBg } from "../lib/imageBg.js";
+import { itemImageDisplay } from "../lib/polish.js";
 import { fetchTodaysWeather, pickTodaysRecommendation, weatherToSeasons, weatherAppropriatenessScore } from "../lib/weather.js";
 import { CATEGORIES, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES, DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES, SPORTSWEAR_SUBCATEGORIES, BAG_SUBCATEGORIES, SHOE_SUBCATEGORIES, SWIMWEAR_SUBCATEGORIES, STYLES, SEASONS, COLOR_SWATCHES, ITEM_CONDITIONS } from "../lib/taxonomy.js";
 
@@ -10,6 +12,10 @@ function WardrobeCardImage({ item }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const touchStartRef = React.useRef(null);
   const images = itemImages(item);
+  // Sample the active image's background to decide contain-on-white vs cover.
+  // (Hook must run before the early return below — rules of hooks.)
+  const activeSrcForBg = images.length ? images[Math.min(photoIndex, images.length - 1)] : null;
+  const bg = useImageBg(activeSrcForBg);
 
   if (images.length === 0 || failed) {
     return (
@@ -61,24 +67,34 @@ function WardrobeCardImage({ item }) {
           loading=eager on all so the carousel doesn't wait for a network
           round-trip when the user clicks next — items typically have 1-6
           photos so the up-front cost is small. */}
-      {images.map((src, i) => (
+      {images.map((src, i) => {
+        const disp = itemImageDisplay(item, i);
+        const showSrc = disp.src || src;
+        // Cut-outs: contain on a white card. Otherwise let bg-detection decide
+        // (it paints the tile the image's own colour, or covers busy photos).
+        const detected = (i === safeIndex && !disp.forceContain && bg?.contain) ? bg.color : null;
+        const contain = disp.forceContain || !!detected;
+        const tileBg = disp.forceContain ? '#FFFFFF' : detected;
+        return (
         <div
           key={i}
+          style={tileBg ? { background: tileBg } : undefined}
           className={`absolute inset-0 transition-opacity duration-300 ease-out ${
             i === safeIndex ? 'opacity-100' : 'opacity-0'
           }`}
         >
           <img
-            src={src}
+            src={showSrc}
             alt={i === safeIndex ? item.name : ''}
             onError={() => setFailed(true)}
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 pointer-events-none"
+            className={`w-full h-full transition-transform duration-700 ease-out group-hover:scale-105 pointer-events-none ${contain ? 'object-contain' : 'object-cover'}`}
             loading="lazy"
             decoding="async"
             draggable={false}
           />
         </div>
-      ))}
+        );
+      })}
 
       {hasMulti && (
         <>

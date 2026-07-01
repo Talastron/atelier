@@ -380,3 +380,37 @@ exports.deleteAccount = onCall(
     return { ok: true };
   }
 );
+
+// --- Image proxy -------------------------------------------------------------
+// Fetches an external (retailer-CDN) image server-side — where browser CORS
+// doesn't exist — and returns the bytes with permissive CORS so the client can
+// read them (for background-removal cut-outs and image rehosting). The public
+// CORS proxies the client used are unreliable; this is the dependable path.
+// Basic SSRF guards: http(s) only, no internal hosts, image content-type, cap.
+exports.imageProxy = onRequest({ region: REGION, cors: true, memory: '256MiB' }, async (req, res) => {
+  const url = String(req.query.url || '');
+  if (!/^https?:\/\//i.test(url)) { res.status(400).send('bad url'); return; }
+  let host;
+  try { host = new URL(url).hostname; } catch { res.status(400).send('bad url'); return; }
+  if (/^(localhost$|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0$|\[?::1\]?$)/i.test(host)) {
+    res.status(400).send('blocked host'); return;
+  }
+  try {
+    const upstream = await fetch(url, {
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AtelierBot/1.0)' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!upstream.ok) { res.status(502).send(`upstream ${upstream.status}`); return; }
+    const ct = upstream.headers.get('content-type') || '';
+    if (!ct.startsWith('image/')) { res.status(415).send('not an image'); return; }
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    if (buf.length > 10 * 1024 * 1024) { res.status(413).send('too large'); return; }
+    res.set('Content-Type', ct);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(buf);
+  } catch (e) {
+    logger.warn('[imageProxy] failed', { url, err: e?.message });
+    res.status(502).send('fetch failed');
+  }
+});

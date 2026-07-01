@@ -46,7 +46,11 @@ export function brandSearchUrl(website, query) {
 
 
 
+// Our own Cloud Function proxy fetches server-side (no browser CORS) and is far
+// more reliable than the public proxies, which are kept only as a fallback.
+const FUNCTION_IMAGE_PROXY = `https://europe-west2-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/imageProxy`;
 const CORS_PROXIES = [
+  (u) => `${FUNCTION_IMAGE_PROXY}?url=${encodeURIComponent(u)}`,
   (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
   (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
@@ -101,6 +105,9 @@ export function clearHostBlock(host) {
   delete map[host];
   writeBlockedHosts(map);
 }
+// Reset every host cooldown — used before a batch so stale blocks (from when
+// the public proxies were failing) don't skip hosts the function proxy can serve.
+export function clearAllHostBlocks() { writeBlockedHosts({}); }
 
 export async function fetchViaProxy(url, options = {}) {
   const host = hostOf(url);

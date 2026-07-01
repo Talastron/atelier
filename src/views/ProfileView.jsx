@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, BarChart3, Calendar, Check, Download, LogOut, Save, Sparkles, X } from "lucide-react";
 import { classifyBodyShape, itemImages, itemNeedsDetail, summariseStyleProfile, todayISO, live } from "../lib/items.js";
 import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
 import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser, deleteMyAccount } from "../firebase.js";
+import { polishItemPrimary } from "../lib/polish.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
@@ -369,7 +370,7 @@ function SubscriptionPill({ state }) {
   return <p className="mt-2 text-sm text-stone-400">Membership status unavailable.</p>;
 }
 
-export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights, onReviewManually }) {
+export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights, onReviewManually, onOpenItem }) {
   const currency = measurements?.currency || 'GBP';
   const aiTempPreset = measurements?.aiTemperaturePreset || 'balanced';
   const setCurrency = (v) => saveMeasurements({ ...measurements, currency: v });
@@ -389,6 +390,38 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteError, setInviteError] = useState(null);
   const [founderCount, setFounderCount] = useState(null);
+
+  // Polish-my-wardrobe batch state
+  const [polishState, setPolishState] = useState(null); // null | { done,total,failed } | { summary }
+  const polishCancelRef = useRef(false);
+
+  const runPolishWardrobe = async () => {
+    if (!user) return;
+    polishCancelRef.current = false;
+    // Clear stale proxy cooldowns so the reliable function proxy gets a fresh go.
+    try { const net = await import("../lib/net.js"); net.clearAllHostBlocks(); } catch { /* non-blocking */ }
+    // Owned + wishlist — polish every item with a photo that isn't cut out yet.
+    const targets = (items || []).filter((it) =>
+      (it.images || []).length > 0 &&
+      !(it.imageMeta?.[0]?.cutoutUrl) &&
+      it.imageMeta?.[0]?.cutout !== true
+    );
+    setPolishState({ done: 0, total: targets.length, failed: 0 });
+    let done = 0, failed = 0;
+    const failedItems = [];
+    for (const it of targets) {
+      if (polishCancelRef.current) break;
+      try {
+        const res = await polishItemPrimary(it, user.uid);
+        if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
+        else { failed += 1; failedItems.push(it); }
+      } catch { failed += 1; failedItems.push(it); }
+      done += 1;
+      setPolishState({ done, total: targets.length, failed });
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems } });
+  };
 
   // Google Calendar connection state. null = still checking, true/false = known.
   const profileToast = useToast();
@@ -752,16 +785,59 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               <h3 className="font-display text-xl md:text-2xl text-stone-900">Photo cutouts <span className="text-[10px] tracking-widest uppercase text-brass-600 ml-2 align-middle">Beta</span></h3>
             </div>
             <p className="text-stone-500 text-sm leading-relaxed max-w-xl">
-              Auto-remove the background from item photos so pieces sit on a clean transparent surface. Heavy in-browser model — first use will be slow while it downloads (~5MB). If anything fails, the original photo is kept.
+              Remove the background from item photos so each piece sits on a clean white card. New items are polished automatically; if a cut-out ever looks wrong, the original is kept and one tap reverts it. Heavy in-browser model — first run downloads ~5MB.
             </p>
           </div>
           <label className="inline-flex items-center gap-3 cursor-pointer shrink-0">
-            <span className="text-xs tracking-widest uppercase text-stone-500">{measurements?.removeBackground ? 'On' : 'Off'}</span>
+            <span className="text-xs tracking-widest uppercase text-stone-500">{measurements?.removeBackground !== false ? 'On' : 'Off'}</span>
             <input type="checkbox" className="sr-only peer"
-              checked={!!measurements?.removeBackground}
+              checked={measurements?.removeBackground !== false}
               onChange={(e) => saveMeasurements({ ...measurements, removeBackground: e.target.checked })} />
             <span className="w-11 h-6 bg-stone-200 rounded-full peer-checked:bg-stone-900 relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform peer-checked:after:translate-x-5"></span>
           </label>
+        </div>
+
+        <div className="mt-6 pt-5 border-t border-stone-100">
+          {!polishState && (
+            <button type="button" onClick={runPolishWardrobe}
+              className="text-xs tracking-widest uppercase px-5 py-3 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors">
+              Polish my wardrobe
+            </button>
+          )}
+          {polishState && !polishState.summary && (
+            <div className="max-w-sm">
+              <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
+                <span>Polishing… {polishState.done} / {polishState.total}{polishState.failed ? ` · ${polishState.failed} kept original` : ''}</span>
+                <button type="button" onClick={() => { polishCancelRef.current = true; }} className="underline hover:text-stone-900">Stop</button>
+              </div>
+              <div className="h-1.5 rounded-full bg-stone-100 overflow-hidden">
+                <div className="h-full bg-brass-400 transition-all" style={{ width: `${polishState.total ? Math.round((polishState.done / polishState.total) * 100) : 0}%` }} />
+              </div>
+            </div>
+          )}
+          {polishState?.summary && (
+            <div className="text-sm text-stone-700">
+              <p className="mb-2">
+                {polishState.summary.done - polishState.summary.failed} polished
+                {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original` : ''}
+                {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
+              </p>
+              {polishState.summary.failedItems?.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-stone-500 mb-2">Couldn’t cut these out — tap to review:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {polishState.summary.failedItems.map((it) => (
+                      <button key={it.id} type="button" onClick={() => onOpenItem?.(it.id)} title={it.name}
+                        className="w-14 h-14 rounded-lg overflow-hidden bg-stone-100 border border-stone-200 hover:border-stone-500 transition-colors">
+                        {(it.images || [])[0] && <img src={it.images[0]} alt={it.name} className="w-full h-full object-cover" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button type="button" onClick={() => setPolishState(null)} className="text-xs tracking-widest uppercase underline text-stone-500 hover:text-stone-900">Done</button>
+            </div>
+          )}
         </div>
       </div>
       </section>

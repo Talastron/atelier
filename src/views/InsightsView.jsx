@@ -2,6 +2,8 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight, Heart, Shirt, TrendingDown, Wand2, Sparkles, Share2, Download, X } from "lucide-react";
 import { daysSinceLastWorn, itemColors, itemCostPerWear, itemImages, itemSeasons, itemWearCount, itemWearHistory, itemWearNotes, todayISO } from "../lib/items.js";
+import { itemImageDisplay } from "../lib/polish.js";
+import ItemTileImage from "../components/ItemTileImage.jsx";
 import { analyzeWardrobeGapsWithGemini, generateStyleManifestoWithGemini } from "../lib/ai.js";
 import { composeStyleDNAExportImage, composeManifestoExportImage, shareOrDownloadImage } from "../lib/canvas.js";
 import { isAIEnabled } from "../firebase.js";
@@ -395,7 +397,7 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
       });
       const rep = sorted[0] || null;
       map[cat] = {
-        photo: rep ? itemImages(rep)[0] : null,
+        photo: rep ? (itemImageDisplay(rep, 0).src || itemImages(rep)[0]) : null,
         brand: rep?.brand || '',
         count: inCat.length,
       };
@@ -1424,7 +1426,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                     >
                       <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 mb-2 border border-stone-200/60">
                         {itemImages(it)[0] ? (
-                          <img src={itemImages(it)[0]} alt={it.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                          <ItemTileImage item={it} alt={it.name} />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
                         )}
@@ -1528,7 +1530,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
               <div key={item.id} className="flex items-center gap-4">
                 <span className="font-display text-stone-300 text-xl w-6 text-right">{idx + 1}</span>
                 <div className="w-12 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
-                  {itemImages(item)[0] && <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                  <ItemTileImage item={item} alt="" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">{item.name}</p>
@@ -1553,7 +1555,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
               <div key={item.id} className="flex items-center gap-4">
                 <span className="font-display text-stone-300 text-xl w-6 text-right">{idx + 1}</span>
                 <div className="w-12 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
-                  {itemImages(item)[0] && <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                  <ItemTileImage item={item} alt="" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">{item.name}</p>
@@ -1580,7 +1582,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
               <div key={item.id} className="flex items-center gap-4">
                 <span className="font-display text-stone-300 text-xl w-6 text-right">{idx + 1}</span>
                 <div className="w-12 h-16 rounded-lg overflow-hidden bg-stone-100 shrink-0">
-                  {itemImages(item)[0] && <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                  <ItemTileImage item={item} alt="" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">{item.name}</p>
@@ -1621,7 +1623,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
             {stale.map((item) => (
               <div key={item.id} className="flex flex-col gap-2">
                 <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100">
-                  {itemImages(item)[0] && <img src={itemImages(item)[0]} alt={item.name} className="w-full h-full object-cover" loading="lazy" />}
+                  <ItemTileImage item={item} alt={item.name} />
                 </div>
                 <p className="text-xs text-stone-900 truncate">{item.name}</p>
                 <p className="text-[10px] uppercase tracking-wider text-stone-400">

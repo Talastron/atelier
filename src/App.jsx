@@ -4646,7 +4646,7 @@ function AppearsInSection({ item, outfits = [], allItems = [], onOpenOutfit }) {
       <div className="flex gap-3 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 pb-3">
         {matching.map((o) => {
           const pieces = resolveOutfitItems(o, allItems);
-          const previews = pieces.slice(0, 4).map((p) => itemImages(p)[0]).filter(Boolean);
+          const previews = pieces.slice(0, 4).map((p) => itemImageDisplay(p, 0).src || itemImages(p)[0]).filter(Boolean);
           return (
             <button key={o.id} onClick={() => onOpenOutfit?.(o.id)}
               className="flex-none w-32 sm:w-36 text-left group transition-transform active:scale-[0.97]">

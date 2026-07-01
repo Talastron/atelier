@@ -8,6 +8,7 @@ import { OUTFIT_SLOTS, emptyOutfit, isMultiSlot, itemFitsSlot, slotForItem, slot
 import { MOOD_PRESETS, STYLES } from "../lib/taxonomy.js";
 import { colorsHarmonize, hexFromColorName } from "../lib/color.js";
 import { daysSinceLastWorn, itemColors, itemImages, itemSeasons, itemStyles, live, newId, resolveOutfitItems } from "../lib/items.js";
+import { itemImageDisplay } from "../lib/polish.js";
 import { generateOutfitWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini } from "../lib/ai.js";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { isAIEnabled } from "../firebase.js";
@@ -1605,7 +1606,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                   const collOutfits = coll.outfitIds.map((id) => outfits.find((o) => o.id === id)).filter(Boolean);
                   const preview = collOutfits.slice(0, 4).map((o) => {
                     const pieces = resolveOutfitItems(o, items);
-                    return pieces[0] ? itemImages(pieces[0])[0] : null;
+                    return pieces[0] ? (itemImageDisplay(pieces[0], 0).src || itemImages(pieces[0])[0]) : null;
                   });
                   const isActive = activeCollection === coll.id;
                   return (

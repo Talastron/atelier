@@ -370,7 +370,7 @@ function SubscriptionPill({ state }) {
   return <p className="mt-2 text-sm text-stone-400">Membership status unavailable.</p>;
 }
 
-export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights, onReviewManually }) {
+export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights, onReviewManually, onOpenItem }) {
   const currency = measurements?.currency || 'GBP';
   const aiTempPreset = measurements?.aiTemperaturePreset || 'balanced';
   const setCurrency = (v) => saveMeasurements({ ...measurements, currency: v });
@@ -406,18 +406,19 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     );
     setPolishState({ done: 0, total: targets.length, failed: 0 });
     let done = 0, failed = 0;
+    const failedItems = [];
     for (const it of targets) {
       if (polishCancelRef.current) break;
       try {
         const res = await polishItemPrimary(it, user.uid);
         if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
-        else { failed += 1; }
-      } catch { failed += 1; }
+        else { failed += 1; failedItems.push(it); }
+      } catch { failed += 1; failedItems.push(it); }
       done += 1;
       setPolishState({ done, total: targets.length, failed });
       await new Promise((r) => setTimeout(r, 0));
     }
-    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current } });
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems } });
   };
 
   // Google Calendar connection state. null = still checking, true/false = known.
@@ -816,9 +817,22 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
             <div className="text-sm text-stone-700">
               <p className="mb-2">
                 {polishState.summary.done - polishState.summary.failed} polished
-                {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original (review them)` : ''}
+                {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original` : ''}
                 {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
               </p>
+              {polishState.summary.failedItems?.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs text-stone-500 mb-2">Couldn’t cut these out — tap to review:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {polishState.summary.failedItems.map((it) => (
+                      <button key={it.id} type="button" onClick={() => onOpenItem?.(it.id)} title={it.name}
+                        className="w-14 h-14 rounded-lg overflow-hidden bg-stone-100 border border-stone-200 hover:border-stone-500 transition-colors">
+                        {(it.images || [])[0] && <img src={it.images[0]} alt={it.name} className="w-full h-full object-cover" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <button type="button" onClick={() => setPolishState(null)} className="text-xs tracking-widest uppercase underline text-stone-500 hover:text-stone-900">Done</button>
             </div>
           )}

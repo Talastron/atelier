@@ -1573,6 +1573,7 @@ function DigitalWardrobe() {
                       subStatus={subStatus}
                       onOpenInsights={() => setActiveTab('insights')}
                       onReviewManually={() => jumpToWardrobe({ filter: 'untagged' })}
+                      onOpenItem={setSelectedItemId}
                     />
                   )}
                   {activeTab === 'shops' && (

@@ -1565,6 +1565,7 @@ function DigitalWardrobe() {
                       addInvite={handleAddInvite}
                       removeInvite={handleRemoveInvite}
                       items={ownedItems}
+                      polishItems={liveItems}
                       deletedItems={deletedItems}
                       outfits={outfits}
                       inspirations={inspirations}

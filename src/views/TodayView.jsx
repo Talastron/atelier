@@ -515,17 +515,17 @@ function DailyBriefCard({
             <p className="mb-2.5 px-0.5 text-[9px] font-medium uppercase tracking-[0.2em] text-brass-600">
               Jewellery · {jewelleryPieces.length} {jewelleryPieces.length === 1 ? 'piece' : 'pieces'}
             </p>
-            <div className="flex flex-wrap justify-center gap-2.5 sm:justify-start sm:gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {jewelleryPieces.map((j, i) => (
                 <button
                   key={j.id}
                   type="button"
                   onClick={openBrief}
-                  className="animate-in w-[clamp(58px,15vw,84px)]"
+                  className="animate-in"
                   style={{ animationDelay: `${i * 50}ms` }}
                   aria-label={`Open ${j.name} in today's look`}
                 >
-                  <div className="aspect-square overflow-hidden rounded-xl bg-white smooth-shadow border border-stone-200/50 p-1.5">
+                  <div className="aspect-square overflow-hidden rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-3">
                     {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
                   </div>
                 </button>

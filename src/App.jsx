@@ -1473,6 +1473,7 @@ function DigitalWardrobe() {
                       onSaveOutfit={handleSaveOutfit}
                       onLogOutfitWear={handleLogOutfitWear}
                       onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }}
+                      onOpenSavedLook={setOpenOutfitId}
                       onItemClick={setSelectedItemId}
                       onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
                       onOpenConcierge={() => setIsConciergeOpen(true)}

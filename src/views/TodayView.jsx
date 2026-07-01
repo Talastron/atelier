@@ -86,6 +86,9 @@ function DailyBriefCard({
   onSaveOutfit,
   onLogOutfitWear,
   onOpenOutfit,
+  onOpenSavedLook = null,  // optional: after saving, jump to the saved look's
+                            // detail page (OutfitDetailView) by id — distinct
+                            // from onOpenOutfit, which seeds the Styling Studio.
   onOpenItem = null,  // optional: tap a chip → open that item's detail view
   onEditPreferences,  // optional: jumps to Profile → Style so the user can
                        // change palette / formality / temperament from the
@@ -109,8 +112,11 @@ function DailyBriefCard({
   // whenever the brief itself changes (compose another), since the new brief
   // hasn't been saved/worn yet.
   const [saveState, setSaveState] = useState('idle'); // idle | saving | saved
+  // Id of the look once saved, so the confirmation button can jump straight to
+  // its detail page instead of making the user hunt for it in the Lookbook.
+  const [savedOutfitId, setSavedOutfitId] = useState(null);
   const [wearState, setWearState] = useState('idle'); // idle | wearing | done
-  useEffect(() => { setSaveState('idle'); setWearState('idle'); }, [brief?.savedAt]);
+  useEffect(() => { setSaveState('idle'); setWearState('idle'); setSavedOutfitId(null); }, [brief?.savedAt]);
 
   // One-time validation of the cached brief: if today's cached look has no
   // clothing base (e.g. it was composed before the clothing-base guarantee, or
@@ -383,6 +389,7 @@ function DailyBriefCard({
     };
     try {
       if (onSaveOutfit) await onSaveOutfit(outfit);
+      setSavedOutfitId(outfit.id);
       setSaveState('saved');
       haptic('success');
       toast?.show?.('Saved to your Lookbook', { kind: 'success' });
@@ -495,18 +502,30 @@ function DailyBriefCard({
         >
           {loading ? 'Composing…' : 'Compose another'}
         </button>
-        <button
-          type="button"
-          onClick={handleSaveAsLook}
-          disabled={saveState !== 'idle'}
-          className={`rounded-full border px-5 py-2.5 text-sm transition-colors disabled:cursor-not-allowed ${
-            saveState === 'saved'
-              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-              : 'border-stone-300 hover:bg-stone-50 disabled:opacity-60'
-          }`}
-        >
-          {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? '✓ Saved to Lookbook' : 'Save as a Look'}
-        </button>
+        {saveState === 'saved' && onOpenSavedLook && savedOutfitId ? (
+          // Saved: the button turns into a one-tap jump to the look's detail
+          // page, so the user never has to hunt for it in the Lookbook.
+          <button
+            type="button"
+            onClick={() => onOpenSavedLook(savedOutfitId)}
+            className="rounded-full border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-sm text-emerald-800 transition-colors hover:bg-emerald-100"
+          >
+            ✓ Saved · View look →
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSaveAsLook}
+            disabled={saveState !== 'idle'}
+            className={`rounded-full border px-5 py-2.5 text-sm transition-colors disabled:cursor-not-allowed ${
+              saveState === 'saved'
+                ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                : 'border-stone-300 hover:bg-stone-50 disabled:opacity-60'
+            }`}
+          >
+            {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? '✓ Saved to Lookbook' : 'Save as a Look'}
+          </button>
+        )}
       </div>
 
       {softNudgeActive() && (
@@ -643,7 +662,7 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
 // Favourites always float to the top within whichever mode is active — a small
 // curated touch that mirrors how most native gallery apps treat starred items.
 
-export default function TodayView({ user, items, measurements, schedules, outfits, inspirations, aiTemperature, onSaveOutfit, onLogOutfitWear, onOpenBrief, onItemClick, onEditPreferences, onOpenConcierge, onOpenInspiration, onOpenInspirationTab, onSelectCalendarDay }) {
+export default function TodayView({ user, items, measurements, schedules, outfits, inspirations, aiTemperature, onSaveOutfit, onLogOutfitWear, onOpenBrief, onOpenSavedLook, onItemClick, onEditPreferences, onOpenConcierge, onOpenInspiration, onOpenInspirationTab, onSelectCalendarDay }) {
   const [weather, setWeather] = useState(null);
   const [weatherSettled, setWeatherSettled] = useState(false);
   useEffect(() => {
@@ -714,6 +733,7 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         onSaveOutfit={onSaveOutfit}
         onLogOutfitWear={onLogOutfitWear}
         onOpenOutfit={onOpenBrief}
+        onOpenSavedLook={onOpenSavedLook}
         onOpenItem={onItemClick}
         onEditPreferences={onEditPreferences}
       />

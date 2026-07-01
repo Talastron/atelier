@@ -420,7 +420,7 @@ function DailyBriefCard({
           are prominent and equal to each other; accessories, shoes, bags and
           jewellery are the supporting smaller size. */}
       <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:justify-start sm:gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:justify-center sm:gap-5">
           {lookTiles.map((t, i) => {
             const isStack = !!t.__stack;
             const garment = !isStack && GARMENT_CATS.has(t.category);
@@ -430,7 +430,7 @@ function DailyBriefCard({
             // Mobile: uniform 2-column grid (w-full fills the cell) — tidy on a
             // narrow screen. Desktop (sm+): the editorial two-tier sizing, where
             // garments are prominent and accessories supporting.
-            const widthCls = `w-full ${garment ? 'sm:w-[clamp(132px,17vw,176px)]' : 'sm:w-[clamp(88px,11vw,120px)]'}`;
+            const widthCls = `w-full ${garment ? 'sm:w-[clamp(150px,20vw,260px)]' : 'sm:w-[clamp(120px,15vw,200px)]'}`;
             return (
               <button
                 key={t.id}

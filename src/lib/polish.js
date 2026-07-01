@@ -48,6 +48,12 @@ export async function polishItemPrimary(item, uid) {
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
   meta[0] = { ...(meta[0] || {}), cutoutUrl };
+  // A fresh cut-out invalidates any earlier manual frame (that crop was taken
+  // from the pre-cut-out image). Drop the stale framedUrl/frame — otherwise the
+  // old crop would display over the new cut-out and the editor would open a
+  // mismatched base.
+  delete meta[0].framedUrl;
+  delete meta[0].frame;
   return { ok: true, imageMeta: meta };
 }
 

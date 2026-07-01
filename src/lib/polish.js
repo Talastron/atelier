@@ -25,12 +25,15 @@ function safeId(s) { return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '').slice
 export async function polishItemPrimary(item, uid) {
   let original = (Array.isArray(item.images) ? item.images : [])[0];
   if (!original || !uid) return { ok: false };
-  const { removeImageBackground, rehostExternalImage } = await import('./canvas.js');
+  const { removeImageBackground } = await import('./canvas.js');
   // External retailer URLs (e.g. cdn.endource.com) display fine but can't be
-  // fetched cross-origin for background removal — rehost to a local data URL
-  // (via proxy) first so the cut-out can read the bytes.
+  // fetched cross-origin for background removal — pull the bytes through the
+  // proxy chain in net.js into a local data URL first, then cut out. (We call
+  // net.js directly; canvas.js's rehostExternalImage wrapper is broken — it
+  // references imageUrlToCompressedDataUrl without importing it.)
   if (!original.startsWith('data:')) {
-    const rehosted = await rehostExternalImage(original);
+    const { imageUrlToCompressedDataUrl } = await import('./net.js');
+    const rehosted = await imageUrlToCompressedDataUrl(original);
     if (rehosted && rehosted.startsWith('data:')) original = rehosted;
   }
   const out = await removeImageBackground(original); // { url, ok }

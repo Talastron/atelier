@@ -709,6 +709,10 @@ export async function rehostExternalImage(externalUrl) {
   if (!externalUrl) return null;
   if (externalUrl.startsWith('data:')) return externalUrl; // already inline
   try {
+    // Lazy import: net.js imports compressImageToDataUrl from THIS module, so a
+    // static import back would form a canvas↔net cycle (undefined at load time).
+    // Resolving at call time sidesteps it — same pattern polish.js uses.
+    const { imageUrlToCompressedDataUrl } = await import('./net.js');
     const dataUrl = await imageUrlToCompressedDataUrl(externalUrl);
     return dataUrl; // null if proxy failed — caller handles gracefully
   } catch (err) {

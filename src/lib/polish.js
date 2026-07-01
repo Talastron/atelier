@@ -59,3 +59,31 @@ export function revertItemPrimary(item) {
   if (meta[0]) { delete meta[0].cutoutUrl; }
   return meta;
 }
+
+// Frame item.images[0]: upload the already-baked crop data URL to Storage and
+// record framedUrl + the frame params (so re-opening restores the crop). The
+// original images[0] is untouched. Returns { ok, imageMeta } or { ok:false }.
+// The canvas bake happens in the caller (ImageFramer via renderFramedDataUrl)
+// so this stays a thin persistence seam, exactly like polishItemPrimary.
+export async function frameItemPrimary(item, uid, dataUrl, frame) {
+  if (!uid || !dataUrl || !dataUrl.startsWith('data:')) return { ok: false };
+  const { storage } = await import('../firebase.js');
+  const { ref, uploadString, getDownloadURL } = await import('firebase/storage');
+  const path = `framed/${uid}/${safeId(item.id)}-0.jpg`;
+  const r = ref(storage, path);
+  await uploadString(r, dataUrl, 'data_url', { cacheControl: 'public, max-age=31536000' });
+  const framedUrl = await getDownloadURL(r);
+  const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
+  while (meta.length < 1) meta.push({});
+  meta[0] = { ...(meta[0] || {}), framedUrl, frame };
+  return { ok: true, imageMeta: meta };
+}
+
+// Revert: drop the framed crop (framedUrl + frame). The original shows again.
+// Pure — returns the updated imageMeta array. (We leave the Storage object; a
+// re-frame overwrites it.)
+export function revertFramePrimary(item) {
+  const meta = Array.isArray(item.imageMeta) ? item.imageMeta.map((m) => ({ ...m })) : [];
+  if (meta[0]) { delete meta[0].framedUrl; delete meta[0].frame; }
+  return meta;
+}

@@ -370,7 +370,7 @@ function SubscriptionPill({ state }) {
   return <p className="mt-2 text-sm text-stone-400">Membership status unavailable.</p>;
 }
 
-export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights, onReviewManually, onOpenItem }) {
+export default function ProfileView({ user, measurements, saveMeasurements, isOwner, allowlist, addInvite, removeInvite, items, polishItems, deletedItems = [], outfits, inspirations = [], shops, onRestoreItem, onHardDeleteItem, onUpdateItem, subStatus, onOpenInsights, onReviewManually, onOpenItem }) {
   const currency = measurements?.currency || 'GBP';
   const aiTempPreset = measurements?.aiTemperaturePreset || 'balanced';
   const setCurrency = (v) => saveMeasurements({ ...measurements, currency: v });
@@ -401,7 +401,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     // Clear stale proxy cooldowns so the reliable function proxy gets a fresh go.
     try { const net = await import("../lib/net.js"); net.clearAllHostBlocks(); } catch { /* non-blocking */ }
     // Owned + wishlist — polish every item with a photo that isn't cut out yet.
-    const targets = (items || []).filter((it) =>
+    // `items` is owned-only (used for the enrichment cards); the polish batch
+    // must also reach wishlist pieces, so App passes the combined live list as
+    // `polishItems`. Fall back to `items` if the prop isn't provided.
+    const targets = ((polishItems || items) || []).filter((it) =>
       (it.images || []).length > 0 &&
       !(it.imageMeta?.[0]?.cutoutUrl) &&
       it.imageMeta?.[0]?.cutout !== true

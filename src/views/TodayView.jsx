@@ -445,13 +445,22 @@ function DailyBriefCard({
                 <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
                   <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
                     {isStack ? (
-                      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-1">
-                        {t.items.slice(0, 4).map((j) => (
-                          <div key={j.id} className="overflow-hidden rounded-md bg-white">
-                            {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
-                          </div>
-                        ))}
-                      </div>
+                      <>
+                        {/* Mobile: one representative jewel at full tile size — a
+                            2x2 in a full-width cell made each piece tiny. The
+                            "N pieces" caption conveys that it's a set. */}
+                        <div className="sm:hidden h-full w-full">
+                          <ItemTileImage item={t.items[0]} alt={`${t.items.length} jewellery pieces`} />
+                        </div>
+                        {/* Desktop: 2x2 preview (the accessory tile is small here). */}
+                        <div className="hidden sm:grid h-full w-full grid-cols-2 grid-rows-2 gap-1">
+                          {t.items.slice(0, 4).map((j) => (
+                            <div key={j.id} className="overflow-hidden rounded-md bg-white">
+                              {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     ) : imgOf(t) ? (
                       <ItemTileImage item={t} alt={t.name} />
                     ) : (

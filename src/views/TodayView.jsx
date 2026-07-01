@@ -324,14 +324,6 @@ function DailyBriefCard({
     ...briefItems.filter(it => it.category !== 'Jewellery'),
     ...(stackJewels.length ? [{ __stack: true, id: 'jewel-stack', items: stackJewels }] : (allJewels.length === 1 ? allJewels : [])),
   ].slice(0, 8);
-  // Give the row a focal point: the lead torso garment (dress/top/outerwear)
-  // becomes the hero tile — larger and pulled to the front — instead of a flat
-  // lineup of equal thumbnails. Falls back to the first tile if there's none.
-  const HERO_CATS = new Set(['Dresses', 'Tops', 'Outerwear']);
-  const heroIdx = Math.max(0, lookTiles.findIndex((t) => !t.__stack && HERO_CATS.has(t.category)));
-  const orderedTiles = heroIdx > 0
-    ? [lookTiles[heroIdx], ...lookTiles.filter((_, idx) => idx !== heroIdx)]
-    : lookTiles;
 
   const conf = brief.confidence;
 
@@ -419,16 +411,18 @@ function DailyBriefCard({
       {/* The look — equal tiles on one aligned grid, clothing first, captioned,
           LEFT-aligned with the headline. Flat tiles, object-cover (no seams). */}
       {/* Editorial flat-lay: white cards lifted off a warm ivory ground by a soft
-          shadow, with a larger hero tile so the look has a focal point instead
-          of a flat lineup of equal thumbnails. */}
+          shadow. Two size tiers — garments (tops, bottoms, dresses, outerwear)
+          are prominent and equal to each other; accessories, shoes, bags and
+          jewellery are the supporting smaller size. */}
       <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
         <div className="flex flex-wrap items-end justify-start gap-3 sm:gap-4">
-          {orderedTiles.map((t, i) => {
+          {lookTiles.map((t, i) => {
             const isStack = !!t.__stack;
             const garment = !isStack && GARMENT_CATS.has(t.category);
             const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
-            const isHero = i === 0;
-            const widthCls = isHero ? 'w-[clamp(168px,25vw,232px)]' : 'w-[clamp(92px,12vw,128px)]';
+            // Garments share the larger size (tops and bottoms read as equals);
+            // accessories are the supporting smaller size.
+            const widthCls = garment ? 'w-[clamp(132px,17vw,176px)]' : 'w-[clamp(88px,11vw,120px)]';
             return (
               <button
                 key={t.id}

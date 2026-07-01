@@ -60,6 +60,43 @@ export function nextSlotIndex(uid) {
   return (existing?.slotIndex ?? 0) + 1;
 }
 
+// --- Cross-device persistence (Firestore) --------------------------------
+// The brief also lives at users/{uid}/state/dailyBrief so every device shows
+// the SAME look for the day, and we compose at most once per user per day (not
+// once per device). localStorage stays the fast local cache; Firestore is the
+// shared source of truth. Firebase is lazy-imported so the pure helpers above
+// stay unit-testable without pulling Firebase into the test graph.
+
+export async function readRemoteDailyBrief(uid) {
+  if (!uid) return null;
+  try {
+    const { db } = await import('./firebase.js');
+    const { doc, getDoc } = await import('firebase/firestore');
+    const snap = await getDoc(doc(db, 'users', uid, 'state', 'dailyBrief'));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    if (data?.dateKey !== todayKey()) return null; // stale (a previous day)
+    return data;
+  } catch {
+    return null; // offline / permission — caller falls back to a local compose
+  }
+}
+
+export async function writeRemoteDailyBrief(uid, brief) {
+  if (!uid || !brief) return;
+  try {
+    const { db } = await import('./firebase.js');
+    const { doc, setDoc } = await import('firebase/firestore');
+    await setDoc(doc(db, 'users', uid, 'state', 'dailyBrief'), {
+      ...brief,
+      dateKey: todayKey(),
+      savedAt: Date.now(),
+    });
+  } catch {
+    // Non-fatal: the local cache still works; we just miss cross-device sync.
+  }
+}
+
 // --- Reload backstop -----------------------------------------------------
 // The in-flight Map below is in-memory, so a HARD PAGE RELOAD mid-compose loses
 // it — and since the result is only cached on completion, the reload would fire

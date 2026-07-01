@@ -4,7 +4,7 @@ import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
-import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent } from "../dailyBrief";
+import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief } from "../dailyBrief";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
@@ -117,6 +117,10 @@ function DailyBriefCard({
   // its detail page instead of making the user hunt for it in the Lookbook.
   const [savedOutfitId, setSavedOutfitId] = useState(null);
   const [wearState, setWearState] = useState('idle'); // idle | wearing | done
+  // Cross-device: has the Firestore-shared brief been checked yet? Gates the
+  // auto-compose so a device doesn't compose locally before learning another
+  // device already composed today's shared look.
+  const [remoteChecked, setRemoteChecked] = useState(false);
   useEffect(() => { setSaveState('idle'); setWearState('idle'); setSavedOutfitId(null); }, [brief?.savedAt]);
 
   // One-time validation of the cached brief: if today's cached look has no
@@ -134,6 +138,23 @@ function DailyBriefCard({
       setBrief(null);
     }
   }, [brief, items, uid]);
+
+  // Cross-device sync: if this device has no local brief for today, check the
+  // Firestore-shared one. If another device already composed today's look,
+  // adopt it (and cache locally) rather than composing a second, different one.
+  useEffect(() => {
+    if (!user) { setRemoteChecked(true); return; }
+    if (readDailyBrief(uid)) { setRemoteChecked(true); return; } // already have today's locally
+    let alive = true;
+    (async () => {
+      try {
+        const remote = await readRemoteDailyBrief(uid);
+        if (alive && remote) setBrief(writeDailyBrief(uid, remote));
+      } catch { /* offline — fall through to a local compose */ }
+      finally { if (alive) setRemoteChecked(true); }
+    })();
+    return () => { alive = false; };
+  }, [uid, user]);
 
   // Best-effort: pull today's calendar events so the brief can dress for
   // what's on. Guarded so non-connected users never fire the callable.
@@ -184,6 +205,10 @@ function DailyBriefCard({
     // racing ahead with an empty list. Non-connected users flip this true
     // almost immediately, so they're not delayed.
     if (!calendarReady) return;
+    // Wait until the Firestore-shared brief has been checked, so we don't
+    // compose a second, different look when another device already composed
+    // today's shared one.
+    if (!remoteChecked) return;
     // Reload backstop: a recent composing marker with NO in-memory in-flight
     // promise means a hard page reload interrupted a compose — skip so we don't
     // fire a duplicate paid call. (Same-session re-runs still hold the inflight
@@ -204,7 +229,9 @@ function DailyBriefCard({
         slotIndex: 0,
         calendarEvents,
       });
-      return writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
+      const saved = writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
+      writeRemoteDailyBrief(uid, saved); // publish to Firestore so other devices show the same look (best-effort)
+      return saved;
     })
       .then((saved) => {
         if (cancelled) return;
@@ -219,7 +246,7 @@ function DailyBriefCard({
       });
 
     return () => { cancelled = true; };
-  }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady]); // re-fires when weather AND calendar resolve so the brief is composed with both
+  }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady, remoteChecked]); // re-fires when weather, calendar AND the shared-brief check resolve
 
   async function composeAnother() {
     setLoading(true);
@@ -235,6 +262,7 @@ function DailyBriefCard({
         calendarEvents,
       });
       const saved = writeDailyBrief(uid, { ...out, intent: 'a different considered look for today', slotIndex: slot });
+      writeRemoteDailyBrief(uid, saved); // a re-roll becomes the new shared look across devices
       setBrief(saved);
     } catch (err) {
       setError(err?.message || 'Could not compose another brief.');
@@ -323,12 +351,11 @@ function DailyBriefCard({
   // the brass caption, not size.
   const GARMENT_CATS = new Set(['Dresses', 'Tops', 'Bottoms', 'Outerwear', 'Sportswear', 'Swimwear']);
   const imgOf = (it) => it?.images?.[0] || it?.imageUrl || null;
-  const allJewels = briefItems.filter(it => it.category === 'Jewellery');
-  const stackJewels = allJewels.length >= 2 ? allJewels : [];
-  const lookTiles = [
-    ...briefItems.filter(it => it.category !== 'Jewellery'),
-    ...(stackJewels.length ? [{ __stack: true, id: 'jewel-stack', items: stackJewels }] : (allJewels.length === 1 ? allJewels : [])),
-  ].slice(0, 8);
+  // Jewellery gets its own full-width strip below the board — several small
+  // pieces need room to be visible. The board shows garments + the other
+  // accessories (shoes, bags, sunglasses…).
+  const mainTiles = briefItems.filter((it) => it.category !== 'Jewellery').slice(0, 8);
+  const jewelleryPieces = briefItems.filter((it) => it.category === 'Jewellery').slice(0, 10);
 
   const conf = brief.confidence;
 
@@ -349,9 +376,8 @@ function DailyBriefCard({
   // One outfit tile (white flat-lay card + caption), extracted so the desktop
   // outfit-board and the mobile grid share exactly one implementation.
   const renderLookCard = (t, i, widthCls) => {
-    const isStack = !!t.__stack;
-    const garment = !isStack && GARMENT_CATS.has(t.category);
-    const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
+    const garment = GARMENT_CATS.has(t.category);
+    const eyebrow = t.subCategory || t.category;
     return (
       <button
         key={t.id}
@@ -359,13 +385,11 @@ function DailyBriefCard({
         onClick={openBrief}
         className={`animate-in flex ${widthCls} flex-col gap-2 text-left`}
         style={{ animationDelay: `${i * 60}ms` }}
-        aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
+        aria-label={`Open ${t.name} in today's look`}
       >
         <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
           <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
-            {isStack ? (
-              t.items[0] ? <ItemTileImage item={t.items[0]} alt={`${t.items.length} jewellery pieces`} /> : null
-            ) : imgOf(t) ? (
+            {imgOf(t) ? (
               <ItemTileImage item={t} alt={t.name} />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
@@ -373,18 +397,18 @@ function DailyBriefCard({
           </div>
         </div>
         <div>
-          <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
-          <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
+          <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
+          <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{t.name}</p>
         </div>
       </button>
     );
   };
 
   // Two tiers for the desktop board: hero garments (dresses/tops/bottoms/
-  // outerwear) anchor the look; everything else (shoes, bags, accessories,
-  // jewellery) is the supporting cluster.
-  const heroTiles = lookTiles.filter((t) => !t.__stack && GARMENT_CATS.has(t.category));
-  const supportTiles = lookTiles.filter((t) => t.__stack || !GARMENT_CATS.has(t.category));
+  // outerwear) anchor the look; the other accessories (shoes, bags, sunglasses)
+  // are the supporting cluster. Jewellery has its own strip below.
+  const heroTiles = mainTiles.filter((t) => GARMENT_CATS.has(t.category));
+  const supportTiles = mainTiles.filter((t) => !GARMENT_CATS.has(t.category));
 
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
@@ -455,14 +479,13 @@ function DailyBriefCard({
 
       {/* The look — equal tiles on one aligned grid, clothing first, captioned,
           LEFT-aligned with the headline. Flat tiles, object-cover (no seams). */}
-      {/* Editorial flat-lay: white cards lifted off a warm ivory ground by a soft
-          shadow. Two size tiers — garments (tops, bottoms, dresses, outerwear)
-          are prominent and equal to each other; accessories, shoes, bags and
-          jewellery are the supporting smaller size. */}
+      {/* Editorial flat-lay: white cards lifted off a warm ivory ground by a
+          soft shadow. Garments anchor as a hero; the other accessories cluster
+          beside them; jewellery gets its own full-width strip below. */}
       <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
-        {/* Mobile: tidy uniform 2-column grid. */}
+        {/* Mobile: tidy uniform 2-column grid of the main pieces. */}
         <div className="grid grid-cols-2 gap-3 sm:hidden">
-          {lookTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
+          {mainTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
         </div>
         {/* Desktop: a composed outfit board — hero garment(s) anchor the look on
             the left; the supporting pieces cluster in a compact grid beside them,
@@ -481,6 +504,33 @@ function DailyBriefCard({
             </div>
           )}
         </div>
+
+        {/* Jewellery — its own full-width strip so several small pieces stay
+            visible and grouped (labelled by count), rather than tiny or hidden
+            inside a shared tile. */}
+        {jewelleryPieces.length > 0 && (
+          <div className="mt-4 border-t border-stone-200/60 pt-4">
+            <p className="mb-2.5 px-0.5 text-[9px] font-medium uppercase tracking-[0.2em] text-brass-600">
+              Jewellery · {jewelleryPieces.length} {jewelleryPieces.length === 1 ? 'piece' : 'pieces'}
+            </p>
+            <div className="flex flex-wrap justify-center gap-2.5 sm:justify-start sm:gap-3">
+              {jewelleryPieces.map((j, i) => (
+                <button
+                  key={j.id}
+                  type="button"
+                  onClick={openBrief}
+                  className="animate-in w-[clamp(72px,20vw,104px)]"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                  aria-label={`Open ${j.name} in today's look`}
+                >
+                  <div className="aspect-square overflow-hidden rounded-xl bg-white smooth-shadow border border-stone-200/50 p-1.5">
+                    {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stylist's note — cream panel (mirrors the marketing site): the narrative on

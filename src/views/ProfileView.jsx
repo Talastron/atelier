@@ -398,6 +398,8 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
   const runPolishWardrobe = async () => {
     if (!user) return;
     polishCancelRef.current = false;
+    // Clear stale proxy cooldowns so the reliable function proxy gets a fresh go.
+    try { const net = await import("../lib/net.js"); net.clearAllHostBlocks(); } catch { /* non-blocking */ }
     // Owned + wishlist — polish every item with a photo that isn't cut out yet.
     const targets = (items || []).filter((it) =>
       (it.images || []).length > 0 &&

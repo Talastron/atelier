@@ -487,15 +487,16 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(currentOutfit[s.toLowerCase()]));
     if (!outfitName.trim() || picked.length === 0) return;
     // When editing, preserve the original id, createdAt, and any existing
     // wornPhotos/favorite/reasoning that we shouldn't blow away.
     const orig = editingId ? outfits.find((o) => o.id === editingId) : null;
-    saveOutfit({
+    const savedId = editingId || newId();
+    await saveOutfit({
       ...(orig || {}),
-      id: editingId || newId(),
+      id: savedId,
       name: outfitName,
       itemIds: picked.map((p) => p.id),
       createdAt: orig?.createdAt || new Date().toISOString(),
@@ -508,11 +509,13 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
     setAiTags([]);
     setEditingId(null);
     if (onEditDone) onEditDone();
-    // Studio mode: notify parent so it can navigate to Lookbook (user
-    // sees their newly-saved look in context). Lookbook mode: switch
-    // to the Lookbook tab so the new outfit is visible inline.
+    // Preserve the prior under-navigation (studio → Lookbook; lookbook → Saved
+    // tab) so closing the detail lands the user where it always did...
     if (onAfterSave) onAfterSave();
     else setTab('saved');
+    // ...and pop the saved look's detail on top, so they land ON it rather than
+    // scanning a list to find it.
+    if (onOpenOutfit) onOpenOutfit(savedId);
   };
 
   // Gold-standard generator: strict 1:1 category/slot, hard filters BEFORE

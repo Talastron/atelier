@@ -4,7 +4,7 @@ import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
-import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent } from "../dailyBrief";
+import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief } from "../dailyBrief";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
@@ -117,6 +117,10 @@ function DailyBriefCard({
   // its detail page instead of making the user hunt for it in the Lookbook.
   const [savedOutfitId, setSavedOutfitId] = useState(null);
   const [wearState, setWearState] = useState('idle'); // idle | wearing | done
+  // Cross-device: has the Firestore-shared brief been checked yet? Gates the
+  // auto-compose so a device doesn't compose locally before learning another
+  // device already composed today's shared look.
+  const [remoteChecked, setRemoteChecked] = useState(false);
   useEffect(() => { setSaveState('idle'); setWearState('idle'); setSavedOutfitId(null); }, [brief?.savedAt]);
 
   // One-time validation of the cached brief: if today's cached look has no
@@ -134,6 +138,23 @@ function DailyBriefCard({
       setBrief(null);
     }
   }, [brief, items, uid]);
+
+  // Cross-device sync: if this device has no local brief for today, check the
+  // Firestore-shared one. If another device already composed today's look,
+  // adopt it (and cache locally) rather than composing a second, different one.
+  useEffect(() => {
+    if (!user) { setRemoteChecked(true); return; }
+    if (readDailyBrief(uid)) { setRemoteChecked(true); return; } // already have today's locally
+    let alive = true;
+    (async () => {
+      try {
+        const remote = await readRemoteDailyBrief(uid);
+        if (alive && remote) setBrief(writeDailyBrief(uid, remote));
+      } catch { /* offline — fall through to a local compose */ }
+      finally { if (alive) setRemoteChecked(true); }
+    })();
+    return () => { alive = false; };
+  }, [uid, user]);
 
   // Best-effort: pull today's calendar events so the brief can dress for
   // what's on. Guarded so non-connected users never fire the callable.
@@ -184,6 +205,10 @@ function DailyBriefCard({
     // racing ahead with an empty list. Non-connected users flip this true
     // almost immediately, so they're not delayed.
     if (!calendarReady) return;
+    // Wait until the Firestore-shared brief has been checked, so we don't
+    // compose a second, different look when another device already composed
+    // today's shared one.
+    if (!remoteChecked) return;
     // Reload backstop: a recent composing marker with NO in-memory in-flight
     // promise means a hard page reload interrupted a compose — skip so we don't
     // fire a duplicate paid call. (Same-session re-runs still hold the inflight
@@ -204,7 +229,9 @@ function DailyBriefCard({
         slotIndex: 0,
         calendarEvents,
       });
-      return writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
+      const saved = writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
+      writeRemoteDailyBrief(uid, saved); // publish to Firestore so other devices show the same look (best-effort)
+      return saved;
     })
       .then((saved) => {
         if (cancelled) return;
@@ -219,7 +246,7 @@ function DailyBriefCard({
       });
 
     return () => { cancelled = true; };
-  }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady]); // re-fires when weather AND calendar resolve so the brief is composed with both
+  }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady, remoteChecked]); // re-fires when weather, calendar AND the shared-brief check resolve
 
   async function composeAnother() {
     setLoading(true);
@@ -235,6 +262,7 @@ function DailyBriefCard({
         calendarEvents,
       });
       const saved = writeDailyBrief(uid, { ...out, intent: 'a different considered look for today', slotIndex: slot });
+      writeRemoteDailyBrief(uid, saved); // a re-roll becomes the new shared look across devices
       setBrief(saved);
     } catch (err) {
       setError(err?.message || 'Could not compose another brief.');

@@ -26,6 +26,7 @@ import Sidebar from './nav/Sidebar.jsx';
 import WeekStrip from './components/WeekStrip.jsx';
 import ConciergePrompt from './components/ConciergePrompt.jsx';
 import ImageFramer from './components/ImageFramer.jsx';
+import ItemTileImage from './components/ItemTileImage.jsx';
 import {
   SEASONS, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES,
   DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES,
@@ -4603,7 +4604,7 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
             className="flex-none w-28 sm:w-32 text-left group transition-transform active:scale-[0.97]">
             <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 mb-2 relative">
               {itemImages(s)[0] ? (
-                <img src={itemImages(s)[0]} alt={s.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <ItemTileImage item={s} alt={s.name} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
               )}
@@ -4645,7 +4646,7 @@ function AppearsInSection({ item, outfits = [], allItems = [], onOpenOutfit }) {
       <div className="flex gap-3 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 pb-3">
         {matching.map((o) => {
           const pieces = resolveOutfitItems(o, allItems);
-          const previews = pieces.slice(0, 4).map((p) => itemImages(p)[0]).filter(Boolean);
+          const previews = pieces.slice(0, 4).map((p) => itemImageDisplay(p, 0).src || itemImages(p)[0]).filter(Boolean);
           return (
             <button key={o.id} onClick={() => onOpenOutfit?.(o.id)}
               className="flex-none w-32 sm:w-36 text-left group transition-transform active:scale-[0.97]">
@@ -6068,7 +6069,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                 title={`Open ${matchedItem.name}`}
                               >
                                 {itemImages(matchedItem)[0]
-                                  ? <img src={itemImages(matchedItem)[0]} alt={matchedItem.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                  ? <ItemTileImage item={matchedItem} alt={matchedItem.name} />
                                   : <div className="w-full h-full flex items-center justify-center"><Shirt size={18} className="text-stone-300" /></div>}
                               </button>
                             ) : (
@@ -6256,7 +6257,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
                   return (
                     <div key={p.id} className="min-w-0">
                       <div className={`aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2 ${isFocal ? 'ring-2 ring-brass-300' : ''}`}>
-                        {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                        <ItemTileImage item={p} alt={p.name || ""} />
                       </div>
                       <p className={`text-[11px] truncate ${isFocal ? 'text-brass-300 font-medium' : 'text-stone-300'}`}>
                         {isFocal ? '★ ' : ''}{p.name}
@@ -6381,7 +6382,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
                 {pieces.map((p) => (
                   <div key={p.id} className="min-w-0">
                     <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
-                      {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                      <ItemTileImage item={p} alt={p.name || ""} />
                     </div>
                     <p className="text-[11px] text-stone-300 truncate">{p.name}</p>
                     <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
@@ -7569,7 +7570,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     >
                       <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-stone-200/60 transition-colors duration-300 ${openable ? 'lg:group-hover:border-brass-300/70' : ''}`}>
                         {itemImages(piece)[0] ? (
-                          <img src={itemImages(piece)[0]} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                          <ItemTileImage item={piece} alt={piece.name} />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={40} strokeWidth={1} /></div>
                         )}
@@ -8277,7 +8278,10 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
               N°{String(n).padStart(2, '0')}
             </span>
             {itemImages(item)[0] ? (
-              <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async"
+              // Feed the cut-out/framed image when the item has one (already
+              // white-backed) so it sits seamlessly on the flat-lay card; falls
+              // back to the original. The card is object-contain by design.
+              <img src={itemImageDisplay(item, 0).src || itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async"
                 className={`w-full h-full object-contain ${isHero ? 'p-2' : 'p-1.5'}`} />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={isHero ? 64 : 28} strokeWidth={1} /></div>
@@ -8385,7 +8389,7 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
                           {/* Thumbnail */}
                           <div className="w-11 h-11 rounded-lg bg-stone-100 border border-stone-200 overflow-hidden shrink-0">
                             {thumb ? (
-                              <img src={thumb} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                              <ItemTileImage item={p} alt={p.name || ""} />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-stone-300">
                                 <Shirt size={18} strokeWidth={1} />

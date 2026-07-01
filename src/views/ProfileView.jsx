@@ -5,7 +5,8 @@ import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
 import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser, deleteMyAccount } from "../firebase.js";
-import { polishItemPrimary } from "../lib/polish.js";
+import { itemImageDisplay, polishItemPrimary } from "../lib/polish.js";
+import ItemTileImage from "../components/ItemTileImage.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
@@ -924,7 +925,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               return (
                 <div key={item.id} className="flex flex-col gap-2">
                   <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 opacity-60">
-                    {itemImages(item)[0] && <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                    <ItemTileImage item={item} alt={item.name} />
                   </div>
                   <p className="text-xs text-stone-900 truncate">{item.name}</p>
                   <p className="text-[10px] uppercase tracking-wider text-stone-400">Deleted {days}d ago</p>

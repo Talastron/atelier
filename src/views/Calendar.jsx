@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Bookmark, Calendar, ChevronRight, Copy, Download, Plus, Printer, Shirt, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import { itemImages, itemWearHistory, itemWearNotes, resolveOutfitItems, todayISO, newId } from "../lib/items.js";
+import { itemImageDisplay } from "../lib/polish.js";
+import ItemTileImage from "../components/ItemTileImage.jsx";
 import { weatherLabel, fetchTravelForecast } from "../lib/weather.js";
 import { generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini } from "../lib/ai.js";
 import { fetchCalendarEvents, isAIEnabled } from "../firebase.js";
@@ -248,10 +250,9 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
                 >
                   <div className="flex gap-1.5 shrink-0">
                     {pieces.slice(0, 4).map((it) => {
-                      const thumb = itemImages(it)[0];
                       return (
                         <div key={it.id} className="w-12 h-14 sm:w-14 sm:h-16 rounded-lg overflow-hidden bg-stone-100 border border-stone-200">
-                          {thumb && <img src={thumb} alt="" loading="lazy" className="w-full h-full object-cover" />}
+                          <ItemTileImage item={it} alt="" />
                         </div>
                       );
                     })}
@@ -710,7 +711,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                   <div className="flex gap-2 overflow-x-auto hide-scrollbar">
                     {scheduledPieces.map((p) => (
                       <div key={p.id} className="flex-none w-14 aspect-[3/4] rounded-lg overflow-hidden bg-white border border-amber-200/60">
-                        {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                        <ItemTileImage item={p} alt={p.name} />
                       </div>
                     ))}
                   </div>
@@ -731,7 +732,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                   {selectedWears.map((item) => (
                     <div key={item.id} className="flex flex-col gap-2">
                       <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100">
-                        {itemImages(item)[0] && <img src={itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                        <ItemTileImage item={item} alt={item.name} />
                       </div>
                       <p className="text-xs text-stone-900 truncate">{item.name}</p>
                     </div>
@@ -1347,7 +1348,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                             {pieces.map((p) => (
                               <div key={p.id} className="relative flex-none w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200 group" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category}`}>
                                 {itemImages(p)[0] ? (
-                                  <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                  <ItemTileImage item={p} alt={p.name || p.category} />
                                 ) : (
                                   <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
                                 )}
@@ -1441,7 +1442,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                                 <div key={p.id} className="flex flex-col items-center w-20" title={`${p.brand ? p.brand + ' · ' : ''}${p.name || p.category} — worn ${dayCount} day${dayCount === 1 ? '' : 's'}`}>
                                   <div className="relative w-20 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100 ring-1 ring-stone-200">
                                     {itemImages(p)[0] ? (
-                                      <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                      <ItemTileImage item={p} alt={p.name || p.category} />
                                     ) : (
                                       <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
                                     )}
@@ -1621,7 +1622,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                             >
                               <div className="relative aspect-[3/4] bg-stone-100">
                                 {itemImages(p)[0] ? (
-                                  <img src={itemImages(p)[0]} alt={p.name || p.category} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                  <ItemTileImage item={p} alt={p.name || p.category} />
                                 ) : (
                                   <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
                                 )}
@@ -1819,7 +1820,7 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
                       <li key={item.id} className="flex items-center gap-3 py-2 border-b border-stone-200/50 last:border-0">
                         <span className="w-5 h-5 rounded border border-stone-400 shrink-0 print:border-stone-600" aria-hidden></span>
                         <div className="w-10 h-12 rounded-lg overflow-hidden bg-stone-100 shrink-0 print:hidden">
-                          {itemImages(item)[0] && <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                          <ItemTileImage item={item} alt="" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-stone-900 truncate">{item.name}</p>
@@ -1893,7 +1894,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
           <div className="grid grid-cols-2 gap-3">
             {outfits.map((outfit) => {
               const pieces = resolveOutfitItems(outfit, items);
-              const previewImages = pieces.slice(0, 4).map((it) => itemImages(it)[0]).filter(Boolean);
+              const previewImages = pieces.slice(0, 4).map((it) => itemImageDisplay(it, 0).src || itemImages(it)[0]).filter(Boolean);
               return (
                 <button key={outfit.id} onClick={() => onPick(outfit.id)} className="text-left group active:scale-[0.97] transition-transform">
                   <div className="aspect-square rounded-2xl overflow-hidden bg-stone-100 smooth-shadow grid grid-cols-2 grid-rows-2 gap-0.5 mb-2 group-hover:smooth-shadow-lg">
@@ -2308,7 +2309,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
                                     title={`${it.name}${it.brand ? ' · ' + it.brand : ''}`}
                                   >
                                     {itemImages(it)[0] ? (
-                                      <img src={itemImages(it)[0]} alt={it.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                                      <ItemTileImage item={it} alt={it.name} />
                                     ) : (
                                       <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={20} strokeWidth={1} /></div>
                                     )}

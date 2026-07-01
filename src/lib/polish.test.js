@@ -20,4 +20,12 @@ describe('itemImageDisplay', () => {
     expect(itemImageDisplay(mk(['a'], undefined), 0)).toEqual({ src: 'a', forceContain: false });
     expect(itemImageDisplay(mk([], []), 0)).toEqual({ src: null, forceContain: false });
   });
+  it('prefers framedUrl over cutoutUrl and original, forcing contain', () => {
+    const item = mk(['orig0'], [{ framedUrl: 'https://s/framed0.jpg', cutoutUrl: 'https://s/cut0.png' }]);
+    expect(itemImageDisplay(item, 0)).toEqual({ src: 'https://s/framed0.jpg', forceContain: true });
+  });
+  it('still prefers cutoutUrl over original when no framedUrl', () => {
+    const item = mk(['orig0'], [{ cutoutUrl: 'https://s/cut0.png' }]);
+    expect(itemImageDisplay(item, 0)).toEqual({ src: 'https://s/cut0.png', forceContain: true });
+  });
 });

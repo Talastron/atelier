@@ -10,6 +10,7 @@ export function itemImageDisplay(item, index = 0) {
   const images = Array.isArray(item?.images) ? item.images : [];
   const meta = Array.isArray(item?.imageMeta) ? item.imageMeta : [];
   const m = meta[index] || {};
+  if (m.framedUrl) return { src: m.framedUrl, forceContain: true };
   if (m.cutoutUrl) return { src: m.cutoutUrl, forceContain: true };
   if (m.cutout === true) return { src: images[index] ?? null, forceContain: true };
   return { src: images[index] ?? null, forceContain: false };

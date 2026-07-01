@@ -483,9 +483,10 @@ function DailyBriefCard({
           soft shadow. Garments anchor as a hero; the other accessories cluster
           beside them; jewellery gets its own full-width strip below. */}
       <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
-        {/* Mobile: tidy uniform 2-column grid of the main pieces. */}
-        <div className="grid grid-cols-2 gap-3 sm:hidden">
-          {mainTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
+        {/* Mobile: two-up, but centred so an odd last piece sits in the middle
+            rather than orphaned beside an empty cell. */}
+        <div className="flex flex-wrap justify-center gap-3 sm:hidden">
+          {mainTiles.map((t, i) => renderLookCard(t, i, 'w-[clamp(130px,42vw,164px)]'))}
         </div>
         {/* Desktop: a composed outfit board — hero garment(s) anchor the look on
             the left; the supporting pieces cluster in a compact grid beside them,
@@ -519,7 +520,7 @@ function DailyBriefCard({
                   key={j.id}
                   type="button"
                   onClick={openBrief}
-                  className="animate-in w-[clamp(72px,20vw,104px)]"
+                  className="animate-in w-[clamp(58px,15vw,84px)]"
                   style={{ animationDelay: `${i * 50}ms` }}
                   aria-label={`Open ${j.name} in today's look`}
                 >

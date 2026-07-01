@@ -1473,6 +1473,7 @@ function DigitalWardrobe() {
                       onSaveOutfit={handleSaveOutfit}
                       onLogOutfitWear={handleLogOutfitWear}
                       onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }}
+                      onOpenSavedLook={setOpenOutfitId}
                       onItemClick={setSelectedItemId}
                       onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
                       onOpenConcierge={() => setIsConciergeOpen(true)}
@@ -1835,16 +1836,24 @@ function DigitalWardrobe() {
               user={user}
               onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
               onOpenItem={(id) => { setIsConciergeOpen(false); setSelectedItemId(id); }}
-              onSaveLook={(itemIds) => {
+              onSaveLook={async (itemIds) => {
                 setIsConciergeOpen(false);
                 const name = `From Concierge · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
-                handleSaveOutfit({
+                const outfit = {
                   id: newId(),
                   name,
                   itemIds,
                   createdAt: new Date().toISOString(),
-                });
-                toast.show('Saved to Lookbook', { kind: 'success' });
+                };
+                try {
+                  // Await the write before opening so the outfit exists in the
+                  // list when OutfitDetailView resolves it by id.
+                  await handleSaveOutfit(outfit);
+                  toast.show('Saved · opening it now', { kind: 'success' });
+                  setOpenOutfitId(outfit.id);
+                } catch (err) {
+                  toast.show(`Could not save: ${err?.message || 'unknown error'}`, { kind: 'error' });
+                }
               }}
               onSchedule={(itemIds, dateISO) => {
                 const id = newId();

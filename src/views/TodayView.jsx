@@ -324,6 +324,14 @@ function DailyBriefCard({
     ...briefItems.filter(it => it.category !== 'Jewellery'),
     ...(stackJewels.length ? [{ __stack: true, id: 'jewel-stack', items: stackJewels }] : (allJewels.length === 1 ? allJewels : [])),
   ].slice(0, 8);
+  // Give the row a focal point: the lead torso garment (dress/top/outerwear)
+  // becomes the hero tile — larger and pulled to the front — instead of a flat
+  // lineup of equal thumbnails. Falls back to the first tile if there's none.
+  const HERO_CATS = new Set(['Dresses', 'Tops', 'Outerwear']);
+  const heroIdx = Math.max(0, lookTiles.findIndex((t) => !t.__stack && HERO_CATS.has(t.category)));
+  const orderedTiles = heroIdx > 0
+    ? [lookTiles[heroIdx], ...lookTiles.filter((_, idx) => idx !== heroIdx)]
+    : lookTiles;
 
   const conf = brief.confidence;
 
@@ -410,42 +418,53 @@ function DailyBriefCard({
 
       {/* The look — equal tiles on one aligned grid, clothing first, captioned,
           LEFT-aligned with the headline. Flat tiles, object-cover (no seams). */}
-      <div className="mt-5 flex flex-wrap justify-start gap-x-4 gap-y-5">
-        {lookTiles.map((t, i) => {
-          const isStack = !!t.__stack;
-          const garment = !isStack && GARMENT_CATS.has(t.category);
-          const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={openBrief}
-              className="animate-in flex w-[clamp(116px,15vw,152px)] flex-col gap-2 text-left"
-              style={{ animationDelay: `${i * 60}ms` }}
-              aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
-            >
-              <div className="aspect-[3/4] overflow-hidden rounded-2xl bg-stone-100">
-                {isStack ? (
-                  <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-stone-200/50">
-                    {t.items.slice(0, 4).map((j) => (
-                      <div key={j.id} className="overflow-hidden bg-stone-100">
-                        {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
+      {/* Editorial flat-lay: white cards lifted off a warm ivory ground by a soft
+          shadow, with a larger hero tile so the look has a focal point instead
+          of a flat lineup of equal thumbnails. */}
+      <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
+        <div className="flex flex-wrap items-end justify-start gap-3 sm:gap-4">
+          {orderedTiles.map((t, i) => {
+            const isStack = !!t.__stack;
+            const garment = !isStack && GARMENT_CATS.has(t.category);
+            const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
+            const isHero = i === 0;
+            const widthCls = isHero ? 'w-[clamp(168px,25vw,232px)]' : 'w-[clamp(92px,12vw,128px)]';
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={openBrief}
+                className={`animate-in flex ${widthCls} flex-col gap-2 text-left`}
+                style={{ animationDelay: `${i * 60}ms` }}
+                aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
+              >
+                {/* White flat-lay card: soft shadow + inner padding so each cut-out
+                    lifts off the ivory and has room to breathe. */}
+                <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
+                  <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
+                    {isStack ? (
+                      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-1">
+                        {t.items.slice(0, 4).map((j) => (
+                          <div key={j.id} className="overflow-hidden rounded-md bg-white">
+                            {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : imgOf(t) ? (
+                      <ItemTileImage item={t} alt={t.name} />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
+                    )}
                   </div>
-                ) : imgOf(t) ? (
-                  <ItemTileImage item={t} alt={t.name} />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
-                )}
-              </div>
-              <div>
-                <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
-                <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
-              </div>
-            </button>
-          );
-        })}
+                </div>
+                <div>
+                  <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
+                  <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Stylist's note — cream panel (mirrors the marketing site): the narrative on

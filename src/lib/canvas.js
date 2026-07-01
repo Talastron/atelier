@@ -4,6 +4,7 @@
 import { itemImages, itemColors } from "./items.js";
 import { hexFromColorName } from "./color.js";
 import { COLOR_SWATCHES } from "./taxonomy.js";
+import { computeCropRect, FRAME_ASPECT } from './framing.js';
 
 // Resolve a colour-family name to a SOLID, canvas-fillable hex. COLOR_SWATCHES
 // may hold a CSS linear-gradient string (the metallics — Gold, Rose Gold, etc.)
@@ -735,6 +736,37 @@ export function parseSourceUrl(text) {
 
 // Public CORS proxies — tried in order until one works.
 // Some block in mobile/PWA contexts; the fallback chain keeps the feature alive.
+
+// Bake a framed crop to a compressed JPEG data URL. `src` is a same-origin or
+// CORS-clean image URL/data URL (callers rehost external retailer URLs first —
+// see ImageFramer). `frame` is { zoom, offsetX, offsetY }. The crop rectangle
+// comes from computeCropRect so the output matches the editor's live preview
+// exactly. Output is a 3:4 portrait JPEG (~675x900), adaptively compressed to
+// stay well under the Storage/doc budget. Returns { url, ok } (ok:false on a
+// load failure), mirroring removeImageBackground's shape.
+export async function renderFramedDataUrl(src, frame, { frameAspect = FRAME_ASPECT, outputHeight = 900 } = {}) {
+  const img = await loadImageForCanvas(src);
+  if (!img) return { url: src, ok: false };
+  const nw = img.naturalWidth;
+  const nh = img.naturalHeight;
+  const { sx, sy, sw, sh } = computeCropRect({ naturalW: nw, naturalH: nh, frameAspect, ...frame });
+  const outH = outputHeight;
+  const outW = Math.round(outH * frameAspect);
+  const c = document.createElement('canvas');
+  c.width = outW;
+  c.height = outH;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#FFFFFF'; // JPEG has no alpha; crop is full-bleed so this only guards rounding edges
+  ctx.fillRect(0, 0, outW, outH);
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+  let q = 0.86;
+  let url = c.toDataURL('image/jpeg', q);
+  while (url.length > 220_000 && q > 0.45) {
+    q -= 0.1;
+    url = c.toDataURL('image/jpeg', q);
+  }
+  return { url, ok: true };
+}
 
 // Resize an image File to a small JPEG data URL we can safely embed in a
 // Firestore document (Spark plan has no Storage; the 1 MiB per-doc limit

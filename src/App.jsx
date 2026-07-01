@@ -25,6 +25,7 @@ import BottomBar from './nav/BottomBar.jsx';
 import Sidebar from './nav/Sidebar.jsx';
 import WeekStrip from './components/WeekStrip.jsx';
 import ConciergePrompt from './components/ConciergePrompt.jsx';
+import ImageFramer from './components/ImageFramer.jsx';
 import {
   SEASONS, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES,
   DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES,
@@ -70,7 +71,7 @@ import { PinterestGlyph, InstagramGlyph } from './components/BrandGlyphs.jsx';
 import { haptic } from './lib/haptic.js';
 import { buildPinterestUrl, uploadShareCardImage, newShareId } from './lib/publicShare.js';
 const OutfitBuilder = lazy(() => import('./views/OutfitBuilder.jsx'));
-import { itemImageDisplay, revertItemPrimary } from './lib/polish.js';
+import { itemImageDisplay, revertItemPrimary, frameItemPrimary, revertFramePrimary } from './lib/polish.js';
 
 // Owners can invite/revoke other users. Must match the rules file exactly.
 // (The rules are the real security boundary — this is just so the UI knows
@@ -2880,12 +2881,17 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     if (!user) return;
     setIsLoading(true); setError(null);
     try {
-      // Strip the in-memory `original` snapshot from imageMeta before save.
-      // We keep originals around in the modal so the user can revert a cutout,
-      // but persisting both versions doubles per-image storage and risks the
-      // 1MiB Firestore doc cap for items with 6 cut-out photos.
+      // Strip the bulky in-memory `original` base64 snapshot from imageMeta
+      // before save (risks 1MiB Firestore cap). Small Storage-URL fields
+      // (cutoutUrl, framedUrl) and frame params are kept intentionally.
       const slimMeta = Array.isArray(formData.imageMeta)
-        ? formData.imageMeta.map((m) => m ? { cutout: !!m.cutout, ...(m.angle ? { angle: m.angle } : {}) } : null)
+        ? formData.imageMeta.map((m) => m ? {
+            cutout: !!m.cutout,
+            ...(m.angle ? { angle: m.angle } : {}),
+            ...(m.cutoutUrl ? { cutoutUrl: m.cutoutUrl } : {}),
+            ...(m.framedUrl ? { framedUrl: m.framedUrl } : {}),
+            ...(m.frame ? { frame: m.frame } : {}),
+          } : null)
         : [];
       const raw = {
         ...formData,
@@ -3663,6 +3669,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   const [activePhoto, setActivePhoto] = useState(0);
   const [showHistory, setShowHistory] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [framerOpen, setFramerOpen] = useState(false);
   const [itemLogDate, setItemLogDate] = useState(todayISO());
   const [itemLogDateOpen, setItemLogDateOpen] = useState(false);
   const [fitEstimate, setFitEstimate] = useState(null);
@@ -3916,6 +3923,26 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       Cut-out · revert
                     </button>
                   )}
+                  {/* Framed · revert — mirrors the cut-out revert control */}
+                  {item.imageMeta?.[Math.min(activePhoto, images.length - 1)]?.framedUrl && (
+                    <button type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const nextMeta = revertFramePrimary(item);
+                        await onUpdateItem({ ...item, imageMeta: nextMeta });
+                        toast.show('Reverted to the un-cropped image', { kind: 'default' });
+                      }}
+                      className="absolute top-3 right-3 lg:top-4 lg:right-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium shadow-sm transition-colors mt-9">
+                      Framed · revert
+                    </button>
+                  )}
+                  {/* Edit image — opens the manual framer on the primary photo */}
+                  <button type="button"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setFramerOpen(true); }}
+                    className="absolute bottom-3 left-3 lg:bottom-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium shadow-sm transition-colors">
+                    Edit image
+                  </button>
                   {item.imageMeta?.[Math.min(activePhoto, images.length - 1)]?.angle && (
                     <span className="absolute top-3 left-3 lg:top-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium">
                       {item.imageMeta[Math.min(activePhoto, images.length - 1)].angle}
@@ -4426,6 +4453,23 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
           startIndex={activePhoto}
           alt={item.name}
           onClose={() => setLightboxOpen(false)}
+        />
+      )}
+      {framerOpen && (
+        <ImageFramer
+          baseSrc={(item.imageMeta?.[0]?.cutoutUrl) || item.images?.[0]}
+          initialFrame={item.imageMeta?.[0]?.frame || undefined}
+          onClose={() => setFramerOpen(false)}
+          onCommit={async ({ dataUrl, frame }) => {
+            const out = await frameItemPrimary(item, uid, dataUrl, frame);
+            if (out.ok) {
+              await onUpdateItem({ ...item, imageMeta: out.imageMeta });
+              toast.show('Image framed ✓', { kind: 'success' });
+            } else {
+              toast.show('Could not frame this image', { kind: 'error' });
+            }
+            setFramerOpen(false);
+          }}
         />
       )}
     </div>

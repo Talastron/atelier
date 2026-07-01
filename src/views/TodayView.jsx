@@ -9,6 +9,7 @@ import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
+import ItemTileImage from "../components/ItemTileImage.jsx";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
@@ -428,12 +429,12 @@ function DailyBriefCard({
                   <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-stone-200/50">
                     {t.items.slice(0, 4).map((j) => (
                       <div key={j.id} className="overflow-hidden bg-stone-100">
-                        {imgOf(j) ? <img src={imgOf(j)} alt={j.name} className="h-full w-full object-cover" /> : null}
+                        {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
                       </div>
                     ))}
                   </div>
                 ) : imgOf(t) ? (
-                  <img src={imgOf(t)} alt={t.name} className="h-full w-full object-cover" />
+                  <ItemTileImage item={t} alt={t.name} />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
                 )}

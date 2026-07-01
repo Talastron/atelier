@@ -18,6 +18,7 @@ import { useEscapeKey } from "../ui/hooks.js";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
 import AIProgressModal from "../components/AIProgressModal.jsx";
+import ItemTileImage from "../components/ItemTileImage.jsx";
 import DiaryView from "./Calendar.jsx";
 
 function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, indexLabel, onClick, onContextMenu }) {
@@ -93,13 +94,12 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
                   const piece = gridPieces[slotIdx];
                   if (!piece) return <div key={slotIdx} aria-hidden="true" />;
-                  const img = itemImages(piece)[0];
                   const lastSlot = isHero ? 5 : 3;
                   const showExtra = slotIdx === lastSlot && extraCount > 0;
                   return (
                     <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
-                      {img ? (
-                        <img src={img} alt={piece.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      {itemImages(piece)[0] ? (
+                        <ItemTileImage item={piece} alt={piece.name} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={24} strokeWidth={1} /></div>
                       )}
@@ -857,7 +857,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           <span className={`text-[9px] lg:text-xs font-medium tracking-widest uppercase text-center px-1 leading-tight ${covered ? 'text-stone-300 line-through' : 'text-stone-400'}`}>{slot}</span>
         ) : pieces.length === 1 ? (
           <>
-            <img src={itemImages(pieces[0])[0]} alt={pieces[0].name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+            <ItemTileImage item={pieces[0]} alt={pieces[0].name} />
             <button
               onClick={() => clearOne(pieces[0])}
               className="absolute top-1.5 right-1.5 lg:top-3 lg:right-3 bg-white/95 backdrop-blur text-stone-900 p-1.5 lg:p-2 rounded-full opacity-100 lg:opacity-70 group-hover:opacity-100 transition-all hover:bg-red-50 hover:text-red-500 shadow-md active:scale-90"
@@ -871,7 +871,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-0.5 p-0.5 relative">
             {pieces.slice(0, 4).map((it) => (
               <div key={it.id} className="relative bg-stone-100 rounded overflow-hidden">
-                {itemImages(it)[0] && <img src={itemImages(it)[0]} alt={it.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                <ItemTileImage item={it} alt={it.name || ""} />
                 <button onClick={(e) => { e.stopPropagation(); clearOne(it); }}
                   className="absolute top-0.5 right-0.5 bg-white/90 backdrop-blur text-stone-900 p-0.5 rounded-full opacity-90 hover:bg-red-50 hover:text-red-500 shadow-sm" aria-label={`Remove ${it.name}`}>
                   <X size={9} strokeWidth={2.5} />
@@ -919,7 +919,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
         <div className={`aspect-[3/4] rounded-2xl overflow-hidden mb-3 border-[3px] transition-all duration-200 relative ${
           isSelected ? 'border-stone-900 shadow-xl' : 'border-transparent group-hover:border-brass-300/40'
         }`}>
-          <img src={itemImages(item)[0]} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 pointer-events-none" loading="lazy" />
+          <ItemTileImage item={item} alt={item.name || ""} />
           <div className="hidden lg:block absolute top-1.5 left-1.5 p-1 bg-white/85 backdrop-blur rounded-full text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
             <GripVertical size={11} strokeWidth={1.5} />
           </div>
@@ -1237,7 +1237,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       <button key={slot} onClick={() => handleSelect(slot, item)}
                         title={`Remove ${item.name}`}
                         className="flex-none w-9 h-12 rounded-lg overflow-hidden bg-stone-700 ring-1 ring-white/10 relative active:scale-95 transition-transform">
-                        {itemImages(item)[0] && <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                        <ItemTileImage item={item} alt={item.name || ""} />
                       </button>
                     ))}
                   </div>
@@ -1320,10 +1320,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         <div key={`${slot}-${item.id}`}
                           title={`${slot} · ${item.name}`}
                           className="shrink-0 w-8 h-11 rounded-md overflow-hidden bg-stone-100 ring-1 ring-stone-200/60">
-                          {itemImages(item)[0] && (
-                            <img src={itemImages(item)[0]} alt="" loading="lazy" decoding="async"
-                              className="w-full h-full object-cover" />
-                          )}
+                          <ItemTileImage item={item} alt={item.name || ""} />
                         </div>
                       ))}
                     </div>
@@ -1474,9 +1471,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                             <div className="flex gap-1 min-w-0 overflow-hidden ml-1">
                               {filled.slice(0, 3).map((item) => (
                                 <div key={item.id} className="w-6 h-8 rounded-md overflow-hidden bg-stone-100 border border-stone-200 shrink-0">
-                                  {itemImages(item)[0] && (
-                                    <img src={itemImages(item)[0]} alt="" loading="lazy" className="w-full h-full object-cover" />
-                                  )}
+                                  <ItemTileImage item={item} alt={item.name || ""} />
                                 </div>
                               ))}
                               {filled.length > 3 && <span className="text-[9px] text-stone-400 self-center ml-1">+{filled.length - 3}</span>}
@@ -1956,7 +1951,7 @@ function ABCompareModal({ pair, onClose, onPick }) {
         <div className="grid grid-cols-3 gap-2 mb-3 flex-1">
           {pieces.slice(0, 9).map((p) => (
             <div key={p.id} className="aspect-[3/4] rounded-lg overflow-hidden bg-stone-100">
-              {itemImages(p)[0] && <img src={itemImages(p)[0]} alt={p.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+              <ItemTileImage item={p} alt={p.name || ""} />
             </div>
           ))}
         </div>
@@ -2058,7 +2053,7 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
                   <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 mb-3">
                     {resolvedItems.map((it) => (
                       <div key={it.id} className="flex-none w-14 aspect-[3/4] rounded-lg overflow-hidden bg-stone-100">
-                        {itemImages(it)[0] && <img src={itemImages(it)[0]} alt={it.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />}
+                        <ItemTileImage item={it} alt={it.name || ""} />
                       </div>
                     ))}
                   </div>

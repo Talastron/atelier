@@ -346,6 +346,46 @@ function DailyBriefCard({
 
   const openBrief = () => onOpenOutfit?.(brief);
 
+  // One outfit tile (white flat-lay card + caption), extracted so the desktop
+  // outfit-board and the mobile grid share exactly one implementation.
+  const renderLookCard = (t, i, widthCls) => {
+    const isStack = !!t.__stack;
+    const garment = !isStack && GARMENT_CATS.has(t.category);
+    const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
+    return (
+      <button
+        key={t.id}
+        type="button"
+        onClick={openBrief}
+        className={`animate-in flex ${widthCls} flex-col gap-2 text-left`}
+        style={{ animationDelay: `${i * 60}ms` }}
+        aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
+      >
+        <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
+          <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
+            {isStack ? (
+              t.items[0] ? <ItemTileImage item={t.items[0]} alt={`${t.items.length} jewellery pieces`} /> : null
+            ) : imgOf(t) ? (
+              <ItemTileImage item={t} alt={t.name} />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
+            )}
+          </div>
+        </div>
+        <div>
+          <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
+          <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
+        </div>
+      </button>
+    );
+  };
+
+  // Two tiers for the desktop board: hero garments (dresses/tops/bottoms/
+  // outerwear) anchor the look; everything else (shoes, bags, accessories,
+  // jewellery) is the supporting cluster.
+  const heroTiles = lookTiles.filter((t) => !t.__stack && GARMENT_CATS.has(t.category));
+  const supportTiles = lookTiles.filter((t) => t.__stack || !GARMENT_CATS.has(t.category));
+
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
     if (wearState !== 'idle') return; // already in flight or done — block double-tap
@@ -420,61 +460,26 @@ function DailyBriefCard({
           are prominent and equal to each other; accessories, shoes, bags and
           jewellery are the supporting smaller size. */}
       <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end sm:justify-center sm:gap-5">
-          {lookTiles.map((t, i) => {
-            const isStack = !!t.__stack;
-            const garment = !isStack && GARMENT_CATS.has(t.category);
-            const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
-            // Garments share the larger size (tops and bottoms read as equals);
-            // accessories are the supporting smaller size.
-            // Mobile: uniform 2-column grid (w-full fills the cell) — tidy on a
-            // narrow screen. Desktop (sm+): the editorial two-tier sizing, where
-            // garments are prominent and accessories supporting.
-            const widthCls = `w-full ${garment ? 'sm:w-[clamp(150px,20vw,260px)]' : 'sm:w-[clamp(120px,15vw,200px)]'}`;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={openBrief}
-                className={`animate-in flex ${widthCls} flex-col gap-2 text-left`}
-                style={{ animationDelay: `${i * 60}ms` }}
-                aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
-              >
-                {/* White flat-lay card: soft shadow + inner padding so each cut-out
-                    lifts off the ivory and has room to breathe. */}
-                <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
-                  <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
-                    {isStack ? (
-                      <>
-                        {/* Mobile: one representative jewel at full tile size — a
-                            2x2 in a full-width cell made each piece tiny. The
-                            "N pieces" caption conveys that it's a set. */}
-                        <div className="sm:hidden h-full w-full">
-                          <ItemTileImage item={t.items[0]} alt={`${t.items.length} jewellery pieces`} />
-                        </div>
-                        {/* Desktop: 2x2 preview (the accessory tile is small here). */}
-                        <div className="hidden sm:grid h-full w-full grid-cols-2 grid-rows-2 gap-1">
-                          {t.items.slice(0, 4).map((j) => (
-                            <div key={j.id} className="overflow-hidden rounded-md bg-white">
-                              {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : imgOf(t) ? (
-                      <ItemTileImage item={t} alt={t.name} />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
-                  <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
-                </div>
-              </button>
-            );
-          })}
+        {/* Mobile: tidy uniform 2-column grid. */}
+        <div className="grid grid-cols-2 gap-3 sm:hidden">
+          {lookTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
+        </div>
+        {/* Desktop: a composed outfit board — hero garment(s) anchor the look on
+            the left; the supporting pieces cluster in a compact grid beside them,
+            given the SAME column width so a single hero card balances in height
+            against the 2-wide accessory grid. Centred with breathing room reads
+            as a designed spread, not a left-clumped, ragged-wrapping row. */}
+        <div className="hidden sm:flex sm:items-start sm:justify-center sm:gap-6 lg:gap-8">
+          {heroTiles.length > 0 && (
+            <div className="flex gap-4">
+              {heroTiles.map((t, i) => renderLookCard(t, i, 'w-[clamp(220px,24vw,300px)]'))}
+            </div>
+          )}
+          {supportTiles.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 content-start w-[clamp(220px,24vw,300px)]">
+              {supportTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
+            </div>
+          )}
         </div>
       </div>
 

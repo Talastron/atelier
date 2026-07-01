@@ -9,6 +9,7 @@ import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
+import ItemTileImage from "../components/ItemTileImage.jsx";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
@@ -409,42 +410,55 @@ function DailyBriefCard({
 
       {/* The look — equal tiles on one aligned grid, clothing first, captioned,
           LEFT-aligned with the headline. Flat tiles, object-cover (no seams). */}
-      <div className="mt-5 flex flex-wrap justify-start gap-x-4 gap-y-5">
-        {lookTiles.map((t, i) => {
-          const isStack = !!t.__stack;
-          const garment = !isStack && GARMENT_CATS.has(t.category);
-          const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={openBrief}
-              className="animate-in flex w-[clamp(116px,15vw,152px)] flex-col gap-2 text-left"
-              style={{ animationDelay: `${i * 60}ms` }}
-              aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
-            >
-              <div className="aspect-[3/4] overflow-hidden rounded-2xl bg-stone-100">
-                {isStack ? (
-                  <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-stone-200/50">
-                    {t.items.slice(0, 4).map((j) => (
-                      <div key={j.id} className="overflow-hidden bg-stone-100">
-                        {imgOf(j) ? <img src={imgOf(j)} alt={j.name} className="h-full w-full object-cover" /> : null}
+      {/* Editorial flat-lay: white cards lifted off a warm ivory ground by a soft
+          shadow. Two size tiers — garments (tops, bottoms, dresses, outerwear)
+          are prominent and equal to each other; accessories, shoes, bags and
+          jewellery are the supporting smaller size. */}
+      <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
+        <div className="flex flex-wrap items-end justify-start gap-3 sm:gap-4">
+          {lookTiles.map((t, i) => {
+            const isStack = !!t.__stack;
+            const garment = !isStack && GARMENT_CATS.has(t.category);
+            const eyebrow = isStack ? 'Jewellery' : (t.subCategory || t.category);
+            // Garments share the larger size (tops and bottoms read as equals);
+            // accessories are the supporting smaller size.
+            const widthCls = garment ? 'w-[clamp(132px,17vw,176px)]' : 'w-[clamp(88px,11vw,120px)]';
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={openBrief}
+                className={`animate-in flex ${widthCls} flex-col gap-2 text-left`}
+                style={{ animationDelay: `${i * 60}ms` }}
+                aria-label={isStack ? `${t.items.length} jewellery pieces in today's look` : `Open ${t.name} in today's look`}
+              >
+                {/* White flat-lay card: soft shadow + inner padding so each cut-out
+                    lifts off the ivory and has room to breathe. */}
+                <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
+                  <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
+                    {isStack ? (
+                      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-1">
+                        {t.items.slice(0, 4).map((j) => (
+                          <div key={j.id} className="overflow-hidden rounded-md bg-white">
+                            {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : imgOf(t) ? (
+                      <ItemTileImage item={t} alt={t.name} />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
+                    )}
                   </div>
-                ) : imgOf(t) ? (
-                  <img src={imgOf(t)} alt={t.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
-                )}
-              </div>
-              <div>
-                <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
-                <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
-              </div>
-            </button>
-          );
-        })}
+                </div>
+                <div>
+                  <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment || isStack ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
+                  <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{isStack ? `${t.items.length} pieces` : t.name}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Stylist's note — cream panel (mirrors the marketing site): the narrative on

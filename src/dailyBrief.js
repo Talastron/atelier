@@ -60,6 +60,40 @@ export function nextSlotIndex(uid) {
   return (existing?.slotIndex ?? 0) + 1;
 }
 
+// --- Reload backstop -----------------------------------------------------
+// The in-flight Map below is in-memory, so a HARD PAGE RELOAD mid-compose loses
+// it — and since the result is only cached on completion, the reload would fire
+// a second (paid) compose. We also persist a lightweight "composing since"
+// timestamp so the auto-compose effect can detect a compose that was in flight
+// when the page reloaded and skip re-firing, until the marker goes stale (at
+// which point the compose clearly never finished and a fresh one is fine).
+const COMPOSING_PREFIX = 'atelier.dailyBrief.composing';
+function composingKey(uid) { return `${COMPOSING_PREFIX}.${uid || 'anon'}`; }
+
+// `now` is injectable so the staleness window is unit-testable without mocking
+// the clock.
+export function markComposing(uid, now = Date.now()) {
+  try { localStorage.setItem(composingKey(uid), JSON.stringify({ at: now, dateKey: todayKey() })); } catch { /* swallow */ }
+}
+
+export function clearComposing(uid) {
+  try { localStorage.removeItem(composingKey(uid)); } catch { /* swallow */ }
+}
+
+// True if a compose was marked within `windowMs` for TODAY. A marker older than
+// the window — or from a previous day — returns false so a fresh compose runs.
+export function isComposingRecent(uid, windowMs = 60000, now = Date.now()) {
+  try {
+    const raw = localStorage.getItem(composingKey(uid));
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (parsed.dateKey !== todayKey()) return false;
+    return typeof parsed.at === 'number' && (now - parsed.at) < windowMs;
+  } catch {
+    return false;
+  }
+}
+
 // Module-level in-flight tracker. The DailyBriefCard unmounts/remounts
 // on every tab navigation (key={activeTab} in DigitalWardrobe), so if a
 // compose is still running when the user navigates away, the next mount
@@ -77,11 +111,13 @@ export function getInflightCompose(uid) {
 // inflight entry is cleared.
 export function registerInflightCompose(uid, composeFn) {
   if (inflight.has(uid)) return inflight.get(uid);
+  markComposing(uid); // persist a reload backstop for the life of this compose
   const p = (async () => {
     try {
       return await composeFn();
     } finally {
       inflight.delete(uid);
+      clearComposing(uid);
     }
   })();
   inflight.set(uid, p);

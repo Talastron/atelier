@@ -4,7 +4,7 @@ import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
-import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose } from "../dailyBrief";
+import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent } from "../dailyBrief";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
@@ -184,6 +184,11 @@ function DailyBriefCard({
     // racing ahead with an empty list. Non-connected users flip this true
     // almost immediately, so they're not delayed.
     if (!calendarReady) return;
+    // Reload backstop: a recent composing marker with NO in-memory in-flight
+    // promise means a hard page reload interrupted a compose — skip so we don't
+    // fire a duplicate paid call. (Same-session re-runs still hold the inflight
+    // promise, so they fall through to the dedup below and set the brief.)
+    if (isComposingRecent(uid) && !getInflightCompose(uid)) return;
     let cancelled = false;
     setLoading(true);
     setError(null);

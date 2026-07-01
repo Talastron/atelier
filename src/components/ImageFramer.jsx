@@ -7,13 +7,15 @@ import { renderFramedDataUrl } from '../lib/canvas.js';
 const FW = 264;
 const FH = Math.round(FW / FRAME_ASPECT); // 352
 
-// Resolve a canvas-safe editable source. Data URLs and Firebase Storage URLs
-// export cleanly; external retailer URLs are rehosted server-side (imageProxy)
-// to a data URL to dodge canvas taint — the same path that made polish reliable.
+// Resolve a canvas-safe editable source. Only inline data URLs are already
+// canvas-clean. Everything else — external retailer CDNs AND our own Firebase
+// Storage download URLs — must be rehosted server-side (imageProxy) to a data
+// URL. Storage URLs display fine in a plain <img> but send no CORS headers, so
+// a crossOrigin canvas load taints and the bake fails; proxying to a data URL
+// sidesteps CORS entirely (the same path that made polish reliable).
 async function resolveEditableSrc(src) {
   if (!src) return null;
   if (src.startsWith('data:')) return src;
-  if (src.includes('firebasestorage')) return src;
   try {
     const { imageUrlToCompressedDataUrl } = await import('../lib/net.js');
     const rehosted = await imageUrlToCompressedDataUrl(src);

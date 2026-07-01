@@ -36,6 +36,8 @@ export function computeCropRect({
   offsetX = 0,
   offsetY = 0,
 }) {
+  // Caller ensures naturalW/naturalH > 0; zero dimensions yield a zero-area crop
+  // (a harmless canvas.drawImage no-op) rather than throwing.
   const z = Math.max(1, zoom);
   const ox = clamp(offsetX, -1, 1);
   const oy = clamp(offsetY, -1, 1);

@@ -34,6 +34,15 @@ describe('framing geometry', () => {
     expect(r.sx + r.sw).toBeLessThanOrEqual(1000 + 1e-6);
   });
 
+  it('clamps the crop at the left/top and bottom/right edges', () => {
+    const tl = computeCropRect({ naturalW: 1000, naturalH: 1000, zoom: 2, offsetX: -5, offsetY: -5 });
+    expect(tl.sx).toBeCloseTo(0, 3);
+    expect(tl.sy).toBeCloseTo(0, 3);
+    const br = computeCropRect({ naturalW: 1000, naturalH: 1000, zoom: 2, offsetX: 5, offsetY: 5 });
+    expect(br.sx + br.sw).toBeCloseTo(1000, 3);
+    expect(br.sy + br.sh).toBeCloseTo(1000, 3);
+  });
+
   it('a tall source resolves to a valid 3:4 crop constrained by width', () => {
     const r = computeCropRect({ naturalW: 600, naturalH: 1200, zoom: 1 });
     expect(r.sw).toBeCloseTo(600, 3);

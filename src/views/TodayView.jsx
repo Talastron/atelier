@@ -404,11 +404,6 @@ function DailyBriefCard({
     );
   };
 
-  // Two tiers for the desktop board: hero garments (dresses/tops/bottoms/
-  // outerwear) anchor the look; the other accessories (shoes, bags, sunglasses)
-  // are the supporting cluster. Jewellery has its own strip below.
-  const heroTiles = mainTiles.filter((t) => GARMENT_CATS.has(t.category));
-  const supportTiles = mainTiles.filter((t) => !GARMENT_CATS.has(t.category));
 
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
@@ -489,22 +484,16 @@ function DailyBriefCard({
         <div className="grid grid-cols-2 gap-3 sm:hidden">
           {mainTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
         </div>
-        {/* Desktop: a composed outfit board — hero garment(s) anchor the look on
-            the left; the supporting pieces cluster in a compact grid beside them,
-            given the SAME column width so a single hero card balances in height
-            against the 2-wide accessory grid. Centred with breathing room reads
-            as a designed spread, not a left-clumped, ragged-wrapping row. */}
-        <div className="hidden sm:flex sm:items-start sm:justify-center sm:gap-6 lg:gap-8">
-          {heroTiles.length > 0 && (
-            <div className="flex gap-4">
-              {heroTiles.map((t, i) => renderLookCard(t, i, 'w-[clamp(220px,24vw,300px)]'))}
-            </div>
-          )}
-          {supportTiles.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 content-start w-[clamp(220px,24vw,300px)]">
-              {supportTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
-            </div>
-          )}
+        {/* Desktop: one centred row on a common baseline — garments are the
+            larger hero tier, the other accessories a medium supporting size.
+            Jewellery has its own strip below, so the main row stays short enough
+            to sit on one line without ragged wrapping. */}
+        <div className="hidden sm:flex sm:flex-wrap sm:items-end sm:justify-center sm:gap-5">
+          {mainTiles.map((t, i) => renderLookCard(
+            t,
+            i,
+            GARMENT_CATS.has(t.category) ? 'w-[clamp(180px,20vw,244px)]' : 'w-[clamp(150px,16vw,200px)]',
+          ))}
         </div>
 
         {/* Jewellery — its own full-width strip so several small pieces stay

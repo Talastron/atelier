@@ -2872,12 +2872,17 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     if (!user) return;
     setIsLoading(true); setError(null);
     try {
-      // Strip the in-memory `original` snapshot from imageMeta before save.
-      // We keep originals around in the modal so the user can revert a cutout,
-      // but persisting both versions doubles per-image storage and risks the
-      // 1MiB Firestore doc cap for items with 6 cut-out photos.
+      // Strip the bulky in-memory `original` base64 snapshot from imageMeta
+      // before save (risks 1MiB Firestore cap). Small Storage-URL fields
+      // (cutoutUrl, framedUrl) and frame params are kept intentionally.
       const slimMeta = Array.isArray(formData.imageMeta)
-        ? formData.imageMeta.map((m) => m ? { cutout: !!m.cutout, ...(m.angle ? { angle: m.angle } : {}) } : null)
+        ? formData.imageMeta.map((m) => m ? {
+            cutout: !!m.cutout,
+            ...(m.angle ? { angle: m.angle } : {}),
+            ...(m.cutoutUrl ? { cutoutUrl: m.cutoutUrl } : {}),
+            ...(m.framedUrl ? { framedUrl: m.framedUrl } : {}),
+            ...(m.frame ? { frame: m.frame } : {}),
+          } : null)
         : [];
       const raw = {
         ...formData,

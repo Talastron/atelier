@@ -3886,15 +3886,23 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 vs 'stretch for sticky runway' that broke things before. */}
           <div className="lg:col-span-6">
             <div className="lg:sticky lg:top-[12rem] space-y-3">
-            <button
+            {/* role="button" (not a real <button>) so the cut-out/framed revert
+                and "Edit image" overlay controls can be real nested buttons —
+                a <button> inside a <button> is invalid HTML. */}
+            <div
               ref={photoRef}
+              role="button"
+              tabIndex={images.length === 0 ? -1 : 0}
               onClick={() => {
                 // A swipe just happened — don't open the lightbox.
                 if (photoSwipeRef.current.swiped) { photoSwipeRef.current.swiped = false; return; }
                 if (images.length > 0) setLightboxOpen(true);
               }}
-              disabled={images.length === 0}
-              className="aspect-[3/4] w-full max-h-[65vh] lg:max-h-[60vh] rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow relative group disabled:cursor-default border border-brass-300"
+              onKeyDown={(e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && images.length > 0) { e.preventDefault(); setLightboxOpen(true); }
+              }}
+              aria-disabled={images.length === 0}
+              className={`aspect-[3/4] w-full max-h-[65vh] lg:max-h-[60vh] rounded-2xl lg:rounded-[2rem] overflow-hidden bg-stone-100 smooth-shadow relative group border border-brass-300 ${images.length === 0 ? 'cursor-default' : 'cursor-pointer'}`}
               style={{ touchAction: images.length > 1 ? 'pan-y' : undefined }}
               aria-label={images.length > 1 ? 'Swipe to flip photos, tap to view fullscreen' : 'View photo in fullscreen'}
             >
@@ -3966,7 +3974,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   <Shirt size={64} strokeWidth={1} />
                 </div>
               )}
-            </button>
+            </div>
             {images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto hide-scrollbar">
                 {images.map((src, i) => (

@@ -4,6 +4,7 @@
 import { itemImages, itemColors } from "./items.js";
 import { hexFromColorName } from "./color.js";
 import { COLOR_SWATCHES } from "./taxonomy.js";
+import { stripItemChips } from "../components/ItemChip.jsx";
 import { computeCropRect, FRAME_ASPECT } from './framing.js';
 
 // Resolve a colour-family name to a SOLID, canvas-fillable hex. COLOR_SWATCHES
@@ -310,7 +311,7 @@ export async function composeOutfitExportImage(outfit, items) {
     ctx.font = 'italic 500 28px "Playfair Display", Georgia, serif';
     ctx.fillStyle = INK;
     ctx.textBaseline = 'alphabetic';
-    const noteText = `"${outfit.reasoning.trim()}"`;
+    const noteText = `"${stripItemChips(outfit.reasoning).trim()}"`;
     wrapCanvasText(ctx, noteText, PAD, noteY + 70, W - PAD * 2, 38, 3);
   }
 

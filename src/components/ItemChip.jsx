@@ -10,6 +10,16 @@ import React from 'react';
 //
 // Shared by ConciergeMessage, the Daily Brief card and the calendar day
 // reasoning. Pass items + onOpenItem explicitly (no closure capture).
+// Plain-text counterpart to renderTextWithChips: replaces each
+// <<item:id|name>> marker with just its display name. Use on non-React
+// surfaces that cannot render chip components — e.g. the canvas share-image
+// export or any string headed for a plain text/alt attribute. Keeps the
+// marker regex defined in this one file so it cannot drift out of sync.
+export function stripItemChips(raw) {
+  if (!raw) return '';
+  return raw.replace(/<<item:[^|>]+\|([^>]+)>>/g, '$1');
+}
+
 export function renderTextWithChips(raw, { items = [], onOpenItem = null } = {}) {
   if (!raw) return null;
   const re = /<<item:([^|>]+)\|([^>]+)>>/g;

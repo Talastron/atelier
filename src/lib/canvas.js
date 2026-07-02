@@ -80,12 +80,15 @@ export function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines =
     if (ctx.measureText(test).width > maxWidth && line) {
       lines.push(line);
       if (lines.length === maxLines) {
-        // Truncate with ellipsis
-        let truncated = word;
-        while (ctx.measureText(truncated + '…').width > maxWidth && truncated.length > 0) {
-          truncated = truncated.slice(0, -1);
+        // Out of lines with text still remaining: truncate the FINAL line
+        // itself so it ends with an ellipsis and still fits maxWidth. (The
+        // previous version appended the overflowing word to an already-full
+        // line, pushing it past the right margin and off the canvas.)
+        let last = lines[maxLines - 1];
+        while (last.length > 0 && ctx.measureText(last + '…').width > maxWidth) {
+          last = last.slice(0, -1);
         }
-        lines[lines.length - 1] = lines[lines.length - 1] + ' ' + truncated.trim() + '…';
+        lines[maxLines - 1] = last.replace(/\s+$/, '') + '…';
         line = '';
         break;
       }

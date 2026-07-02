@@ -9,7 +9,7 @@ import { itemImageDisplay } from '../lib/polish.js';
 //     for busy shots where no clean border colour is detected
 // Used anywhere we show one item thumbnail (e.g. the Today outfit tiles) so the
 // look stays consistent with the wardrobe once items are polished.
-export default function ItemTileImage({ item, alt }) {
+export default function ItemTileImage({ item, alt, zoomOnHover = false }) {
   const disp = itemImageDisplay(item, 0);
   const src = disp.src
     || (Array.isArray(item?.images) ? item.images[0] : null)
@@ -31,7 +31,7 @@ export default function ItemTileImage({ item, alt }) {
         alt={alt || item?.name || ''}
         loading="lazy"
         decoding="async"
-        className={`w-full h-full ${contain ? 'object-contain' : 'object-cover'}`}
+        className={`w-full h-full ${contain ? 'object-contain' : 'object-cover'}${zoomOnHover ? ' transition-transform duration-700 ease-out group-hover:scale-105' : ''}`}
       />
     </div>
   );

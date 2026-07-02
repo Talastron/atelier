@@ -524,9 +524,11 @@ function DailyBriefCard({
         )}
       </div>
 
-      {/* Stylist's note — cream panel (mirrors the marketing site): the narrative on
+      {/* Stylist's note — a warm, gently recessed panel (deeper than the ivory
+          ground, no shadow) so it reads as a calm secondary reading block below
+          the floating product tiles. Narrative on
           the left, the confidence figure on the right. */}
-      <div className="mt-7 flex flex-col gap-4 rounded-2xl bg-stone-50 p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
+      <div className="mt-7 flex flex-col gap-4 rounded-2xl bg-[#efe8db] p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
         <Sparkles size={20} strokeWidth={1.4} className="hidden shrink-0 text-brass-500 sm:block" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">Stylist's note</p>

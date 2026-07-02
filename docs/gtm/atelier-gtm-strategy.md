@@ -75,6 +75,12 @@ Artifacts ranked by shareability:
 - **Creator gifting (not paying)** — free Founding Member access + invites to ~15–30 mid-tier (10k–80k) quiet-luxury/capsule creators. Genuine, no contract.
 - **Communities** — r/femalefashionadvice, r/capsulewardrobe, capsule Facebook groups, niche Discords. Show up helpful, never spam.
 
+**Supporting channel — LinkedIn (NOT primary).** Your ICP is *on* LinkedIn but in professional headspace, not shopping-for-a-wardrobe-app mode — so it won't spread the Style DNA reveal like Pinterest/Reels. Use it for what it's actually good at, as a near-free *repurpose* (don't let it compete for the hours Track 1/2 need):
+- **~1 build-in-public founder post/week** — personal, text-first, native (LinkedIn's algorithm rewards this). Reaches a different audience: other founders, press/journalists, potential partners (stylists, boutiques, editors), and the professional slice of your ICP.
+- **Warm Track-1 outreach** — your professional network lives here; mine it for first-cohort candidates.
+- **The trap to avoid:** likes from other founders ≠ customers. Measure trials, not applause.
+- **Link placement:** put the site link in the *first comment*, not the post body — LinkedIn throttles reach on posts with outbound links.
+
 ## 6. Current focus — plug the leaks, then drive traffic
 
 The product is live, so there is **no waitlist** — the funnel is: traffic → site/Journal → **14-day trial** → paid. Fix the conversion path first, then pour traffic in.

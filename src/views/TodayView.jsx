@@ -504,13 +504,13 @@ function DailyBriefCard({
             <p className="mb-2.5 px-0.5 text-[9px] font-medium uppercase tracking-[0.2em] text-brass-600">
               Jewellery · {jewelleryPieces.length} {jewelleryPieces.length === 1 ? 'piece' : 'pieces'}
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="flex flex-wrap justify-center gap-3">
               {jewelleryPieces.map((j, i) => (
                 <button
                   key={j.id}
                   type="button"
                   onClick={openBrief}
-                  className="animate-in"
+                  className="animate-in w-[clamp(140px,15vw,180px)]"
                   style={{ animationDelay: `${i * 50}ms` }}
                   aria-label={`Open ${j.name} in today's look`}
                 >

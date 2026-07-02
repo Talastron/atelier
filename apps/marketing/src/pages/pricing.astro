@@ -38,7 +38,7 @@ import { ChevronRight } from 'lucide-react';
 // Lemon Squeezy product URL (Atelier Membership — covers both Monthly & Annual variants).
 // The customer picks Monthly vs Annual on the LS-hosted checkout page.
 // Annual is set as the "favourite" / highlighted default in the LS dashboard.
-const LS_CHECKOUT_URL = 'https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c73-c40d-41b7-bb39-6aef6b39b525';
+const LS_CHECKOUT_URL = 'https://myatelier.lemonsqueezy.com/checkout/buy/b39cfd69-0875-49fa-a63c-b053ef3413ca';
 
 // Founding Member URL — same Annual variant as LS_CHECKOUT_URL, with the
 // KYMDE3NG discount code (£29 off forever, capped at 100 redemptions in LS)
@@ -54,12 +54,18 @@ const LS_CHECKOUT_URL = 'https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c7
 // KYMDE3NG manually since the code is displayed on the card below as
 // belt-and-braces.
 const LS_FOUNDING_CODE = 'KYMDE3NG';
-const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/a9d33c73-c40d-41b7-bb39-6aef6b39b525?checkout[discount_code]=${LS_FOUNDING_CODE}`;
+const LS_FOUNDING_URL = `https://myatelier.lemonsqueezy.com/checkout/buy/b39cfd69-0875-49fa-a63c-b053ef3413ca?checkout[discount_code]=${LS_FOUNDING_CODE}`;
 
 // Variant IDs — appear in webhook payloads; reference only, not used in URLs.
-// 1809234 = Monthly, 1809222 = Annual (Founding members come in as Annual
-// + the KYMDE3NG discount, so they're indistinguishable from regular Annual
-// in the webhook payload's variant_id field).
+// The webhook (functions/api/lemonsqueezy-webhook.ts) is variant-agnostic:
+// it grants access on the subscription event + status, so these IDs are
+// documentation only and nothing breaks if they're stale.
+// TEST-mode variants were 1809234 = Monthly, 1809222 = Annual. When the
+// store went live (2026-07-02) the product was recreated via "Copy to Live
+// Mode", minting new Live variant IDs + a new checkout UUID (above). Fill in
+// the Live variant IDs here if/when needed (open each variant in the LS
+// dashboard). Founding members still arrive as Annual + the KYMDE3NG
+// discount, so they're indistinguishable from regular Annual in the payload.
 ---
 
 <Base title="The Keys to Atelier — Membership">

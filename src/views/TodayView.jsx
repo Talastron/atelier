@@ -466,7 +466,7 @@ function DailyBriefCard({
   };
 
   return (
-    <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-8 smooth-shadow">
+    <div className="rounded-3xl border border-stone-200/70 bg-[#f4efe6] p-6 sm:p-8 smooth-shadow">
       {/* Section headline only — the page header above already carries the
           greeting + weather, so the card doesn't repeat an eyebrow or the
           weather line (that read as duplication). */}
@@ -474,10 +474,10 @@ function DailyBriefCard({
 
       {/* The look — equal tiles on one aligned grid, clothing first, captioned,
           LEFT-aligned with the headline. Flat tiles, object-cover (no seams). */}
-      {/* Editorial flat-lay: white cards lifted off a warm ivory ground by a
-          soft shadow. Garments anchor as a hero; the other accessories cluster
-          beside them; jewellery gets its own full-width strip below. */}
-      <div className="mt-5 rounded-3xl p-4 sm:p-6" style={{ background: '#f7f4ee' }}>
+      {/* Editorial flat-lay: white item cards lift off the card's own warm ivory
+          surface — no nested panel (the card IS the ivory ground). Garments
+          anchor as a hero row; jewellery gets its own strip below. */}
+      <div className="mt-5">
         {/* Mobile: reliable 2-column grid (an odd last piece sits bottom-left —
             standard, and far better than the mis-sized flex that stacked
             everything one-per-row). */}

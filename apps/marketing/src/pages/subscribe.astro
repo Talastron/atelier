@@ -1,5 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
 import NewsletterSignup from '../components/NewsletterSignup.astro';
 
 // No-JS failure path: functions/api/subscribe.ts redirects here with ?error=1
@@ -8,6 +10,7 @@ import NewsletterSignup from '../components/NewsletterSignup.astro';
 const hasError = Astro.url.searchParams.get('error') === '1';
 ---
 <Base title="Subscribe — Atelier" description="Occasional essays on dressing well from what you already own.">
+  <Nav />
   <main style="max-width: 42rem; margin: 0 auto; padding: 6rem 1.5rem;">
     {hasError && (
       <p role="alert" style="margin-bottom: 1.5rem; color: #b91c1c; font-size: .9rem;">
@@ -21,4 +24,5 @@ const hasError = Astro.url.searchParams.get('error') === '1';
       subtext="Essays on style, cost-per-wear, and dressing from what you already own — a few times a month, never spam."
     />
   </main>
+  <Footer />
 </Base>

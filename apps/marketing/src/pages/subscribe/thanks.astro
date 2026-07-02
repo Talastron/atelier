@@ -1,7 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
 ---
 <Base title="Almost there — Atelier" description="Confirm your subscription to the Atelier letter.">
+  <Nav />
   <main style="max-width: 42rem; margin: 0 auto; padding: 6rem 1.5rem; text-align: center;">
     <h1 class="font-display" style="font-size: 2rem; color: #1c1917;">Check your inbox</h1>
     <p style="color: #57534e; margin-top: 1rem;">
@@ -9,4 +12,5 @@ import Base from '../../layouts/Base.astro';
     </p>
     <p style="margin-top: 2rem;"><a href="/" style="text-decoration: underline;">Back to Atelier</a></p>
   </main>
+  <Footer />
 </Base>

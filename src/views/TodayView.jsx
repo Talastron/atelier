@@ -466,7 +466,7 @@ function DailyBriefCard({
   };
 
   return (
-    <div className="rounded-3xl border border-stone-200/70 bg-[#f4efe6] p-6 sm:p-8 smooth-shadow">
+    <div className="rounded-3xl border border-stone-200/60 bg-[#f4efe6] p-6 sm:p-8">
       {/* Section headline only — the page header above already carries the
           greeting + weather, so the card doesn't repeat an eyebrow or the
           weather line (that read as duplication). */}

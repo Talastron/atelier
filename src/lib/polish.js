@@ -39,11 +39,20 @@ export async function polishItemPrimary(item, uid) {
   }
   const out = await removeImageBackground(original); // { url, ok }
   if (!out.ok) return { ok: false, error: out.error };
+  // Trim to the subject so it fills its tile (a delicate piece shouldn't float
+  // tiny in a big white frame). Best-effort — keeps the untrimmed cut-out on
+  // failure or when there's nothing safe to trim (white-on-white, already tight).
+  let cutout = out.url;
+  try {
+    const { trimCutoutDataUrl } = await import('./trimCutout.js');
+    const trimmed = await trimCutoutDataUrl(cutout);
+    if (trimmed.ok) cutout = trimmed.url;
+  } catch { /* keep the untrimmed cut-out */ }
   const { storage } = await import('../firebase.js');
   const { ref, uploadString, getDownloadURL } = await import('firebase/storage');
   const path = `polish/${uid}/${safeId(item.id)}-0.jpg`;
   const r = ref(storage, path);
-  await uploadString(r, out.url, 'data_url', { cacheControl: 'public, max-age=31536000' });
+  await uploadString(r, cutout, 'data_url', { cacheControl: 'public, max-age=31536000' });
   const cutoutUrl = await getDownloadURL(r);
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
@@ -92,4 +101,34 @@ export function revertFramePrimary(item) {
   const meta = Array.isArray(item.imageMeta) ? item.imageMeta.map((m) => ({ ...m })) : [];
   if (meta[0]) { delete meta[0].framedUrl; delete meta[0].frame; }
   return meta;
+}
+
+// Re-trim an ALREADY-polished item's cut-out to its subject (for the "Tighten
+// cut-outs" batch on existing wardrobes). Loads the current cutoutUrl as a
+// canvas-clean data URL (Storage URLs aren't canvas-safe — go through the image
+// proxy, like the framer), trims it, and re-uploads to the same path. Returns
+// { ok, imageMeta } on success; { ok:false, skipped } when there was nothing
+// safe to trim (leaves the cut-out as-is). The original images[0] is untouched.
+export async function retrimItemPrimary(item, uid) {
+  const cutoutUrl = item?.imageMeta?.[0]?.cutoutUrl;
+  if (!uid || !cutoutUrl) return { ok: false };
+  let dataUrl = cutoutUrl;
+  if (!dataUrl.startsWith('data:')) {
+    const { imageUrlToCompressedDataUrl } = await import('./net.js');
+    dataUrl = await imageUrlToCompressedDataUrl(cutoutUrl);
+  }
+  if (!dataUrl || !dataUrl.startsWith('data:')) return { ok: false };
+  const { trimCutoutDataUrl } = await import('./trimCutout.js');
+  const trimmed = await trimCutoutDataUrl(dataUrl);
+  if (!trimmed.ok) return { ok: false, skipped: true }; // nothing safe to trim
+  const { storage } = await import('../firebase.js');
+  const { ref, uploadString, getDownloadURL } = await import('firebase/storage');
+  const path = `polish/${uid}/${safeId(item.id)}-0.jpg`;
+  const r = ref(storage, path);
+  await uploadString(r, trimmed.url, 'data_url', { cacheControl: 'public, max-age=31536000' });
+  const newUrl = await getDownloadURL(r);
+  const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
+  while (meta.length < 1) meta.push({});
+  meta[0] = { ...(meta[0] || {}), cutoutUrl: newUrl };
+  return { ok: true, imageMeta: meta };
 }

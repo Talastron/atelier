@@ -5,7 +5,7 @@ import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
 import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser, deleteMyAccount } from "../firebase.js";
-import { itemImageDisplay, polishItemPrimary } from "../lib/polish.js";
+import { itemImageDisplay, polishItemPrimary, retrimItemPrimary } from "../lib/polish.js";
 import ItemTileImage from "../components/ItemTileImage.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
@@ -427,6 +427,32 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems } });
   };
 
+  // Re-trim already-polished items so each subject fills its tile (delicate
+  // pieces stop floating small). Targets items that HAVE a cut-out — the
+  // opposite of the polish batch. Reuses the same progress UI.
+  const runRetrimWardrobe = async () => {
+    if (!user) return;
+    polishCancelRef.current = false;
+    try { const net = await import("../lib/net.js"); net.clearAllHostBlocks(); } catch { /* non-blocking */ }
+    const targets = ((polishItems || items) || []).filter((it) => !!it.imageMeta?.[0]?.cutoutUrl);
+    setPolishState({ done: 0, total: targets.length, failed: 0, retrim: true });
+    let done = 0, failed = 0;
+    const failedItems = [];
+    for (const it of targets) {
+      if (polishCancelRef.current) break;
+      try {
+        const res = await retrimItemPrimary(it, user.uid);
+        if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
+        // res.skipped (already tight / nothing safe to trim) is a fine outcome.
+        else if (!res.skipped) { failed += 1; failedItems.push(it); }
+      } catch { failed += 1; failedItems.push(it); }
+      done += 1;
+      setPolishState({ done, total: targets.length, failed, retrim: true });
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, retrim: true } });
+  };
+
   // Google Calendar connection state. null = still checking, true/false = known.
   const profileToast = useToast();
   const [calConnected, setCalConnected] = useState(null);
@@ -803,15 +829,21 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
 
         <div className="mt-6 pt-5 border-t border-stone-100">
           {!polishState && (
-            <button type="button" onClick={runPolishWardrobe}
-              className="text-xs tracking-widest uppercase px-5 py-3 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors">
-              Polish my wardrobe
-            </button>
+            <div className="flex flex-wrap gap-2.5">
+              <button type="button" onClick={runPolishWardrobe}
+                className="text-xs tracking-widest uppercase px-5 py-3 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors">
+                Polish my wardrobe
+              </button>
+              <button type="button" onClick={runRetrimWardrobe}
+                className="text-xs tracking-widest uppercase px-5 py-3 rounded-full border border-stone-300 text-stone-800 hover:bg-stone-50 transition-colors">
+                Tighten cut-outs
+              </button>
+            </div>
           )}
           {polishState && !polishState.summary && (
             <div className="max-w-sm">
               <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                <span>Polishing… {polishState.done} / {polishState.total}{polishState.failed ? ` · ${polishState.failed} kept original` : ''}</span>
+                <span>{polishState.retrim ? 'Tightening' : 'Polishing'}… {polishState.done} / {polishState.total}{polishState.failed ? ` · ${polishState.failed} kept original` : ''}</span>
                 <button type="button" onClick={() => { polishCancelRef.current = true; }} className="underline hover:text-stone-900">Stop</button>
               </div>
               <div className="h-1.5 rounded-full bg-stone-100 overflow-hidden">
@@ -822,13 +854,13 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           {polishState?.summary && (
             <div className="text-sm text-stone-700">
               <p className="mb-2">
-                {polishState.summary.done - polishState.summary.failed} polished
+                {polishState.summary.done - polishState.summary.failed} {polishState.summary.retrim ? 'tightened' : 'polished'}
                 {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original` : ''}
                 {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
               </p>
               {polishState.summary.failedItems?.length > 0 && (
                 <div className="mb-3">
-                  <p className="text-xs text-stone-500 mb-2">Couldn’t cut these out — tap to review:</p>
+                  <p className="text-xs text-stone-500 mb-2">Couldn’t {polishState.summary.retrim ? 'tighten' : 'cut out'} these — tap to review:</p>
                   <div className="flex flex-wrap gap-2">
                     {polishState.summary.failedItems.map((it) => (
                       <button key={it.id} type="button" onClick={() => onOpenItem?.(it.id)} title={it.name}

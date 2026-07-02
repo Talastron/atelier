@@ -383,14 +383,14 @@ function DailyBriefCard({
         key={t.id}
         type="button"
         onClick={openBrief}
-        className={`animate-in flex ${widthCls} flex-col gap-2 text-left`}
+        className={`animate-in group flex ${widthCls} flex-col gap-2 text-left`}
         style={{ animationDelay: `${i * 60}ms` }}
         aria-label={`Open ${t.name} in today's look`}
       >
         <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
           <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
             {imgOf(t) ? (
-              <ItemTileImage item={t} alt={t.name} />
+              <ItemTileImage item={t} alt={t.name} zoomOnHover />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
             )}
@@ -510,12 +510,12 @@ function DailyBriefCard({
                   key={j.id}
                   type="button"
                   onClick={openBrief}
-                  className="animate-in w-[clamp(140px,15vw,180px)]"
+                  className="animate-in group w-[clamp(140px,15vw,180px)]"
                   style={{ animationDelay: `${i * 50}ms` }}
                   aria-label={`Open ${j.name} in today's look`}
                 >
                   <div className="aspect-square overflow-hidden rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-3">
-                    {imgOf(j) ? <ItemTileImage item={j} alt={j.name} /> : null}
+                    {imgOf(j) ? <ItemTileImage item={j} alt={j.name} zoomOnHover /> : null}
                   </div>
                 </button>
               ))}

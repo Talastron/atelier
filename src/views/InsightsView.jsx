@@ -382,22 +382,31 @@ function squarifyTreemap(items, x, y, w, h) {
 // mark, and a museum-label brand line above the eyebrow.
 function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
   // Pre-bake per-category meta so we don't re-scan ownedItems every render.
-  // Representative item = most-worn (tied by price), so "Shoes" picks the
-  // worn pumps over the priciest boots — the user's signature, not the splurge.
+  // Representative item picks, in order of preference: (1) an item with a clean
+  // cut-out / framed image — background removed onto white, trimmed to subject —
+  // so the plate shows an intentional still-life, not a badly-cropped lifestyle
+  // shot; then (2) most-worn (the signature, not the splurge); then (3) priciest.
+  // `contain` records whether that rep is a whole-subject cut-out (show it
+  // object-contain on a warm ground) vs. a full-bleed lifestyle photo (cover).
   const catMeta = useMemo(() => {
     const map = {};
     for (const cat of Object.keys(categoryBreakdown)) {
       const inCat = ownedItems.filter((i) => i.category === cat);
-      const withPhoto = inCat.filter((i) => itemImages(i)[0]);
+      const withPhoto = inCat.filter((i) => itemImageDisplay(i, 0).src);
       const sorted = [...withPhoto].sort((a, b) => {
+        const ca = itemImageDisplay(a, 0).forceContain ? 1 : 0;
+        const cb = itemImageDisplay(b, 0).forceContain ? 1 : 0;
+        if (cb !== ca) return cb - ca; // clean cut-outs lead
         const wa = itemWearCount(a) || 0;
         const wb = itemWearCount(b) || 0;
         if (wb !== wa) return wb - wa;
         return (b.price || 0) - (a.price || 0);
       });
       const rep = sorted[0] || null;
+      const disp = rep ? itemImageDisplay(rep, 0) : { src: null, forceContain: false };
       map[cat] = {
-        photo: rep ? (itemImageDisplay(rep, 0).src || itemImages(rep)[0]) : null,
+        photo: disp.src || (rep ? itemImages(rep)[0] : null),
+        contain: !!disp.forceContain,
         brand: rep?.brand || '',
         count: inCat.length,
       };
@@ -405,96 +414,211 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
     return map;
   }, [categoryBreakdown, ownedItems]);
 
-  const entries = Object.entries(categoryBreakdown)
-    .map(([category, value]) => ({ category, value }))
-    .filter((e) => e.value > 0)
-    .sort((a, b) => b.value - a.value);
-  const total = entries.reduce((s, e) => s + e.value, 0);
+  // Cap-and-fold: a magazine never prints an unreadable sliver. Show the top
+  // CAP categories as full plates and fold the long tail into one closing
+  // "+ N more" type-tile. Only fold when it actually removes slivers (more than
+  // CAP + 1 categories) — with exactly CAP + 1 we just show them all.
+  const CAP = 6;
+  const { entries, total, moreMeta } = useMemo(() => {
+    const all = Object.entries(categoryBreakdown)
+      .map(([category, value]) => ({ category, value }))
+      .filter((e) => e.value > 0)
+      .sort((a, b) => b.value - a.value);
+    const sum = all.reduce((s, e) => s + e.value, 0);
+    if (all.length <= CAP + 1) return { entries: all, total: sum, moreMeta: null };
+    const shown = all.slice(0, CAP);
+    const folded = all.slice(CAP);
+    const moreValue = folded.reduce((s, e) => s + e.value, 0);
+    const merged = [...shown, { category: '__more__', value: moreValue }]
+      .sort((a, b) => b.value - a.value);
+    return { entries: merged, total: sum, moreMeta: { count: folded.length, value: moreValue, categories: folded.map((f) => f.category) } };
+  }, [categoryBreakdown]);
+
   // Layout in a virtual 100×56 unit box (≈16:9). CSS turns it back into
   // percentages so the treemap is fluid at any container width.
   const layout = useMemo(() => squarifyTreemap(entries, 0, 0, 100, 56), [entries]);
+
+  // One-shot staggered reveal so the spread "develops" like a print. Starts
+  // hidden, flips visible after mount; `motion-reduce:` classes force the tiles
+  // visible immediately for users who prefer no motion.
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setRevealed(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   if (entries.length === 0) return <p className="text-stone-400 italic">No items owned yet.</p>;
 
   return (
     <div className="relative w-full" style={{ aspectRatio: '100 / 56' }}>
-      {layout.map((tile) => {
-        const meta = catMeta[tile.category] || { photo: null, brand: '', count: 0 };
+      {layout.map((tile, idx) => {
+        const isMore = tile.category === '__more__';
+        const meta = catMeta[tile.category] || { photo: null, contain: false, brand: '', count: 0 };
         const pct = total > 0 ? (tile.value / total) * 100 : 0;
         const clickable = !!onJumpToWardrobe;
         const Wrap = clickable ? 'button' : 'div';
+        // A folded "+ N more" tile opens the whole wardrobe (no category); a
+        // category plate deep-links to that category.
         const tileProps = clickable
-          ? { type: 'button', onClick: () => onJumpToWardrobe({ filter: 'all', category: tile.category }), 'aria-label': `View ${tile.category} in wardrobe` }
+          ? {
+              type: 'button',
+              onClick: () => onJumpToWardrobe(isMore ? { filter: 'all' } : { filter: 'all', category: tile.category }),
+              'aria-label': isMore ? 'View all categories in wardrobe' : `View ${tile.category} in wardrobe`,
+            }
           : {};
         // Tile typography scales with tile area so a sliver gets small caps
         // and the dominant tile gets a real display heading.
         const area = tile.w * tile.h;
-        const heroish = area >= 900;
+        const heroish = !isMore && area >= 900;
         const big = area >= 450;
+        // Staggered reveal — hidden→visible in scan order; motion-reduce forces
+        // it visible instantly regardless of the `revealed` flag.
+        const revealCls = `transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0 ${revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`;
         return (
           <Wrap
             key={tile.category}
             {...tileProps}
-            className={`group absolute overflow-hidden ${clickable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-300' : ''}`}
+            className={`group absolute overflow-hidden ${revealCls} ${clickable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-300' : ''}`}
             style={{
               left: `${tile.x}%`,
               top: `${(tile.y / 56) * 100}%`,
               width: `${tile.w}%`,
               height: `${(tile.h / 56) * 100}%`,
               padding: '3px', // hairline gutter between tiles
+              transitionDelay: `${Math.min(idx * 60, 420)}ms`,
             }}
           >
-            <div className="relative w-full h-full rounded-xl overflow-hidden bg-stone-200 ring-1 ring-stone-200/60">
-              {meta.photo ? (
-                <img
-                  src={meta.photo}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300" />
-              )}
-              {/* Editorial overlay — a soft top wash stops highlights from
-                  blowing out on hover, and a darker bottom gradient carries
-                  the type without a tinted card behind it. */}
-              <div className="absolute inset-0 bg-gradient-to-t from-stone-900/90 via-stone-900/15 to-stone-900/10" />
+            {(() => {
+              // Three tile registers, each with the legibility treatment its
+              // imagery needs:
+              //   • card  — a cut-out (subject on white). Cream ground blends the
+              //     white edge; DARK-INK museum caption below the product.
+              //   • photo — a full-bleed lifestyle shot. Dark scrim + WHITE caption.
+              //   • more  — the folded tail. Brass-on-ink type plate.
+              const asCard = !isMore && meta.photo && meta.contain;
+              const asPhoto = !isMore && meta.photo && !meta.contain;
+              const light = asCard || (!isMore && !meta.photo); // cut-out or empty → dark ink
+              const catCls = heroish ? 'text-xs sm:text-sm' : 'text-[9px] sm:text-[10px]';
+              const pctCls = heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]';
+              const priceCls = `font-display ${heroish ? 'text-2xl md:text-3xl' : big ? 'text-lg md:text-xl' : 'text-sm'}`;
+              const pieceCls = heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]';
 
-              {/* Hero-only flourishes: a brass-thread inset frame (the
-                  printer's passe-partout move) and a small "Largest" gilded
-                  tab — a feature mark without typography overload. */}
-              {heroish && (
-                <>
-                  <div className="absolute inset-2 ring-[1px] ring-inset ring-white/15 rounded-lg pointer-events-none" />
-                  <div className="absolute top-3 right-3 flex items-center gap-2">
-                    <span className="w-5 h-px bg-brass-300/70" />
-                    <span className="text-[9px] tracking-[0.3em] uppercase text-brass-200/90 font-medium">Largest</span>
-                  </div>
-                </>
-              )}
-
-              <div className="absolute left-0 right-0 bottom-0 p-3 md:p-4 text-white">
-                {heroish && meta.brand && (
-                  <p className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-brass-200/90 font-medium mb-1 truncate">
-                    {meta.brand}
-                  </p>
-                )}
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className={`${heroish ? 'text-xs sm:text-sm' : 'text-[9px] sm:text-[10px]'} tracking-[0.22em] uppercase font-semibold opacity-90`}>{tile.category}</p>
-                  <p className={`${heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]'} tracking-widest uppercase opacity-70`}>{pct.toFixed(0)}%</p>
-                </div>
-                <div className="flex items-baseline justify-between gap-2 mt-0.5">
-                  <p className={`font-display ${heroish ? 'text-2xl md:text-3xl' : big ? 'text-lg md:text-xl' : 'text-sm'}`}>
-                    £{tile.value.toLocaleString()}
-                  </p>
-                  {(big || heroish) && meta.count > 0 && (
-                    <p className={`${heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]'} tracking-widest uppercase opacity-60`}>
-                      × {meta.count} {meta.count === 1 ? 'piece' : 'pieces'}
+              if (isMore) {
+                // Folded tail — a warm taupe summary plate that belongs to the
+                // cream family rather than punching a dark hole in the spread.
+                return (
+                  <div className="relative w-full h-full rounded-xl overflow-hidden ring-1 ring-stone-300/60 flex flex-col items-center justify-center text-center px-3"
+                       style={{ background: 'linear-gradient(160deg, #EBE4D9, #DCD2C3)' }}>
+                    <span className="w-6 h-px bg-brass-500/70 mb-3" aria-hidden="true" />
+                    <p className={`font-display text-stone-900 ${big ? 'text-xl md:text-2xl' : 'text-base'}`}>
+                      £{tile.value.toLocaleString()}
                     </p>
+                    <p className="text-[9px] sm:text-[10px] tracking-[0.22em] uppercase text-stone-500 font-medium mt-1.5">
+                      + {moreMeta?.count ?? 0} more {moreMeta?.count === 1 ? 'category' : 'categories'}
+                    </p>
+                    {moreMeta?.categories?.length > 0 && (
+                      <p className="text-[9px] sm:text-[10px] tracking-[0.14em] uppercase text-stone-400 mt-2 leading-relaxed max-w-[85%]">
+                        {moreMeta.categories.join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                );
+              }
+
+              // LIGHT register — cut-out card (or empty). flex-col so the caption
+              // sits below the product on the cream, never over it.
+              if (light) {
+                // Luggage-tag split: a PURE-WHITE product zone (top) so the
+                // cut-out's baked-white background dissolves seamlessly — no box
+                // edge, whatever the item's colour — over a cream caption footer.
+                return (
+                  <div className="relative w-full h-full rounded-xl overflow-hidden ring-1 ring-stone-200/70 flex flex-col"
+                       style={{ background: '#F4EFE7' }}>
+                    <div className={`relative flex-1 min-h-0 ${asCard ? '' : 'bg-gradient-to-br from-stone-100 to-stone-200'}`}
+                         style={asCard ? { background: 'radial-gradient(ellipse 78% 68% at 50% 44%, #FFFFFF 0%, #FFFFFF 58%, #F6F2EB 100%)' } : undefined}>
+                      {meta.photo && (
+                        <img
+                          src={meta.photo}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 w-full h-full object-contain p-2 md:p-3 transition-transform duration-700 group-hover:scale-[1.04]"
+                        />
+                      )}
+                    </div>
+                    <div className={`relative px-3 pb-3 md:px-4 md:pb-4 pt-2 ${asCard ? 'border-t border-stone-200/60' : ''}`}>
+                      {heroish && meta.brand && (
+                        <p className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-brass-600 font-medium mb-1 truncate">
+                          {meta.brand}
+                        </p>
+                      )}
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className={`${catCls} tracking-[0.22em] uppercase font-semibold text-stone-800`}>{tile.category}</p>
+                        <p className={`${pctCls} tracking-widest uppercase text-stone-400 tabular-nums`}>{pct.toFixed(0)}%</p>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2 mt-0.5">
+                        <p className={`${priceCls} text-stone-900`}>£{tile.value.toLocaleString()}</p>
+                        {(big || heroish) && meta.count > 0 && (
+                          <p className={`${pieceCls} tracking-widest uppercase text-stone-400 tabular-nums`}>
+                            × {meta.count} {meta.count === 1 ? 'piece' : 'pieces'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {/* Matte frame — quiet stone hairline; gilded brass on the hero. */}
+                    <div className={`absolute rounded-lg pointer-events-none ${heroish ? 'inset-2 ring-1 ring-inset ring-brass-300/50' : 'inset-1.5 ring-[0.5px] ring-inset ring-stone-300/60'}`} />
+                    {heroish && (
+                      <div className="absolute top-3 right-3 flex items-center gap-2">
+                        <span className="w-5 h-px bg-brass-400/70" />
+                        <span className="text-[9px] tracking-[0.3em] uppercase text-brass-500 font-medium">Largest</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // DARK register — full-bleed lifestyle photo, white caption on scrim.
+              return (
+                <div className="relative w-full h-full rounded-xl overflow-hidden ring-1 ring-stone-200/60 bg-stone-200">
+                  <img
+                    src={meta.photo}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
+                    style={{ filter: 'contrast(1.03) saturate(0.97)' }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-900/92 via-stone-900/25 to-stone-900/10 pointer-events-none" />
+                  <div className="absolute inset-0 pointer-events-none" style={{ boxShadow: 'inset 0 0 60px rgba(28,25,23,0.28)' }} />
+                  <div className={`absolute rounded-lg pointer-events-none ${heroish ? 'inset-2 ring-1 ring-inset ring-brass-200/40' : 'inset-1.5 ring-[0.5px] ring-inset ring-white/15'}`} />
+                  {heroish && (
+                    <div className="absolute top-3 right-3 flex items-center gap-2">
+                      <span className="w-5 h-px bg-brass-300/70" />
+                      <span className="text-[9px] tracking-[0.3em] uppercase text-brass-200/90 font-medium">Largest</span>
+                    </div>
                   )}
+                  <div className="absolute left-0 right-0 bottom-0 p-3 md:p-4 text-white">
+                    {heroish && meta.brand && (
+                      <p className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-brass-200/90 font-medium mb-1 truncate">
+                        {meta.brand}
+                      </p>
+                    )}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className={`${catCls} tracking-[0.22em] uppercase font-semibold opacity-90`}>{tile.category}</p>
+                      <p className={`${pctCls} tracking-widest uppercase opacity-70 tabular-nums`}>{pct.toFixed(0)}%</p>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-2 mt-0.5">
+                      <p className={priceCls}>£{tile.value.toLocaleString()}</p>
+                      {(big || heroish) && meta.count > 0 && (
+                        <p className={`${pieceCls} tracking-widest uppercase opacity-60 tabular-nums`}>
+                          × {meta.count} {meta.count === 1 ? 'piece' : 'pieces'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </Wrap>
         );
       })}

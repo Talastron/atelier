@@ -13,6 +13,7 @@ const targets = {
   'atelier-monthly-hero.svg':    [1600, 1200],
   'atelier-social-square.svg':   [1080, 1080],
   'atelier-og.svg':              [1200, 630],
+  'atelier-store-header.svg':    [1600, 300],
 };
 
 const svgs = readdirSync(dir).filter((f) => f.endsWith('.svg'));

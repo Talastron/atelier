@@ -34,7 +34,7 @@
 
   <!-- Top eyebrow text -->
   <g font-family="Georgia, 'Times New Roman', serif" fill="#1c1917" text-anchor="middle">
-    <text x="800" y="180" font-size="22" letter-spacing="14" font-weight="400" fill-opacity="0.55">E S T  2 0 2 6</text>
+    <text x="800" y="180" font-size="22" letter-spacing="14" font-weight="400" fill-opacity="0.72">E S T  2 0 2 6</text>
   </g>
 
   <!-- Hanger mark, scaled up and centered -->
@@ -59,22 +59,18 @@
 
   <!-- Membership label -->
   <g font-family="Georgia, 'Times New Roman', serif" fill="#1c1917" text-anchor="middle">
-    <text x="800" y="890" font-size="34" letter-spacing="22" font-weight="400" fill-opacity="0.8">M E M B E R S H I P</text>
+    <text x="800" y="890" font-size="34" letter-spacing="22" font-weight="400" fill-opacity="0.9">M E M B E R S H I P</text>
   </g>
 
   <!-- Tagline -->
   <g font-family="Georgia, 'Times New Roman', serif" fill="#1c1917" text-anchor="middle">
-    <text x="800" y="970" font-size="30" font-style="italic" fill-opacity="0.65">Quiet luxury for your wardrobe.</text>
+    <text x="800" y="970" font-size="30" font-style="italic" fill-opacity="0.82">Quiet luxury for your wardrobe.</text>
   </g>
 
-  <!-- Bottom feature row -->
-  <g font-family="Georgia, 'Times New Roman', serif" fill="#1c1917" text-anchor="middle" font-size="20" letter-spacing="6" fill-opacity="0.6">
-    <text x="430" y="1050">U N L I M I T E D  P I E C E S</text>
-    <text x="800" y="1050">A I  S T Y L I N G</text>
-    <text x="1170" y="1050">C O S T - P E R - W E A R</text>
+  <!-- Bottom feature row — single centred line; em-spaces keep the two-word
+       phrases legible, gold middots separate the three. Replaces the old
+       fixed-x phrases + circles, which collided once the words were spaced. -->
+  <g font-family="Georgia, 'Times New Roman', serif" fill="#1c1917" text-anchor="middle" font-size="20" letter-spacing="6" fill-opacity="0.78">
+    <text x="800" y="1050">U N L I M I T E D　P I E C E S　　A I　S T Y L I N G　　C O S T - P E R - W E A R</text>
   </g>
-
-  <!-- Gold dots between features -->
-  <circle cx="615" cy="1043" r="3" fill="#D4B378"/>
-  <circle cx="985" cy="1043" r="3" fill="#D4B378"/>
 </svg>

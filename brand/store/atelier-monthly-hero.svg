@@ -24,7 +24,7 @@
   </g>
 
   <g font-family="Georgia, 'Times New Roman', serif" fill="#1c1917" text-anchor="middle">
-    <text x="800" y="180" font-size="22" letter-spacing="16" fill-opacity="0.55">M O N T H L Y</text>
+    <text x="800" y="180" font-size="22" letter-spacing="16" fill-opacity="0.72">M O N T H L Y</text>
   </g>
 
   <g transform="translate(640 280) scale(1.25)">
@@ -45,12 +45,12 @@
   <circle cx="800" cy="820.75" r="4" fill="#D4B378"/>
 
   <g font-family="Georgia, 'Times New Roman', serif" fill="#1c1917" text-anchor="middle">
-    <text x="800" y="890" font-size="34" letter-spacing="22" fill-opacity="0.8">M E M B E R S H I P</text>
-    <text x="800" y="970" font-size="30" font-style="italic" fill-opacity="0.65">Quiet luxury for your wardrobe.</text>
+    <text x="800" y="890" font-size="34" letter-spacing="22" fill-opacity="0.9">M E M B E R S H I P</text>
+    <text x="800" y="970" font-size="30" font-style="italic" fill-opacity="0.82">Quiet luxury for your wardrobe.</text>
   </g>
 
   <g transform="translate(800 1050)" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">
     <rect x="-160" y="-32" width="320" height="56" rx="28" fill="none" stroke="#1c1917" stroke-opacity="0.35" stroke-width="1"/>
-    <text x="0" y="6" font-size="22" letter-spacing="10" fill="#1c1917" fill-opacity="0.75">£ 1 2  /  M O N T H</text>
+    <text x="0" y="6" font-size="22" letter-spacing="10" fill="#1c1917" fill-opacity="0.85">£ 1 2  /  M O N T H</text>
   </g>
 </svg>

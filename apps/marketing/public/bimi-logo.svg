@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny-ps" viewBox="0 0 256 256">
+  <title>Atelier</title>
+  <rect width="256" height="256" fill="#1c1917"/>
+  <g fill="none" stroke="#F7F5F2" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110"/>
+    <path d="M 128 110 L 62 184 L 194 184 Z"/>
+  </g>
+  <line x1="128" y1="184" x2="128" y2="205" stroke="#D4B378" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="128" cy="211" r="6" fill="#D4B378"/>
+</svg>

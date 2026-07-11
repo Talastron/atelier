@@ -35,7 +35,7 @@ const BrassRule = () => (
 );
 
 // Three destinations, each a curated nine-piece capsule pulled from
-// /public/seed-wardrobe. Each set composed to match the season and the
+// /public/wardrobe. Each set composed to match the season and the
 // dressing register of the city — Tokyo dresses softer and trans-
 // seasonal, Paris layers into autumn dressier, NYC carries weight
 // against the cold.
@@ -46,15 +46,15 @@ const DESTINATIONS = [
     weather: '12–22°C · Cherry blossom · light rain expected',
     note: "Tokyo in April sits between cherry blossom and unpredictable rain. Nine pieces give you fourteen outfits, half of them dressed for the evening.",
     items: [
-      { name: 'Silk blouse',          src: '/seed-wardrobe/silk-blouse-ivory.jpg' },
-      { name: 'Breton stripe tee',    src: '/seed-wardrobe/silk-top-black.jpg' },
-      { name: 'Shirt dress',          src: '/seed-wardrobe/midi-shirt-dress-stone.jpg' },
-      { name: 'Wool trouser',         src: '/seed-wardrobe/wool-trouser-charcoal.jpg' },
-      { name: 'Dark wash jeans',      src: '/seed-wardrobe/dark-wash-jeans.jpg' },
-      { name: 'Beige trench',         src: '/seed-wardrobe/trench-coat-beige.jpg' },
-      { name: 'White sneakers',       src: '/seed-wardrobe/leather-sneakers-white.jpg' },
-      { name: 'Black knee boots',     src: '/seed-wardrobe/leather-knee-boots-black.jpg' },
-      { name: 'Silk twill scarf',     src: '/seed-wardrobe/leather-gloves-olive.jpg' },
+      { name: 'Champagne silk vest', src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
+      { name: 'Silk colourblock vest', src: '/wardrobe/pippa-silk-front-colourblock-vest.jpg' },
+      { name: 'Belted shirt dress', src: '/wardrobe/belt-shirt-dress.jpg' },
+      { name: 'Wool-blend trousers', src: '/wardrobe/gael-wool-blend-trousers.jpg' },
+      { name: 'High-rise denim shorts', src: '/wardrobe/high-rise-denim-shorts.jpg' },
+      { name: 'Linen jacket', src: '/wardrobe/mariam-jacket.jpg' },
+      { name: 'Block-heel sandals', src: '/wardrobe/suedette-2-part-block-heel-sandals.jpg' },
+      { name: 'Gold block-heel sandals', src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg' },
+      { name: 'Fine chain necklace', src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
     ],
   },
   {
@@ -63,15 +63,15 @@ const DESTINATIONS = [
     weather: '11–18°C · Golden autumn · dressier evenings',
     note: "Paris in October calls for layers that hold their tailoring through dinner. The wool coat in, the trench out. Loafers carry the days; boots the nights.",
     items: [
-      { name: 'Cashmere rollneck',    src: '/seed-wardrobe/silk-blouse-ivory.jpg' },
-      { name: 'Silk blouse',          src: '/seed-wardrobe/silk-blouse-ivory.jpg' },
-      { name: 'Champagne silk dress', src: '/seed-wardrobe/silk-midi-dress-champagne.jpg' },
-      { name: 'Wool trouser',         src: '/seed-wardrobe/wool-trouser-charcoal.jpg' },
-      { name: 'Dark wash jeans',      src: '/seed-wardrobe/dark-wash-jeans.jpg' },
-      { name: 'Camel wool coat',      src: '/seed-wardrobe/wool-coat-charcoal.jpg' },
-      { name: 'Tan loafers',          src: '/seed-wardrobe/canvas-wedges-black.jpg' },
-      { name: 'Black knee boots',     src: '/seed-wardrobe/leather-knee-boots-black.jpg' },
-      { name: 'Structured tote',      src: '/seed-wardrobe/structured-tote-tan.jpg' },
+      { name: 'Satin blouse', src: '/wardrobe/mirabel-satin-blouse.jpg' },
+      { name: 'Champagne silk vest', src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
+      { name: 'Pleat-detail dress', src: '/wardrobe/claire-pleat-detail-dress.jpg' },
+      { name: 'Wool-blend trousers', src: '/wardrobe/gael-wool-blend-trousers.jpg' },
+      { name: 'High-rise denim shorts', src: '/wardrobe/high-rise-denim-shorts.jpg' },
+      { name: 'Navy wool coat', src: '/wardrobe/jasmin-coat.jpg' },
+      { name: 'Block-heel sandals', src: '/wardrobe/suedette-2-part-block-heel-sandals.jpg' },
+      { name: 'Gold block-heel sandals', src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg' },
+      { name: 'Fine chain necklace', src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
     ],
   },
   {
@@ -80,15 +80,15 @@ const DESTINATIONS = [
     weather: '−2 to 5°C · Cold, dry · indoor heat',
     note: "Manhattan in January moves between cold streets and overheated rooms. Cashmere as the base layer; the coat does all the public-facing work.",
     items: [
-      { name: 'Cashmere rollneck',    src: '/seed-wardrobe/silk-blouse-ivory.jpg' },
-      { name: 'Poplin shirt',         src: '/seed-wardrobe/poplin-shirt-white.jpg' },
-      { name: 'Little black dress',   src: '/seed-wardrobe/silk-slip-pewter.jpg' },
-      { name: 'Wool trouser',         src: '/seed-wardrobe/wool-trouser-charcoal.jpg' },
-      { name: 'Dark wash jeans',      src: '/seed-wardrobe/dark-wash-jeans.jpg' },
-      { name: 'Camel wool coat',      src: '/seed-wardrobe/wool-coat-charcoal.jpg' },
-      { name: 'Black knee boots',     src: '/seed-wardrobe/leather-knee-boots-black.jpg' },
-      { name: 'White sneakers',       src: '/seed-wardrobe/leather-sneakers-white.jpg' },
-      { name: 'Quilted crossbody',    src: '/seed-wardrobe/structured-tote-tan.jpg' },
+      { name: 'Champagne silk vest', src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
+      { name: 'Button-down blouse', src: '/wardrobe/reg-classic-button-down-blouse.jpg' },
+      { name: 'Pleat-detail dress', src: '/wardrobe/claire-pleat-detail-dress.jpg' },
+      { name: 'Wool-blend trousers', src: '/wardrobe/gael-wool-blend-trousers.jpg' },
+      { name: 'High-rise denim shorts', src: '/wardrobe/high-rise-denim-shorts.jpg' },
+      { name: 'Navy wool coat', src: '/wardrobe/jasmin-coat.jpg' },
+      { name: 'Gold block-heel sandals', src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg' },
+      { name: 'Block-heel sandals', src: '/wardrobe/suedette-2-part-block-heel-sandals.jpg' },
+      { name: 'Fine chain necklace', src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
     ],
   },
 ];

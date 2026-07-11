@@ -38,10 +38,10 @@ const OUTFITS = [
     note: 'Soft volume on top, sharp tailoring below. One decision, not four.',
     confidence: 94,
     items: [
-      { name: 'Ivory silk blouse',      src: '/seed-wardrobe/silk-blouse-ivory.jpg' },
-      { name: 'Charcoal wool trouser',  src: '/seed-wardrobe/wool-trouser-charcoal.jpg' },
-      { name: 'Black canvas wedges',    src: '/seed-wardrobe/canvas-wedges-black.jpg' },
-      { name: 'Structured tote',        src: '/seed-wardrobe/structured-tote-tan.jpg' },
+      { name: 'Champagne silk vest', src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
+      { name: 'Wool-blend trousers', src: '/wardrobe/gael-wool-blend-trousers.jpg' },
+      { name: 'Block-heel sandals', src: '/wardrobe/suedette-2-part-block-heel-sandals.jpg' },
+      { name: 'Fine chain necklace', src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
     ],
   },
   {
@@ -50,10 +50,10 @@ const OUTFITS = [
     note: 'Champagne silk against the charcoal coat. Quiet glamour, no shouting.',
     confidence: 89,
     items: [
-      { name: 'Silk midi dress',         src: '/seed-wardrobe/silk-midi-dress-champagne.jpg' },
-      { name: 'Charcoal wool coat',      src: '/seed-wardrobe/wool-coat-charcoal.jpg' },
-      { name: 'Black knee boots',        src: '/seed-wardrobe/leather-knee-boots-black.jpg' },
-      { name: 'Olive leather gloves',    src: '/seed-wardrobe/leather-gloves-olive.jpg' },
+      { name: 'Pleat-detail dress', src: '/wardrobe/claire-pleat-detail-dress.jpg' },
+      { name: 'Navy wool coat', src: '/wardrobe/jasmin-coat.jpg' },
+      { name: 'Gold block-heel sandals', src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg' },
+      { name: 'Fine chain necklace', src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
     ],
   },
   {
@@ -62,10 +62,10 @@ const OUTFITS = [
     note: 'Black silk and denim, lifted by the straw fedora.',
     confidence: 91,
     items: [
-      { name: 'Black silk top',          src: '/seed-wardrobe/silk-top-black.jpg' },
-      { name: 'Dark wash jeans',         src: '/seed-wardrobe/dark-wash-jeans.jpg' },
-      { name: 'White leather sneakers',  src: '/seed-wardrobe/leather-sneakers-white.jpg' },
-      { name: 'Straw fedora',            src: '/seed-wardrobe/straw-fedora-stone.jpg' },
+      { name: 'Silk colourblock vest', src: '/wardrobe/pippa-silk-front-colourblock-vest.jpg' },
+      { name: 'High-rise denim shorts', src: '/wardrobe/high-rise-denim-shorts.jpg' },
+      { name: 'Block-heel sandals', src: '/wardrobe/suedette-2-part-block-heel-sandals.jpg' },
+      { name: 'Gold stick necklace', src: '/wardrobe/y-sparks-stick-gold-necklace.jpg' },
     ],
   },
 ];

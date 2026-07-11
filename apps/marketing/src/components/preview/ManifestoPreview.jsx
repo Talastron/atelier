@@ -19,7 +19,7 @@ const VARIANTS = [
     date: '18 June 2026',
     text: `You dress in the colours of considered absence: stone, ink, cream, with brass at the wrist as the only ornament. The silhouettes you reach for are quiet ones, a tailored shoulder, an unfussy trouser, a coat that holds its line. You are not minimalist, exactly; you simply trust that less, well-chosen, says more.
 
-The pieces you wear most are the ones whose construction you can feel. The cashmere rollneck has been worn seventy times this year; the silk blouse has not. Your wardrobe knows the difference between aspiration and habit, and is, on the whole, in favour of habit.
+The pieces you wear most are the ones whose construction you can feel. The wool-blend trousers have been worn seventy times this year; the pleat-detail dress has not. Your wardrobe knows the difference between aspiration and habit, and is, on the whole, in favour of habit.
 
 What you are missing, judging by your saved inspirations rather than your closet, is one piece of softness against the structure. A wool wrap. A velvet jacket. Something that catches the light without asking for it.`,
   },

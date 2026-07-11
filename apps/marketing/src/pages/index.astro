@@ -10,6 +10,7 @@ import Footer from '../components/Footer.astro';
 import Philosophy from '../components/Philosophy.astro';
 import ClosingMasthead from '../components/ClosingMasthead.astro';
 import { Hero } from '../components/landing/Hero.jsx';
+import { InsideAtelier } from '../components/landing/InsideAtelier.jsx';
 import { ConciergeDemo } from '../components/landing/ConciergeDemo.jsx';
 import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
 import { InvestmentLens } from '../components/landing/InvestmentLens.jsx';
@@ -97,6 +98,11 @@ const softwareLd = {
         </div>
       </div>
     </section>
+
+    {/* ── Inside Atelier — interactive tour of the real app surfaces
+        (Wardrobe / Styling Studio / Lookbook), desktop + mobile frames.
+        Shows the homepage visitor exactly what they get on sign-in. ── */}
+    <InsideAtelier client:load />
 
     {/* ── Section 2: Meet the Concierge ─────────────────────────────── */}
     <section

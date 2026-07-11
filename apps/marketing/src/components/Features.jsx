@@ -138,12 +138,12 @@ function ToolkitCard({ icon: Icon, eyebrow, title, titleEm, description, demo })
 
 const IDENTIFY_SAMPLES = [
   {
-    src: '/seed-wardrobe/wool-coat-charcoal.jpg',
-    chips: ['OUTERWEAR', 'WOOL · CASHMERE', 'CAMEL', 'COS · £225'],
+    src: '/wardrobe/jasmin-coat.jpg',
+    chips: ['OUTERWEAR', 'WOOL BLEND', 'NAVY', '£269'],
   },
   {
-    src: '/seed-wardrobe/leather-gloves-olive.jpg',
-    chips: ['ACCESSORIES', 'SILK TWILL', 'AUTUMN PALETTE', 'HERMÈS · £395'],
+    src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
+    chips: ['JEWELLERY', 'GOLD VERMEIL', 'DELICATE', '£95'],
   },
 ];
 
@@ -252,8 +252,8 @@ function IdentifyDemo() {
 // ─────────────────────────────────────────────────────────────────────────
 
 const DESTINATIONS = [
-  { name: 'Lisbon', items: ['/seed-wardrobe/silk-top-black.jpg', '/seed-wardrobe/dark-wash-jeans.jpg', '/seed-wardrobe/leather-gloves-olive.jpg', '/seed-wardrobe/leather-sneakers-white.jpg', '/seed-wardrobe/silk-midi-dress-champagne.jpg'] },
-  { name: 'Edinburgh', items: ['/seed-wardrobe/silk-blouse-ivory.jpg', '/seed-wardrobe/wool-trouser-charcoal.jpg', '/seed-wardrobe/wool-coat-charcoal.jpg', '/seed-wardrobe/leather-knee-boots-black.jpg', '/seed-wardrobe/structured-tote-tan.jpg'] },
+  { name: 'Lisbon', items: ['/wardrobe/pippa-silk-front-colourblock-vest.jpg', '/wardrobe/high-rise-denim-shorts.jpg', '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg', '/wardrobe/suedette-2-part-block-heel-sandals.jpg', '/wardrobe/claire-pleat-detail-dress.jpg'] },
+  { name: 'Edinburgh', items: ['/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg', '/wardrobe/gael-wool-blend-trousers.jpg', '/wardrobe/jasmin-coat.jpg', '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg', '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg'] },
 ];
 
 function TravelDemo() {
@@ -381,8 +381,8 @@ function TravelDemo() {
 // ─────────────────────────────────────────────────────────────────────────
 
 const CPW_SAMPLES = [
-  { name: 'Cashmere rollneck', brand: 'Pringle of Scotland', src: '/seed-wardrobe/silk-blouse-ivory.jpg', price: 280, maxWears: 70 },
-  { name: 'White poplin shirt', brand: 'The White Company', src: '/seed-wardrobe/poplin-shirt-white.jpg', price: 95, maxWears: 52 },
+  { name: 'Champagne silk vest', src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg', price: 90, maxWears: 70 },
+  { name: 'Button-down blouse', src: '/wardrobe/reg-classic-button-down-blouse.jpg', price: 99, maxWears: 52 },
 ];
 
 function CPWDemo() {
@@ -485,7 +485,7 @@ function CPWDemo() {
 const MANIFESTO_SNIPPETS = [
   'You dress in the colours of considered absence: stone, ink, cream.',
   'Your wardrobe runs on quiet conviction — every piece earns its keep.',
-  'The cashmere rollneck has been worn seventy times this year. The silk blouse has not.',
+  'The champagne silk vest has been worn seventy times this year. Some pieces, barely at all.',
 ];
 
 function ManifestoDemo() {
@@ -577,8 +577,8 @@ function ManifestoDemo() {
 // ─────────────────────────────────────────────────────────────────────────
 
 const LOOKBOOK_SAMPLES = [
-  { url: 'atelier.co/sh/3kF9p', items: ['/seed-wardrobe/silk-blouse-ivory.jpg', '/seed-wardrobe/wool-trouser-charcoal.jpg', '/seed-wardrobe/canvas-wedges-black.jpg'] },
-  { url: 'atelier.co/sh/M2qZx', items: ['/seed-wardrobe/silk-midi-dress-champagne.jpg', '/seed-wardrobe/wool-coat-charcoal.jpg', '/seed-wardrobe/leather-knee-boots-black.jpg'] },
+  { url: 'atelier.co/sh/3kF9p', items: ['/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg', '/wardrobe/gael-wool-blend-trousers.jpg', '/wardrobe/suedette-2-part-block-heel-sandals.jpg'] },
+  { url: 'atelier.co/sh/M2qZx', items: ['/wardrobe/claire-pleat-detail-dress.jpg', '/wardrobe/jasmin-coat.jpg', '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg'] },
 ];
 
 function LookbookDemo() {
@@ -693,18 +693,18 @@ const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const CALENDAR_SAMPLES = [
   {
     plan: [
-      { day: 0, src: '/seed-wardrobe/silk-blouse-ivory.jpg' },
-      { day: 2, src: '/seed-wardrobe/silk-midi-dress-champagne.jpg' },
-      { day: 4, src: '/seed-wardrobe/wool-trouser-charcoal.jpg' },
-      { day: 6, src: '/seed-wardrobe/silk-top-black.jpg' },
+      { day: 0, src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
+      { day: 2, src: '/wardrobe/claire-pleat-detail-dress.jpg' },
+      { day: 4, src: '/wardrobe/gael-wool-blend-trousers.jpg' },
+      { day: 6, src: '/wardrobe/pippa-silk-front-colourblock-vest.jpg' },
     ],
     today: 2, // Wed highlighted
   },
   {
     plan: [
-      { day: 1, src: '/seed-wardrobe/poplin-shirt-white.jpg' },
-      { day: 3, src: '/seed-wardrobe/wool-coat-charcoal.jpg' },
-      { day: 5, src: '/seed-wardrobe/leather-gloves-olive.jpg' },
+      { day: 1, src: '/wardrobe/reg-classic-button-down-blouse.jpg' },
+      { day: 3, src: '/wardrobe/jasmin-coat.jpg' },
+      { day: 5, src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
     ],
     today: 3, // Thu
   },

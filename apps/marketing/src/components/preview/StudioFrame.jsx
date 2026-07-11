@@ -84,26 +84,34 @@ const BrassRule = () => (
 // ───────────────────────────────────────────────────────────────────────────
 
 const SAMPLE_ITEMS = [
-  { src: '/seed-wardrobe/wool-coat-charcoal.jpg',           name: 'Belted camel wool coat',  brand: 'COS',                 cat: 'Outerwear',   season: 'Autumn · Winter', price: 225,  fav: true,  segment: 'owned'    },
-  { src: '/seed-wardrobe/silk-blouse-ivory.jpg',   name: 'Cashmere rollneck',       brand: 'Pringle of Scotland', cat: 'Tops',        season: 'Autumn · Winter', price: 280,  fav: true,  segment: 'owned'    },
-  { src: '/seed-wardrobe/silk-midi-dress-champagne.jpg', name: 'Silk midi dress',         brand: 'Reformation',         cat: 'Dresses',     season: 'Spring · Summer', price: 248,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/wool-trouser-charcoal.jpg',     name: 'Charcoal wool trouser',   brand: 'Theory',              cat: 'Bottoms',     season: 'All year',        price: 195,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/silk-blouse-ivory.jpg',         name: 'Ivory silk blouse',       brand: 'Equipment',           cat: 'Tops',        season: 'All year',        price: 220,  fav: true,  segment: 'owned'    },
-  { src: '/seed-wardrobe/poplin-shirt-white.jpg',        name: 'White poplin shirt',      brand: 'The White Company',   cat: 'Tops',        season: 'All year',        price: 95,   fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/dark-wash-jeans.jpg',           name: 'Dark wash jeans',         brand: 'AGOLDE',              cat: 'Bottoms',     season: 'All year',        price: 178,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/silk-top-black.jpg',         name: 'Breton stripe tee',       brand: 'Saint James',         cat: 'Tops',        season: 'Spring · Summer', price: 65,   fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/midi-shirt-dress-stone.jpg',    name: 'Stone shirt dress',       brand: '& Other Stories',     cat: 'Dresses',     season: 'Spring · Autumn', price: 125,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/trench-coat-beige.jpg',         name: 'Beige trench coat',       brand: 'Burberry',            cat: 'Outerwear',   season: 'Spring · Autumn', price: 1850, fav: true,  segment: 'owned'    },
-  { src: '/seed-wardrobe/leather-knee-boots-black.jpg',  name: 'Black knee boots',        brand: 'Aeyde',               cat: 'Shoes',       season: 'Autumn · Winter', price: 425,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/canvas-wedges-black.jpg',         name: 'Tan penny loafers',       brand: 'G.H. Bass',           cat: 'Shoes',       season: 'Spring · Autumn', price: 165,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/leather-sneakers-white.jpg',    name: 'White leather sneakers',  brand: 'Veja',                cat: 'Shoes',       season: 'All year',        price: 135,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/structured-tote-tan.jpg',       name: 'Structured leather tote', brand: 'Cuyana',              cat: 'Bags',        season: 'All year',        price: 245,  fav: true,  segment: 'owned'    },
-  { src: '/seed-wardrobe/structured-tote-tan.jpg',   name: 'Quilted crossbody',       brand: 'Polène',              cat: 'Bags',        season: 'All year',        price: 380,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/leather-gloves-olive.jpg',          name: 'Silk twill scarf',        brand: 'Hermès',              cat: 'Accessories', season: 'Spring · Summer', price: 395,  fav: true,  segment: 'owned'    },
-  { src: '/seed-wardrobe/straw-fedora-stone.jpg',    name: 'Gold layered necklaces',  brand: 'Missoma',             cat: 'Jewellery',   season: 'All year',        price: 165,  fav: false, segment: 'owned'    },
-  { src: '/seed-wardrobe/silk-slip-pewter.jpg',          name: 'Pewter silk slip',        brand: 'Olivia von Halle',    cat: 'Dresses',     season: 'Summer',          price: 295,  fav: false, segment: 'wishlist' },
-  { src: '/seed-wardrobe/tailored-blazer-cream.jpg',        name: 'Ivory tweed blazer',      brand: 'Sézane',              cat: 'Outerwear',   season: 'Spring · Autumn', price: 365,  fav: false, segment: 'wishlist' },
-  { src: '/seed-wardrobe/silk-slip-pewter.jpg',                 name: 'Crepe little black dress', brand: 'Roland Mouret',      cat: 'Dresses',     season: 'All year',        price: 595,  fav: false, segment: 'wishlist' },
+  { src: '/wardrobe/jasmin-coat.jpg', name: 'Navy wool coat', cat: 'Outerwear', season: 'Autumn · Winter', price: 269, fav: true, segment: 'owned' },
+  { src: '/wardrobe/marina-single-breasted-blazer.jpg', name: 'Single-breasted blazer', cat: 'Outerwear', season: 'Spring · Summer', price: 250, fav: false, segment: 'owned' },
+  { src: '/wardrobe/mirabel-satin-blouse.jpg', name: 'Satin blouse', cat: 'Tops', season: 'Autumn · Winter', price: 110, fav: true, segment: 'owned' },
+  { src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg', name: 'Champagne silk vest', cat: 'Tops', season: 'Spring · Summer', price: 90, fav: false, segment: 'owned' },
+  { src: '/wardrobe/gael-wool-blend-trousers.jpg', name: 'Wool-blend trousers', cat: 'Bottoms', season: 'All year', price: 110, fav: true, segment: 'owned' },
+  { src: '/wardrobe/pleated-tailored-shorts.jpg', name: 'Pleated tailored shorts', cat: 'Bottoms', season: 'Spring · Summer', price: 138, fav: false, segment: 'owned' },
+  { src: '/wardrobe/claire-pleat-detail-dress.jpg', name: 'Pleat-detail dress', cat: 'Dresses', season: 'Spring · Summer', price: 225, fav: false, segment: 'wishlist' },
+  { src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg', name: 'Gold block-heel sandals', cat: 'Shoes', season: 'Summer', price: 89, fav: true, segment: 'owned' },
+  { src: '/wardrobe/gold-vermeil-baroque-pearl-pendant-pearl.jpg', name: 'Baroque pearl pendant', cat: 'Jewellery', season: 'All year', price: 75, fav: true, segment: 'owned' },
+  { src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg', name: 'Fine chain necklace', cat: 'Jewellery', season: 'All year', price: 95, fav: false, segment: 'owned' },
+  { src: '/wardrobe/high-rise-denim-shorts.jpg', name: 'High-rise denim shorts', cat: 'Bottoms', season: 'Summer', price: 79, fav: false, segment: 'owned' },
+  { src: '/wardrobe/england-elektra-ladies-leather-gloves.jpg', name: 'Leather gloves', cat: 'Accessories', season: 'Autumn · Winter', price: 69, fav: false, segment: 'owned' },
+  { src: '/wardrobe/pippa-silk-front-colourblock-vest.jpg', name: 'Silk colourblock vest', cat: 'Tops', season: 'Spring · Summer', price: 98, fav: false, segment: 'owned' },
+  { src: '/wardrobe/riley-pale-pink-silk-front-vest-top.jpg', name: 'Pale pink silk vest', cat: 'Tops', season: 'Summer', price: 88, fav: false, segment: 'owned' },
+  { src: '/wardrobe/reg-classic-button-down-blouse.jpg', name: 'Button-down blouse', cat: 'Tops', season: 'Spring', price: 99, fav: false, segment: 'owned' },
+  { src: '/wardrobe/robin-jumper.jpg', name: 'Fine-knit jumper', cat: 'Tops', season: 'Spring · Summer · Autumn', price: 79, fav: true, segment: 'owned' },
+  { src: '/wardrobe/robin-stripe-cardigan.jpg', name: 'Striped cardigan', cat: 'Tops', season: 'Spring · Summer · Autumn', price: 59, fav: false, segment: 'owned' },
+  { src: '/wardrobe/rosana-frill-trim-polka-dot-blouse.jpg', name: 'Polka-dot blouse', cat: 'Tops', season: 'Spring · Autumn · Winter', price: 69, fav: false, segment: 'owned' },
+  { src: '/wardrobe/louisa-dobby-top.jpg', name: 'Dobby-weave top', cat: 'Tops', season: 'Spring · Autumn · Winter', price: 59, fav: false, segment: 'owned' },
+  { src: '/wardrobe/sleeveless-amalfi-linen-shirt.jpg', name: 'Sleeveless linen shirt', cat: 'Tops', season: 'Summer', price: 79, fav: false, segment: 'owned' },
+  { src: '/wardrobe/amalfi-linen-short.jpg', name: 'Linen shorts', cat: 'Bottoms', season: 'Summer', price: 99, fav: false, segment: 'owned' },
+  { src: '/wardrobe/chessie-shorts.jpg', name: 'Tailored shorts', cat: 'Bottoms', season: 'Spring · Summer', price: 59, fav: false, segment: 'owned' },
+  { src: '/wardrobe/belt-shirt-dress.jpg', name: 'Belted shirt dress', cat: 'Dresses', season: 'Summer', price: 49, fav: false, segment: 'owned' },
+  { src: '/wardrobe/suedette-2-part-block-heel-sandals.jpg', name: 'Block-heel sandals', cat: 'Shoes', season: 'Summer', price: 30, fav: false, segment: 'owned' },
+  { src: '/wardrobe/y-sparks-stick-gold-necklace.jpg', name: 'Gold stick necklace', cat: 'Jewellery', season: 'All year', price: 70, fav: false, segment: 'owned' },
+  { src: '/wardrobe/moissanite-ring.jpg', name: 'Solitaire ring', cat: 'Jewellery', season: 'All year', price: 70, fav: false, segment: 'owned' },
+  { src: '/wardrobe/moissanite-earrings.jpg', name: 'Stud earrings', cat: 'Jewellery', season: 'All year', price: 50, fav: false, segment: 'owned' },
+  { src: '/wardrobe/mariam-jacket.jpg', name: 'Linen jacket', cat: 'Outerwear', season: 'Spring · Summer', price: 99, fav: false, segment: 'wishlist' },
 ];
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -308,7 +316,7 @@ const SEGMENTS = [
   { id: 'wishlist',    label: 'Wishlist' },
 ];
 
-const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
+const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
 
 function WardrobeView() {
   const [segment, setSegment] = useState('all');
@@ -356,8 +364,26 @@ function WardrobeView() {
               className="mt-2 text-[11px] uppercase font-medium"
               style={{ letterSpacing: '0.18em', color: 'var(--atelier-stone-500)' }}
             >
-              {filtered.length} Pieces Curated
+              {SAMPLE_ITEMS.length} Pieces Curated
             </p>
+            {/* Ask the Concierge — matches the app's header CTA */}
+            <button
+              type="button"
+              className="flex items-center gap-2 mt-4 px-4 rounded-full"
+              style={{
+                background: '#ffffff',
+                border: '1px solid var(--atelier-stone-200)',
+                height: '38px',
+                color: 'var(--atelier-stone-800)',
+                fontSize: '10px',
+                fontWeight: 600,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <Sparkles size={13} strokeWidth={1.75} style={{ color: 'var(--atelier-brass-500)' }} />
+              Ask the Concierge
+            </button>
           </div>
         </header>
 
@@ -545,12 +571,96 @@ function WardrobeView() {
         )}
       </div>
 
-      {/* ── RIGHT RAIL: TODAY + Needs attention + TODAY'S PICK ─────────── */}
+      {/* ── RIGHT RAIL: THE DAILY BRIEF (matches the app) ─────────────── */}
       <aside className="hidden lg:flex flex-col gap-3.5">
-        <TodayCard />
-        <NeedsAttentionCard />
-        <TodaysPickCard />
+        <DailyBriefCard />
       </aside>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// THE DAILY BRIEF — right-rail card, matches the app's Wardrobe view
+// ───────────────────────────────────────────────────────────────────────────
+
+const BRIEF_PIECES = [
+  '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg',
+  '/wardrobe/pleated-tailored-shorts.jpg',
+  '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg',
+  '/wardrobe/gold-vermeil-baroque-pearl-pendant-pearl.jpg',
+  '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
+  '/wardrobe/mirabel-satin-blouse.jpg',
+  '/wardrobe/claire-pleat-detail-dress.jpg',
+  '/wardrobe/y-sparks-stick-gold-necklace.jpg',
+  '/wardrobe/moissanite-earrings.jpg',
+  '/wardrobe/riley-pale-pink-silk-front-vest-top.jpg',
+];
+
+function DailyBriefCard() {
+  return (
+    <div
+      className="rounded-2xl"
+      style={{
+        background: '#ffffff',
+        border: '1px solid var(--atelier-stone-200)',
+        padding: '1.25rem 1.35rem',
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <p
+          className="text-[9px] uppercase font-bold"
+          style={{ letterSpacing: '0.22em', color: 'var(--atelier-stone-500)' }}
+        >
+          The Daily Brief
+        </p>
+        <p className="text-[9px]" style={{ letterSpacing: '0.04em', color: 'var(--atelier-stone-400)' }}>
+          100% confidence
+        </p>
+      </div>
+
+      <h3
+        style={{
+          fontFamily: 'var(--atelier-font-display)',
+          fontSize: '1.5rem',
+          lineHeight: 1.1,
+          color: 'var(--atelier-stone-900)',
+          marginBottom: 10,
+        }}
+      >
+        Styled for today.
+      </h3>
+
+      <p
+        style={{
+          fontFamily: 'var(--atelier-font-display)',
+          fontStyle: 'italic',
+          fontSize: '12.5px',
+          lineHeight: 1.6,
+          color: 'var(--atelier-stone-500)',
+          marginBottom: 14,
+        }}
+      >
+        A champagne silk vest over pleated tailored shorts — a quiet neutral base lifted
+        by gold block-heel sandals and a stack of fine gold and pearl jewellery.
+        Composed for today's warm, dry afternoon.
+      </p>
+
+      <div className="grid grid-cols-5 gap-1.5">
+        {BRIEF_PIECES.map((src, i) => (
+          <div
+            key={i}
+            style={{
+              aspectRatio: '1',
+              borderRadius: 8,
+              overflow: 'hidden',
+              background: 'var(--atelier-stone-100)',
+              border: '1px solid var(--atelier-stone-200)',
+            }}
+          >
+            <Pic src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -565,7 +675,7 @@ function ItemCard({ item }) {
       <div
         className="aspect-[3/4] rounded-2xl relative overflow-hidden mb-3"
         style={{
-          background: 'var(--atelier-stone-100)',
+          background: '#ffffff',
           boxShadow: '0 4px 16px -6px rgba(28,25,23,0.06), 0 1px 2px rgba(28,25,23,0.04)',
         }}
       >
@@ -626,7 +736,7 @@ function ItemCard({ item }) {
           className="text-[9px] uppercase truncate flex-1 font-semibold"
           style={{ letterSpacing: '0.18em', color: 'var(--atelier-stone-500)' }}
         >
-          {item.brand} · {item.season}
+          {item.season}
         </p>
         <p
           className="text-[11px] font-medium shrink-0"
@@ -765,7 +875,7 @@ function NeedsAttentionCard() {
       icon: Star,
       iconBg: 'var(--atelier-stone-100)',
       iconFg: 'var(--atelier-stone-700)',
-      title: 'Cashmere rollneck',
+      title: 'Fine-knit jumper',
       sub: 'Favourite · 18 days since last wear',
     },
     {
@@ -845,7 +955,7 @@ function NeedsAttentionCard() {
 }
 
 function TodaysPickCard() {
-  const pick = SAMPLE_ITEMS.find((i) => i.brand === 'Hermès') || SAMPLE_ITEMS[15];
+  const pick = SAMPLE_ITEMS.find((i) => i.fav) || SAMPLE_ITEMS[0];
   return (
     <div
       className="rounded-2xl overflow-hidden flex items-stretch"
@@ -885,7 +995,7 @@ function TodaysPickCard() {
           className="text-[10px] truncate"
           style={{ color: 'var(--atelier-stone-400)' }}
         >
-          {pick.brand} · {pick.season}
+          {pick.cat} · {pick.season}
         </p>
       </div>
     </div>
@@ -898,40 +1008,40 @@ function TodaysPickCard() {
 
 const OUTFITS = [
   {
-    key: 'office',
-    label: 'A morning meeting',
+    key: 'lunch',
+    label: 'A summer lunch',
     items: [
-      { slot: 'Top',       name: 'Cashmere rollneck',       src: '/seed-wardrobe/silk-blouse-ivory.jpg' },
-      { slot: 'Bottom',    name: 'Charcoal wool trouser',   src: '/seed-wardrobe/wool-trouser-charcoal.jpg' },
-      { slot: 'Footwear',  name: 'Tan penny loafers',       src: '/seed-wardrobe/canvas-wedges-black.jpg' },
-      { slot: 'Accessory', name: 'Structured tote',         src: '/seed-wardrobe/structured-tote-tan.jpg' },
+      { slot: 'Top',       name: 'Champagne silk vest',   src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
+      { slot: 'Bottom',    name: 'Linen shorts',          src: '/wardrobe/amalfi-linen-short.jpg' },
+      { slot: 'Footwear',  name: 'Gold block-heel sandals', src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg' },
+      { slot: 'Accessory', name: 'Fine chain necklace',   src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
     ],
-    note: 'Soft volume on top, sharp tailoring below. The tan ties the loafers and the bag, so the outfit reads as one decision rather than four.',
-    confidence: 94,
+    note: 'Champagne silk against pale linen, warmed by the gold of the sandals and the necklace. One tonal family, read as a single decision.',
+    confidence: 93,
   },
   {
     key: 'evening',
-    label: 'Drinks tonight',
+    label: 'An evening out',
     items: [
-      { slot: 'Dress',     name: 'Champagne silk midi',     src: '/seed-wardrobe/silk-midi-dress-champagne.jpg' },
-      { slot: 'Outerwear', name: 'Camel wool coat',         src: '/seed-wardrobe/wool-coat-charcoal.jpg' },
-      { slot: 'Footwear',  name: 'Black knee boots',        src: '/seed-wardrobe/leather-knee-boots-black.jpg' },
-      { slot: 'Accessory', name: 'Gold layered necklaces',  src: '/seed-wardrobe/straw-fedora-stone.jpg' },
+      { slot: 'Dress',     name: 'Pleat-detail dress',    src: '/wardrobe/claire-pleat-detail-dress.jpg' },
+      { slot: 'Outerwear', name: 'Single-breasted blazer', src: '/wardrobe/marina-single-breasted-blazer.jpg' },
+      { slot: 'Footwear',  name: 'Block-heel sandals',    src: '/wardrobe/suedette-2-part-block-heel-sandals.jpg' },
+      { slot: 'Accessory', name: 'Baroque pearl pendant', src: '/wardrobe/gold-vermeil-baroque-pearl-pendant-pearl.jpg' },
     ],
-    note: 'The champagne silk against the camel coat reads warmer than either alone.',
-    confidence: 89,
+    note: 'The blazer sharpens the dress; the pearl keeps it soft. Tailoring and silk in the same breath.',
+    confidence: 90,
   },
   {
     key: 'weekend',
     label: 'A Saturday in town',
     items: [
-      { slot: 'Top',       name: 'Breton stripe tee',       src: '/seed-wardrobe/silk-top-black.jpg' },
-      { slot: 'Bottom',    name: 'Dark wash jeans',         src: '/seed-wardrobe/dark-wash-jeans.jpg' },
-      { slot: 'Footwear',  name: 'White sneakers',          src: '/seed-wardrobe/leather-sneakers-white.jpg' },
-      { slot: 'Accessory', name: 'Silk twill scarf',        src: '/seed-wardrobe/leather-gloves-olive.jpg' },
+      { slot: 'Top',       name: 'Striped cardigan',      src: '/wardrobe/robin-stripe-cardigan.jpg' },
+      { slot: 'Bottom',    name: 'High-rise denim shorts', src: '/wardrobe/high-rise-denim-shorts.jpg' },
+      { slot: 'Footwear',  name: 'Gold block-heel sandals', src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg' },
+      { slot: 'Accessory', name: 'Gold stick necklace',   src: '/wardrobe/y-sparks-stick-gold-necklace.jpg' },
     ],
-    note: 'Classic stripes and denim, lifted by the silk scarf knotted at the bag handle.',
-    confidence: 91,
+    note: 'Denim lifted by a fine-knit cardigan and a little gold. Easy, but considered.',
+    confidence: 88,
   },
 ];
 
@@ -1113,7 +1223,7 @@ const MANIFESTO_VARIANTS = [
     date: '18 June 2026',
     text: `You dress in the colours of considered absence: stone, ink, cream, with brass at the wrist as the only ornament. The silhouettes you reach for are quiet ones, a tailored shoulder, an unfussy trouser, a coat that holds its line.
 
-The pieces you wear most are the ones whose construction you can feel. The cashmere rollneck has been worn seventy times this year; the silk blouse has not.
+The pieces you wear most are the ones whose construction you can feel. The wool-blend trousers have been worn seventy times this year; the pleat-detail dress has not.
 
 What you are missing, judging by your saved inspirations, is one piece of softness against the structure.`,
   },
@@ -1171,13 +1281,13 @@ function InsightsView() {
   const current = MANIFESTO_VARIANTS[variantIdx];
 
   const bestCPW = [
-    { src: SAMPLE_ITEMS[1].src, name: 'Cashmere rollneck',    brand: 'Pringle of Scotland', wears: 70, cpw: 4.0  },
-    { src: SAMPLE_ITEMS[3].src, name: 'Charcoal wool trouser', brand: 'Theory',             wears: 48, cpw: 4.06 },
-    { src: SAMPLE_ITEMS[5].src, name: 'White poplin shirt',    brand: 'The White Company',  wears: 52, cpw: 1.83 },
+    { src: '/wardrobe/gael-wool-blend-trousers.jpg', name: 'Wool-blend trousers', cat: 'Bottoms', wears: 48, cpw: 2.29 },
+    { src: '/wardrobe/reg-classic-button-down-blouse.jpg', name: 'Button-down blouse', cat: 'Tops', wears: 40, cpw: 2.48 },
+    { src: '/wardrobe/robin-jumper.jpg', name: 'Fine-knit jumper', cat: 'Tops', wears: 36, cpw: 2.19 },
   ];
   const worstCPW = [
-    { src: SAMPLE_ITEMS[2].src,  name: 'Silk midi dress', brand: 'Reformation', wears: 4,  cpw: 62.0  },
-    { src: SAMPLE_ITEMS[15].src, name: 'Silk twill scarf', brand: 'Hermès',     wears: 2, cpw: 197.5 },
+    { src: '/wardrobe/claire-pleat-detail-dress.jpg', name: 'Pleat-detail dress', cat: 'Dresses', wears: 3, cpw: 75.0 },
+    { src: '/wardrobe/gold-vermeil-baroque-pearl-pendant-pearl.jpg', name: 'Baroque pearl pendant', cat: 'Jewellery', wears: 2, cpw: 37.5 },
   ];
 
   return (
@@ -1312,7 +1422,7 @@ function CPWCard({ icon: Icon, title, accent, items }) {
                 {item.name}
               </p>
               <p className="text-[9px] uppercase" style={{ letterSpacing: '0.16em', color: 'var(--atelier-stone-500)', fontWeight: 500 }}>
-                {item.brand} · {item.wears} wears
+                {item.cat} · {item.wears} wears
               </p>
             </div>
             <p className="text-[15px] shrink-0" style={{ fontFamily: 'var(--atelier-font-display)', color: accent, fontFeatureSettings: '"onum" on' }}>

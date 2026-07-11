@@ -20,7 +20,9 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SOURCE_DIR = resolve(__dirname, '..', 'public', 'seed-wardrobe');
+// Directories under public/ whose JPG/PNG images get a WebP sibling.
+// Add a folder here so a future image swap stays zero-friction.
+const SOURCE_DIRS = ['seed-wardrobe', 'wardrobe'].map((d) => resolve(__dirname, '..', 'public', d));
 
 // Max width for editorial product photos. The StudioFrame slot displays
 // these at ~200px CSS pixels; 1024px gives ~5x density headroom for 4-5K
@@ -34,42 +36,44 @@ const WEBP_QUALITY = 80;
 
 const SOURCE_EXTS = new Set(['.jpg', '.jpeg', '.png']);
 
-if (!existsSync(SOURCE_DIR)) {
-  console.log(`No ${SOURCE_DIR} — nothing to optimize, skipping.`);
-  process.exit(0);
-}
-
-const files = readdirSync(SOURCE_DIR).filter((f) => SOURCE_EXTS.has(extname(f).toLowerCase()));
-
 let processed = 0;
 let skipped = 0;
 let saved = 0;
 
-for (const file of files) {
-  const sourcePath = join(SOURCE_DIR, file);
-  const baseName = basename(file, extname(file));
-  const webpPath = join(SOURCE_DIR, `${baseName}.webp`);
-
-  // Idempotency: if the .webp exists and is newer than the source, leave
-  // it alone. mtimeMs comparison is cheap and accurate for build caches.
-  if (existsSync(webpPath)) {
-    const srcMtime = statSync(sourcePath).mtimeMs;
-    const webpMtime = statSync(webpPath).mtimeMs;
-    if (webpMtime >= srcMtime) {
-      skipped += 1;
-      continue;
-    }
+for (const SOURCE_DIR of SOURCE_DIRS) {
+  if (!existsSync(SOURCE_DIR)) {
+    console.log(`No ${SOURCE_DIR} — skipping.`);
+    continue;
   }
 
-  const sourceBytes = statSync(sourcePath).size;
-  await sharp(sourcePath)
-    .resize({ width: MAX_WIDTH, withoutEnlargement: true })
-    .webp({ quality: WEBP_QUALITY, effort: 6 })
-    .toFile(webpPath);
-  const outputBytes = statSync(webpPath).size;
-  saved += sourceBytes - outputBytes;
-  processed += 1;
-  console.log(`  ✓ ${file} → ${baseName}.webp  (${Math.round(sourceBytes / 1024)} KB → ${Math.round(outputBytes / 1024)} KB)`);
+  const files = readdirSync(SOURCE_DIR).filter((f) => SOURCE_EXTS.has(extname(f).toLowerCase()));
+
+  for (const file of files) {
+    const sourcePath = join(SOURCE_DIR, file);
+    const baseName = basename(file, extname(file));
+    const webpPath = join(SOURCE_DIR, `${baseName}.webp`);
+
+    // Idempotency: if the .webp exists and is newer than the source, leave
+    // it alone. mtimeMs comparison is cheap and accurate for build caches.
+    if (existsSync(webpPath)) {
+      const srcMtime = statSync(sourcePath).mtimeMs;
+      const webpMtime = statSync(webpPath).mtimeMs;
+      if (webpMtime >= srcMtime) {
+        skipped += 1;
+        continue;
+      }
+    }
+
+    const sourceBytes = statSync(sourcePath).size;
+    await sharp(sourcePath)
+      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY, effort: 6 })
+      .toFile(webpPath);
+    const outputBytes = statSync(webpPath).size;
+    saved += sourceBytes - outputBytes;
+    processed += 1;
+    console.log(`  ✓ ${file} → ${baseName}.webp  (${Math.round(sourceBytes / 1024)} KB → ${Math.round(outputBytes / 1024)} KB)`);
+  }
 }
 
 if (processed > 0) {

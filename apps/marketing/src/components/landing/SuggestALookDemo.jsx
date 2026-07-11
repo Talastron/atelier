@@ -35,10 +35,10 @@ const BrassRule = () => (
 // sells the intelligence: "the Concierge composed something fresh, it didn't
 // just point at what was already on screen."
 const OUTFIT = [
-  { slot: 'Top',       name: 'Ivory tweed blazer',      src: '/seed-wardrobe/tailored-blazer-cream.jpg' },
-  { slot: 'Bottom',    name: 'Pewter silk slip',        src: '/seed-wardrobe/silk-slip-pewter.jpg' },
-  { slot: 'Footwear',  name: 'Black knee boots',        src: '/seed-wardrobe/leather-knee-boots-black.jpg' },
-  { slot: 'Accessory', name: 'Quilted crossbody',       src: '/seed-wardrobe/structured-tote-tan.jpg' },
+  { slot: 'Top',       name: 'Single-breasted blazer', src: '/wardrobe/marina-single-breasted-blazer.jpg' },
+  { slot: 'Bottom',    name: 'Pleat-detail dress', src: '/wardrobe/claire-pleat-detail-dress.jpg' },
+  { slot: 'Footwear',  name: 'Gold block-heel sandals', src: '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg' },
+  { slot: 'Accessory', name: 'Fine chain necklace', src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
 ];
 
 const STYLIST_NOTE =
@@ -47,12 +47,12 @@ const STYLIST_NOTE =
 // The faux background — different items entirely, so the modal looks like it
 // composed something rather than recycled what was visible.
 const FAUX_WARDROBE = [
-  '/seed-wardrobe/silk-top-black.jpg',
-  '/seed-wardrobe/dark-wash-jeans.jpg',
-  '/seed-wardrobe/leather-sneakers-white.jpg',
-  '/seed-wardrobe/trench-coat-beige.jpg',
-  '/seed-wardrobe/poplin-shirt-white.jpg',
-  '/seed-wardrobe/leather-gloves-olive.jpg',
+  '/wardrobe/pippa-silk-front-colourblock-vest.jpg',
+  '/wardrobe/high-rise-denim-shorts.jpg',
+  '/wardrobe/suedette-2-part-block-heel-sandals.jpg',
+  '/wardrobe/mariam-jacket.jpg',
+  '/wardrobe/reg-classic-button-down-blouse.jpg',
+  '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
 ];
 
 const STAGE = {

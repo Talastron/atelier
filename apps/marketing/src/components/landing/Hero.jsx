@@ -576,10 +576,14 @@ function StudioFrame() {
                           fontSize: 10.5,
                           lineHeight: 1.2,
                           color: 'var(--atelier-stone-800)',
-                          minHeight: '1.2em',
+                          // Two-line clamp with the full height reserved: names
+                          // like "Single-breasted blazer" wrap instead of dying
+                          // as "Single-brea…", and the grid never reflows.
+                          minHeight: '2.4em',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
                           opacity: isRevealed ? 1 : 0,
                           transition: 'opacity 400ms ease 120ms',
                         }}
@@ -924,10 +928,13 @@ function StudioFrame() {
                     fontSize: 11,
                     color: 'var(--atelier-stone-800)',
                     lineHeight: 1.3,
-                    minHeight: '1.3em',
+                    // Two lines reserved (same grid-stability rule as above):
+                    // names wrap rather than truncating to "Pewter sil…".
+                    minHeight: '2.6em',
                     overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
                     opacity: isRevealed ? 1 : 0,
                     transform: isRevealed ? 'translateY(0)' : 'translateY(0.15rem)',
                     transition: 'opacity 400ms ease 120ms, transform 400ms ease 120ms',

@@ -222,11 +222,33 @@ ls dist         # confirm dist/ actually rebuilt (check timestamp)
 ```bash
 firebase hosting:channel:deploy premonorepo --expires 3d
 ```
+
+> **⚠️ Auth caveat (learned 2026-07-12):** sign-in DOES NOT WORK on ephemeral channel
+> URLs — Firebase Auth authorized domains and the App Check reCAPTCHA key are both
+> domain-allowlisted (`edit.myatelier.style`, `localhost`), and the channel hostname
+> isn't on either list. The app boots but the membership gate reads as "no account".
+> The channel verifies the BUILD (loads, assets, no white screen). To verify **signed-in**
+> behaviour, serve the same `dist/` on localhost instead:
+> `pnpm preview --port 4173` from `apps/studio`, then test at `http://localhost:4173`.
+
 This prints a temporary URL. Open it and verify **hard**:
 - App loads, no white screen, no console errors.
-- Sign-in works (magic-link path especially — that's how paid users arrive).
+- Sign-in works — via the localhost serve above, per the caveat.
 - A couple of core views render (wardrobe, concierge, insights).
 - Assets/fonts/images load (catches broken relative paths).
+
+---
+
+## ✅ MIGRATION COMPLETED — 2026-07-12
+
+Executed end-to-end this date: app absorbed into `Talastron/atelier` as `apps/studio`
+([PR #3](https://github.com/Talastron/atelier/pull/3), true merge commit, 574 commits,
+history back to "Initial digital wardrobe"). pnpm workspace conversion clean. Marketing
+(Cloudflare) build unaffected. Hosting promoted to production after founder-verified
+localhost sign-in test; **rules and functions deliberately not deployed** (unchanged).
+Remaining: archive `billiesherwood/digital-wardrobe` on GitHub (owner action).
+Gotchas hit for the record: uncommitted `pnpm-lock.yaml` failed the Cloudflare PR check
+(commit the lockfile!), and the preview-channel auth caveat above.
 
 ### C4. Promote to production ONLY after the preview passes
 ```bash

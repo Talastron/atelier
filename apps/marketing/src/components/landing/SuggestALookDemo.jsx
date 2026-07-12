@@ -242,45 +242,44 @@ export function SuggestALookDemo() {
           </div>
         </div>
 
-        {/* The TODAY card — the action surface */}
+        {/* The TODAY card — editorial cream surface (matches the app's
+            'Styled for today'); ink reserved for the action button only. */}
         <div className="flex flex-col gap-2">
           <div
-            className="rounded-xl relative overflow-hidden"
+            className="rounded-xl"
             style={{
-              background: 'linear-gradient(135deg, var(--atelier-ink) 0%, #292524 100%)',
-              color: '#ffffff',
-              padding: '0.9rem 1rem',
+              background: '#F4EFE6',
+              border: '1px solid var(--atelier-stone-200)',
+              padding: '0.9rem 1rem 1rem',
             }}
           >
-            <p
-              className="text-[9px] uppercase font-bold mb-0.5"
-              style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-400)' }}
-            >
-              Today
+            <div className="flex items-center gap-2 mb-2">
+              <span aria-hidden="true" style={{ display: 'inline-block', width: 16, height: 1.5, background: 'var(--atelier-brass-300)' }} />
+              <p className="text-[9px] uppercase font-bold" style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-500)' }}>
+                Today
+              </p>
+            </div>
+            <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 22, lineHeight: 1, color: 'var(--atelier-stone-900)', fontFeatureSettings: '"onum" on' }}>
+              15–27°
             </p>
-            <p
-              className="text-sm"
-              style={{ fontFamily: 'var(--atelier-font-display)', lineHeight: 1.3 }}
-            >
-              15–27°C · Partly cloudy
-            </p>
+            <p className="text-[11px] mt-1" style={{ color: 'var(--atelier-stone-500)' }}>Partly cloudy</p>
             <button
               type="button"
               tabIndex={-1}
               aria-hidden="true"
-              className="w-full mt-2.5 text-[10px] uppercase px-3 py-2 rounded-full flex items-center justify-center gap-2 font-medium"
+              className="w-full mt-3 text-[10px] uppercase px-3 py-2.5 rounded-full flex items-center justify-center gap-2 font-medium"
               style={{
-                background: 'var(--atelier-brass-300)',
-                color: 'var(--atelier-stone-900)',
+                background: 'var(--atelier-ink)',
+                color: '#F7F5F2',
                 letterSpacing: '0.18em',
                 boxShadow: buttonGlowing
                   ? '0 0 0 4px rgba(212, 179, 120, 0.4), 0 0 24px rgba(212, 179, 120, 0.5)'
-                  : 'none',
+                  : '0 1px 2px rgba(28,25,23,0.12)',
                 transform: buttonGlowing ? 'scale(1.03)' : 'scale(1)',
                 transition: 'all 400ms ease',
               }}
             >
-              <Wand2 size={11} strokeWidth={1.5} />
+              <Wand2 size={11} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-300)' }} />
               Suggest a look
             </button>
           </div>
@@ -394,43 +393,38 @@ export function SuggestALookDemo() {
             </p>
           </div>
 
-          {/* TodayTile — dark gradient action card */}
+          {/* TodayTile — editorial cream card; ink for the button only */}
           <div
             style={{
-              background: 'linear-gradient(135deg, var(--atelier-stone-900) 0%, var(--atelier-stone-800) 100%)',
-              color: '#ffffff',
+              background: '#F4EFE6',
+              border: '1px solid var(--atelier-stone-200)',
               borderRadius: 14,
-              padding: '0.75rem 0.875rem',
-              position: 'relative',
-              overflow: 'hidden',
+              padding: '0.75rem 0.875rem 0.85rem',
             }}
           >
-            <div
-              aria-hidden="true"
-              className="absolute pointer-events-none"
-              style={{ right: -16, top: -16, opacity: 0.06, transform: 'rotate(12deg)' }}
-            >
-              <Sparkles size={100} strokeWidth={0.8} />
+            <div className="flex items-center gap-1.5" style={{ marginBottom: 6 }}>
+              <span aria-hidden="true" style={{ display: 'inline-block', width: 14, height: 1.5, background: 'var(--atelier-brass-300)' }} />
+              <p style={{ fontSize: 8, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', fontWeight: 700 }}>
+                Today
+              </p>
             </div>
-            <p style={{ fontSize: 8, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-stone-400)', fontWeight: 700, marginBottom: 1 }}>
-              Today
+            <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 19, lineHeight: 1, color: 'var(--atelier-stone-900)', fontFeatureSettings: '"onum" on' }}>
+              15–27°
             </p>
-            <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 12.5, lineHeight: 1.3, marginBottom: 8 }}>
-              15–27°C · Partly cloudy
-            </p>
+            <p style={{ fontSize: 9.5, color: 'var(--atelier-stone-500)', marginTop: 2, marginBottom: 9 }}>Partly cloudy</p>
             <button
               type="button"
               tabIndex={-1}
               aria-hidden="true"
               style={{
                 width: '100%',
-                background: 'var(--atelier-brass-300)',
-                color: 'var(--atelier-stone-900)',
+                background: 'var(--atelier-ink)',
+                color: '#F7F5F2',
                 fontSize: 9.5,
                 fontWeight: 600,
                 letterSpacing: '0.16em',
                 textTransform: 'uppercase',
-                padding: '0.5rem 0.75rem',
+                padding: '0.55rem 0.75rem',
                 borderRadius: 999,
                 display: 'flex',
                 alignItems: 'center',
@@ -438,12 +432,12 @@ export function SuggestALookDemo() {
                 gap: 5,
                 boxShadow: buttonGlowing
                   ? '0 0 0 4px rgba(212, 179, 120, 0.4), 0 0 22px rgba(212, 179, 120, 0.5)'
-                  : 'none',
+                  : '0 1px 2px rgba(28,25,23,0.12)',
                 transform: buttonGlowing ? 'scale(1.02)' : 'scale(1)',
                 transition: 'all 350ms ease',
               }}
             >
-              <Wand2 size={10} strokeWidth={1.5} />
+              <Wand2 size={10} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-300)' }} />
               Suggest a look
             </button>
           </div>

@@ -59,7 +59,7 @@ const OUTFITS = [
   {
     label: 'A Saturday in town',
     weather: '18–22°C · Bright',
-    note: 'Black silk and denim, lifted by the straw fedora.',
+    note: 'Colour-blocked silk and denim, lifted by a fine gold necklace.',
     confidence: 91,
     items: [
       { name: 'Silk colourblock vest', src: '/wardrobe/pippa-silk-front-colourblock-vest.jpg' },
@@ -402,50 +402,42 @@ function StudioFrame() {
             </p>
           </div>
 
-          {/* TodayTile — replica of App.jsx:4316 dark gradient card */}
+          {/* TodayTile — editorial cream card matching the app's warm
+              'Styled for today' surface. Ink is reserved for the action
+              button only (dark = action, not container). */}
           <div
             style={{
-              background:
-                'linear-gradient(135deg, var(--atelier-stone-900) 0%, var(--atelier-stone-800) 100%)',
-              color: '#ffffff',
+              background: '#F4EFE6',
+              border: '1px solid var(--atelier-stone-200)',
               borderRadius: 18,
-              padding: '0.875rem 1rem',
-              position: 'relative',
-              overflow: 'hidden',
-              boxShadow: '0 4px 12px -3px rgba(28, 25, 23, 0.08)',
+              padding: '1rem 1.1rem 1.1rem',
             }}
           >
-            {/* Sparkles decoration top-right */}
-            <div
-              aria-hidden="true"
-              className="absolute pointer-events-none"
-              style={{ right: -20, top: -20, opacity: 0.06, transform: 'rotate(12deg)' }}
-            >
-              <Sparkles size={140} strokeWidth={0.8} />
+            {/* brass rule + eyebrow */}
+            <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
+              <span
+                aria-hidden="true"
+                style={{ display: 'inline-block', width: 18, height: 1.5, background: 'var(--atelier-brass-300)' }}
+              />
+              <p style={{ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', fontWeight: 700 }}>
+                Today
+              </p>
             </div>
 
-            <p
-              style={{
-                fontSize: 9,
-                letterSpacing: '0.24em',
-                textTransform: 'uppercase',
-                color: 'var(--atelier-stone-400)',
-                fontWeight: 700,
-                marginBottom: 2,
-              }}
-            >
-              Today
-            </p>
-            <p
-              style={{
-                fontFamily: 'var(--atelier-font-display)',
-                fontSize: 15,
-                lineHeight: 1.3,
-                marginBottom: 12,
-              }}
-            >
-              {current.weather}
-            </p>
+            {/* temperature in display numerals, condition beneath */}
+            {(() => {
+              const [temp, ...cond] = String(current.weather).split('·');
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 26, lineHeight: 1, color: 'var(--atelier-stone-900)', fontFeatureSettings: '"onum" on' }}>
+                    {temp.trim()}
+                  </p>
+                  {cond.length > 0 && (
+                    <p style={{ fontSize: 11, color: 'var(--atelier-stone-500)', marginTop: 4 }}>{cond.join('·').trim()}</p>
+                  )}
+                </div>
+              );
+            })()}
 
             <button
               type="button"
@@ -453,13 +445,13 @@ function StudioFrame() {
               aria-hidden="true"
               style={{
                 width: '100%',
-                background: 'var(--atelier-brass-300)',
-                color: 'var(--atelier-stone-900)',
+                background: 'var(--atelier-ink)',
+                color: '#F7F5F2',
                 fontSize: 10.5,
                 fontWeight: 600,
                 letterSpacing: '0.16em',
                 textTransform: 'uppercase',
-                padding: '0.625rem 1rem',
+                padding: '0.7rem 1rem',
                 borderRadius: 999,
                 display: 'flex',
                 alignItems: 'center',
@@ -467,7 +459,7 @@ function StudioFrame() {
                 gap: 6,
                 boxShadow: buttonGlowing
                   ? '0 0 0 4px rgba(212, 179, 120, 0.4), 0 0 20px rgba(212, 179, 120, 0.4)'
-                  : '0 1px 2px rgba(0, 0, 0, 0.06)',
+                  : '0 1px 2px rgba(28, 25, 23, 0.12)',
                 transform: buttonGlowing ? 'scale(1.02)' : 'scale(1)',
                 transition: 'all 350ms ease',
                 opacity: composing || showingOutfit ? 0.4 : 1,
@@ -476,7 +468,7 @@ function StudioFrame() {
               <Wand2
                 size={12}
                 strokeWidth={1.5}
-                style={{ animation: composing ? 'hero-wand-spin 1.4s linear infinite' : 'none' }}
+                style={{ color: 'var(--atelier-brass-300)', animation: composing ? 'hero-wand-spin 1.4s linear infinite' : 'none' }}
               />
               {composing ? 'Composing' : 'Suggest a look'}
             </button>
@@ -835,8 +827,8 @@ function StudioFrame() {
               padding: '0.55rem 1rem',
               minWidth: 148,
               borderRadius: 999,
-              background: 'var(--atelier-brass-300)',
-              color: 'var(--atelier-stone-900)',
+              background: 'var(--atelier-ink)',
+              color: '#F7F5F2',
               fontSize: 10.5,
               fontWeight: 600,
               letterSpacing: '0.18em',
@@ -844,7 +836,7 @@ function StudioFrame() {
               flexShrink: 0,
               boxShadow: buttonGlowing
                 ? '0 0 0 4px rgba(212, 179, 120, 0.35), 0 0 22px rgba(212, 179, 120, 0.5)'
-                : '0 1px 2px rgba(28, 25, 23, 0.06)',
+                : '0 1px 2px rgba(28, 25, 23, 0.12)',
               transform: buttonGlowing ? 'scale(1.04)' : 'scale(1)',
               transition: 'all 350ms ease',
               opacity: composing || showingOutfit ? 0.35 : 1,

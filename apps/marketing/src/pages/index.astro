@@ -59,7 +59,7 @@ const softwareLd = {
       id="what-atelier-does"
       style="background: var(--atelier-cream); padding-block: clamp(4rem, 8vw, 7rem); padding-inline: var(--atelier-page-padding); border-top: 1px solid rgba(212, 179, 120, 0.18);"
     >
-      <div class="mx-auto" style="max-width: 1180px;">
+      <div class="mx-auto" style="max-width: var(--atelier-container-max);">
         {/* Header */}
         <div style="max-width: 640px;">
           <div class="flex items-center gap-3 mb-5">
@@ -100,12 +100,12 @@ const softwareLd = {
     <section
       style="background: var(--atelier-stone-50); min-height: 100vh; display: flex; align-items: center; padding-block: clamp(3rem, 6vw, 5rem); padding-inline: var(--atelier-page-padding);"
     >
-      {/* Container narrowed from 1280px to 1180px to give the left column
-          more visual inset; gap widened so the copy block and the demo each
-          get their own room rather than reading as one wide composition. */}
+      {/* Uses the shared container token so every homepage section aligns to
+          the same page edge as the Nav/Hero (no per-section width drift); the
+          wide gap gives the copy block and the demo their own room. */}
       <div
         class="mx-auto grid lg:grid-cols-[5fr_7fr] gap-10 lg:gap-20 items-start w-full"
-        style="max-width: 1180px;"
+        style="max-width: var(--atelier-container-max);"
       >
         {/* Copy column — top-aligned with the demo */}
         <div class="text-left lg:pt-2">

@@ -11,6 +11,7 @@ import Philosophy from '../components/Philosophy.astro';
 import ClosingMasthead from '../components/ClosingMasthead.astro';
 import { Hero } from '../components/landing/Hero.jsx';
 import { InsideAtelier } from '../components/landing/InsideAtelier.jsx';
+import { WhatAtelierDoes } from '../components/landing/WhatAtelierDoes.jsx';
 import { ConciergeDemo } from '../components/landing/ConciergeDemo.jsx';
 import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
 import { InvestmentLens } from '../components/landing/InvestmentLens.jsx';
@@ -79,22 +80,13 @@ const softwareLd = {
           </p>
         </div>
 
-        {/* Capabilities — four plain statements of what the app does */}
-        <div
-          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(218px, 1fr)); gap: clamp(2rem, 3vw, 3.5rem); margin-top: clamp(2.75rem, 5vw, 4.5rem); padding-top: clamp(2.5rem, 4vw, 3.5rem); border-top: 1px solid rgba(28, 25, 23, 0.08);"
-        >
-          {[
-            { t: 'Catalogue', d: 'Photograph or import every piece you own. Atelier builds your private digital wardrobe.' },
-            { t: 'Log', d: 'Record what you actually wear, so the Concierge styles you from your real habits.' },
-            { t: 'Style', d: 'The AI composes outfits from your own clothes, plans your week, and packs your trips.' },
-            { t: 'Track', d: 'See the cost-per-wear of every piece — and where your wardrobe has gaps.' },
-          ].map((c) => (
-            <div>
-              <span style="display: block; width: 26px; height: 1.5px; background: var(--atelier-brass-300); margin-bottom: 1.1rem;" aria-hidden="true"></span>
-              <h3 style="font-family: var(--atelier-font-display); font-size: 1.3125rem; line-height: 1.1; color: var(--atelier-stone-900); margin-bottom: 0.6rem;">{c.t}</h3>
-              <p style="font-size: 0.9375rem; line-height: 1.6; color: var(--atelier-stone-600);">{c.d}</p>
-            </div>
-          ))}
+        {/* Capabilities — the four statements as a tabbed showcase whose
+            stage renders truthful mini-vignettes of the actual studio.
+            All four claims remain permanently in the DOM (the tab index IS
+            the copy), preserving the plain-text purpose statement the
+            Google OAuth homepage review requires. */}
+        <div style="margin-top: clamp(2.75rem, 5vw, 4.5rem);">
+          <WhatAtelierDoes client:visible />
         </div>
       </div>
     </section>

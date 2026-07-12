@@ -264,6 +264,23 @@ function TrackVignette() {
           </li>
         ))}
       </ul>
+      {/* The studio's generated insight, verbatim register — the numbers do
+          the convincing. */}
+      <div
+        className="flex items-baseline justify-between rounded-xl px-3 py-2.5 mb-2.5"
+        style={{ border: '1px solid rgba(212,179,120,0.35)', background: 'rgba(212,179,120,0.06)' }}
+      >
+        <div>
+          <p style={{ ...EYEBROW, fontSize: 7.5, color: 'var(--atelier-brass-600)' }}>Wardrobe investment</p>
+          <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '1.05rem', color: 'var(--atelier-stone-900)' }}>
+            £2,791 <span style={{ fontSize: 10, color: 'var(--atelier-stone-500)' }}>across 28 pieces</span>
+          </p>
+        </div>
+        <div className="text-right">
+          <p style={{ ...EYEBROW, fontSize: 7.5 }}>Average</p>
+          <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '1.05rem', color: 'var(--atelier-brass-600)' }}>£4.10<span style={{ fontSize: 9, color: 'var(--atelier-stone-400)' }}>/wear</span></p>
+        </div>
+      </div>
       <p className="text-[10.5px]" style={{ color: 'var(--atelier-stone-500)' }}>
         The dress wants three more evenings — or a resale listing. Atelier will say which.
       </p>
@@ -303,8 +320,6 @@ export function WhatAtelierDoes() {
     setActive(next);
     tabRefs.current[next]?.focus();
   }, [active]);
-
-  const Vignette = VIGNETTES[active];
 
   return (
     <div
@@ -395,39 +410,55 @@ export function WhatAtelierDoes() {
         })}
       </div>
 
-      {/* Stage — the truthful app vignette for the active capability */}
+      {/* Stage — all four vignettes render stacked in ONE grid cell, so the
+          stage permanently holds the height of the tallest and switching tabs
+          is a pure crossfade: zero layout shift, no content "jump" on rotation. */}
       <div
         id="wad-stage"
         role="tabpanel"
         aria-labelledby={`wad-tab-${active}`}
         className="lg:sticky lg:top-24"
       >
-        <div key={active} style={{ animation: reduced ? 'none' : 'wad-rise 480ms cubic-bezier(0.22,1,0.36,1)' }}>
-          <Vignette />
-          <p
-            className="mt-4 text-center text-[11px] italic"
-            style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-500)' }}
-          >
-            {CAPABILITIES[active].caption}
-          </p>
-          <p className="mt-1.5 text-center">
-            <a
-              href="/studio"
-              className="text-[10px] uppercase"
-              style={{ letterSpacing: '0.22em', color: 'var(--atelier-brass-600)', fontWeight: 600, textDecoration: 'none' }}
-            >
-              See the full studio →
-            </a>
-          </p>
+        <div style={{ display: 'grid' }}>
+          {VIGNETTES.map((V, i) => {
+            const isOn = i === active;
+            return (
+              <div
+                key={CAPABILITIES[i].title}
+                aria-hidden={!isOn}
+                style={{
+                  gridArea: '1 / 1',
+                  opacity: isOn ? 1 : 0,
+                  visibility: isOn ? 'visible' : 'hidden',
+                  transform: isOn || reduced ? 'translateY(0)' : 'translateY(0.6rem)',
+                  transition: reduced
+                    ? 'opacity 200ms ease, visibility 200ms'
+                    : 'opacity 480ms cubic-bezier(0.22,1,0.36,1), transform 480ms cubic-bezier(0.22,1,0.36,1), visibility 480ms',
+                  pointerEvents: isOn ? 'auto' : 'none',
+                }}
+              >
+                <V />
+                <p
+                  className="mt-4 text-center text-[11px] italic"
+                  style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-500)' }}
+                >
+                  {CAPABILITIES[i].caption}
+                </p>
+              </div>
+            );
+          })}
         </div>
+        <p className="mt-1.5 text-center">
+          <a
+            href="/studio"
+            className="text-[10px] uppercase"
+            style={{ letterSpacing: '0.22em', color: 'var(--atelier-brass-600)', fontWeight: 600, textDecoration: 'none' }}
+          >
+            See the full studio →
+          </a>
+        </p>
       </div>
 
-      <style>{`
-        @keyframes wad-rise {
-          from { opacity: 0; transform: translateY(0.6rem); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }

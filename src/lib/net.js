@@ -46,17 +46,33 @@ export function brandSearchUrl(website, query) {
 
 
 
-// Our own Cloud Function proxy fetches server-side (no browser CORS) and is far
-// more reliable than the public proxies, which are kept only as a fallback.
+// Retailer images are fetched only through our own Cloud Function proxy, which
+// runs server-side in europe-west2 with SSRF guards (no browser CORS needed).
+// We deliberately no longer fall back to anonymous public CORS proxies: they
+// received retailer URLs and the user's IP with no data-processing guarantees —
+// a privacy exposure we don't want. If the function proxy can't fetch an image,
+// we simply skip rehosting that one image.
 const FUNCTION_IMAGE_PROXY = `https://europe-west2-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/imageProxy`;
-const CORS_PROXIES = [
-  (u) => `${FUNCTION_IMAGE_PROXY}?url=${encodeURIComponent(u)}`,
-  (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-  (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-  (u) => `https://api.cors.lol/?url=${encodeURIComponent(u)}`,
-  (u) => `https://corsproxy.org/?${encodeURIComponent(u)}`,
-];
+const buildImageProxyUrl = (u) => `${FUNCTION_IMAGE_PROXY}?url=${encodeURIComponent(u)}`;
+
+// Page proxy returns product-page HTML (for JSON-LD price/brand). It's gated on
+// App Check server-side, so we attach a fresh App Check token per request.
+const FUNCTION_PAGE_PROXY = `https://europe-west2-${import.meta.env.VITE_FIREBASE_PROJECT_ID}.cloudfunctions.net/pageProxy`;
+
+// Fetch a product page's HTML through our own App Check-gated pageProxy. Keeps
+// retailer URLs first-party (never sent to third-party proxies). Best-effort:
+// throws on any failure so the caller can fall back to Microlink-only metadata.
+async function fetchPageHtmlViaProxy(url) {
+  const headers = {};
+  try {
+    const { getAppCheckHeaderToken } = await import('../firebase.js');
+    const token = await getAppCheckHeaderToken();
+    if (token) headers['X-Firebase-AppCheck'] = token;
+  } catch { /* App Check unavailable — pageProxy will 401 and we degrade below */ }
+  const resp = await fetchWithTimeout(`${FUNCTION_PAGE_PROXY}?url=${encodeURIComponent(url)}`, { headers }, 12_000);
+  if (!resp.ok) throw new Error(`Page proxy returned HTTP ${resp.status}`);
+  return resp.text();
+}
 
 export function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   return Promise.race([
@@ -109,33 +125,34 @@ export function clearHostBlock(host) {
 // the public proxies were failing) don't skip hosts the function proxy can serve.
 export function clearAllHostBlocks() { writeBlockedHosts({}); }
 
-export async function fetchViaProxy(url, options = {}) {
+// Fetch a retailer image through our own Cloud Function proxy only. Keeps the
+// per-host backoff so a genuinely unreachable CDN isn't hammered every session.
+// Only image content-types succeed (the function rejects anything else).
+export async function fetchImageViaProxy(url, options = {}) {
   const host = hostOf(url);
   if (isHostBlocked(host)) {
-    throw new Error(`Skipped — ${host} is in cooldown after repeated proxy failures`);
+    throw new Error(`Skipped — ${host} is in cooldown after repeated image-proxy failures`);
   }
-  const errors = [];
-  for (const buildUrl of CORS_PROXIES) {
-    try {
-      const resp = await fetchWithTimeout(buildUrl(url), options);
-      if (resp.ok) {
-        clearHostBlock(host);
-        return resp;
-      }
-      errors.push(`HTTP ${resp.status}`);
-    } catch (err) {
-      errors.push(err?.message || 'fetch failed');
-    }
+  let resp;
+  try {
+    resp = await fetchWithTimeout(buildImageProxyUrl(url), options);
+  } catch (err) {
+    markHostFailed(host);
+    throw new Error(err?.message || 'image proxy fetch failed');
   }
-  markHostFailed(host);
-  throw new Error(`All ${CORS_PROXIES.length} proxies failed (${errors.slice(0, 3).join(' · ')})`);
+  if (!resp.ok) {
+    markHostFailed(host);
+    throw new Error(`Image proxy returned HTTP ${resp.status}`);
+  }
+  clearHostBlock(host);
+  return resp;
 }
 
-// Download an image (through a public CORS proxy to bypass hotlink-block headers),
-// resize it, and return a small base64 data URL we can persist inside Firestore.
+// Download an image (through our own Cloud Function proxy to bypass hotlink-block
+// headers), resize it, and return a small base64 data URL to persist in Firestore.
 export async function imageUrlToCompressedDataUrl(url) {
   try {
-    const resp = await fetchViaProxy(url);
+    const resp = await fetchImageViaProxy(url);
     const blob = await resp.blob();
     if (!blob.type.startsWith('image/')) throw new Error('not an image');
     const file = new File([blob], 'product.jpg', { type: blob.type });
@@ -149,6 +166,7 @@ export async function imageUrlToCompressedDataUrl(url) {
 // Parse Schema.org Product / Offer data out of a page's JSON-LD blocks.
 // This is the most reliable place to find price, brand, and full descriptions —
 // Open Graph rarely exposes price; Schema.org almost always does for e-commerce.
+// Fed by the first-party pageProxy (see fetchPageHtmlViaProxy).
 export function extractSchemaFromHtml(html) {
   const out = {};
   const blocks = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
@@ -279,9 +297,10 @@ export function cleanProductUrl(rawUrl) {
 }
 
 // Best-effort metadata extraction from any product URL.
-// Pipeline: Microlink (title/image/description) + raw HTML via proxy chain
-// (JSON-LD price/brand/full desc). Each step is logged on failure so console
-// shows which stage failed when a user reports issues.
+// Pipeline: Microlink (title/image/description/publisher) + page HTML via our own
+// App Check-gated pageProxy (JSON-LD price/brand/full desc). Both are first-party
+// or a named processor — no anonymous public CORS proxies. Each step is logged on
+// failure so the console shows which stage failed when a user reports issues.
 export async function fetchProductFromUrl(rawUrl) {
   const url = cleanProductUrl(rawUrl);
   let microlinkData = {};
@@ -300,14 +319,17 @@ export async function fetchProductFromUrl(rawUrl) {
   }
   if (microlinkError) console.warn('[wardrobe] microlink failed:', microlinkError);
 
+  // Schema.org enrichment (price/brand/full description) via our own App Check-
+  // gated pageProxy — first-party, so retailer URLs never touch third-party
+  // proxies. Best-effort: if it fails, Microlink's title/image still carry the
+  // import and the user sets price in the editor.
   let schema = {};
   let schemaError = null;
   try {
-    const htmlResp = await fetchViaProxy(url);
-    const html = await htmlResp.text();
+    const html = await fetchPageHtmlViaProxy(url);
     schema = extractSchemaFromHtml(html);
   } catch (err) {
-    schemaError = err?.message || 'Proxy network error';
+    schemaError = err?.message || 'page proxy error';
     console.warn('[wardrobe] schema fetch failed:', schemaError);
   }
 

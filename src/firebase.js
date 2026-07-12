@@ -158,6 +158,19 @@ if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
   );
 }
 
+// Fresh App Check token string for authenticating first-party backend calls that
+// aren't Firebase SDK calls (e.g. the pageProxy Cloud Function, which gates on
+// App Check so it can't be abused as an open proxy). Null if App Check is off.
+export async function getAppCheckHeaderToken() {
+  if (!_appCheck) return null;
+  try {
+    const { token } = await getAppCheckToken(_appCheck, false);
+    return token || null;
+  } catch {
+    return null;
+  }
+}
+
 export const auth = getAuth(app);
 
 // Offline persistence + multi-tab handling. Lets the app load the cached

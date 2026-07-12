@@ -414,3 +414,51 @@ exports.imageProxy = onRequest({ region: REGION, cors: true, memory: '256MiB' },
     res.status(502).send('fetch failed');
   }
 });
+
+// --- Page proxy (first-party, App Check-gated) -------------------------------
+// Fetches a product page's HTML server-side so the client can parse JSON-LD
+// (price/brand/description) for link import — the enrichment we used to get from
+// anonymous public CORS proxies before removing them for privacy. Because this
+// returns arbitrary HTML (a far more abusable capability than an image proxy),
+// it is gated behind Firebase App Check so only the genuine app can call it.
+// SSRF guards mirror imageProxy: http(s) only, no internal hosts, size + time caps.
+exports.pageProxy = onRequest({ region: REGION, cors: true, memory: '256MiB' }, async (req, res) => {
+  // App Check: reject anything that isn't the genuine app (skipped in emulator).
+  if (!isRunningInEmulator()) {
+    const token = req.get('X-Firebase-AppCheck');
+    if (!token) { res.status(401).send('missing app check token'); return; }
+    try {
+      await admin.appCheck().verifyToken(token);
+    } catch {
+      res.status(401).send('invalid app check token'); return;
+    }
+  }
+
+  const url = String(req.query.url || '');
+  if (!/^https?:\/\//i.test(url)) { res.status(400).send('bad url'); return; }
+  let host;
+  try { host = new URL(url).hostname; } catch { res.status(400).send('bad url'); return; }
+  if (/^(localhost$|127\.|10\.|192\.168\.|169\.254\.|0\.0\.0\.0$|\[?::1\]?$)/i.test(host)) {
+    res.status(400).send('blocked host'); return;
+  }
+  try {
+    const upstream = await fetch(url, {
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AtelierBot/1.0)' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!upstream.ok) { res.status(502).send(`upstream ${upstream.status}`); return; }
+    const ct = upstream.headers.get('content-type') || '';
+    if (!/text\/html|application\/xhtml\+xml/i.test(ct)) { res.status(415).send('not html'); return; }
+    // Cap the body: we only need the <head> JSON-LD, and an unbounded page could
+    // exhaust memory. Read to a 3 MB cap and hand back UTF-8 text.
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    const html = buf.subarray(0, 3 * 1024 * 1024).toString('utf8');
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(html);
+  } catch (e) {
+    logger.warn('[pageProxy] failed', { url, err: e?.message });
+    res.status(502).send('fetch failed');
+  }
+});

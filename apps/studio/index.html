@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- .ico first so legacy browsers and implicit /favicon.ico requests find a
+         real file (Firebase's SPA rewrite would otherwise serve index.html and
+         the browser would fall back to a stale cached icon). Modern browsers
+         skip past it to the auto-inverting SVG. PNG fallbacks cover iOS Home
+         Screen (which silently ignores SVG apple-touch-icons) and Android PWA. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/icon.svg" color="#1c1917" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1c1917" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Atelier" />
+    <title>Atelier · Digital Wardrobe</title>
+    <meta name="description" content="Quiet luxury for your wardrobe. Unlimited pieces, AI styling, cost-per-wear analytics, and the full Atelier studio." />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Atelier" />
+    <meta property="og:title" content="Atelier · Digital Wardrobe" />
+    <meta property="og:description" content="Quiet luxury for your wardrobe. Unlimited pieces, AI styling, cost-per-wear analytics." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Atelier · Digital Wardrobe" />
+    <meta name="twitter:description" content="Quiet luxury for your wardrobe. Unlimited pieces, AI styling, cost-per-wear analytics." />
+    <meta name="twitter:image" content="/og-image.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

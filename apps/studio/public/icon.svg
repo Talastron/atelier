@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Auto-inverting favicon. Light bg + dark hanger by default;
+       prefers-color-scheme: dark flips to dark bg + light hanger so the
+       icon stays legible whether the browser's tab strip is light or
+       dark. Modern browsers honour <style> + @media inside SVG favicons
+       (Chrome 105+, Safari 14+, Firefox 88+). The brass charm stays
+       brass in both modes — it's the design accent. -->
+  <style>
+    .bg { fill: #F7F5F2; }
+    .ink { stroke: #1c1917; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1c1917; }
+      .ink { stroke: #F7F5F2; }
+    }
+  </style>
+
+  <!-- Page-coloured ground, iOS-style rounded corners. -->
+  <rect class="bg" width="256" height="256" rx="56"/>
+
+  <!-- Wire-hanger silhouette — single-weight stroke, rounded terminals,
+       universal wardrobe-app vocabulary. Colour adapts via .ink class. -->
+  <g class="ink" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hook (curl + descending stem to triangle apex). -->
+    <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110"/>
+    <!-- Triangular frame. -->
+    <path d="M 128 110 L 62 184 L 194 184 Z"/>
+  </g>
+
+  <!-- Brass charm — atelier finishing detail. Brass stays brass in both
+       light and dark modes; it's the brand thread, not a UI element. -->
+  <line x1="128" y1="184" x2="128" y2="206" stroke="#D4B378" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="128" cy="212" r="5" fill="#D4B378"/>
+</svg>

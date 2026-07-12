@@ -1,0 +1,107 @@
+rules_version = '2';
+
+// Production Firestore security rules for the Atelier wardrobe app.
+//
+// This file IS version-controlled — the single source of truth for access
+// control. Owner emails are NOT secret: they already ship publicly in the
+// client bundle via VITE_OWNER_EMAILS, so committing them here adds no
+// exposure. The list below MUST match VITE_OWNER_EMAILS in .env.local.
+//
+// Three paths grant a user their private /users/{uid} subtree:
+//   • isOwner()               — permanent founders
+//   • isInvited()             — allowlisted friends, managed in-app
+//   • hasActiveSubscription() — paying customers. Lemon Squeezy → the
+//     atelier-website monorepo's Pages Function webhook → /subscriberAccess/{uid}
+//     (written with the Admin SDK, which bypasses these rules).
+//
+// Deploy:  firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Permanent owners — never lose access even if /allowlist/... is empty.
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'sibylle.sherwood@gmail.com',
+          'martin.sherwood@gmail.com'
+        ];
+    }
+
+    // Invited friends — owners manage this list from inside the app.
+    function isInvited() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/allowlist/$(request.auth.token.email));
+    }
+
+    // Paying customer. The webhook normalises Lemon Squeezy 'on_trial' to
+    // 'active', so trials are covered by the 'active' branch. A 'cancelled'
+    // subscription keeps access until the paid period it already covers ends.
+    function subscriberAccess() {
+      return get(/databases/$(database)/documents/subscriberAccess/$(request.auth.uid)).data;
+    }
+    function hasActiveSubscription() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/subscriberAccess/$(request.auth.uid))
+        && (
+          subscriberAccess().status == 'active'
+          || (subscriberAccess().status == 'cancelled'
+              && subscriberAccess().currentPeriodEnd > request.time)
+        );
+    }
+
+    // Owner / invited are checked first so they never incur the subscriber
+    // get() (|| short-circuits).
+    function canSignIn() {
+      return isOwner() || isInvited() || hasActiveSubscription();
+    }
+
+    // Each user gets a private subtree at /users/{uid}/... Cross-user denied.
+    match /users/{uid}/{document=**} {
+      allow read, write: if canSignIn() && request.auth.uid == uid;
+    }
+
+    // A user may read their own subscriber-access doc (drives the
+    // trial/subscription UI). Writes are server-only (webhook via Admin SDK).
+    match /subscriberAccess/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Full subscription records — readable only by their owning user; never
+    // written client-side.
+    match /subscriptions/{subId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Webhook idempotency ledger — server-only, no client access at all.
+    match /processed_webhook_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Allowlist: owners read & manage; an invited user can read just their own
+    // entry (so the app can confirm "yes, you're in").
+    match /allowlist/{email} {
+      allow read: if isOwner() || (request.auth != null && request.auth.token.email == email);
+      allow write: if isOwner();
+    }
+
+    // Public shared looks: anyone with the link can READ. Only signed-in users
+    // can create. Share docs embed snapshots so they stay viewable even if the
+    // original is later edited or deleted.
+    match /public/{shareId} {
+      allow read: if true;
+      allow create, update: if canSignIn();
+      allow delete: if canSignIn();
+    }
+
+    // Default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

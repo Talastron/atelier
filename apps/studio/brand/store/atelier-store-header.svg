@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 300" width="1600" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FBF8F3"/>
+      <stop offset="100%" stop-color="#F1EADD"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cream ground -->
+  <rect width="1600" height="300" fill="url(#bg)"/>
+
+  <!-- Hanger mark, left, vertically centred (256 box scaled to 200) -->
+  <g transform="translate(400 50) scale(0.78125)">
+    <rect width="256" height="256" rx="56" fill="#1c1917"/>
+    <g fill="none" stroke="#F7F5F2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 160 60 Q 160 44 144 44 Q 128 44 128 58 L 128 110"/>
+      <path d="M 128 110 L 62 184 L 194 184 Z"/>
+    </g>
+    <line x1="128" y1="184" x2="128" y2="206" stroke="#D4B378" stroke-width="1.5" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="128" cy="212" r="5" fill="#D4B378"/>
+  </g>
+
+  <!-- Wordmark, right of the mark, optically centred to it -->
+  <text x="668" y="205" font-family="Georgia, 'Times New Roman', serif" font-size="150" letter-spacing="2" fill="#1c1917">Atelier<tspan fill="#D4B378">.</tspan></text>
+</svg>

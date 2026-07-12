@@ -674,6 +674,13 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
         // so the model can't return a malformed or partial object. Requires
         // JSON mode (responseMimeType above). Only passed by callers that opt in.
         ...(opts.responseSchema ? { responseSchema: opts.responseSchema } : {}),
+        // Disable 2.5 Flash's thinking phase — same rationale (and placement
+        // note) as geminiTextStream below: thinking emits zero tokens for
+        // 20–60s, which is why "Suggest a look" felt slow. Callers wanting
+        // deep analysis can pass opts.thinkingBudget explicitly.
+        thinkingConfig: {
+          thinkingBudget: opts.thinkingBudget ?? 0,
+        },
       },
     });
     const result = await model.generateContent(prompt);
@@ -836,6 +843,12 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
       generationConfig: {
         temperature: opts.temperature ?? 0.4,
         ...(opts.jsonMode ? { responseMimeType: 'application/json' } : {}),
+        // Same thinking-phase disable as geminiText/geminiTextStream —
+        // identify/label/receipt calls are quick classifications that don't
+        // need it, and it was the hidden latency on every photo import.
+        thinkingConfig: {
+          thinkingBudget: opts.thinkingBudget ?? 0,
+        },
       },
     });
     const result = await model.generateContent([

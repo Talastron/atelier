@@ -635,8 +635,8 @@ export function SuggestALookDemo() {
                           {item.slot}
                         </p>
                         <p
-                          className="text-[11px] truncate mt-0.5"
-                          style={{ fontFamily: 'var(--atelier-font-display)' }}
+                          className="text-[11px] line-clamp-2 mt-0.5"
+                          style={{ fontFamily: 'var(--atelier-font-display)', lineHeight: 1.25, minHeight: '2.5em' }}
                         >
                           {item.name}
                         </p>

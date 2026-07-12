@@ -8724,7 +8724,7 @@ function PublicShareView({ shareId }) {
         </p>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display text-stone-900">{name || (isLookbook ? 'A lookbook' : 'A look')}</h1>
         {reasoning && (
-          <p className="mt-4 text-stone-600 italic max-w-2xl leading-relaxed">"{reasoning}"</p>
+          <p className="mt-4 text-stone-600 italic max-w-2xl leading-relaxed">"{renderTextWithChips(reasoning, { items: pieces })}"</p>
         )}
 
         {isLookbook ? (
@@ -8744,7 +8744,7 @@ function PublicShareView({ shareId }) {
                     <h2 className="font-display text-2xl sm:text-3xl text-stone-900">{l.name}</h2>
                     <span className="text-[10px] tracking-widest uppercase text-stone-400">{(l.pieces || []).length} pieces</span>
                   </div>
-                  {l.reasoning && <p className="text-stone-600 italic max-w-2xl mb-6 leading-relaxed">"{l.reasoning}"</p>}
+                  {l.reasoning && <p className="text-stone-600 italic max-w-2xl mb-6 leading-relaxed">"{renderTextWithChips(l.reasoning, { items: l.pieces || [] })}"</p>}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {(l.pieces || []).map((p) => (
                       <div key={p.id} className="flex flex-col gap-3">

@@ -930,13 +930,23 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               <h3 className="font-display text-xl md:text-2xl text-stone-900">Backup &amp; export</h3>
             </div>
             <p className="text-stone-500 text-sm leading-relaxed max-w-xl">
-              Download your entire wardrobe — items, photos, outfits, shops, size charts, measurements — as a single JSON file. Portable to any database, future-proof against vendor changes.
+              Download your entire wardrobe — items, photos, outfits, inspirations, shops, size charts, measurements, and your Concierge chat history — as a single JSON file. Portable to any database, future-proof against vendor changes.
             </p>
           </div>
-          <button onClick={() => downloadJson(
-            `atelier-wardrobe-${todayISO()}.json`,
-            { exportedAt: new Date().toISOString(), version: 1, user: { email: user?.email, displayName: user?.displayName }, measurements, items, outfits, shops }
-          )} className="bg-stone-900 text-white px-5 py-3 rounded-full font-medium text-sm flex items-center gap-2 hover:bg-stone-700 transition-all shadow-lg shrink-0">
+          <button onClick={async () => {
+            // Concierge history isn't held in ProfileView's props, so pull the
+            // current thread on demand. Best-effort: a failed load still exports
+            // everything else rather than blocking the download.
+            let concierge = [];
+            try {
+              const { loadCurrentThread } = await import('../conciergeStore.js');
+              concierge = (await loadCurrentThread()).messages || [];
+            } catch { /* export the rest regardless */ }
+            downloadJson(
+              `atelier-wardrobe-${todayISO()}.json`,
+              { exportedAt: new Date().toISOString(), version: 2, user: { email: user?.email, displayName: user?.displayName }, measurements, items, outfits, inspirations, shops, concierge }
+            );
+          }} className="bg-stone-900 text-white px-5 py-3 rounded-full font-medium text-sm flex items-center gap-2 hover:bg-stone-700 transition-all shadow-lg shrink-0">
             <Download size={16} strokeWidth={1.5} /> Download backup
           </button>
         </div>

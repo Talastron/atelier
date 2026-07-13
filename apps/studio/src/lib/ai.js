@@ -721,6 +721,86 @@ Respond ONLY with JSON: {"verdict": "...", "recommendation": "...", "confidence"
   };
 }
 
+// ── The Considered Purchase ────────────────────────────────────────────────
+// Score a piece the user is thinking of buying AGAINST their real wardrobe:
+// how many new outfits it unlocks, what it duplicates, its likely cost-per-wear,
+// fit risk, and whether it fills a gap — ending in a calm buy/wait/skip verdict.
+// The moat feature: only Atelier can answer this, because only Atelier holds the
+// user's owned wardrobe. See docs/superpowers/specs/2026-07-13-the-considered-purchase-spec.md
+const CONSIDERED_PURCHASE_SCHEMA = Schema.object({
+  properties: {
+    verdictLine: Schema.string(),
+    recommendation: Schema.string(),
+    outfitsUnlocked: Schema.number(),
+    overlaps: Schema.array({ items: Schema.string() }),
+    predictedCostPerWear: Schema.string(),
+    fitNote: Schema.string(),
+    gapNote: Schema.string(),
+    reasoning: Schema.string(),
+  },
+});
+
+export async function scorePurchaseWithGemini({ item, items = [], measurements = {} }) {
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
+  if (!item) return null;
+
+  const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
+  const wardrobe = owned.slice(0, 120).map((i) => {
+    const cat = i.subCategory ? `${i.category}/${i.subCategory}` : i.category;
+    return `${i.name}|${i.brand || '?'}|${cat}|colors=${itemColors(i).join(',') || '-'}|styles=${itemStyles(i).join(',') || '-'}`;
+  }).join('\n');
+
+  const cat = item.subCategory ? `${item.category}/${item.subCategory}` : item.category;
+  const price = item.price != null && item.price !== '' ? `£${item.price}` : '(no price recorded)';
+  const m = measurements || {};
+  const body = [
+    m.height && `height ${m.height}cm`, m.chest && `chest/bust ${m.chest}cm`,
+    m.waist && `waist ${m.waist}cm`, m.hips && `hips ${m.hips}cm`,
+  ].filter(Boolean).join(', ') || 'no body measurements recorded';
+
+  const prompt = `You are a candid, numerate wardrobe advisor for a "considered wardrobe" app. The house view: patience is a feature, and the best purchase is often the one not made. Assess honestly whether buying this piece is a considered choice for THIS person, given what they already own.
+
+THE PIECE BEING CONSIDERED:
+- ${item.name || 'Unnamed piece'}${item.brand ? ' · ' + item.brand : ''}
+- category: ${cat}
+- price: ${price}
+- colours: ${itemColors(item).join(', ') || '—'}${item.materials?.length ? `\n- materials: ${item.materials.join(', ')}` : ''}
+
+THEIR BODY: ${body}
+
+THEY ALREADY OWN (name|brand|category|colors|styles):
+${wardrobe || '(their wardrobe is empty)'}
+
+Assess, honestly and without hype:
+1. outfitsUnlocked — roughly how many NEW complete outfits (a dress, OR a top + bottom, plus optional shoes/accessory) this piece makes possible using pieces they ALREADY own. Be realistic, not generous.
+2. overlaps — the NAMES of owned pieces that are close relatives (same category + compatible colour/silhouette) that this would duplicate. Empty array if none.
+3. predictedCostPerWear — estimate realistic yearly wears for this category and person, divide the price, return like "£4.20", or "—" if no price.
+4. fitNote — one short sentence on fit risk vs their body/brand, or "" if nothing to note.
+5. gapNote — does it fill a genuine gap, or add to a saturated area? One short sentence.
+6. verdictLine — a short, calm verdict in the brand's quiet voice. Max 4 words, ends with a full stop. Examples: "A considered yes." · "Worth the wait." · "You may already own this." · "Leave it on the rail."
+7. recommendation — exactly one of "buy", "wait", "skip".
+8. reasoning — ONE elegant sentence tying it together.
+
+Favour "wait" when it duplicates what they own or the cost-per-wear is poor; reserve "buy" for pieces that genuinely unlock looks and fill a real gap.
+
+Respond ONLY as JSON matching the schema.`;
+
+  const text = await geminiText(prompt, { temperature: 0.5, jsonMode: true, responseSchema: CONSIDERED_PURCHASE_SCHEMA }, 'considered-purchase');
+  let p;
+  try { p = JSON.parse(text); } catch { return null; }
+  if (!p?.verdictLine) return null;
+  return {
+    verdictLine: String(p.verdictLine),
+    recommendation: ['buy', 'wait', 'skip'].includes(p.recommendation) ? p.recommendation : 'wait',
+    outfitsUnlocked: typeof p.outfitsUnlocked === 'number' ? Math.max(0, Math.round(p.outfitsUnlocked)) : null,
+    overlaps: Array.isArray(p.overlaps) ? p.overlaps.filter((x) => typeof x === 'string' && x.trim()).slice(0, 4) : [],
+    predictedCostPerWear: typeof p.predictedCostPerWear === 'string' ? p.predictedCostPerWear : '—',
+    fitNote: typeof p.fitNote === 'string' ? p.fitNote : '',
+    gapNote: typeof p.gapNote === 'string' ? p.gapNote : '',
+    reasoning: typeof p.reasoning === 'string' ? p.reasoning : '',
+  };
+}
+
 // generateConciergeReply — multi-turn chat with the user's personal
 // stylist. Builds a single prompt that concatenates system context
 // (wardrobe inventory, most-worn pieces, style profile, owner name,

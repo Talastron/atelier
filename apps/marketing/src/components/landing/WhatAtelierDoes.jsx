@@ -51,15 +51,20 @@ const W = (f) => `/wardrobe/${f}.jpg`;
 function Chrome({ children, label }) {
   return (
     <div
-      className="rounded-[1.25rem] overflow-hidden"
+      className="rounded-[1.25rem] overflow-hidden flex flex-col"
       style={{
+        // ONE fixed-size studio "window". Every view renders inside the same
+        // frame, sized to fit the richest screen (the wardrobe grid); shorter
+        // screens centre vertically so they read as balanced, not broken.
+        // Switching tabs never changes the box size.
+        height: 524,
         background: '#ffffff',
         border: '1px solid var(--atelier-stone-200)',
         boxShadow: '0 24px 48px -20px rgba(28,25,23,0.18), 0 4px 12px rgba(28,25,23,0.05)',
       }}
     >
       <div
-        className="flex items-center gap-2 px-4"
+        className="flex items-center gap-2 px-4 shrink-0"
         style={{ height: 34, borderBottom: '1px solid var(--atelier-stone-100)', background: 'var(--atelier-stone-50)' }}
       >
         <span className="flex gap-1.5" aria-hidden="true">
@@ -71,7 +76,9 @@ function Chrome({ children, label }) {
           edit.myatelier.style · {label}
         </span>
       </div>
-      <div style={{ padding: '1.1rem 1.2rem 1.25rem' }}>{children}</div>
+      <div style={{ padding: '1.1rem 1.2rem 1.25rem', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ width: '100%' }}>{children}</div>
+      </div>
     </div>
   );
 }
@@ -123,7 +130,7 @@ function CatalogueVignette() {
         ))}
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {CATALOGUE_TILES.map((f) => <Tile key={f} src={W(f)} />)}
+        {CATALOGUE_TILES.map((f) => <Tile key={f} src={W(f)} ratio="1" />)}
       </div>
     </Chrome>
   );

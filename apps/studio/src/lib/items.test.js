@@ -9,18 +9,18 @@ describe('currentSeasonLabel', () => {
   });
 
   it('maps June, July, August to Summer', () => {
-    expect(currentSeasonLabel(new Date('2026-06-01'))).toBe('Summer');
+    expect(currentSeasonLabel(new Date(2026, 5, 1))).toBe('Summer'); // June 1
     expect(currentSeasonLabel(new Date('2026-07-13'))).toBe('Summer');
     expect(currentSeasonLabel(new Date('2026-08-31'))).toBe('Summer');
   });
 
   it('maps September, October, November to Autumn', () => {
-    expect(currentSeasonLabel(new Date('2026-09-01'))).toBe('Autumn');
+    expect(currentSeasonLabel(new Date(2026, 8, 1))).toBe('Autumn'); // Sept 1
     expect(currentSeasonLabel(new Date('2026-11-30'))).toBe('Autumn');
   });
 
   it('maps December, January, February to Winter', () => {
-    expect(currentSeasonLabel(new Date('2026-12-01'))).toBe('Winter');
+    expect(currentSeasonLabel(new Date(2026, 11, 1))).toBe('Winter'); // Dec 1
     expect(currentSeasonLabel(new Date('2026-01-15'))).toBe('Winter');
     expect(currentSeasonLabel(new Date('2026-02-28'))).toBe('Winter');
   });

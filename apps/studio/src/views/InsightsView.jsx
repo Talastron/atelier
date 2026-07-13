@@ -1208,10 +1208,29 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
     .sort((a, b) => b._wears - a._wears)
     .slice(0, 5);
 
-  // Stale items: owned, not worn in 90+ days (or never)
+  // Season name — moved up from further below (it's also used there, for
+  // season-coverage tracking) so the "stale" filter immediately below can
+  // exclude out-of-season pieces. Same computation, single definition.
+  const seasonName = now.getMonth() >= 2 && now.getMonth() <= 4 ? 'Spring'
+    : now.getMonth() >= 5 && now.getMonth() <= 7 ? 'Summer'
+    : now.getMonth() >= 8 && now.getMonth() <= 10 ? 'Autumn'
+    : 'Winter';
+
+  // Stale items: owned 90+ days, currently in-season, not worn in 90+ days
+  // (or never). The ownership and season guards stop a brand-new purchase
+  // or an out-of-season piece (a winter coat in July) from reading as
+  // "neglected" — it would be incoherent to call something "not worn in 90
+  // days" when it hasn't even been owned that long, or to flag it when it
+  // isn't wearable right now anyway.
+  const ninetyDaysAgo = Date.now() - 90 * 86_400_000;
   const stale = ownedItems
     .map((i) => ({ ...i, _days: daysSinceLastWorn(i) }))
     .filter((i) => i._days === null || i._days >= 90)
+    .filter((i) => i.createdAt && new Date(i.createdAt).getTime() < ninetyDaysAgo)
+    .filter((i) => {
+      const s = itemSeasons(i);
+      return s.length === 0 || s.includes(seasonName);
+    })
     .sort((a, b) => (b._days ?? Infinity) - (a._days ?? Infinity))
     .slice(0, 6);
 
@@ -1272,10 +1291,8 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
   // Season coverage — % of in-season owned pieces worn at least once in
   // the current season window. Behavioural nudge to actually wear what
   // you own; surfaces forgotten pieces in the right time of year.
-  const seasonName = now.getMonth() >= 2 && now.getMonth() <= 4 ? 'Spring'
-    : now.getMonth() >= 5 && now.getMonth() <= 7 ? 'Summer'
-    : now.getMonth() >= 8 && now.getMonth() <= 10 ? 'Autumn'
-    : 'Winter';
+  // (seasonName itself is now defined earlier, alongside the "stale" filter
+  // that also needs it — see above.)
   const seasonStart = (() => {
     const y = now.getFullYear();
     const m = now.getMonth();

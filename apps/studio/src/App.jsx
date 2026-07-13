@@ -4275,7 +4275,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       ].filter(([, v]) => v).map(([label, value]) => (
                         <div key={label} className="flex items-baseline justify-between gap-4 py-2.5 border-t border-stone-100 first:border-t-0">
                           <dt className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0">{label}</dt>
-                          <dd className="text-sm text-stone-800 text-right">{value}</dd>
+                          <dd className="text-sm text-stone-800 text-right min-w-0 break-words">{value}</dd>
                         </div>
                       ))}
                     </dl>
@@ -4304,9 +4304,9 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               </div>
             )}
 
-            {item.status === 'wishlist' && (
-              <FitVerdictSection item={item} measurements={measurements} inspirations={inspirations} onSaveFit={onSaveFit} />
-            )}
+            {/* The Concierge's taste read is now folded into The Considered
+                Purchase above (its verdict weighs taste fit), so a separate
+                style-fit card here only competed with the buy verdict. */}
 
             {!fit && item.status === 'wishlist' && item.brand && (() => {
               const hasMeasurements = measurements?.chest || measurements?.waist || measurements?.hips;

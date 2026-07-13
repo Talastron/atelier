@@ -2,7 +2,7 @@
 // vision analysis, naming/tagging, concierge chat, style manifesto, travel
 // capsule. Wired via Firebase AI Logic (App Check verified, no API key in bundle).
 import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream, Schema } from "../firebase.js";
-import { itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
+import { currentSeasonLabel, itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
 import { buildItemFitPrompt, parseAndNormalizeFit, selectAspirationBasis, buildItemSummaryLine } from './itemFit.js';
 import { weatherLabel } from "./weather.js";
 import { ensureClothingBase, hasClothingBase } from "./outfit.js";
@@ -846,6 +846,23 @@ export async function generateConciergeReply({ messages, items = [], outfits = [
     .map((x) => `${x.it.name} × ${x.count}`)
     .join(', ');
 
+  // Least-worn signal — same guards as the Insights "Stale" panel (owned
+  // 90+ days, currently in-season) so a typed "what have I worn least"
+  // question doesn't get answered from a brand-new or out-of-season piece.
+  const currentSeason = currentSeasonLabel();
+  const ninetyDaysAgo = Date.now() - 90 * 86_400_000;
+  const leastWorn = [...owned]
+    .filter((it) => it.createdAt && new Date(it.createdAt).getTime() < ninetyDaysAgo)
+    .filter((it) => {
+      const seasons = itemSeasons(it);
+      return seasons.length === 0 || seasons.includes(currentSeason);
+    })
+    .map((it) => ({ it, count: itemWearCount(it) }))
+    .sort((a, b) => a.count - b.count)
+    .slice(0, 8)
+    .map((x) => `${x.it.name} × ${x.count}`)
+    .join(', ');
+
   // Saved outfits the stylist can suggest by name.
   const savedLooks = outfits.slice(0, 30).map((o) => {
     const ct = Object.values(o).filter((v) => v && typeof v === 'object' && (v.id || Array.isArray(v))).length;
@@ -951,6 +968,7 @@ ${itemIndex}
 Today is ${todayLabel}.
 ${styleProfile ? `\nThe client's style profile: ${styleProfile}\n` : ''}
 ${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
+${leastWorn ? `\nLEAST WORN (in season, owned 90+ days): ${leastWorn}` : ''}
 ${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}
 ${chipRule}${wearContextsBlock}${eventsBlock}
 When proposing an outfit, format as:

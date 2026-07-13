@@ -428,6 +428,14 @@ BRAND IDENTIFICATION (be conservative):
 CRITICAL RULE — NO DOUBLE-DIPPING:
 If you matched a garment to a wardrobe item, do NOT also list it as missing. Every garment in the inspiration must be EITHER matched OR missing, never both.
 
+COMPLETION VERDICT:
+Write one calm, editorial line judging how much of THIS look the user could wear today from pieces they already own, based on the garments you just matched above. No score, no percentage, no price, no currency, no exclamation marks — speak only in terms of pieces owned vs missing.
+- All garments matched: "You already own this look."
+- One garment missing: "One piece would complete this."
+- Several missing, some matched: "Two pieces would complete this." / "A different direction for you, but three pieces in."
+- Nothing matched: "Nothing here yet from your wardrobe."
+Ground the line in the exact garments you just listed — never state or imply a count separately from what they show.
+
 User's wardrobe (id|name|brand|category|colors|styles):
 ${wardrobeSummary}
 
@@ -444,6 +452,7 @@ Respond ONLY with valid JSON in this exact shape:
       "buyingNote": "string or null — only when matchedItemId is null. Include a brand-or-style suggestion when useful (e.g. 'a tailored navy blazer with peak lapels — Ralph Lauren or Theory style'). When matchedItemId is set with confidence medium or low, you MAY instead include a note of the form 'you have a similar piece but the inspiration\\'s is [more relaxed / more cropped / different material]' only if the difference is meaningful — otherwise leave null."
     }
   ],
+  "completionVerdict": "one calm line — see COMPLETION VERDICT rules above",
   "summary": "2-3 sentences describing the overall look — its atmosphere, what makes it cohesive, the kind of moment it suggests. Editorial voice, like a stylist captioning the page in a magazine. Avoid generic words like 'stylish', 'chic', 'fresh' — reach for specificity."
 }
 
@@ -453,7 +462,8 @@ Rules for the response:
 - When matchedItemId is set: matchConfidence MUST be 'high', 'medium', or 'low'. buyingNote is optional (null unless you want to note a meaningful difference).
 - When matchedItemId is null: matchConfidence MUST be null. buyingNote MUST be a short specific suggestion (<=90 chars).
 - brand_guess is independent of matching — you can guess a brand on the inspiration whether or not the user owns something matching.
-- Never invent ids. Never list the same id twice.`;
+- Never invent ids. Never list the same id twice.
+- completionVerdict must be consistent with the garments array you return in THIS SAME response: judge how many of exactly those garments are matched vs missing. Never mention price or money.`;
 
   const text = await geminiTextVision(prompt, imageDataUrl, { temperature: 0.2, jsonMode: true }, 'inspiration-analysis');
   if (!text) throw new Error('The Concierge could not analyse this photo');
@@ -479,11 +489,18 @@ Rules for the response:
     if (note) missingPieces.push(note);
   }
 
+  // Derived deterministically from the already-validated match list, not
+  // from the model — piecesOwned/piecesMissing can never drift from the
+  // garments actually shown, unlike a count the model states separately.
+  const dedupedMatchIds = [...new Set(wardrobeMatchIds)];
   return {
     garments,                                  // new shape (preferred)
-    wardrobeMatchIds: [...new Set(wardrobeMatchIds)],
+    wardrobeMatchIds: dedupedMatchIds,
     missingPieces,
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+    completionVerdict: typeof parsed.completionVerdict === 'string' ? parsed.completionVerdict : '',
+    piecesOwned: dedupedMatchIds.length,
+    piecesMissing: garments.length - dedupedMatchIds.length,
   };
 }
 

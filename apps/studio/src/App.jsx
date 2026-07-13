@@ -3773,7 +3773,12 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   const runPurchaseVerdict = async () => {
     setPurchaseVerdictBusy(true); setPurchaseVerdictError(null);
     try {
-      const v = await scorePurchaseWithGemini({ item, items: allItems, measurements });
+      // Hard timeout so a slow/stalled model call can never leave the button
+      // stuck in its "Scoring…" state indefinitely.
+      const v = await Promise.race([
+        scorePurchaseWithGemini({ item, items: allItems, measurements }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Took too long — try again.')), 40000)),
+      ]);
       if (v) setPurchaseVerdict(v);
       else setPurchaseVerdictError('Could not score this one — try again.');
     } catch (e) {
@@ -4304,9 +4309,9 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               </div>
             )}
 
-            {/* The Concierge's taste read is now folded into The Considered
-                Purchase above (its verdict weighs taste fit), so a separate
-                style-fit card here only competed with the buy verdict. */}
+            {item.status === 'wishlist' && (
+              <FitVerdictSection item={item} measurements={measurements} inspirations={inspirations} onSaveFit={onSaveFit} />
+            )}
 
             {!fit && item.status === 'wishlist' && item.brand && (() => {
               const hasMeasurements = measurements?.chest || measurements?.waist || measurements?.hips;

@@ -1126,7 +1126,7 @@ export function Hero() {
 
       <div
         className="relative w-full"
-        style={{ maxWidth: 'var(--atelier-container-max)', margin: '0 auto' }}
+        style={{ maxWidth: 'var(--atelier-content-max)', margin: '0 auto' }}
       >
         {/* Masthead band */}
         <div className="flex items-center justify-center gap-4 mb-6">

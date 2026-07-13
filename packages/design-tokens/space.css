@@ -2,9 +2,14 @@
 /* Atelier spacing tokens. Built on an 8px baseline grid. */
 
 :root {
-  /* Page container */
+  /* Page container.
+     --atelier-container-max is the OUTER bound (used by the Nav, which puts the
+     page padding INSIDE it). Section *content* wrappers should use
+     --atelier-content-max so their left/right edges line up exactly with the
+     Nav's logo and CTA. One page edge everywhere; no per-section drift. */
   --atelier-container-max: 1280px;
   --atelier-page-padding: clamp(1.5rem, 4vw, 3rem);
+  --atelier-content-max: calc(1280px - 2 * clamp(1.5rem, 4vw, 3rem));
 
   /* Vertical section rhythm — generous, luxurious */
   --atelier-section-padding-y: clamp(4rem, 8vw, 8rem);

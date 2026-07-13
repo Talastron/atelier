@@ -282,7 +282,9 @@ function StudioFrame() {
       className="mx-auto"
       style={{
         marginTop: 'clamp(2.5rem, 4vw, 4rem)',
-        width: 'min(100%, 980px)',
+        // Full content width — matches the sections below and aligns to the
+        // Nav logo/CTA. (Was capped at 980px, which left it looking inset.)
+        width: '100%',
         background: '#ffffff',
         border: '1px solid var(--atelier-stone-200)',
         borderRadius: 20,

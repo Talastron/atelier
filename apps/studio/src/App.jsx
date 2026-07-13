@@ -6118,6 +6118,31 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                   </button>
                 )}
 
+                {/* The Style Verdict — completion read against the owned
+                    wardrobe. Guarded on completionVerdict so inspirations
+                    analysed before this field existed just skip the card
+                    (they still show the garment list below unaffected). */}
+                {inspiration.analysis.completionVerdict && (
+                  <div className="bg-white border border-stone-200 rounded-2xl p-5 lg:p-6 smooth-shadow">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles size={13} strokeWidth={1.5} className="text-brass-500" />
+                      <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">The Style Verdict</h2>
+                    </div>
+                    <p className="font-display text-2xl lg:text-3xl text-stone-900 leading-tight">{inspiration.analysis.completionVerdict}</p>
+                    <dl className="mt-5">
+                      {[
+                        ['Pieces owned', String(inspiration.analysis.piecesOwned ?? 0)],
+                        ['Pieces missing', String(inspiration.analysis.piecesMissing ?? 0)],
+                      ].map(([label, value]) => (
+                        <div key={label} className="flex items-baseline justify-between gap-4 py-2.5 border-t border-stone-100 first:border-t-0">
+                          <dt className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0">{label}</dt>
+                          <dd className="text-sm text-stone-800 text-right min-w-0 break-words">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
+
                 {/* Garments as visual cards */}
                 {garments.length > 0 && (
                   <div>

@@ -50,7 +50,7 @@ import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExpor
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
-import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini } from './lib/ai.js';
+import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
@@ -3677,6 +3677,9 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
   const [fitEstimate, setFitEstimate] = useState(null);
   const [fitEstimateBusy, setFitEstimateBusy] = useState(false);
   const [fitEstimateError, setFitEstimateError] = useState(null);
+  const [purchaseVerdict, setPurchaseVerdict] = useState(null);
+  const [purchaseVerdictBusy, setPurchaseVerdictBusy] = useState(false);
+  const [purchaseVerdictError, setPurchaseVerdictError] = useState(null);
   const images = itemImages(item);
   const toast = useToast();
   // Touch swipe between items in the wardrobe list. Only horizontal gestures
@@ -3743,6 +3746,8 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
     setActivePhoto(0);
     setFitEstimate(null);
     setFitEstimateError(null);
+    setPurchaseVerdict(null);
+    setPurchaseVerdictError(null);
   }, [item.id]);
 
   const seasons = itemSeasons(item);
@@ -3763,6 +3768,23 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
       setFitEstimateError(e?.message || 'Fit estimate failed.');
     } finally {
       setFitEstimateBusy(false);
+    }
+  };
+  const runPurchaseVerdict = async () => {
+    setPurchaseVerdictBusy(true); setPurchaseVerdictError(null);
+    try {
+      // Hard timeout so a slow/stalled model call can never leave the button
+      // stuck in its "Scoring…" state indefinitely.
+      const v = await Promise.race([
+        scorePurchaseWithGemini({ item, items: allItems, measurements }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Took too long — try again.')), 40000)),
+      ]);
+      if (v) setPurchaseVerdict(v);
+      else setPurchaseVerdictError('Could not score this one — try again.');
+    } catch (e) {
+      setPurchaseVerdictError(e?.message || 'Scoring failed.');
+    } finally {
+      setPurchaseVerdictBusy(false);
     }
   };
   const wears = itemWearCount(item);
@@ -4235,6 +4257,57 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 </div>
               );
             })()}
+
+            {item.status === 'wishlist' && (
+              <div className="bg-white border border-stone-200 rounded-2xl p-5 lg:p-6 smooth-shadow">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={13} strokeWidth={1.5} className="text-brass-500" />
+                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">The Considered Purchase</h2>
+                </div>
+                {purchaseVerdict ? (
+                  <div className="animate-in fade-in duration-300">
+                    <p className="font-display text-2xl lg:text-3xl text-stone-900 leading-tight">{purchaseVerdict.verdictLine}</p>
+                    {purchaseVerdict.reasoning && (
+                      <p className="text-sm italic text-stone-600 leading-relaxed mt-2">{purchaseVerdict.reasoning}</p>
+                    )}
+                    <dl className="mt-5">
+                      {[
+                        ['Outfits unlocked', purchaseVerdict.outfitsUnlocked != null ? `${purchaseVerdict.outfitsUnlocked} new look${purchaseVerdict.outfitsUnlocked === 1 ? '' : 's'} from pieces you own` : null],
+                        ['Cost per wear', purchaseVerdict.predictedCostPerWear && purchaseVerdict.predictedCostPerWear !== '—' ? purchaseVerdict.predictedCostPerWear : null],
+                        ['You already own', purchaseVerdict.overlaps.length ? purchaseVerdict.overlaps.join(', ') : null],
+                        ['Fit', purchaseVerdict.fitNote || null],
+                        ['In your wardrobe', purchaseVerdict.gapNote || null],
+                      ].filter(([, v]) => v).map(([label, value]) => (
+                        <div key={label} className="flex items-baseline justify-between gap-4 py-2.5 border-t border-stone-100 first:border-t-0">
+                          <dt className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0">{label}</dt>
+                          <dd className="text-sm text-stone-800 text-right min-w-0 break-words">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <div className="mt-5 flex items-center gap-3 flex-wrap">
+                      <span className="text-[11px] tracking-[0.18em] uppercase text-brass-700 font-medium">Hold 72 hours, then decide</span>
+                      <button onClick={runPurchaseVerdict} disabled={purchaseVerdictBusy}
+                        className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline disabled:opacity-50">
+                        {purchaseVerdictBusy ? 'Re-scoring…' : 'Re-score'}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-stone-400 italic mt-3">Scored against your own wardrobe. The studio advises; the decision is yours.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-stone-600 leading-relaxed mb-3">
+                      Before you buy it, ask the studio. Atelier scores this against everything you already own — the new outfits it unlocks, what it duplicates, its likely cost-per-wear — then suggests a pause.
+                    </p>
+                    <button onClick={runPurchaseVerdict} disabled={purchaseVerdictBusy}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-xs font-medium hover:bg-stone-700 transition-colors disabled:opacity-60">
+                      <Sparkles size={13} strokeWidth={1.5} className="text-brass-300" />
+                      {purchaseVerdictBusy ? 'Scoring…' : 'Is it worth it?'}
+                    </button>
+                    {purchaseVerdictError && <p className="text-xs text-red-600 mt-2">{purchaseVerdictError}</p>}
+                  </>
+                )}
+              </div>
+            )}
 
             {item.status === 'wishlist' && (
               <FitVerdictSection item={item} measurements={measurements} inspirations={inspirations} onSaveFit={onSaveFit} />

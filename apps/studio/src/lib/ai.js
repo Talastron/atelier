@@ -721,6 +721,108 @@ Respond ONLY with JSON: {"verdict": "...", "recommendation": "...", "confidence"
   };
 }
 
+// ── The Considered Purchase ────────────────────────────────────────────────
+// Score a piece the user is thinking of buying AGAINST their real wardrobe:
+// how many new outfits it unlocks, what it duplicates, its likely cost-per-wear,
+// fit risk, and whether it fills a gap — ending in a calm buy/wait/skip verdict.
+// The moat feature: only Atelier can answer this, because only Atelier holds the
+// user's owned wardrobe. See docs/superpowers/specs/2026-07-13-the-considered-purchase-spec.md
+const CONSIDERED_PURCHASE_SCHEMA = Schema.object({
+  properties: {
+    verdictLine: Schema.string(),
+    recommendation: Schema.string(),
+    outfitsUnlocked: Schema.number(),
+    overlaps: Schema.array({ items: Schema.string() }),
+    predictedCostPerWear: Schema.string(),
+    fitNote: Schema.string(),
+    gapNote: Schema.string(),
+    reasoning: Schema.string(),
+  },
+});
+
+export async function scorePurchaseWithGemini({ item, items = [], measurements = {} }) {
+  if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
+  if (!item) return null;
+
+  const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
+  const wardrobe = owned.slice(0, 120).map((i) => {
+    const cat = i.subCategory ? `${i.category}/${i.subCategory}` : i.category;
+    return `${i.name}|${i.brand || '?'}|${cat}|colors=${itemColors(i).join(',') || '-'}|styles=${itemStyles(i).join(',') || '-'}`;
+  }).join('\n');
+
+  const cat = item.subCategory ? `${item.category}/${item.subCategory}` : item.category;
+  const price = item.price != null && item.price !== '' ? `£${item.price}` : '(no price recorded)';
+  const m = measurements || {};
+  const body = [
+    m.height && `height ${m.height}cm`, m.chest && `chest/bust ${m.chest}cm`,
+    m.waist && `waist ${m.waist}cm`, m.hips && `hips ${m.hips}cm`,
+  ].filter(Boolean).join(', ') || 'no body measurements recorded';
+
+  const prompt = `You are a warm, numerate wardrobe advisor for a "considered wardrobe" app. You are NOT anti-shopping — a considered wardrobe still grows, and part of your job is to give people confidence in a good buy. You are honest about genuine duplication or poor value, but your default posture is encouraging.
+
+THE PIECE BEING CONSIDERED:
+- ${item.name || 'Unnamed piece'}${item.brand ? ' · ' + item.brand : ''}
+- category: ${cat}
+- price: ${price}
+- colours: ${itemColors(item).join(', ') || '—'}${item.materials?.length ? `\n- materials: ${item.materials.join(', ')}` : ''}
+
+THEIR BODY: ${body}
+
+THEY ALREADY OWN (name|brand|category|colors|styles):
+${wardrobe || '(their wardrobe is empty)'}
+
+Judge this piece for THIS person, weighing four things together:
+- Taste fit: does it suit the palette, styles and spirit of the wardrobe they have built? A strong taste fit is a real point in its favour — if it is unmistakably "them", say so.
+- What it unlocks: outfitsUnlocked = roughly how many complete outfits (a dress, OR a top + bottom, plus optional shoes/accessory) it would work in with pieces they ALREADY own. Count where it genuinely combines; a versatile everyday piece is worth several, a true one-off fewer. Accessories (sunglasses, belts, bags, jewellery) and neutral staples pair with many outfits — never return 0 for a wearable, combinable piece.
+- Value: predictedCostPerWear = estimate realistic yearly wears for this category and person, then divide the price.
+- Fit & gap: any fit risk (fitNote), and whether it fills a gap or adds to a saturated area (gapNote).
+
+Then choose the recommendation — "buy", "wait", or "skip":
+- "buy": it suits them and adds something — a gap filled, a strong taste fit, a good cost-per-wear, or several outfits unlocked. This is the right call for MOST well-chosen pieces; be confident and encouraging.
+- "wait": promising, but the timing or value is not quite there — a very similar piece is still going strong, or the cost-per-wear looks high for now.
+- "skip": a clear duplicate of something they already own and wear, adding little.
+
+Overlap with what they own is NOT an automatic veto: a clear upgrade, a refresh of a tired staple, or A DIFFERENT COLOURWAY (a tortoiseshell where they own black, a camel where they own navy) is a legitimate addition that extends the wardrobe — lean positive on these. Only call something a duplicate when it is genuinely the same piece in the same colour family. Never contradict a genuine taste match — if it truly suits them, let the verdict reflect that warmth even while noting any overlap.
+
+Fields to return:
+- verdictLine: a short, warm verdict in the brand's quiet voice, max 4 words, ending in a full stop. It MUST match the recommendation. Buy: "A clear yes." / "This earns its place." / "Buy it well." — Wait: "Worth the wait." / "Nearly, not yet." — Skip: "You have this already." / "Leave it on the rail."
+- recommendation: exactly one of "buy", "wait", "skip".
+- outfitsUnlocked: an integer.
+- overlaps: the plain display NAME only of each owned piece it closely duplicates (e.g. "Black Chanel sunglasses"), or an empty array. Never include brand codes, colours, or the raw pipe-delimited data. Do NOT list a piece here if it is merely a different colour of this one.
+- predictedCostPerWear: a MONEY value ONLY, formatted like "£4.20". Never put words, a verdict, or a sentence in this field. Use "—" only when there is genuinely no price.
+- fitNote, gapNote: one short sentence each, or "".
+- reasoning: ONE elegant, encouraging sentence that fits the verdict.
+
+Respond ONLY as JSON matching the schema.`;
+
+  const text = await geminiText(prompt, { temperature: 0.5, jsonMode: true, responseSchema: CONSIDERED_PURCHASE_SCHEMA }, 'considered-purchase');
+  let p;
+  try { p = JSON.parse(text); } catch { return null; }
+  if (!p?.verdictLine) return null;
+  return {
+    verdictLine: String(p.verdictLine),
+    recommendation: ['buy', 'wait', 'skip'].includes(p.recommendation) ? p.recommendation : 'wait',
+    outfitsUnlocked: typeof p.outfitsUnlocked === 'number' ? Math.max(0, Math.round(p.outfitsUnlocked)) : null,
+    // Clean names only: strip any leaked "name|brand|cat|colors=…|styles=…"
+    // wardrobe-summary formatting down to the display name before the pipe.
+    overlaps: Array.isArray(p.overlaps)
+      ? p.overlaps
+          .filter((x) => typeof x === 'string' && x.trim())
+          .map((x) => x.split('|')[0].trim())
+          .filter(Boolean)
+          .slice(0, 4)
+      : [],
+    // Only accept a genuine money value ("£4.20", "4.20"); never a stray
+    // sentence the model may have leaked into this field.
+    predictedCostPerWear: (typeof p.predictedCostPerWear === 'string' && /^\s*£?\s*\d/.test(p.predictedCostPerWear) && p.predictedCostPerWear.length <= 12)
+      ? p.predictedCostPerWear.trim()
+      : '—',
+    fitNote: typeof p.fitNote === 'string' ? p.fitNote : '',
+    gapNote: typeof p.gapNote === 'string' ? p.gapNote : '',
+    reasoning: typeof p.reasoning === 'string' ? p.reasoning : '',
+  };
+}
+
 // generateConciergeReply — multi-turn chat with the user's personal
 // stylist. Builds a single prompt that concatenates system context
 // (wardrobe inventory, most-worn pieces, style profile, owner name,

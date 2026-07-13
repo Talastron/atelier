@@ -218,7 +218,7 @@ export function InvestmentLens() {
     >
       <div
         className="mx-auto"
-        style={{ maxWidth: 'var(--atelier-container-max)' }}
+        style={{ maxWidth: 'var(--atelier-content-max)' }}
       >
         {/* Section header */}
         <div className="text-center mb-14 lg:mb-16">

@@ -160,7 +160,7 @@ export function TravelCapsuleDemo() {
     >
       <div
         className="mx-auto"
-        style={{ maxWidth: 'var(--atelier-container-max)' }}
+        style={{ maxWidth: 'var(--atelier-content-max)' }}
       >
         {/* Section header */}
         <div className="text-center mb-10 lg:mb-12">

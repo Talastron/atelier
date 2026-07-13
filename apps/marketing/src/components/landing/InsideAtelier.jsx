@@ -520,7 +520,7 @@ export function InsideAtelier() {
       id="inside-atelier"
       style={{ background: 'var(--atelier-stone-50)', padding: 'clamp(4rem, 8vw, 7rem) var(--atelier-page-padding)' }}
     >
-      <div className="mx-auto" style={{ maxWidth: 1180 }}>
+      <div className="mx-auto" style={{ maxWidth: 'var(--atelier-content-max)' }}>
         {/* Header */}
         <div className="text-center" style={{ marginBottom: 'clamp(2rem, 4vw, 3rem)' }}>
           <div className="flex items-center justify-center gap-3" style={{ marginBottom: 18 }}>

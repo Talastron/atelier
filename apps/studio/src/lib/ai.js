@@ -492,6 +492,10 @@ Rules for the response:
   // Derived deterministically from the already-validated match list, not
   // from the model — piecesOwned/piecesMissing can never drift from the
   // garments actually shown, unlike a count the model states separately.
+  // Uses missingPieces.length (not the deduped wardrobeMatchIds set) so the
+  // count stays consistent even if the model mistakenly matches two
+  // different garments to the same wardrobe id — each garment is still
+  // counted individually, matching what the garment list itself will show.
   const dedupedMatchIds = [...new Set(wardrobeMatchIds)];
   return {
     garments,                                  // new shape (preferred)
@@ -499,8 +503,8 @@ Rules for the response:
     missingPieces,
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
     completionVerdict: typeof parsed.completionVerdict === 'string' ? parsed.completionVerdict : '',
-    piecesOwned: dedupedMatchIds.length,
-    piecesMissing: garments.length - dedupedMatchIds.length,
+    piecesOwned: garments.length - missingPieces.length,
+    piecesMissing: missingPieces.length,
   };
 }
 

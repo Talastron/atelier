@@ -1357,7 +1357,12 @@ function DigitalWardrobe() {
       const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
       const recentLog = pieces.flatMap((p) => (itemWearHistory(p) || []).map((d) => ({ date: d, name: p.name }))).slice(-5);
       const line = await narrateWearWithGemini({ outfit, items, recentLog, weather });
-      if (line) toast.show(line, { kind: 'default', duration: 6500 });
+      // Longer than the routine confirmation toasts (default 2.8s) — this is
+      // a one-off styling compliment worth actually reading, not a status
+      // ping, and it's the only toast left in this flow once the wear is
+      // logged (the redundant "Logged for today" toast at the call site
+      // was removed so this doesn't have to compete for attention).
+      if (line) toast.show(line, { kind: 'default', duration: 9000 });
     } catch { /* AI offline — no problem */ }
   };
   const handleSetWearNote = async (item, dateISO, note) => {
@@ -8116,13 +8121,12 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                       onClick={async () => {
                         setLogBusy(true);
                         try {
+                          // onLogWear (handleLogOutfitWear) already shows its own
+                          // "WORN" confirmation toast, plus an optional Concierge
+                          // narration line — a third confirmation toast here just
+                          // stacked on top and crowded out the narration before
+                          // it could be read. Don't duplicate the confirmation.
                           await onLogWear(logDate, logVerdict, logOccasion);
-                          toast.show(
-                            logDate === todayISO()
-                              ? 'Logged for today'
-                              : `Logged for ${new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`,
-                            { kind: 'success' }
-                          );
                           setJustLoggedDate(logDate); // offer the photo prompt for this wear
                           setLogVerdict(''); setLogOccasion(''); setLogDate(todayISO()); setWearLogExpanded(false);
                         } catch (err) {

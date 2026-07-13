@@ -3,19 +3,20 @@
 @theme {
   --font-display: 'Playfair Display', serif;
   --font-sans: 'Jost', sans-serif;
-  /* Brass / champagne accent — a muted gold that reads "luxury fashion" rather
-     than "warning highlighter". Used sparingly: hero CTAs, success markers,
-     thin editorial rules. Roughly 30% less saturated than amber-300/400. */
-  --color-brass-50:  #faf5ec;
-  --color-brass-100: #f3e9d0;
-  --color-brass-200: #e6d2a3;
+  /* Brass / champagne accent. MIRRORS @atelier/design-tokens (the single
+     source of truth — edit colors.css there first, then sync here). Golden
+     champagne per the brand brief: #D4B378 (light) -> #A8884C (deep), a
+     consistent gold hue that no longer browns out at the deep stops. */
+  --color-brass-50:  #fbf6ec;
+  --color-brass-100: #f5ead1;
+  --color-brass-200: #e9d3a6;
   --color-brass-300: #d4b378;
-  --color-brass-400: #c19a5b;
-  --color-brass-500: #b08349;
-  --color-brass-600: #946a3a;
-  --color-brass-700: #785532;
-  --color-brass-800: #5d422a;
-  --color-brass-900: #3d2b1c;
+  --color-brass-400: #c4a063;
+  --color-brass-500: #b69154;
+  --color-brass-600: #a8884c;
+  --color-brass-700: #8c7040;
+  --color-brass-800: #6e5833;
+  --color-brass-900: #4e3f26;
   /* Claret — a deep editorial wine for "over budget" / restrained alerts.
      Replaces saturated web-red (bg-red-500/text-red-700) on Insights so the
      warning stays in the brass/stone luxury palette instead of shouting like

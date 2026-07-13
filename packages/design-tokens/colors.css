@@ -1,15 +1,41 @@
 /* packages/design-tokens/colors.css */
-/* Atelier color tokens. Consumed by both apps via CSS custom properties. */
+/* Atelier colour tokens — the SINGLE SOURCE OF TRUTH for both apps.        */
+/* apps/marketing imports this via styles/global.css; apps/studio mirrors   */
+/* the brass + claret ramps in its Tailwind @theme (keep the two in sync —  */
+/* edit HERE first). Brass follows the brand brief: a golden champagne from  */
+/* #D4B378 (light) to #A8884C (deep), never browning out.                    */
 
 :root {
   /* Foundational neutrals */
   --atelier-cream: #F7F5F2;      /* primary background */
   --atelier-ink: #1c1917;        /* primary text, dark surfaces */
 
-  /* Brass — accent / luxury signature */
-  --atelier-brass-200: #E2C896;
-  --atelier-brass-300: #D4B378;
-  --atelier-brass-600: #A8884C;
+  /* Brass — accent / luxury signature. Golden champagne, consistent hue     */
+  /* across the whole ramp (brief #D4B378 -> #A8884C), tuned so the deep      */
+  /* stops stay gold rather than turning bronze.                             */
+  --atelier-brass-50:  #FBF6EC;
+  --atelier-brass-100: #F5EAD1;
+  --atelier-brass-200: #E9D3A6;
+  --atelier-brass-300: #D4B378;  /* brief — light */
+  --atelier-brass-400: #C4A063;
+  --atelier-brass-500: #B69154;
+  --atelier-brass-600: #A8884C;  /* brief — deep */
+  --atelier-brass-700: #8C7040;
+  --atelier-brass-800: #6E5833;
+  --atelier-brass-900: #4E3F26;
+
+  /* Claret — deep editorial wine for restrained "over budget" alerts.       */
+  /* Kept in the brass/stone luxury register, never a web-red.               */
+  --atelier-claret-50:  #f7eeec;
+  --atelier-claret-100: #ecd6d2;
+  --atelier-claret-200: #d8a8a1;
+  --atelier-claret-300: #b97a72;
+  --atelier-claret-400: #9a5048;
+  --atelier-claret-500: #7d3a32;
+  --atelier-claret-600: #6a2e27;
+  --atelier-claret-700: #56241f;
+  --atelier-claret-800: #401a16;
+  --atelier-claret-900: #2a110e;
 
   /* Stone — extended neutral scale, aligns with Tailwind stone */
   --atelier-stone-50:  #fafaf9;

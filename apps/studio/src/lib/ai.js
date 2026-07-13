@@ -395,8 +395,10 @@ export async function analyzeInspirationWithGemini({ imageDataUrl, items }) {
   if (!imageDataUrl) throw new Error('No image to analyze.');
 
   // Richer wardrobe summary — include subcategory, materials, and styles
-  // so the model has more signal to match. Cap at 120 (was 100).
-  const wardrobeSummary = items.slice(0, 120).map((i) => {
+  // so the model has more signal to match. Cap at 500 (was 120) — below
+  // that ceiling every owned item must be visible to matching, or a
+  // genuinely-owned piece past the cutoff gets silently treated as missing.
+  const wardrobeSummary = items.slice(0, 500).map((i) => {
     const cat = i.subCategory ? `${i.category}/${i.subCategory}` : i.category;
     const colours = itemColors(i).join(',') || '-';
     const styles = itemStyles(i).join(',') || '-';
@@ -409,11 +411,12 @@ YOUR TASK:
 For EACH visible garment in the inspiration photo, decide whether the user OWNS something close enough to wear, OR is MISSING a piece they would need to buy.
 
 MATCHING RULES (be GENEROUS — the user owns very few near-perfect matches; close is the target):
-- Same broad category (a "blouse" in the inspiration matches "Tops" in the wardrobe; a "shirt" matches "Tops/Shirts" OR "Tops/Blouses")
+- Same broad category is a HARD requirement that the "be generous" guidance below never overrides — a belt is never a match for a bag, a shoe is never a match for a boot, a bracelet is never a match for a necklace, even when the colour and material are identical. Generosity applies WITHIN a category (a slightly different silhouette, a close colour, a similar style) — never across categories. A category mismatch is always "missing", never a low-confidence match.
+- When multiple owned items in the SAME category could plausibly match, prefer the closest SUBTYPE (e.g. a "chain link bracelet" should match an owned chain bracelet over an owned cuff bracelet, if both exist in the wardrobe list) — do not settle for a same-category-but-wrong-subtype match when a better subtype match is available.
 - Compatible colour FAMILY (cream/ivory/white are interchangeable; navy/dark blue interchangeable; tan/camel/cognac interchangeable)
 - Compatible silhouette when both have silhouette info (loose fits loose, tailored fits tailored)
 - If the inspiration garment is generic (e.g. "white shirt") and the wardrobe has a "white linen shirt" or "white silk shirt" — that IS a match. The garment description does not need to be exact.
-- When in doubt, MATCH rather than mark missing. A user with a wardrobe of 100+ pieces almost always has a stand-in for any common item. Listing things as missing that they functionally own is the WORST failure mode.
+- When in doubt about SILHOUETTE, COLOUR, or SUBTYPE (never about CATEGORY), MATCH rather than mark missing. A user with a wardrobe of 100+ pieces almost always has a stand-in for any common item. Listing things as missing that they functionally own is the WORST failure mode — but a wrong-category match is worse still, since it tells the user they own something they do not.
 
 EXAMPLES of what counts as a match:
 - Inspiration "white linen button-down" + Wardrobe "Sleeveless Amalfi Linen Shirt" (White, by Holland Cooper) → MATCH (both white, both linen, both Tops)
@@ -478,8 +481,15 @@ Rules for the response:
   const missingPieces = [];
   for (const g of garments) {
     if (g.matchedItemId && typeof g.matchedItemId === 'string') {
-      // Verify the id actually exists in the wardrobe before trusting it
-      if (items.some((i) => i.id === g.matchedItemId)) {
+      // Verify the id exists AND that its category matches the garment's
+      // stated category before trusting the match. The model's own bias
+      // toward avoiding "missing" can otherwise produce cross-category
+      // matches (e.g. a belt matched to a bag) at low confidence — this is
+      // a hard rule in the prompt too, but checked here in code since it's
+      // mechanically verifiable and must never depend on the model alone.
+      const matchedItem = items.find((i) => i.id === g.matchedItemId);
+      const sameCategory = matchedItem && String(matchedItem.category || '').trim().toLowerCase() === String(g.category || '').trim().toLowerCase();
+      if (sameCategory) {
         wardrobeMatchIds.push(g.matchedItemId);
         continue;
       }

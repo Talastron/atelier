@@ -55,9 +55,10 @@ function Chrome({ children, label }) {
       style={{
         // ONE fixed-size studio "window". Every view renders inside the same
         // frame, sized to fit the richest screen (the wardrobe grid); shorter
-        // screens centre vertically so they read as balanced, not broken.
-        // Switching tabs never changes the box size.
-        height: 524,
+        // screens sit top-aligned like a real app screen. Sized to the richest
+        // view (the wardrobe grid); the others carry a little natural space at
+        // the foot. Switching tabs never changes the box size.
+        height: 432,
         background: '#ffffff',
         border: '1px solid var(--atelier-stone-200)',
         boxShadow: '0 24px 48px -20px rgba(28,25,23,0.18), 0 4px 12px rgba(28,25,23,0.05)',
@@ -76,9 +77,7 @@ function Chrome({ children, label }) {
           edit.myatelier.style · {label}
         </span>
       </div>
-      <div style={{ padding: '1.1rem 1.2rem 1.25rem', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ width: '100%' }}>{children}</div>
-      </div>
+      <div style={{ padding: '1.1rem 1.2rem 1.25rem', flex: 1, minHeight: 0, overflow: 'hidden' }}>{children}</div>
     </div>
   );
 }
@@ -102,8 +101,8 @@ function Tile({ src, ratio = '3/4', radius = 10 }) {
 // ── I. Catalogue — the wardrobe grid ───────────────────────────────────────
 
 const CATALOGUE_TILES = [
-  'jasmin-coat', 'mirabel-satin-blouse', 'gael-wool-blend-trousers',
-  'claire-pleat-detail-dress', 'merisa-gold-wide-fit-block-heel-sandals-', 'gold-vermeil-baroque-pearl-pendant-pearl',
+  'jasmin-coat', 'mirabel-satin-blouse', 'gael-wool-blend-trousers', 'marina-single-breasted-blazer',
+  'claire-pleat-detail-dress', 'merisa-gold-wide-fit-block-heel-sandals-', 'gold-vermeil-baroque-pearl-pendant-pearl', 'riley-pale-pink-silk-front-vest-top',
 ];
 
 function CatalogueVignette() {
@@ -129,7 +128,7 @@ function CatalogueVignette() {
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {CATALOGUE_TILES.map((f) => <Tile key={f} src={W(f)} ratio="1" />)}
       </div>
     </Chrome>
@@ -180,6 +179,28 @@ function LogVignette() {
         <p className="text-[11px]" style={{ color: 'var(--atelier-stone-600)' }}>
           Worn today · <em style={{ fontFamily: 'var(--atelier-font-display)' }}>Champagne silk vest</em> — 23rd wear this year
         </p>
+      </div>
+
+      {/* Most-worn strip — gives the diary a second beat and fills the frame */}
+      <div className="mt-4">
+        <p className="mb-2" style={EYEBROW}>Most worn this week</p>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { src: 'gene-silk-front-vest-top-in-champagne-si', n: 'Champagne silk vest', w: '3 wears' },
+            { src: 'gael-wool-blend-trousers', n: 'Wool-blend trousers', w: '2 wears' },
+            { src: 'mirabel-satin-blouse', n: 'Satin blouse', w: '2 wears' },
+          ].map((m) => (
+            <div key={m.src} className="flex items-center gap-2 rounded-xl px-2 py-1.5" style={{ background: 'var(--atelier-stone-50)', border: '1px solid var(--atelier-stone-100)' }}>
+              <div style={{ width: 26, height: 32, borderRadius: 6, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--atelier-stone-200)' }}>
+                <Pic src={W(m.src)} alt="" loading="lazy" className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] truncate" style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-800)' }}>{m.n}</p>
+                <p style={{ ...EYEBROW, fontSize: 7.5 }}>{m.w}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </Chrome>
   );

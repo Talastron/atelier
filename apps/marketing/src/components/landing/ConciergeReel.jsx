@@ -103,13 +103,13 @@ const HOLD = 7400; // ms per answer
 
 // ── content renderers ──────────────────────────────────────────────────────
 
-// A tile fills its grid cell (photo crops with object-cover) so the grid can
-// flex to the card's available height rather than driving a too-tall layout.
+// A tile shows the WHOLE garment (object-contain on a white cell) so nothing is
+// cropped; the cell flexes to the card's available height.
 function Tile({ file, name, delay }) {
   return (
     <figure className="cr-rv" style={{ '--cr-d': `${delay}s`, margin: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 1, minHeight: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: 'var(--atelier-stone-100)' }}>
-        <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center 32%' }} />
+      <div style={{ flex: 1, minHeight: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: '#fff', padding: 6 }}>
+        <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-contain" />
       </div>
       <figcaption style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11.5, marginTop: 6, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</figcaption>
     </figure>
@@ -123,8 +123,8 @@ function UnwornBody({ s }) {
     <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '1fr', gap: 8 }}>
       {s.tiles.map(([file, name, reason, count], i) => (
         <figure key={file + i} className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22 + i * STEP).toFixed(2)}s`, margin: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, minHeight: 0, position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: 'var(--atelier-stone-100)' }}>
-            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center 30%' }} />
+          <div style={{ flex: 1, minHeight: 0, position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: '#fff', padding: 6 }}>
+            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-contain" />
             <span style={{ position: 'absolute', top: 6, right: 6, background: 'var(--atelier-ink)', color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 10, fontWeight: 700, letterSpacing: '0.03em', padding: '3px 7px', borderRadius: 999 }}>{count}</span>
           </div>
           <p style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11.5, marginTop: 6, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
@@ -142,8 +142,8 @@ function CpwBody({ s }) {
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 9 }}>
       {s.rows.map(([file, name, wears, val, flag], i) => (
         <div key={file + i} className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22 + i * 0.16).toFixed(2)}s`, display: 'flex', alignItems: 'center', gap: 12, padding: '9px 11px', borderRadius: 12, background: flag ? 'rgba(212,179,120,0.10)' : 'var(--atelier-stone-50)', border: `1px solid ${flag ? 'rgba(212,179,120,0.4)' : 'var(--atelier-stone-200)'}` }}>
-          <div style={{ width: 44, height: 56, borderRadius: 8, flexShrink: 0, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)' }}>
-            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" />
+          <div style={{ width: 44, height: 56, borderRadius: 8, flexShrink: 0, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: '#fff', padding: 3 }}>
+            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-contain" />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 15, lineHeight: 1.2, color: 'var(--atelier-stone-800)' }}>{name}</p>

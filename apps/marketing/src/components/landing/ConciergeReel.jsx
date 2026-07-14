@@ -375,11 +375,11 @@ export function ConciergeReel() {
     <section
       id="concierge-reel"
       className="relative overflow-hidden"
-      style={{ background: 'var(--atelier-stone-50)', paddingBlock: 'clamp(3.5rem, 7vw, 6rem)', paddingInline: 'var(--atelier-page-padding)', borderTop: '1px solid rgba(212,179,120,0.18)' }}
+      style={{ background: 'var(--atelier-stone-50)', paddingBlock: 'clamp(2.75rem, 5vw, 4.5rem)', paddingInline: 'var(--atelier-page-padding)', borderTop: '1px solid rgba(212,179,120,0.18)' }}
     >
       <div className="relative mx-auto" style={{ maxWidth: 'var(--atelier-content-max)' }}>
         {/* section header */}
-        <div className="text-center" style={{ marginBottom: 'clamp(1.5rem, 3vw, 2.25rem)' }}>
+        <div className="text-center" style={{ marginBottom: 'clamp(1.15rem, 2.2vw, 1.6rem)' }}>
           <div className="flex items-center justify-center gap-3 mb-4">
             <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
             <p className="text-[10px] uppercase font-medium" style={{ letterSpacing: '0.28em', color: 'var(--atelier-brass-text, #836A3A)' }}>The Concierge at work</p>
@@ -392,35 +392,34 @@ export function ConciergeReel() {
 
         {/* the "ask" — the conversation panel, now ABOVE the cards so the
             answers below are fully visible. Light, wide, brass border-rule. */}
-        <div className="mx-auto" style={{ width: 'min(780px, 100%)' }}>
-          <div style={{ position: 'relative', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 20, padding: 'clamp(1.1rem, 2vw, 1.5rem) clamp(1.3rem, 2.6vw, 2rem)', boxShadow: '0 30px 70px -30px rgba(28,25,23,0.22), 0 8px 20px -12px rgba(28,25,23,0.1)' }}>
-            <div aria-hidden="true" style={{ position: 'absolute', inset: 8, border: '1px solid rgba(212,179,120,0.35)', borderRadius: 14, pointerEvents: 'none' }} />
-            <div className="relative">
-              <div className="flex items-center gap-2" style={{ marginBottom: 11 }}>
-                <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>✦</span>
-                <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700 }}>Ask the Concierge</span>
-              </div>
-              <div className="flex items-center justify-between gap-6" style={{ flexWrap: 'wrap' }}>
+        <div className="mx-auto" style={{ width: 'min(800px, 100%)' }}>
+          {/* one compact row: avatar + typed question · CTAs. The section header
+              above already frames it as the Concierge, so no separate eyebrow. */}
+          <div style={{ position: 'relative', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 16, padding: 'clamp(0.65rem, 1.2vw, 0.9rem) clamp(1rem, 2.2vw, 1.6rem)', boxShadow: '0 24px 56px -30px rgba(28,25,23,0.2), 0 6px 16px -12px rgba(28,25,23,0.1)' }}>
+            <div aria-hidden="true" style={{ position: 'absolute', inset: 6, border: '1px solid rgba(212,179,120,0.32)', borderRadius: 11, pointerEvents: 'none' }} />
+            <div className="relative flex items-center justify-between gap-5" style={{ flexWrap: 'wrap' }}>
+              <div className="flex items-center gap-3" style={{ flex: '1 1 280px', minWidth: 0 }}>
+                <span aria-hidden="true" style={{ width: 26, height: 26, flexShrink: 0, borderRadius: '50%', background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13 }}>✦</span>
                 {/* fixed one-line height + nowrap so the panel never resizes as
                     the question types or changes length */}
-                <p style={{ flex: '1 1 300px', minWidth: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.0625rem, 1.7vw, 1.4375rem)', lineHeight: 1.4, letterSpacing: '-0.005em', color: 'var(--atelier-stone-900)', margin: 0, textAlign: 'left', height: '1.4em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p style={{ flex: 1, minWidth: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.0625rem, 1.7vw, 1.375rem)', lineHeight: 1.4, letterSpacing: '-0.005em', color: 'var(--atelier-stone-900)', margin: 0, textAlign: 'left', height: '1.4em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   <span ref={typedRef} /><span className="cr-cursor" aria-hidden="true" />
                 </p>
-                <div className="flex items-center gap-3 shrink-0">
-                  <a href="/pricing" className="inline-flex items-center px-6 py-3 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]" style={{ background: 'var(--atelier-ink)', color: '#fff', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
-                    Begin curating
-                  </a>
-                  <a href="/studio" className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors group" style={{ color: 'var(--atelier-stone-600)', whiteSpace: 'nowrap' }}>
-                    See the Studio<span className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--atelier-brass-text, #836A3A)', display: 'inline-block' }}>→</span>
-                  </a>
-                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <a href="/pricing" className="inline-flex items-center px-5 py-2.5 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]" style={{ background: 'var(--atelier-ink)', color: '#fff', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
+                  Begin curating
+                </a>
+                <a href="/studio" className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors group" style={{ color: 'var(--atelier-stone-600)', whiteSpace: 'nowrap' }}>
+                  See the Studio<span className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--atelier-brass-text, #836A3A)', display: 'inline-block' }}>→</span>
+                </a>
               </div>
             </div>
           </div>
         </div>
 
         {/* the answers — the depth carousel, fully visible below the ask */}
-        <div ref={stageWrapRef} className="relative w-full" style={{ height: 'clamp(460px, 64vh, 660px)', marginTop: 'clamp(1.75rem, 3.5vw, 3rem)' }}>
+        <div ref={stageWrapRef} className="relative w-full" style={{ height: 'clamp(440px, 58vh, 620px)', marginTop: 'clamp(1rem, 2.2vw, 1.75rem)' }}>
           <div ref={stageRef} className="cr-stage" style={{ position: 'absolute', inset: 0, maxWidth: 1500, margin: '0 auto' }}>
             {SLIDES.map((s, i) => (
               <div

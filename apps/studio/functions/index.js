@@ -14,11 +14,14 @@
  */
 
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { google } = require('googleapis');
+const { Resend } = require('resend');
+const { buildInviteEmailHtml, buildInviteEmailText } = require('./inviteEmailTemplate');
 
 admin.initializeApp();
 
@@ -38,6 +41,7 @@ const STATE_DOC = '_oauth_state';            // server-only transient state, sam
 const GOOGLE_OAUTH_CLIENT_ID = defineSecret('GOOGLE_OAUTH_CLIENT_ID');
 const GOOGLE_OAUTH_CLIENT_SECRET = defineSecret('GOOGLE_OAUTH_CLIENT_SECRET');
 const GOOGLE_OAUTH_REDIRECT_URI = defineSecret('GOOGLE_OAUTH_REDIRECT_URI');
+const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 
 // --- Helpers -----------------------------------------------------------------
 
@@ -378,6 +382,44 @@ exports.deleteAccount = onCall(
 
     logger.info('deleteAccount: account fully deleted', { uid });
     return { ok: true };
+  }
+);
+
+// --- Invite email --------------------------------------------------------------
+// Fires whenever an owner adds a new email to /allowlist/{email} (the Profile
+// page's "Invited Friends" form). Deliberately a Firestore trigger, not a
+// callable invoked directly from the "Invite" button — access is granted the
+// moment the allowlist doc is written, regardless of whether this email ever
+// sends. A failed or not-yet-configured send must never look like a failed
+// invite; that's why every failure path below logs and returns instead of
+// throwing.
+exports.sendInviteEmail = onDocumentCreated(
+  { document: 'allowlist/{email}', region: REGION, secrets: [RESEND_API_KEY] },
+  async (event) => {
+    const email = event.params.email;
+    const apiKey = RESEND_API_KEY.value();
+    if (!apiKey) {
+      // Expected state until the secret is provisioned — not an error.
+      logger.info('sendInviteEmail: RESEND_API_KEY not set yet, skipping', { email });
+      return;
+    }
+    try {
+      const resend = new Resend(apiKey);
+      const { error } = await resend.emails.send({
+        from: 'Atelier <invites@myatelier.style>',
+        to: email,
+        subject: "You're in — a private wardrobe on Atelier",
+        html: buildInviteEmailHtml(),
+        text: buildInviteEmailText(),
+      });
+      if (error) {
+        logger.error('sendInviteEmail: Resend API returned an error', { email, error });
+        return;
+      }
+      logger.info('sendInviteEmail: sent', { email });
+    } catch (err) {
+      logger.error('sendInviteEmail: send failed', { email, message: err?.message || String(err) });
+    }
   }
 );
 

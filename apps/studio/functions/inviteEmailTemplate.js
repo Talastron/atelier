@@ -18,6 +18,7 @@ const APP_URL = 'https://edit.myatelier.style';
 const MARKETING_URL = 'https://myatelier.style';
 const LOGO_URL = 'https://myatelier.style/brand/atelier-logo.png';
 const PRIVACY_URL = 'https://myatelier.style/legal/privacy';
+const TERMS_URL = 'https://myatelier.style/legal/terms';
 
 function buildInviteEmailHtml() {
   return `<!DOCTYPE html>
@@ -67,16 +68,40 @@ function buildInviteEmailHtml() {
               </td>
             </tr>
             <tr>
-              <td style="padding:20px 32px 32px 32px;text-align:center;">
-                <p style="margin:0 0 14px 0;font-size:12px;line-height:1.6;color:#78716C;">
+              <td style="padding:24px 32px 0 32px;text-align:center;">
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#78716C;">
                   You're receiving this because an Atelier member invited you.
                 </p>
-                <p style="margin:0 0 14px 0;font-size:11px;line-height:1.6;color:#A8A29E;">
-                  Talastron Ltd, registered in England and Wales, Company No. 15464691.<br />
-                  Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11 3NE.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 32px 0 32px;text-align:center;">
+                <p style="margin:0;font-size:11px;line-height:1.7;color:#A8A29E;">
+                  Talastron Ltd &middot; Registered in England and Wales &middot; Company No. 15464691 &middot; VAT No. GB&nbsp;463&nbsp;5874&nbsp;58<br />
+                  Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11&nbsp;3NE
                 </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px 32px 0 32px;text-align:center;">
+                <span style="display:inline-block;width:3px;height:3px;border-radius:50%;background-color:#D4B378;margin:0 4px;">&nbsp;</span>
+                <span style="display:inline-block;width:3px;height:3px;border-radius:50%;background-color:#A8884C;margin:0 4px;">&nbsp;</span>
+                <span style="display:inline-block;width:3px;height:3px;border-radius:50%;background-color:#D4B378;margin:0 4px;">&nbsp;</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:14px 32px 0 32px;text-align:center;">
+                <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:13px;line-height:1.6;color:#78716C;">
+                  Composed in Surrey, for considered closets everywhere.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 32px 32px;text-align:center;">
                 <p style="margin:0;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">
-                  <a href="${PRIVACY_URL}" style="color:#A8884C;text-decoration:none;font-weight:600;">Privacy Policy</a>
+                  <a href="${PRIVACY_URL}" style="color:#A8884C;text-decoration:none;font-weight:600;">Privacy</a>
+                  <span style="color:#D4B378;">&nbsp;&middot;&nbsp;</span>
+                  <a href="${TERMS_URL}" style="color:#A8884C;text-decoration:none;font-weight:600;">Terms</a>
                 </p>
               </td>
             </tr>
@@ -101,9 +126,16 @@ Sign in with this email address and your wardrobe will be ready.
 
 ---
 You're receiving this because an Atelier member invited you.
-Talastron Ltd, registered in England and Wales, Company No. 15464691.
+
+Talastron Ltd. Registered in England and Wales. Company No. 15464691. VAT No. GB 463 5874 58.
 Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11 3NE.
-Privacy policy: ${PRIVACY_URL}`;
+
+* * *
+
+Composed in Surrey, for considered closets everywhere.
+
+Privacy: ${PRIVACY_URL}
+Terms: ${TERMS_URL}`;
 }
 
 module.exports = { buildInviteEmailHtml, buildInviteEmailText };

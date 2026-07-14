@@ -357,7 +357,9 @@ export function ConciergeReel() {
                   <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700 }}>Ask the Concierge</span>
                 </div>
                 <div className="flex items-center justify-between gap-6" style={{ flexWrap: 'wrap' }}>
-                  <p style={{ flex: '1 1 300px', minWidth: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.375rem, 2.4vw, 2rem)', lineHeight: 1.1, letterSpacing: '-0.01em', color: 'var(--atelier-stone-900)', margin: 0, textAlign: 'left', minHeight: '1.25em' }}>
+                  {/* fixed one-line height + nowrap so the panel never resizes as
+                      the question types or changes length */}
+                  <p style={{ flex: '1 1 300px', minWidth: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.0625rem, 1.7vw, 1.4375rem)', lineHeight: 1.4, letterSpacing: '-0.005em', color: 'var(--atelier-stone-900)', margin: 0, textAlign: 'left', height: '1.4em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <span ref={typedRef} /><span className="cr-cursor" aria-hidden="true" />
                   </p>
                   <div className="flex items-center gap-3 shrink-0">

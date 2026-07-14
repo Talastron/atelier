@@ -304,6 +304,25 @@ body {
 }
 .cr-slot.is-center { filter: saturate(1) blur(0); }
 
+/* Mobile: one card at a time, cross-faded. The cards fill the stage with NO
+   transform and NO filter — a transform-scaled/filtered layer clipping the
+   rounded image cells is what the compositor fringes green on mobile, so we
+   remove the composited layer entirely rather than fight the artifact. Only
+   opacity animates (the crossfade). */
+@media (max-width: 700px) {
+  .cr-slot {
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
 /* Compose settle — focus card's answer eases in (never fully empty: starts
    dimmed, not hidden, to avoid the empty-then-populate flash). Only the
    centre card runs it. */

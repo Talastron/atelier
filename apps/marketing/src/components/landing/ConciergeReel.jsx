@@ -247,6 +247,7 @@ export function ConciergeReel() {
   const pausedRef = useRef(false);
   const nearRef = useRef(NEAR); // side-card offset, recomputed to fit the stage width
   const farRef = useRef(FAR);   // off-frame parking offset
+  const mobileRef = useRef(false); // <=700px: single-card crossfade, no scale/blur
   const [reduced, setReduced] = useState(false);
   const [docHidden, setDocHidden] = useState(false);
 
@@ -278,6 +279,7 @@ export function ConciergeReel() {
   // Fit the side-card offsets to the actual stage width so the left/right
   // cards are never clipped by the page margins, at any viewport.
   const computeOffsets = useCallback(() => {
+    mobileRef.current = typeof window !== 'undefined' && window.innerWidth <= 700;
     const stage = stageRef.current;
     const card = slotRefs.current[0];
     const stageW = stage ? stage.clientWidth : 0;
@@ -305,11 +307,18 @@ export function ConciergeReel() {
   //   3..N-2   left slot, hidden (has faded out)
   const place = useCallback((i) => {
     const nearV = nearRef.current;
+    const mobile = mobileRef.current;
     slotRefs.current.forEach((slot, k) => {
       if (!slot) return;
       const raw = (k - i + N) % N;
       let x, s, o, z;
-      if (raw === 0) { x = 0; s = 1; o = 1; z = 5; }
+      if (mobile) {
+        // One full-width card at a time; the others sit hidden at centre and
+        // cross-fade. No scale and (via CSS) no blur, so mobile GPUs have no
+        // scaled/filtered layer to fringe.
+        if (raw === 0) { x = 0; s = 1; o = 1; z = 5; }
+        else { x = 0; s = 1; o = 0; z = 1; }
+      } else if (raw === 0) { x = 0; s = 1; o = 1; z = 5; }
       else if (raw === 1) { x = nearV; s = 0.8; o = 1; z = 3; }
       else if (raw === N - 1) { x = -nearV; s = 0.8; o = 1; z = 3; }
       else if (raw === 2) { x = nearV; s = 0.8; o = 0; z = 2; }
@@ -317,7 +326,7 @@ export function ConciergeReel() {
       const prev = slot._crx;
       // The hidden card that hops from the left slot to the right slot travels
       // while invisible — snap it (no transition) so nothing slides underneath.
-      if (!reduced && prev !== undefined && Math.abs(x - prev) > nearV * 1.5) {
+      if (!reduced && !mobile && prev !== undefined && Math.abs(x - prev) > nearV * 1.5) {
         slot.style.transition = 'none';
         slot.style.transform = `translate(${x}px,-50%) scale(${s})`;
         slot.getBoundingClientRect();

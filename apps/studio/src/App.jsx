@@ -6647,6 +6647,16 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     // the guard above will be stopped here before it can launch a stream.
     setBusy(true);
     setError(null);
+    // cancelledRef is a one-way latch tripped by a PRIOR request (explicit
+    // Cancel, a watchdog timeout, or — in dev, under StrictMode — a synthetic
+    // mount/unmount cycle) and nothing ever reset it. Once tripped, every
+    // future send() in this component's lifetime silently skipped the
+    // finalize step below (`if (cancelledRef.current) return`), leaving the
+    // reply stuck mid-stream forever even though the API call itself
+    // completed fine — this was the actual "Concierge hangs" bug. Reset it
+    // here so a stale cancellation from an earlier turn can never affect a
+    // new one.
+    cancelledRef.current = false;
 
     const userMsg = { role: 'user', text, ts: new Date().toISOString() };
     const afterUser = [...messages, userMsg];
@@ -6737,6 +6747,10 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
     if (busy) return;
     setBusy(true);
     setError(null);
+    // Same reset as send() — see the comment there. Without this, retrying
+    // after any prior cancellation/timeout in this session would hit the
+    // exact same stuck-forever bug immediately.
+    cancelledRef.current = false;
 
     // Insert a streaming placeholder — mirrors the send flow so the user
     // sees tokens arrive rather than waiting for a full non-streaming reply.

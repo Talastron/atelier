@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Pic } from '@atelier/ui';
 
 /**
  * ConciergeReel — the homepage hero.
@@ -103,13 +102,27 @@ const HOLD = 7400; // ms per answer
 
 // ── content renderers ──────────────────────────────────────────────────────
 
-// A tile shows the WHOLE garment (object-contain on a white cell) so nothing is
-// cropped; the cell flexes to the card's available height.
+// The whole garment, shown via a CSS background-image (contain) on an opaque
+// cell rather than an <img>. Painting the photo into the element's own backing
+// store avoids the green compositing fringe that <img> textures pick up at
+// their content edge inside the transform-scaled, layer-promoted slots.
+function Photo({ file, name }) {
+  return (
+    <div
+      role="img"
+      aria-label={name}
+      style={{ width: '100%', height: '100%', backgroundImage: `url("${W(file)}")`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+    />
+  );
+}
+
+// A tile shows the WHOLE garment on a white cell (no crop); the cell flexes to
+// the card's available height.
 function Tile({ file, name, delay }) {
   return (
     <figure className="cr-rv" style={{ '--cr-d': `${delay}s`, margin: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, minHeight: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: '#fff', padding: 6 }}>
-        <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-contain" />
+        <Photo file={file} name={name} />
       </div>
       <figcaption style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11.5, marginTop: 6, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</figcaption>
     </figure>
@@ -124,7 +137,7 @@ function UnwornBody({ s }) {
       {s.tiles.map(([file, name, reason, count], i) => (
         <figure key={file + i} className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22 + i * STEP).toFixed(2)}s`, margin: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, minHeight: 0, position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: '#fff', padding: 6 }}>
-            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-contain" />
+            <Photo file={file} name={name} />
             <span style={{ position: 'absolute', top: 6, right: 6, background: 'var(--atelier-ink)', color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 10, fontWeight: 700, letterSpacing: '0.03em', padding: '3px 7px', borderRadius: 999 }}>{count}</span>
           </div>
           <p style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11.5, marginTop: 6, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
@@ -143,7 +156,7 @@ function CpwBody({ s }) {
       {s.rows.map(([file, name, wears, val, flag], i) => (
         <div key={file + i} className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22 + i * 0.16).toFixed(2)}s`, display: 'flex', alignItems: 'center', gap: 12, padding: '9px 11px', borderRadius: 12, background: flag ? 'rgba(212,179,120,0.10)' : 'var(--atelier-stone-50)', border: `1px solid ${flag ? 'rgba(212,179,120,0.4)' : 'var(--atelier-stone-200)'}` }}>
           <div style={{ width: 44, height: 56, borderRadius: 8, flexShrink: 0, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: '#fff', padding: 3 }}>
-            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-contain" />
+            <Photo file={file} name={name} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 15, lineHeight: 1.2, color: 'var(--atelier-stone-800)' }}>{name}</p>

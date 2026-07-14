@@ -353,7 +353,10 @@ export function ConciergeReel() {
                 key={i}
                 ref={(el) => { slotRefs.current[i] = el; }}
                 className="cr-slot"
-                style={{ width: 'min(420px, 84vw)', marginLeft: 'calc(min(210px, 42vw) * -1)', height: 'clamp(300px, 46vh, 470px)' }}
+                /* height fills the available stage space (bounded, capped) so the
+                   card never grows taller than the gap between chat bar and dots
+                   and overlaps them; leaves ~8px breathing room top and bottom. */
+                style={{ width: 'min(420px, 84vw)', marginLeft: 'calc(min(210px, 42vw) * -1)', height: 'min(calc(100% - 16px), 470px)' }}
                 aria-hidden={i !== idx}
               >
                 <Card s={s} />

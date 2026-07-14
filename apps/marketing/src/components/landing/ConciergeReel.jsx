@@ -79,6 +79,20 @@ const SLIDES = [
     note: 'Two have paid for themselves. One owes you evenings.',
     stat: '£4.10 avg',
   },
+  {
+    // Style Manifesto — the Concierge's written reading of your aesthetic
+    // (a real feature: a Gemini-written brief, refreshed each season).
+    ask: 'What’s my style?',
+    reply: 'Read from everything you own and wear.',
+    meta: 'Your style manifesto',
+    kind: 'dna',
+    reading:
+      'You dress in a tight tonal palette — champagne, stone and ink, warmed by gold. Tailored, never fussy. You buy rarely and keep what lasts.',
+    traits: ['Tonal', 'Tailored', 'Quiet luxury', 'Gold-warmed'],
+    palette: ['#e7d9be', '#c9b38a', '#a8a29e', '#A8884C', '#1c1917'],
+    note: 'A private brief, composed from your wardrobe and refreshed each season.',
+    stat: 'Volume I',
+  },
 ];
 
 const N = SLIDES.length;
@@ -118,7 +132,31 @@ function Row({ file, name, sub, val, cpw, delay }) {
   );
 }
 
+function DnaBody({ s }) {
+  return (
+    <div>
+      <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22).toFixed(2)}s`, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 15, lineHeight: 1.55, color: 'var(--atelier-stone-700)', margin: '0 0 14px' }}>
+        {s.reading}
+      </p>
+      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.4).toFixed(2)}s`, display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 14 }}>
+        {s.traits.map((t) => (
+          <span key={t} style={{ fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: '0.04em', padding: '5px 11px', borderRadius: 999, background: 'var(--atelier-cream)', border: '1px solid #eee7da', color: 'var(--atelier-stone-700)' }}>{t}</span>
+        ))}
+      </div>
+      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.58).toFixed(2)}s` }}>
+        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', margin: '0 0 7px' }}>Your palette</p>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {s.palette.map((c, i) => (
+            <span key={i} style={{ flex: 1, height: 34, borderRadius: 7, background: c, border: '1px solid rgba(28,25,23,0.08)' }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CardBody({ s }) {
+  if (s.kind === 'dna') return <DnaBody s={s} />;
   if (s.kind === 'grid') {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${s.cols}, 1fr)`, gap: s.cols === 3 ? 7 : 9 }}>
@@ -171,10 +209,11 @@ export function ConciergeReel() {
   const [reduced, setReduced] = useState(false);
   const [docHidden, setDocHidden] = useState(false);
 
-  // preload outfit imagery (webp variant)
+  // preload outfit imagery (webp variant). Some slides (Style DNA) have no
+  // photography, so guard for missing tiles/rows.
   useEffect(() => {
     SLIDES.forEach((s) => {
-      const files = s.tiles ? s.tiles.map((t) => t[0]) : s.rows.map((r) => r[0]);
+      const files = s.tiles ? s.tiles.map((t) => t[0]) : (s.rows ? s.rows.map((r) => r[0]) : []);
       files.forEach((f) => { const img = new Image(); img.src = `/wardrobe/${f}.webp`; });
     });
   }, []);
@@ -201,10 +240,10 @@ export function ConciergeReel() {
       if (!slot) return;
       const raw = (k - i + N) % N;
       let x, s, z;
-      if (raw === 0) { x = 0; s = 1; z = 5; }
-      else if (raw === 1) { x = NEAR; s = 0.8; z = 3; }
-      else if (raw === 3) { x = -NEAR; s = 0.8; z = 3; }
-      else { x = -FAR; s = 0.7; z = 1; }
+      if (raw === 0) { x = 0; s = 1; z = 5; }          // centre (front)
+      else if (raw === 1) { x = NEAR; s = 0.8; z = 3; } // right (set back)
+      else if (raw === N - 1) { x = -NEAR; s = 0.8; z = 3; } // left (set back)
+      else { x = -FAR; s = 0.7; z = 1; }               // parked off-frame, clipped
       const prev = slot._crx;
       if (!reduced && prev !== undefined && Math.abs(x - prev) > NEAR * 1.8) {
         slot.style.transition = 'none';
@@ -299,7 +338,9 @@ export function ConciergeReel() {
 
         {/* depth carousel */}
         <div className="relative w-full" style={{ flex: 1, minHeight: 0 }}>
-          <div ref={stageRef} className="cr-stage relative mx-auto" style={{ height: '100%', maxWidth: 1500 }}>
+          {/* stage fills the (flex-sized) parent via inset:0 — height:100% would
+              collapse to 0 because the flex parent's height isn't "definite". */}
+          <div ref={stageRef} className="cr-stage" style={{ position: 'absolute', inset: 0, maxWidth: 1500, margin: '0 auto' }}>
             {SLIDES.map((s, i) => (
               <div
                 key={i}

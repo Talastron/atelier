@@ -1208,10 +1208,29 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
     .sort((a, b) => b._wears - a._wears)
     .slice(0, 5);
 
-  // Stale items: owned, not worn in 90+ days (or never)
+  // Season name — moved up from further below (it's also used there, for
+  // season-coverage tracking) so the "stale" filter immediately below can
+  // exclude out-of-season pieces. Same computation, single definition.
+  const seasonName = now.getMonth() >= 2 && now.getMonth() <= 4 ? 'Spring'
+    : now.getMonth() >= 5 && now.getMonth() <= 7 ? 'Summer'
+    : now.getMonth() >= 8 && now.getMonth() <= 10 ? 'Autumn'
+    : 'Winter';
+
+  // Stale items: owned 90+ days, currently in-season, not worn in 90+ days
+  // (or never). The ownership and season guards stop a brand-new purchase
+  // or an out-of-season piece (a winter coat in July) from reading as
+  // "neglected" — it would be incoherent to call something "not worn in 90
+  // days" when it hasn't even been owned that long, or to flag it when it
+  // isn't wearable right now anyway.
+  const ninetyDaysAgo = Date.now() - 90 * 86_400_000;
   const stale = ownedItems
     .map((i) => ({ ...i, _days: daysSinceLastWorn(i) }))
     .filter((i) => i._days === null || i._days >= 90)
+    .filter((i) => i.createdAt && new Date(i.createdAt).getTime() < ninetyDaysAgo)
+    .filter((i) => {
+      const s = itemSeasons(i);
+      return s.length === 0 || s.includes(seasonName);
+    })
     .sort((a, b) => (b._days ?? Infinity) - (a._days ?? Infinity))
     .slice(0, 6);
 
@@ -1272,10 +1291,8 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
   // Season coverage — % of in-season owned pieces worn at least once in
   // the current season window. Behavioural nudge to actually wear what
   // you own; surfaces forgotten pieces in the right time of year.
-  const seasonName = now.getMonth() >= 2 && now.getMonth() <= 4 ? 'Spring'
-    : now.getMonth() >= 5 && now.getMonth() <= 7 ? 'Summer'
-    : now.getMonth() >= 8 && now.getMonth() <= 10 ? 'Autumn'
-    : 'Winter';
+  // (seasonName itself is now defined earlier, alongside the "stale" filter
+  // that also needs it — see above.)
   const seasonStart = (() => {
     const y = now.getFullYear();
     const m = now.getMonth();
@@ -1744,17 +1761,25 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-2">Stale — wear or part with?</h3>
           <p className="text-stone-500 text-sm mb-6">Owned items not worn in 90+ days. Wear deliberately this week, or move on.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {stale.map((item) => (
-              <div key={item.id} className="flex flex-col gap-2">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100">
-                  <ItemTileImage item={item} alt={item.name} />
-                </div>
-                <p className="text-xs text-stone-900 truncate">{item.name}</p>
-                <p className="text-[10px] uppercase tracking-wider text-stone-400">
-                  {item._days === null ? 'Never worn' : `${item._days}d ago`}
-                </p>
-              </div>
-            ))}
+            {stale.map((item) => {
+              const clickable = !!onOpenItem;
+              const Wrap = clickable ? 'button' : 'div';
+              return (
+                <Wrap
+                  key={item.id}
+                  {...(clickable ? { type: 'button', onClick: () => onOpenItem(item.id), 'aria-label': `Open ${item.name}` } : {})}
+                  className={`flex flex-col gap-2 text-left ${clickable ? 'group cursor-pointer' : ''}`}
+                >
+                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100">
+                    <ItemTileImage item={item} alt={item.name} />
+                  </div>
+                  <p className={`text-xs truncate ${clickable ? 'text-stone-900 group-hover:text-stone-700' : 'text-stone-900'}`}>{item.name}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-stone-400">
+                    {item._days === null ? 'Never worn' : `${item._days}d ago`}
+                  </p>
+                </Wrap>
+              );
+            })}
           </div>
         </div>
       )}

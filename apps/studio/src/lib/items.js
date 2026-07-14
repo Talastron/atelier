@@ -215,6 +215,19 @@ export function itemSeasons(item) {
   return [];
 }
 
+// Same Spring/Summer/Autumn/Winter mapping already duplicated inline in
+// App.jsx, OutfitBuilder.jsx, and weather.js — this is the one new call
+// site (ai.js's Concierge prompt) that didn't have a local copy to reuse,
+// so it gets a shared helper instead of a fifth inline copy. The existing
+// inline copies elsewhere are NOT migrated to this — out of scope here.
+export function currentSeasonLabel(date = new Date()) {
+  const month = date.getMonth();
+  return month >= 2 && month <= 4 ? 'Spring'
+    : month >= 5 && month <= 7 ? 'Summer'
+    : month >= 8 && month <= 10 ? 'Autumn'
+    : 'Winter';
+}
+
 // True when an OWNED item is missing the descriptive tags the Concierge relies
 // on — colour, material, or style. Single source of truth shared by the
 // "Complete my data" backfill (Profile) and the Wardrobe "Needs detail" filter,

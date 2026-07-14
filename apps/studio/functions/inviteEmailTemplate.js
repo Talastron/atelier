@@ -23,12 +23,12 @@ function buildInviteEmailHtml() {
         <td align="center">
           <table role="presentation" width="100%" style="max-width:480px;background-color:#FFFFFF;border-radius:24px;overflow:hidden;">
             <tr>
-              <td style="padding:0;background-color:#1C1917;text-align:center;">
-                <img src="${LOGO_URL}" width="120" height="37" alt="Atelier" style="display:block;width:120px;height:37px;margin:28px auto;" />
+              <td style="padding:36px 40px 0 40px;text-align:center;">
+                <img src="${LOGO_URL}" width="120" height="37" alt="Atelier" style="display:block;width:120px;height:37px;margin:0 auto;" />
               </td>
             </tr>
             <tr>
-              <td style="padding:44px 40px 32px 40px;">
+              <td style="padding:28px 40px 32px 40px;">
                 <h1 style="margin:0 0 20px 0;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.3;color:#1C1917;font-weight:500;">You're in.</h1>
                 <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#57534E;">
                   You've been given your own private wardrobe inside Atelier, a space that's entirely yours. No one else sees what's in it, and you won't see anyone else's.

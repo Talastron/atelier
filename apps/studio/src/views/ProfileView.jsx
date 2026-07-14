@@ -273,23 +273,14 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
 
 // Body-shape result — designed to sit as the bottom panel INSIDE the
 // Measurements card (parent has overflow-hidden), not as its own free card.
-// Until chest/waist/hips are filled it's a quiet ivory prompt; once we can
-// classify a shape it becomes a dark "reveal" that crowns the inputs above it.
+// Renders nothing until chest/waist/hips are filled — the card's own intro
+// copy already explains what filling them in unlocks, so an empty-state
+// placeholder here would just restate that same instruction a second time.
+// Once we can classify a shape it becomes a dark "reveal" that crowns the
+// inputs above it.
 function FitProfileCard({ measurements }) {
   const shape = classifyBodyShape(measurements);
-  if (!shape) {
-    return (
-      <div className="border-t border-stone-100 bg-[#FBFAF8] px-6 md:px-8 py-7">
-        <div className="flex items-center gap-3">
-          <span className="brass-rule shrink-0" aria-hidden="true"></span>
-          <h4 className="font-display text-lg md:text-xl text-stone-900">Your fit profile</h4>
-        </div>
-        <p className="text-stone-500 text-sm leading-relaxed mt-3 max-w-2xl">
-          Add your <strong className="text-stone-700">chest, waist, and hips</strong> above and your body-shape guidance appears here — the same foundation M&amp;S, ASOS and Stitch Fix build their fit tools on.
-        </p>
-      </div>
-    );
-  }
+  if (!shape) return null;
   const guide = BODY_SHAPE_GUIDES[shape];
   return (
     <div className="bg-stone-900 text-white px-6 md:px-10 py-8 md:py-10">
@@ -1094,8 +1085,12 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                   <p className="text-sm text-stone-900 truncate">{entry.displayName || entry.email}</p>
                   {entry.displayName && <p className="text-[10px] text-stone-500 uppercase tracking-wider mt-0.5 truncate">{entry.email}</p>}
                 </div>
+                {/* Always visible — this used to be opacity-0 until :hover,
+                    which meant there was no way to discover or use it on
+                    touch devices (no hover state), and on desktop it read
+                    as if removal wasn't possible at all. */}
                 <button onClick={() => removeInvite(entry.email).catch((e) => alert(e.message))}
-                  className="text-stone-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                  className="text-stone-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
                   aria-label={`Revoke access for ${entry.email}`}
                 >
                   <X size={16} strokeWidth={1.5} />

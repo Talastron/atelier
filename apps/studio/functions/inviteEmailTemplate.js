@@ -77,8 +77,11 @@ function buildInviteEmailHtml() {
             <tr>
               <td style="padding:20px 32px 0 32px;text-align:center;">
                 <p style="margin:0;font-size:11px;line-height:1.7;color:#A8A29E;">
-                  Talastron Ltd &middot; Registered in England and Wales &middot; Company No. 15464691 &middot; VAT No. GB&nbsp;463&nbsp;5874&nbsp;58<br />
-                  Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11&nbsp;3NE
+                  <span style="white-space:nowrap;">Talastron Ltd</span> &middot;
+                  <span style="white-space:nowrap;">Registered in England and Wales</span> &middot;
+                  <span style="white-space:nowrap;">Company No. 15464691</span> &middot;
+                  <span style="white-space:nowrap;">VAT No. GB 463 5874 58</span><br />
+                  Registered office: <span style="white-space:nowrap;">The Long Barn, Cobham Park Road,</span> <span style="white-space:nowrap;">Cobham, Surrey, KT11 3NE</span>
                 </p>
               </td>
             </tr>

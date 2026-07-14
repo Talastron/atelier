@@ -104,14 +104,16 @@ const HOLD = 7400; // ms per answer
 
 // ── content renderers ──────────────────────────────────────────────────────
 
-function Tile({ file, name, delay, eager }) {
+// A tile fills its grid cell (photo crops with object-cover) so the grid can
+// flex to the card's available height rather than driving a too-tall layout.
+function Tile({ file, name, delay }) {
   return (
-    <div className="cr-rv" style={{ '--cr-d': `${delay}s` }}>
-      <div style={{ aspectRatio: '3/4', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: 'var(--atelier-stone-100)' }}>
-        <Pic src={W(file)} alt={name} loading={eager ? 'eager' : 'lazy'} className="w-full h-full object-cover" />
+    <figure className="cr-rv" style={{ '--cr-d': `${delay}s`, margin: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 0, borderRadius: 9, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: 'var(--atelier-stone-100)' }}>
+        <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center 32%' }} />
       </div>
-      <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 11.5, marginTop: 5, lineHeight: 1.2, color: 'var(--atelier-stone-800)' }}>{name}</p>
-    </div>
+      <figcaption style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11, marginTop: 4, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</figcaption>
+    </figure>
   );
 }
 
@@ -158,16 +160,18 @@ function DnaBody({ s }) {
 function CardBody({ s }) {
   if (s.kind === 'dna') return <DnaBody s={s} />;
   if (s.kind === 'grid') {
+    // grid fills the flex body: equal auto-rows, tiles crop to fit — so the
+    // outfit/capsule never overflows the card, whatever the card height.
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${s.cols}, 1fr)`, gap: s.cols === 3 ? 7 : 9 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${s.cols}, 1fr)`, gridAutoRows: '1fr', gap: s.cols === 3 ? 7 : 9 }}>
         {s.tiles.map(([file, name], i) => (
-          <Tile key={file + i} file={file} name={name} delay={(BASE + 0.22 + i * STEP).toFixed(2)} eager={false} />
+          <Tile key={file + i} file={file} name={name} delay={(BASE + 0.22 + i * STEP).toFixed(2)} />
         ))}
       </div>
     );
   }
   return (
-    <div>
+    <div style={{ flex: 1, minHeight: 0 }}>
       {s.rows.map(([file, name, sub, val], i) => (
         <Row key={file + i} file={file} name={name} sub={sub} val={val} cpw={s.kind === 'cpw'} delay={(BASE + 0.22 + i * 0.18).toFixed(2)} />
       ))}
@@ -178,16 +182,19 @@ function CardBody({ s }) {
 function Card({ s }) {
   return (
     <div style={{ height: '100%', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 24, overflow: 'hidden', boxShadow: '0 34px 74px -30px rgba(28,25,23,0.34)' }}>
-      <div style={{ padding: '18px 18px 20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '16px 16px 18px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {/* Concierge reply */}
-        <div className="cr-rv" style={{ '--cr-d': `${BASE}s`, display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 12 }}>
+        <div className="cr-rv" style={{ '--cr-d': `${BASE}s`, display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 11, flexShrink: 0 }}>
           <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>✦</span>
-          <span style={{ background: 'var(--atelier-cream)', border: '1px solid #eee7da', borderRadius: '4px 15px 15px 15px', padding: '8px 12px', fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--atelier-stone-700)', lineHeight: 1.4 }}>{s.reply}</span>
+          <span style={{ background: 'var(--atelier-cream)', border: '1px solid #eee7da', borderRadius: '4px 15px 15px 15px', padding: '7px 11px', fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 12.5, color: 'var(--atelier-stone-700)', lineHeight: 1.35 }}>{s.reply}</span>
         </div>
-        <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.1).toFixed(2)}s`, fontFamily: 'Arial, sans-serif', fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700, margin: '0 0 9px' }}>{s.meta}</p>
-        <CardBody s={s} />
-        <div className="cr-rv" style={{ '--cr-d': '2.6s', display: 'flex', alignItems: 'center', gap: 10, marginTop: 'auto', paddingTop: 13 }}>
-          <p style={{ margin: 0, flex: 1, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.4, color: 'var(--atelier-stone-700)', padding: '11px 13px', background: 'var(--atelier-cream)', border: '1px solid #eee7da', borderRadius: 11 }}>{s.note}</p>
+        <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.1).toFixed(2)}s`, fontFamily: 'Arial, sans-serif', fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700, margin: '0 0 9px', flexShrink: 0 }}>{s.meta}</p>
+        {/* answer body — flexes to fill the remaining height */}
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <CardBody s={s} />
+        </div>
+        <div className="cr-rv" style={{ '--cr-d': '2.6s', display: 'flex', alignItems: 'center', gap: 10, marginTop: 11, flexShrink: 0 }}>
+          <p style={{ margin: 0, flex: 1, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 12, lineHeight: 1.35, color: 'var(--atelier-stone-700)', padding: '9px 12px', background: 'var(--atelier-cream)', border: '1px solid #eee7da', borderRadius: 11 }}>{s.note}</p>
           <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700, whiteSpace: 'nowrap' }}>{s.stat}</span>
         </div>
       </div>

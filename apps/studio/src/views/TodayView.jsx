@@ -799,13 +799,21 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         isAiEnabled={isAIEnabled()}
         onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents }) => {
           return generateOutfitWithGemini({
-            items,
+            // Owned pieces only — using the raw `items` (owned + wishlist)
+            // let the model build "today's look" partly out of something
+            // not yet bought. hasClothingBase/ensureClothingBase then saw a
+            // valid top+bottom pair (because the wishlist item resolved fine
+            // against the full list) and let it through — but DailyBriefCard
+            // itself only ever renders against ownedAvailable, so the
+            // wishlist piece silently failed to resolve and vanished from
+            // the card, leaving what looked like a top with no bottom.
+            items: ownedAvailable,
             intent,
             weather,
             season: currentSeason,
             styleProfile: summariseStyleProfile(measurements),
             temperature,
-            previousOutfit: previous ? (previous.itemIds || []).map((id) => items.find((it) => it.id === id)).filter(Boolean) : null,
+            previousOutfit: previous ? (previous.itemIds || []).map((id) => ownedAvailable.find((it) => it.id === id)).filter(Boolean) : null,
             calendarEvents,
           });
         }}

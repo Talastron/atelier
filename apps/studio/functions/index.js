@@ -408,7 +408,7 @@ exports.sendInviteEmail = onDocumentCreated(
       const { error } = await resend.emails.send({
         from: 'Atelier <invites@myatelier.style>',
         to: email,
-        subject: "You're in — a private wardrobe on Atelier",
+        subject: "You're in: a private wardrobe on Atelier",
         html: buildInviteEmailHtml(),
         text: buildInviteEmailText(),
       });

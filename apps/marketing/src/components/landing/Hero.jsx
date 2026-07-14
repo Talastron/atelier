@@ -364,7 +364,7 @@ function StudioFrame() {
                 letterSpacing: '-0.005em',
               }}
             >
-              Atelier<span style={{ color: 'var(--atelier-brass-600)' }}>.</span>
+              Atelier<span style={{ color: 'var(--atelier-brass-text)' }}>.</span>
             </span>
           </div>
           <div
@@ -547,7 +547,7 @@ function StudioFrame() {
                     fontSize: 8.5,
                     letterSpacing: '0.24em',
                     textTransform: 'uppercase',
-                    color: 'var(--atelier-brass-600)',
+                    color: 'var(--atelier-brass-text)',
                     fontWeight: 700,
                   }}
                 >
@@ -651,7 +651,7 @@ function StudioFrame() {
                 <Wand2
                   size={12}
                   strokeWidth={1.4}
-                  style={{ color: 'var(--atelier-brass-600)', flexShrink: 0 }}
+                  style={{ color: 'var(--atelier-brass-text)', flexShrink: 0 }}
                 />
                 <p
                   style={{
@@ -671,7 +671,7 @@ function StudioFrame() {
                     fontSize: 9,
                     letterSpacing: '0.18em',
                     textTransform: 'uppercase',
-                    color: 'var(--atelier-brass-600)',
+                    color: 'var(--atelier-brass-text)',
                     fontWeight: 700,
                     flexShrink: 0,
                     fontFeatureSettings: '"onum" on',
@@ -718,7 +718,7 @@ function StudioFrame() {
               lineHeight: 1,
             }}
           >
-            Atelier<span style={{ color: 'var(--atelier-brass-600)' }}>.</span>
+            Atelier<span style={{ color: 'var(--atelier-brass-text)' }}>.</span>
           </span>
         </div>
 
@@ -744,7 +744,7 @@ function StudioFrame() {
             style={{
               fontSize: 8.5,
               letterSpacing: '0.28em',
-              color: 'var(--atelier-stone-400)',
+              color: 'var(--atelier-stone-500)',
               fontWeight: 600,
               textTransform: 'uppercase',
             }}
@@ -800,7 +800,7 @@ function StudioFrame() {
                 style={{
                   fontSize: 8.5,
                   letterSpacing: '0.22em',
-                  color: 'var(--atelier-brass-600)',
+                  color: 'var(--atelier-brass-text)',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                 }}
@@ -1003,7 +1003,7 @@ function StudioFrame() {
           <Wand2
             size={14}
             strokeWidth={1.4}
-            style={{ color: 'var(--atelier-brass-600)', flexShrink: 0 }}
+            style={{ color: 'var(--atelier-brass-text)', flexShrink: 0 }}
           />
           <p
             style={{
@@ -1023,7 +1023,7 @@ function StudioFrame() {
               fontSize: 10,
               letterSpacing: '0.2em',
               textTransform: 'uppercase',
-              color: 'var(--atelier-brass-600)',
+              color: 'var(--atelier-brass-text)',
               fontWeight: 600,
               flexShrink: 0,
               fontFeatureSettings: '"onum" on',
@@ -1188,7 +1188,7 @@ export function Hero() {
             className="text-[10px] uppercase font-medium"
             style={{
               letterSpacing: '0.32em',
-              color: 'var(--atelier-brass-600)',
+              color: 'var(--atelier-brass-text)',
             }}
           >
             The Atelier Studio · MMXXVI
@@ -1279,7 +1279,7 @@ export function Hero() {
             See the studio
             <span
               className="transition-transform group-hover:translate-x-1"
-              style={{ color: 'var(--atelier-brass-600)', display: 'inline-block' }}
+              style={{ color: 'var(--atelier-brass-text)', display: 'inline-block' }}
             >
               →
             </span>

@@ -82,7 +82,7 @@ export function PricingInsideList() {
                 fontFamily: 'var(--atelier-font-display)',
                 fontStyle: 'italic',
                 fontSize: '1.0625rem',
-                color: 'var(--atelier-brass-600)',
+                color: 'var(--atelier-brass-text)',
                 letterSpacing: '0.02em',
                 fontWeight: 400,
               }}

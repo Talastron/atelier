@@ -323,7 +323,7 @@ export function SuggestALookDemo() {
                 color: 'var(--atelier-stone-900)',
               }}
             >
-              Atelier<span style={{ color: 'var(--atelier-brass-600)' }}>.</span>
+              Atelier<span style={{ color: 'var(--atelier-brass-text)' }}>.</span>
             </span>
           </div>
           <div
@@ -571,7 +571,7 @@ export function SuggestALookDemo() {
                 tabIndex={-1}
                 aria-hidden="true"
                 className="p-2 rounded-full"
-                style={{ color: 'var(--atelier-stone-400)' }}
+                style={{ color: 'var(--atelier-stone-500)' }}
               >
                 <X size={16} strokeWidth={1.5} />
               </button>
@@ -622,7 +622,7 @@ export function SuggestALookDemo() {
                           className="text-[8px] uppercase truncate"
                           style={{
                             letterSpacing: '0.18em',
-                            color: 'var(--atelier-stone-400)',
+                            color: 'var(--atelier-stone-500)',
                             fontWeight: 600,
                           }}
                         >
@@ -667,7 +667,7 @@ export function SuggestALookDemo() {
                   className="text-[9px] uppercase mb-1"
                   style={{
                     letterSpacing: '0.22em',
-                    color: 'var(--atelier-stone-400)',
+                    color: 'var(--atelier-stone-500)',
                     fontWeight: 600,
                   }}
                 >

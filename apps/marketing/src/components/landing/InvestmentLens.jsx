@@ -136,7 +136,7 @@ function FigureRow({ figure, inView, isLast, index }) {
         className="text-[10px] uppercase mb-5"
         style={{
           letterSpacing: '0.4em',
-          color: 'var(--atelier-brass-600)',
+          color: 'var(--atelier-brass-text)',
           fontWeight: 600,
         }}
       >
@@ -226,7 +226,7 @@ export function InvestmentLens() {
             <BrassRule />
             <p
               className="text-[10px] uppercase font-medium"
-              style={{ letterSpacing: '0.32em', color: 'var(--atelier-brass-600)' }}
+              style={{ letterSpacing: '0.32em', color: 'var(--atelier-brass-text)' }}
             >
               The Annual Report &middot; By way of example
             </p>
@@ -300,7 +300,7 @@ export function InvestmentLens() {
                 className="text-[10px] uppercase mb-2"
                 style={{
                   letterSpacing: '0.4em',
-                  color: 'var(--atelier-brass-600)',
+                  color: 'var(--atelier-brass-text)',
                   fontWeight: 600,
                 }}
               >
@@ -382,7 +382,7 @@ export function InvestmentLens() {
                 className="text-center text-[10px] uppercase mt-1"
                 style={{
                   letterSpacing: '0.32em',
-                  color: 'var(--atelier-stone-400)',
+                  color: 'var(--atelier-stone-500)',
                   fontWeight: 500,
                 }}
               >

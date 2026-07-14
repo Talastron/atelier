@@ -26,6 +26,20 @@
   --font-sans: var(--atelier-font-sans);
 }
 
+/* ── Accessibility: contrast overrides (WCAG AA) ──────────────────────────
+   The base stone-500 body text (4.41) and the small brass eyebrow text
+   (3.07) sat just under the AA 4.5:1 threshold on the cream / stone-50
+   grounds. These nudge the TEXT-facing values to clear 4.5:1 on cream while
+   staying inside the quiet-luxury palette. Decorative brass (rules, dots,
+   gradients, the founder/faq marker bars) keeps the bright --atelier-brass-600;
+   only *text* uses were remapped to --atelier-brass-text. stone-400, which
+   failed even large-text contrast, is no longer used for text — those uses
+   were remapped to stone-500 (it stays as-is for the Footer armoire strokes). */
+:root {
+  --atelier-stone-500: #766f6a;   /* was #78716c · 4.41 → 4.54 on cream */
+  --atelier-brass-text: #836A3A;  /* small brass label text · 4.72 on cream */
+}
+
 /* Base body styles */
 html {
   scroll-behavior: smooth;

@@ -97,7 +97,7 @@ export function OutfitPreview() {
               className="text-[10px] font-medium uppercase"
               style={{
                 letterSpacing: 'var(--atelier-tracking-eyebrow)',
-                color: 'var(--atelier-brass-600)',
+                color: 'var(--atelier-brass-text)',
               }}
             >
               By Atelier Concierge
@@ -179,7 +179,7 @@ export function OutfitPreview() {
                     className="absolute inset-0 flex items-center justify-center text-[10px] uppercase"
                     style={{
                       letterSpacing: 'var(--atelier-tracking-eyebrow)',
-                      color: 'var(--atelier-stone-400)',
+                      color: 'var(--atelier-stone-500)',
                       fontWeight: 500,
                     }}
                   >
@@ -245,7 +245,7 @@ export function OutfitPreview() {
         <Wand2
           size={28}
           strokeWidth={1.3}
-          style={{ color: 'var(--atelier-brass-600)', flexShrink: 0 }}
+          style={{ color: 'var(--atelier-brass-text)', flexShrink: 0 }}
         />
         <div className="flex-1">
           <p

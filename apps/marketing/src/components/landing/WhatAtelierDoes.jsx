@@ -73,7 +73,7 @@ function Chrome({ children, label }) {
             <span key={c} style={{ width: 7, height: 7, borderRadius: '50%', background: c, opacity: 0.9 }} />
           ))}
         </span>
-        <span className="mx-auto text-[9px]" style={{ letterSpacing: '0.14em', color: 'var(--atelier-stone-400)' }}>
+        <span className="mx-auto text-[9px]" style={{ letterSpacing: '0.14em', color: 'var(--atelier-stone-500)' }}>
           edit.myatelier.style · {label}
         </span>
       </div>
@@ -290,8 +290,8 @@ function TrackVignette() {
               <p className="text-[11px] truncate" style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-800)' }}>{r.name}</p>
               <p style={{ ...EYEBROW, fontSize: 8 }}>{r.wears} wears</p>
             </div>
-            <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '0.95rem', color: r.flag ? 'var(--atelier-brass-600)' : 'var(--atelier-stone-900)' }}>
-              £{r.cpw}<span style={{ fontSize: 9, color: 'var(--atelier-stone-400)' }}>/wear</span>
+            <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '0.95rem', color: r.flag ? 'var(--atelier-brass-text)' : 'var(--atelier-stone-900)' }}>
+              £{r.cpw}<span style={{ fontSize: 9, color: 'var(--atelier-stone-500)' }}>/wear</span>
             </p>
           </li>
         ))}
@@ -303,14 +303,14 @@ function TrackVignette() {
         style={{ border: '1px solid rgba(212,179,120,0.35)', background: 'rgba(212,179,120,0.06)' }}
       >
         <div>
-          <p style={{ ...EYEBROW, fontSize: 7.5, color: 'var(--atelier-brass-600)' }}>Wardrobe investment</p>
+          <p style={{ ...EYEBROW, fontSize: 7.5, color: 'var(--atelier-brass-text)' }}>Wardrobe investment</p>
           <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '1.05rem', color: 'var(--atelier-stone-900)' }}>
             £2,791 <span style={{ fontSize: 10, color: 'var(--atelier-stone-500)' }}>across 28 pieces</span>
           </p>
         </div>
         <div className="text-right">
           <p style={{ ...EYEBROW, fontSize: 7.5 }}>Average</p>
-          <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '1.05rem', color: 'var(--atelier-brass-600)' }}>£4.10<span style={{ fontSize: 9, color: 'var(--atelier-stone-400)' }}>/wear</span></p>
+          <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '1.05rem', color: 'var(--atelier-brass-text)' }}>£4.10<span style={{ fontSize: 9, color: 'var(--atelier-stone-500)' }}>/wear</span></p>
         </div>
       </div>
       <p className="text-[10.5px]" style={{ color: 'var(--atelier-stone-500)' }}>
@@ -403,7 +403,7 @@ export function WhatAtelierDoes() {
                   style={{
                     fontFamily: 'var(--atelier-font-display)',
                     fontSize: '0.8rem',
-                    color: isActive ? 'var(--atelier-brass-600)' : 'var(--atelier-stone-300)',
+                    color: isActive ? 'var(--atelier-brass-text)' : 'var(--atelier-stone-500)',
                     minWidth: 22,
                     transition: 'color 300ms ease',
                   }}
@@ -417,7 +417,7 @@ export function WhatAtelierDoes() {
                       fontFamily: 'var(--atelier-font-display)',
                       fontSize: '1.35rem',
                       lineHeight: 1.1,
-                      color: isActive ? 'var(--atelier-stone-900)' : 'var(--atelier-stone-400)',
+                      color: isActive ? 'var(--atelier-stone-900)' : 'var(--atelier-stone-500)',
                       transition: 'color 300ms ease',
                     }}
                   >
@@ -428,7 +428,7 @@ export function WhatAtelierDoes() {
                     style={{
                       fontSize: '0.875rem',
                       lineHeight: 1.55,
-                      color: isActive ? 'var(--atelier-stone-600)' : 'var(--atelier-stone-400)',
+                      color: isActive ? 'var(--atelier-stone-600)' : 'var(--atelier-stone-500)',
                       transition: 'color 300ms ease',
                       maxWidth: '42ch',
                     }}
@@ -484,7 +484,7 @@ export function WhatAtelierDoes() {
           <a
             href="/studio"
             className="text-[10px] uppercase"
-            style={{ letterSpacing: '0.22em', color: 'var(--atelier-brass-600)', fontWeight: 600, textDecoration: 'none' }}
+            style={{ letterSpacing: '0.22em', color: 'var(--atelier-brass-text)', fontWeight: 600, textDecoration: 'none' }}
           >
             See the full studio →
           </a>

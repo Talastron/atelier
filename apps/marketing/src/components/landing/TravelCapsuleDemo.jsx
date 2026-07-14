@@ -168,7 +168,7 @@ export function TravelCapsuleDemo() {
             <BrassRule />
             <p
               className="text-[10px] uppercase font-medium"
-              style={{ letterSpacing: '0.32em', color: 'var(--atelier-brass-600)' }}
+              style={{ letterSpacing: '0.32em', color: 'var(--atelier-brass-text)' }}
             >
               The Travel Capsule
             </p>
@@ -279,7 +279,7 @@ export function TravelCapsuleDemo() {
                 <Cloud
                   size={16}
                   strokeWidth={1.5}
-                  style={{ color: 'var(--atelier-brass-600)', flexShrink: 0, marginTop: 2 }}
+                  style={{ color: 'var(--atelier-brass-text)', flexShrink: 0, marginTop: 2 }}
                 />
                 <p
                   style={{
@@ -298,7 +298,7 @@ export function TravelCapsuleDemo() {
                   className="text-[10px] uppercase mb-2.5"
                   style={{
                     letterSpacing: '0.28em',
-                    color: 'var(--atelier-stone-400)',
+                    color: 'var(--atelier-stone-500)',
                     fontWeight: 600,
                   }}
                 >
@@ -325,7 +325,7 @@ export function TravelCapsuleDemo() {
                 <Sparkles
                   size={12}
                   strokeWidth={1.5}
-                  style={{ color: 'var(--atelier-brass-600)' }}
+                  style={{ color: 'var(--atelier-brass-text)' }}
                 />
                 <p
                   className="text-[10px] uppercase"

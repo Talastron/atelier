@@ -1761,17 +1761,25 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           <h3 className="font-display text-xl md:text-2xl text-stone-900 mb-2">Stale — wear or part with?</h3>
           <p className="text-stone-500 text-sm mb-6">Owned items not worn in 90+ days. Wear deliberately this week, or move on.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {stale.map((item) => (
-              <div key={item.id} className="flex flex-col gap-2">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100">
-                  <ItemTileImage item={item} alt={item.name} />
-                </div>
-                <p className="text-xs text-stone-900 truncate">{item.name}</p>
-                <p className="text-[10px] uppercase tracking-wider text-stone-400">
-                  {item._days === null ? 'Never worn' : `${item._days}d ago`}
-                </p>
-              </div>
-            ))}
+            {stale.map((item) => {
+              const clickable = !!onOpenItem;
+              const Wrap = clickable ? 'button' : 'div';
+              return (
+                <Wrap
+                  key={item.id}
+                  {...(clickable ? { type: 'button', onClick: () => onOpenItem(item.id), 'aria-label': `Open ${item.name}` } : {})}
+                  className={`flex flex-col gap-2 text-left ${clickable ? 'group cursor-pointer' : ''}`}
+                >
+                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100">
+                    <ItemTileImage item={item} alt={item.name} />
+                  </div>
+                  <p className={`text-xs truncate ${clickable ? 'text-stone-900 group-hover:text-stone-700' : 'text-stone-900'}`}>{item.name}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-stone-400">
+                    {item._days === null ? 'Never worn' : `${item._days}d ago`}
+                  </p>
+                </Wrap>
+              );
+            })}
           </div>
         </div>
       )}

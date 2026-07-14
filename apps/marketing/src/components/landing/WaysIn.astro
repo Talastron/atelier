@@ -1,0 +1,113 @@
+---
+// apps/marketing/src/components/landing/WaysIn.astro
+//
+// "Filling the wardrobe" — the onboarding-friction reducer.
+//
+// The biggest objection a first-time visitor forms is "do I really have to
+// photograph a hundred things by hand?" The app answers this with several
+// AI-assisted intake routes; this section surfaces them truthfully so the
+// objection is answered before it hardens into a reason not to buy.
+//
+// Every claim here maps to a real intake flow in the studio's AddItemModal
+// (apps/studio/src/App.jsx ~2936–3160):
+//   • Import via Link  → paste a product URL, extract name/brand/colour/
+//                        materials/price + official image
+//   • Identify with Concierge / Find this online → snap a photo, AI
+//                        auto-fills or finds the real listing
+//   • Closet sweep     → many photos in a row, AI identifies each
+//   • Label scan / Receipt import / Manual entry → the quiet routes
+//
+// Static Astro (no hydration): presentational only, ships zero JS.
+import { BrassRule } from '@atelier/ui';
+
+const ROUTES = [
+  {
+    roman: 'I',
+    title: 'Paste a link',
+    body: 'Drop in a product link from any store. Atelier reads the page and fills in the name, brand, colours, materials and price, then pulls in the official image. Some shops lock their pages. When one does, photograph the piece instead and the Concierge finds the matching listing for you.',
+  },
+  {
+    roman: 'II',
+    title: 'Snap a photo',
+    body: 'Photograph anything you own. The Concierge names the category, brand and colours for you, or searches the web for the exact listing and imports it whole, official image and all.',
+  },
+  {
+    roman: 'III',
+    title: 'Sweep the closet',
+    body: 'Photograph one piece after another. Atelier identifies each as you go and files them together, so a whole wardrobe goes in during a single sitting.',
+  },
+];
+---
+
+<section
+  id="ways-in"
+  style="background: var(--atelier-stone-50); padding-block: clamp(4rem, 8vw, 7rem); padding-inline: var(--atelier-page-padding); border-top: 1px solid rgba(212, 179, 120, 0.18);"
+>
+  <div class="mx-auto" style="max-width: var(--atelier-content-max);">
+    {/* Header */}
+    <div style="max-width: 640px;">
+      <div class="flex items-center gap-3 mb-5">
+        <BrassRule client:load />
+        <p
+          class="text-[10px] uppercase font-medium"
+          style="letter-spacing: 0.28em; color: var(--atelier-brass-600);"
+        >
+          Filling the wardrobe
+        </p>
+      </div>
+      <h2
+        style="font-family: var(--atelier-font-display); font-size: clamp(2rem, 3.6vw, 3.25rem); line-height: 1.05; letter-spacing: -0.01em; color: var(--atelier-stone-900); margin-bottom: 1.5rem;"
+      >
+        You won't photograph it all <em style="font-weight: 400;">by hand</em>.
+      </h2>
+      <p style="font-size: clamp(1rem, 1.15vw, 1.125rem); line-height: 1.7; color: var(--atelier-stone-600); max-width: 56ch;">
+        Getting your wardrobe in is the part people dread. It needn't be. The
+        Concierge does the cataloguing for you, and there are three quick ways
+        to start.
+      </p>
+    </div>
+
+    {/* Three primary intake routes — numbered editorial cards */}
+    <div
+      class="grid grid-cols-1 md:grid-cols-3"
+      style="gap: clamp(1rem, 2vw, 1.5rem); margin-top: clamp(2.75rem, 5vw, 4rem);"
+    >
+      {ROUTES.map((r) => (
+        <article
+          style="background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 14px; padding: clamp(1.5rem, 2.5vw, 2rem); box-shadow: 0 12px 36px -18px rgba(28, 25, 23, 0.10);"
+        >
+          <div class="flex items-center gap-3 mb-4">
+            <span
+              style="font-family: var(--atelier-font-display); font-style: italic; font-size: 1.5rem; color: var(--atelier-brass-600); line-height: 1;"
+            >
+              {r.roman}
+            </span>
+            <span
+              aria-hidden="true"
+              style="display: inline-block; width: 18px; height: 1.5px; background: var(--atelier-brass-300);"
+            />
+          </div>
+          <h3
+            style="font-family: var(--atelier-font-display); font-size: 1.375rem; line-height: 1.1; color: var(--atelier-stone-900); margin-bottom: 0.75rem;"
+          >
+            {r.title}
+          </h3>
+          <p style="font-size: 0.9375rem; line-height: 1.6; color: var(--atelier-stone-600);">
+            {r.body}
+          </p>
+        </article>
+      ))}
+    </div>
+
+    {/* Quiet fourth line — the manual / label / receipt routes, set as a
+        footnote so the three fast routes stay the headline. All three are
+        real: label scanning, ReceiptImportModal, and manual entry. */}
+    <p
+      class="mt-8"
+      style="font-family: var(--atelier-font-display); font-style: italic; font-size: 0.9375rem; line-height: 1.6; color: var(--atelier-stone-500); max-width: 60ch;"
+    >
+      Prefer to do it yourself? Scan a care label, import from a receipt, or
+      enter a piece by hand. Every route ends in the same considered record.
+    </p>
+  </div>
+</section>

@@ -58,12 +58,25 @@ function buildInviteEmailHtml() {
           </table>
           <table role="presentation" width="100%" style="max-width:480px;">
             <tr>
-              <td style="padding:24px 20px 0 20px;text-align:center;">
-                <p style="margin:0;font-size:11px;line-height:1.7;color:#A8A29E;">
-                  You're receiving this because an Atelier member invited you.<br />
+              <td style="padding:28px 40px 0 40px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="border-top:1px solid rgba(212,179,120,0.35);font-size:0;line-height:0;">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 32px 32px 32px;text-align:center;">
+                <p style="margin:0 0 14px 0;font-size:12px;line-height:1.6;color:#78716C;">
+                  You're receiving this because an Atelier member invited you.
+                </p>
+                <p style="margin:0 0 14px 0;font-size:11px;line-height:1.6;color:#A8A29E;">
                   Talastron Ltd, registered in England and Wales, Company No. 15464691.<br />
-                  Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11 3NE.<br />
-                  <a href="${PRIVACY_URL}" style="color:#A8A29E;text-decoration:underline;">Privacy policy</a>
+                  Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11 3NE.
+                </p>
+                <p style="margin:0;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;">
+                  <a href="${PRIVACY_URL}" style="color:#A8884C;text-decoration:none;font-weight:600;">Privacy Policy</a>
                 </p>
               </td>
             </tr>

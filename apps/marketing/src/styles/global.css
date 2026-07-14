@@ -145,3 +145,110 @@ body {
 .section-cta:hover .arrow {
   transform: translateX(0.2rem);
 }
+
+/* ── Home-page FAQ accordion ─────────────────────────────────────────────
+   Moved here from the FAQ.astro scoped <style> block so the rules ship in
+   the main linked stylesheet (hash-stable, well cached) rather than as a
+   small per-page inline <style>, which a stale HTML cache could strip and
+   leave the accordion showing the browser's default disclosure triangles.
+   Class names are unique to the FAQ, so global (unscoped) is safe. */
+.faq-item {
+  border-bottom: 1px solid var(--atelier-stone-200);
+}
+.faq-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: clamp(1.1rem, 2vw, 1.5rem) 0;
+  cursor: pointer;
+  list-style: none;
+  outline-offset: 4px;
+}
+.faq-summary::-webkit-details-marker {
+  display: none;
+}
+.faq-question {
+  font-family: var(--atelier-font-display);
+  font-size: clamp(1.0625rem, 1.6vw, 1.3125rem);
+  line-height: 1.3;
+  color: var(--atelier-stone-800, #292524);
+  transition: color 200ms ease;
+}
+.faq-summary:hover .faq-question {
+  color: var(--atelier-stone-900);
+}
+.faq-marker {
+  position: relative;
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+.faq-marker::before,
+.faq-marker::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: var(--atelier-brass-600);
+  transform: translate(-50%, -50%);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms ease;
+}
+.faq-marker::before {
+  width: 14px;
+  height: 1.5px;
+}
+.faq-marker::after {
+  width: 1.5px;
+  height: 14px;
+}
+.faq-item[open] .faq-marker::after {
+  transform: translate(-50%, -50%) scaleY(0);
+  opacity: 0;
+}
+.faq-answer {
+  padding: 0 0 clamp(1.25rem, 2.5vw, 1.75rem);
+  max-width: 62ch;
+}
+.faq-answer p {
+  font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+  line-height: 1.7;
+  color: var(--atelier-stone-600);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .faq-item[open] .faq-answer {
+    animation: faq-answer-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes faq-answer-in {
+    from { opacity: 0; transform: translateY(-0.25rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ── Founder-note link (home page) ───────────────────────────────────────
+   Moved here from FounderNote.astro for the same reason as the FAQ styles. */
+.founder-note-link {
+  position: relative;
+  text-decoration: none;
+  padding-bottom: 0.35rem;
+  transition: color 200ms ease;
+}
+.founder-note-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 0;
+  height: 1.5px;
+  background: var(--atelier-brass-600);
+  transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.founder-note-link:hover,
+.founder-note-link:focus-visible {
+  color: var(--atelier-stone-900);
+}
+.founder-note-link:hover::after,
+.founder-note-link:focus-visible::after {
+  width: 80%;
+}

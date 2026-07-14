@@ -94,30 +94,5 @@ import { BrassRule } from '@atelier/ui';
   </div>
 </section>
 
-<style>
-  .founder-note-link {
-    position: relative;
-    text-decoration: none;
-    padding-bottom: 0.35rem;
-    transition: color 200ms ease;
-  }
-  .founder-note-link::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: 0;
-    height: 1.5px;
-    background: var(--atelier-brass-600);
-    transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  .founder-note-link:hover,
-  .founder-note-link:focus-visible {
-    color: var(--atelier-stone-900);
-  }
-  .founder-note-link:hover::after,
-  .founder-note-link:focus-visible::after {
-    width: 80%;
-  }
-</style>
+{/* .founder-note-link styles live in src/styles/global.css so they ship in
+    the main linked stylesheet rather than a per-page inline block. */}

@@ -11,7 +11,11 @@
  * clients block inline attachments by default anyway.
  */
 
-const APP_URL = 'https://myatelier.style';
+// The signed-in app lives on its own subdomain, separate from the marketing
+// site at myatelier.style — matches EDIT_URL in apps/marketing/src/config.ts,
+// which every "Sign In" / "Open Studio" button on the marketing site uses.
+const APP_URL = 'https://edit.myatelier.style';
+const MARKETING_URL = 'https://myatelier.style';
 const LOGO_URL = 'https://myatelier.style/brand/atelier-logo.png';
 const PRIVACY_URL = 'https://myatelier.style/legal/privacy';
 
@@ -25,7 +29,9 @@ function buildInviteEmailHtml() {
           <table role="presentation" width="100%" style="max-width:480px;background-color:#FFFFFF;border-radius:24px;overflow:hidden;">
             <tr>
               <td style="padding:36px 40px 0 40px;text-align:center;">
-                <img src="${LOGO_URL}" width="120" height="37" alt="Atelier" style="display:block;width:120px;height:37px;margin:0 auto;" />
+                <a href="${MARKETING_URL}">
+                  <img src="${LOGO_URL}" width="120" height="37" alt="Atelier" style="display:block;width:120px;height:37px;margin:0 auto;border:0;" />
+                </a>
               </td>
             </tr>
             <tr>

@@ -9069,7 +9069,7 @@ function OnboardingTour({ onJumpTo }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[80] bg-stone-900/80 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl">
+      <div className="bg-[#F7F5F2] w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col min-h-[320px]">
         <div className="bg-stone-900 text-white px-6 py-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400">Welcome to Atelier</p>
@@ -9077,7 +9077,11 @@ function OnboardingTour({ onJumpTo }) {
           </div>
           <h3 className="font-display text-2xl">{s.title}</h3>
         </div>
-        <div className="p-6 space-y-4">
+        {/* flex-1 so this content area fills whatever room is left between the
+            fixed header and footer — the body copy varies in length step to
+            step (step 5 runs noticeably longer than the rest), and without
+            this the whole card visibly grew/shrank switching steps. */}
+        <div className="p-6 space-y-4 flex-1">
           <p className="text-sm text-stone-700 leading-relaxed">{s.body}</p>
           <div className="flex gap-1.5">
             {ONBOARD_STEPS.map((_, i) => (

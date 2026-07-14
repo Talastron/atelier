@@ -57,10 +57,11 @@ const SLIDES = [
     ask: 'What have I worn least?',
     reply: 'Three you’ve barely touched this year.',
     meta: 'Gathering dust',
-    kind: 'rows',
-    rows: [
-      ['claire-pleat-detail-dress', 'Pleat-detail dress', 'bought in haste', '2×'],
-      ['marina-single-breasted-blazer', 'Single-breasted blazer', 'inherited', '3×'],
+    kind: 'unworn',
+    tiles: [
+      ['claire-pleat-detail-dress', 'Pleat-detail dress', 'Bought in haste', '2×'],
+      ['sequin-embellished-vest', 'Sequin vest', 'A gift', '1×'],
+      ['marina-single-breasted-blazer', 'Single-breasted blazer', 'Inherited', '3×'],
     ],
     note: 'Wear them, or release them — your call, noted with reasons.',
     stat: '3 flagged',
@@ -71,8 +72,9 @@ const SLIDES = [
     meta: 'Cost per wear · this year',
     kind: 'cpw',
     rows: [
-      ['gael-wool-blend-trousers', 'Wool-blend trousers', '48 wears', '£2.29'],
-      ['claire-pleat-detail-dress', 'Pleat-detail dress', '3 wears', '£75'],
+      ['gael-wool-blend-trousers', 'Wool-blend trousers', '48 wears', '£2.29', false],
+      ['robin-jumper', 'Fine-knit jumper', '36 wears', '£2.19', false],
+      ['claire-pleat-detail-dress', 'Pleat-detail dress', '3 wears', '£75', true],
     ],
     note: 'Two have paid for themselves. One owes you evenings.',
     stat: '£4.10 avg',
@@ -115,39 +117,66 @@ function Tile({ file, name, delay }) {
   );
 }
 
-function Row({ file, name, sub, val, cpw, delay, isLast }) {
+// ── "What have I worn least?" — three photos that fill the card, each with a
+// wear-count badge and its reason. Photo-forward, like the outfit grid.
+function UnwornBody({ s }) {
   return (
-    <div className="cr-rv" style={{ '--cr-d': `${delay}s`, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px', borderBottom: isLast ? 'none' : '1px solid var(--atelier-stone-200)' }}>
-      <div style={{ width: 34, height: 42, borderRadius: 8, flexShrink: 0, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)' }}>
-        <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 14, lineHeight: 1.25, color: 'var(--atelier-stone-800)' }}>{name}</p>
-        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', marginTop: 2 }}>{sub}</p>
-      </div>
-      <p style={{ fontSize: 14.5, color: 'var(--atelier-brass-text, #836A3A)', whiteSpace: 'nowrap' }}>
-        {val}{cpw && <span style={{ fontSize: 9, color: 'var(--atelier-stone-500)' }}>/wear</span>}
-      </p>
+    <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '1fr', gap: 8 }}>
+      {s.tiles.map(([file, name, reason, count], i) => (
+        <figure key={file + i} className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22 + i * STEP).toFixed(2)}s`, margin: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, minHeight: 0, position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: 'var(--atelier-stone-100)' }}>
+            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center 30%' }} />
+            <span style={{ position: 'absolute', top: 6, right: 6, background: 'var(--atelier-ink)', color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 10, fontWeight: 700, letterSpacing: '0.03em', padding: '3px 7px', borderRadius: 999 }}>{count}</span>
+          </div>
+          <p style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11.5, marginTop: 6, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+          <p style={{ flexShrink: 0, fontFamily: 'Arial, sans-serif', fontSize: 8.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', marginTop: 2 }}>{reason}</p>
+        </figure>
+      ))}
     </div>
   );
 }
 
+// ── "What's my wardrobe costing?" — a cost-per-wear leaderboard: framed rows
+// with a real thumbnail and a bold brass figure; the poor performer flagged.
+function CpwBody({ s }) {
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 9 }}>
+      {s.rows.map(([file, name, wears, val, flag], i) => (
+        <div key={file + i} className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22 + i * 0.16).toFixed(2)}s`, display: 'flex', alignItems: 'center', gap: 12, padding: '9px 11px', borderRadius: 12, background: flag ? 'rgba(212,179,120,0.10)' : 'var(--atelier-stone-50)', border: `1px solid ${flag ? 'rgba(212,179,120,0.4)' : 'var(--atelier-stone-200)'}` }}>
+          <div style={{ width: 44, height: 56, borderRadius: 8, flexShrink: 0, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)' }}>
+            <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 15, lineHeight: 1.2, color: 'var(--atelier-stone-800)' }}>{name}</p>
+            <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', marginTop: 2 }}>{wears}</p>
+          </div>
+          <p style={{ margin: 0, fontFamily: 'var(--atelier-font-display)', fontSize: '1.375rem', lineHeight: 1, color: flag ? 'var(--atelier-brass-text, #836A3A)' : 'var(--atelier-stone-900)', whiteSpace: 'nowrap' }}>
+            {val}<span style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, color: 'var(--atelier-stone-500)' }}>/wear</span>
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── "What's my style?" — the Style Manifesto: an editorial, typography-led
+// card (large italic reading, brass trait chips, a bold palette strip).
 function DnaBody({ s }) {
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22).toFixed(2)}s`, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 15, lineHeight: 1.55, color: 'var(--atelier-stone-700)', margin: '0 0 15px' }}>
-        {s.reading}
+      <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22).toFixed(2)}s`, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 'clamp(1rem, 1.5vw, 1.1875rem)', lineHeight: 1.55, color: 'var(--atelier-stone-800)', margin: '0 0 20px' }}>
+        “{s.reading}”
       </p>
-      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.4).toFixed(2)}s`, display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 }}>
+      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.4).toFixed(2)}s`, display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}>
         {s.traits.map((t) => (
-          <span key={t} style={{ fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: '0.04em', padding: '5px 11px', borderRadius: 999, background: 'var(--atelier-cream)', border: '1px solid #eee7da', color: 'var(--atelier-stone-700)' }}>{t}</span>
+          <span key={t} style={{ fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, padding: '6px 13px', borderRadius: 999, background: 'var(--atelier-cream)', border: '1px solid #eee7da', color: 'var(--atelier-brass-text, #836A3A)' }}>{t}</span>
         ))}
       </div>
       <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.58).toFixed(2)}s` }}>
-        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', margin: '0 0 8px' }}>Your palette</p>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', margin: '0 0 9px' }}>Your palette</p>
+        <div style={{ display: 'flex', gap: 7 }}>
           {s.palette.map((c, i) => (
-            <span key={i} style={{ flex: 1, height: 36, borderRadius: 8, background: c, border: '1px solid var(--atelier-stone-200)' }} />
+            <span key={i} style={{ flex: 1, height: 50, borderRadius: 8, background: c, border: '1px solid var(--atelier-stone-200)' }} />
           ))}
         </div>
       </div>
@@ -157,22 +186,13 @@ function DnaBody({ s }) {
 
 function CardBody({ s }) {
   if (s.kind === 'dna') return <DnaBody s={s} />;
-  if (s.kind === 'grid') {
-    // grid fills the flex body: equal auto-rows, tiles crop to fit — so the
-    // outfit/capsule never overflows the card, whatever the card height.
-    return (
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${s.cols}, 1fr)`, gridAutoRows: '1fr', gap: 8 }}>
-        {s.tiles.map(([file, name], i) => (
-          <Tile key={file + i} file={file} name={name} delay={(BASE + 0.22 + i * STEP).toFixed(2)} />
-        ))}
-      </div>
-    );
-  }
-  // rows centred in the available body so the card is balanced like the grids
+  if (s.kind === 'unworn') return <UnwornBody s={s} />;
+  if (s.kind === 'cpw') return <CpwBody s={s} />;
+  // grid (outfit / capsule) — fills the flex body; tiles crop to fit.
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      {s.rows.map(([file, name, sub, val], i) => (
-        <Row key={file + i} file={file} name={name} sub={sub} val={val} cpw={s.kind === 'cpw'} isLast={i === s.rows.length - 1} delay={(BASE + 0.22 + i * 0.18).toFixed(2)} />
+    <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${s.cols}, 1fr)`, gridAutoRows: '1fr', gap: 8 }}>
+      {s.tiles.map(([file, name], i) => (
+        <Tile key={file + i} file={file} name={name} delay={(BASE + 0.22 + i * STEP).toFixed(2)} />
       ))}
     </div>
   );

@@ -233,6 +233,8 @@ export function ConciergeReel() {
   const timerRef = useRef(null);
   const typeTimerRef = useRef(null);
   const pausedRef = useRef(false);
+  const nearRef = useRef(NEAR); // side-card offset, recomputed to fit the stage width
+  const farRef = useRef(FAR);   // off-frame parking offset
   const [reduced, setReduced] = useState(false);
   const [docHidden, setDocHidden] = useState(false);
 
@@ -261,20 +263,36 @@ export function ConciergeReel() {
     return () => document.removeEventListener('visibilitychange', on);
   }, []);
 
+  // Fit the side-card offsets to the actual stage width so the left/right
+  // cards are never clipped by the page margins, at any viewport.
+  const computeOffsets = useCallback(() => {
+    const stage = stageRef.current;
+    const card = slotRefs.current[0];
+    const stageW = stage ? stage.clientWidth : 0;
+    if (!stageW) return;
+    const cardW = card ? card.offsetWidth : 420;
+    const sideHalf = (cardW * 0.8) / 2; // visual half-width of a scaled side card
+    const maxNear = stageW / 2 - sideHalf - 14; // keep the outer edge inside the stage
+    nearRef.current = Math.max(150, Math.min(NEAR, maxNear));
+    farRef.current = stageW / 2 + cardW; // safely off-frame (clipped by the stage)
+  }, []);
+
   // Position every slot by its offset from the current index.
   const place = useCallback((i) => {
+    const nearV = nearRef.current;
+    const farV = farRef.current;
     slotRefs.current.forEach((slot, k) => {
       if (!slot) return;
       const raw = (k - i + N) % N;
       let x, s, z;
-      if (raw === 0) { x = 0; s = 1; z = 5; }          // centre (front)
-      else if (raw === 1) { x = NEAR; s = 0.8; z = 3; } // right (set back)
-      else if (raw === N - 1) { x = -NEAR; s = 0.8; z = 3; } // left (set back)
-      else { x = -FAR; s = 0.7; z = 1; }               // parked off-frame, clipped
+      if (raw === 0) { x = 0; s = 1; z = 5; }            // centre (front)
+      else if (raw === 1) { x = nearV; s = 0.8; z = 3; } // right (set back)
+      else if (raw === N - 1) { x = -nearV; s = 0.8; z = 3; } // left (set back)
+      else { x = -farV; s = 0.7; z = 1; }                // parked off-frame, clipped
       const prev = slot._crx;
-      if (!reduced && prev !== undefined && Math.abs(x - prev) > NEAR * 1.8) {
+      if (!reduced && prev !== undefined && Math.abs(x - prev) > nearV * 1.8) {
         slot.style.transition = 'none';
-        slot.style.transform = `translate(${FAR}px,-50%) scale(0.7)`;
+        slot.style.transform = `translate(${farV}px,-50%) scale(0.7)`;
         slot.getBoundingClientRect();
         slot.style.transition = '';
       }
@@ -311,6 +329,16 @@ export function ConciergeReel() {
     typeQuestion(SLIDES[idx].ask);
   }, [idx, place, typeQuestion]);
 
+  // Fit the offsets to the stage width on mount and on resize, so the left
+  // and right cards are never clipped by the page margins.
+  useEffect(() => {
+    computeOffsets();
+    place(idxRef.current);
+    const onResize = () => { computeOffsets(); place(idxRef.current); };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [computeOffsets, place]);
+
   // Auto-advance (suspended for reduced motion, hidden tab, or hover).
   useEffect(() => {
     if (reduced || docHidden) { clearTimeout(timerRef.current); return; }
@@ -337,15 +365,11 @@ export function ConciergeReel() {
       <div aria-hidden="true" className="absolute pointer-events-none" style={{ top: '3%', left: '50%', transform: 'translateX(-50%)', width: '70%', height: '46%', background: 'radial-gradient(ellipse at center, rgba(212,179,120,0.06) 0%, transparent 65%)' }} />
 
       <div className="relative w-full mx-auto flex flex-col items-center" style={{ maxWidth: 'var(--atelier-content-max)', flex: 1, minHeight: 0 }}>
-        {/* compact top: masthead + one-line purpose (kept for SEO / OAuth) */}
-        <div className="flex items-center justify-center gap-4 mb-3">
-          <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
-          <p className="text-[10px] uppercase font-medium" style={{ letterSpacing: '0.32em', color: 'var(--atelier-brass-text, #836A3A)' }}>The Atelier Studio · MMXXVI</p>
-          <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
-        </div>
-        <p className="text-center mx-auto" style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)', color: 'var(--atelier-stone-600)', maxWidth: '48ch', marginBottom: 'clamp(0.5rem, 1.1vh, 0.9rem)' }}>
-          A private AI stylist that dresses you from the clothes you already own.
-        </p>
+        {/* The visible hero is carried by the live demo (chat + rotating cards).
+            An sr-only H1 keeps the page's purpose statement for SEO / OAuth /
+            screen readers; the visible plain-language version lives just below
+            in "What Atelier does". */}
+        <h1 className="sr-only">Atelier — an AI stylist that dresses you from the clothes you already own.</h1>
 
         {/* stage — the answer cards rotate in the BACKGROUND; the Concierge
             conversation panel sits ON TOP, overlaying them (ActiveCampaign-style). */}

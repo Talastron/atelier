@@ -279,25 +279,39 @@ export function ConciergeReel() {
   }, []);
 
   // Position every slot by its offset from the current index.
+  //
+  // Three cards are ever visible: centre (front), left and right (set back).
+  // The two hidden cards sit *at* the left/right slots but at opacity 0. On
+  // advance the featured cards physically move + zoom, while the departing
+  // left card simply FADES OUT in place and the next card FADES IN at the
+  // right — nothing slides off the frame. Poses by offset (raw):
+  //   0        centre, front, visible
+  //   1        right slot, visible
+  //   2        right slot, hidden (about to fade in)
+  //   N-1      left slot, visible
+  //   3..N-2   left slot, hidden (has faded out)
   const place = useCallback((i) => {
     const nearV = nearRef.current;
-    const farV = farRef.current;
     slotRefs.current.forEach((slot, k) => {
       if (!slot) return;
       const raw = (k - i + N) % N;
-      let x, s, z;
-      if (raw === 0) { x = 0; s = 1; z = 5; }            // centre (front)
-      else if (raw === 1) { x = nearV; s = 0.8; z = 3; } // right (set back)
-      else if (raw === N - 1) { x = -nearV; s = 0.8; z = 3; } // left (set back)
-      else { x = -farV; s = 0.7; z = 1; }                // parked off-frame, clipped
+      let x, s, o, z;
+      if (raw === 0) { x = 0; s = 1; o = 1; z = 5; }
+      else if (raw === 1) { x = nearV; s = 0.8; o = 1; z = 3; }
+      else if (raw === N - 1) { x = -nearV; s = 0.8; o = 1; z = 3; }
+      else if (raw === 2) { x = nearV; s = 0.8; o = 0; z = 2; }
+      else { x = -nearV; s = 0.8; o = 0; z = 2; }
       const prev = slot._crx;
-      if (!reduced && prev !== undefined && Math.abs(x - prev) > nearV * 1.8) {
+      // The hidden card that hops from the left slot to the right slot travels
+      // while invisible — snap it (no transition) so nothing slides underneath.
+      if (!reduced && prev !== undefined && Math.abs(x - prev) > nearV * 1.5) {
         slot.style.transition = 'none';
-        slot.style.transform = `translate(${farV}px,-50%) scale(0.7)`;
+        slot.style.transform = `translate(${x}px,-50%) scale(${s})`;
         slot.getBoundingClientRect();
         slot.style.transition = '';
       }
       slot.style.transform = `translate(${x}px,-50%) scale(${s})`;
+      slot.style.opacity = o;
       slot.style.zIndex = z;
       slot._crx = x;
       const isC = raw === 0;
@@ -406,14 +420,14 @@ export function ConciergeReel() {
         </div>
 
         {/* the answers — the depth carousel, fully visible below the ask */}
-        <div ref={stageWrapRef} className="relative w-full" style={{ height: 'clamp(340px, 46vh, 500px)', marginTop: 'clamp(1.75rem, 3.5vw, 3rem)' }}>
+        <div ref={stageWrapRef} className="relative w-full" style={{ height: 'clamp(460px, 64vh, 660px)', marginTop: 'clamp(1.75rem, 3.5vw, 3rem)' }}>
           <div ref={stageRef} className="cr-stage" style={{ position: 'absolute', inset: 0, maxWidth: 1500, margin: '0 auto' }}>
             {SLIDES.map((s, i) => (
               <div
                 key={i}
                 ref={(el) => { slotRefs.current[i] = el; }}
                 className="cr-slot"
-                style={{ width: 'min(430px, 80vw)', marginLeft: 'calc(min(215px, 40vw) * -1)', height: 'min(calc(100% - 12px), 500px)' }}
+                style={{ width: 'min(440px, 82vw)', marginLeft: 'calc(min(220px, 41vw) * -1)', height: 'min(calc(100% - 12px), 660px)' }}
                 aria-hidden="true"
               >
                 <Card s={s} />

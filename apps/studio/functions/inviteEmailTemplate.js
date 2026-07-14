@@ -6,10 +6,13 @@
  *
  * Email clients don't support external stylesheets reliably, so styling is
  * inline throughout. Font stacks fall back to system serif/sans-serif —
- * the app's actual display font isn't available in email clients.
+ * the app's actual display font isn't available in email clients. The logo
+ * is loaded from the live marketing site rather than attached, since most
+ * clients block inline attachments by default anyway.
  */
 
 const APP_URL = 'https://myatelier.style';
+const LOGO_URL = 'https://myatelier.style/brand/atelier-logo.png';
 
 function buildInviteEmailHtml() {
   return `<!DOCTYPE html>
@@ -20,11 +23,15 @@ function buildInviteEmailHtml() {
         <td align="center">
           <table role="presentation" width="100%" style="max-width:480px;background-color:#FFFFFF;border-radius:24px;overflow:hidden;">
             <tr>
-              <td style="padding:48px 40px 32px 40px;">
-                <p style="margin:0 0 24px 0;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#A8884C;font-weight:600;">Atelier</p>
+              <td style="padding:0;background-color:#1C1917;text-align:center;">
+                <img src="${LOGO_URL}" width="120" height="37" alt="Atelier" style="display:block;width:120px;height:37px;margin:28px auto;" />
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:44px 40px 32px 40px;">
                 <h1 style="margin:0 0 20px 0;font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.3;color:#1C1917;font-weight:500;">You're in.</h1>
                 <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#57534E;">
-                  You've been given your own private wardrobe inside Atelier — a space that's entirely yours. No one else sees what's in it, and you won't see anyone else's.
+                  You've been given your own private wardrobe inside Atelier, a space that's entirely yours. No one else sees what's in it, and you won't see anyone else's.
                 </p>
                 <p style="margin:0 0 32px 0;font-size:15px;line-height:1.6;color:#57534E;">
                   Add what you own, save the looks that catch your eye, and let the Concierge help you get dressed from what's already there.
@@ -52,7 +59,7 @@ function buildInviteEmailHtml() {
 function buildInviteEmailText() {
   return `You're in.
 
-You've been given your own private wardrobe inside Atelier — a space that's entirely yours. No one else sees what's in it, and you won't see anyone else's.
+You've been given your own private wardrobe inside Atelier, a space that's entirely yours. No one else sees what's in it, and you won't see anyone else's.
 
 Add what you own, save the looks that catch your eye, and let the Concierge help you get dressed from what's already there.
 

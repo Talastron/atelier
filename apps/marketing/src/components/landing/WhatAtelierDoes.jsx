@@ -143,7 +143,11 @@ const LOG_DAYS = [
   { d: 'Wed', src: null },
   { d: 'Thu', src: 'mirabel-satin-blouse' },
   { d: 'Fri', src: 'claire-pleat-detail-dress' },
-  { d: 'Sat', src: 'high-rise-denim-shorts' },
+  // Was 'high-rise-denim-shorts', whose source photo carries a wide white
+  // margin — at object-fit: cover it rendered noticeably smaller/zoomed-out
+  // than the tightly-framed neighbours and broke the row's rhythm. The
+  // pleated-tailored-shorts photo fills the frame like the rest of the week.
+  { d: 'Sat', src: 'pleated-tailored-shorts' },
   { d: 'Sun', src: null },
 ];
 

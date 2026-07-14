@@ -134,6 +134,13 @@ function StudioFrame() {
   const [confidence, setConfidence] = useState(0);
   const containerRef = useRef(null);
   const [inView, setInView] = useState(true);
+  // Two reasons to suspend the perpetual demo loop: the visitor prefers
+  // reduced motion, or the tab is backgrounded (where the setTimeout chain
+  // would otherwise keep firing and draining a phone battery). Reduced-motion
+  // additionally settles the frame on one finished outfit (see effect below),
+  // so those visitors still see the product's output, just without the reveal.
+  const [reduced, setReduced] = useState(false);
+  const [docHidden, setDocHidden] = useState(false);
 
   const timersRef = useRef([]);
   const rafRef = useRef(null);
@@ -177,9 +184,44 @@ function StudioFrame() {
     return () => obs.disconnect();
   }, []);
 
-  // Main animation loop. Slow, considered timing throughout.
+  // Watch the visitor's motion preference (live, so it responds if they change
+  // it in OS settings while the page is open).
   useEffect(() => {
-    if (!inView) {
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!mq) return;
+    setReduced(mq.matches);
+    const onChange = (e) => setReduced(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // Suspend the loop while the tab is hidden. rAF self-throttles in background
+  // tabs, but the setTimeout chain does not, so we stop it explicitly.
+  useEffect(() => {
+    const onVis = () => setDocHidden(document.hidden);
+    onVis();
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // Reduced-motion: don't animate at all. Cancel any scheduled work and pin
+  // the frame to one finished proposal (a fully-composed outfit with the
+  // stylist's note and confidence), so the hero still shows what the product
+  // produces without the reveal choreography.
+  useEffect(() => {
+    if (!reduced) return;
+    clearAllTimers();
+    cancelRaf();
+    setOutfitIdx(0);
+    setStage(STAGE.COMPLETE);
+    setRevealedSlots(4);
+    setConfidence(OUTFITS[0].confidence);
+  }, [reduced]);
+
+  // Main animation loop. Slow, considered timing throughout. Suspended when out
+  // of view, when the tab is hidden, or when reduced motion is preferred.
+  useEffect(() => {
+    if (!inView || docHidden || reduced) {
       clearAllTimers();
       cancelRaf();
       return;
@@ -263,10 +305,11 @@ function StudioFrame() {
       clearAllTimers();
       cancelRaf();
     };
-    // Intentionally only depend on inView; outfit index is managed internally
-    // via localIdx so the effect doesn't restart every time we advance.
+    // Depend only on the three suspend/resume gates; outfit index is managed
+    // internally via localIdx so the effect doesn't restart every time we
+    // advance the carousel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inView]);
+  }, [inView, docHidden, reduced]);
 
   const current = OUTFITS[outfitIdx];
   const showingOutfit =
@@ -1242,6 +1285,23 @@ export function Hero() {
             </span>
           </a>
         </div>
+
+        {/* Early-access line — honest exclusivity in place of social proof
+            (there are no members to quote yet). Frames "no crowd" as "be
+            among the first" and points at the founding tier on /pricing. A
+            quiet invitation, not a countdown — the live founding count lives
+            on /pricing and isn't restated here. */}
+        <p
+          className="mx-auto italic"
+          style={{
+            fontFamily: 'var(--atelier-font-display)',
+            fontSize: 'clamp(0.875rem, 1vw, 0.9375rem)',
+            color: 'var(--atelier-stone-500)',
+            marginTop: 'clamp(1.25rem, 2vw, 1.5rem)',
+          }}
+        >
+          Now welcoming its founding members.
+        </p>
 
         {/* Live interactive studio surface */}
         <StudioFrame />

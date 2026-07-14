@@ -16,6 +16,9 @@ import { ConciergeDemo } from '../components/landing/ConciergeDemo.jsx';
 import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
 import { InvestmentLens } from '../components/landing/InvestmentLens.jsx';
 import { TravelCapsuleDemo } from '../components/landing/TravelCapsuleDemo.jsx';
+import WaysIn from '../components/landing/WaysIn.astro';
+import FounderNote from '../components/landing/FounderNote.astro';
+import FAQ from '../components/landing/FAQ.astro';
 import JournalRail from '../components/JournalRail.astro';
 import { BrassRule } from '@atelier/ui';
 import { SITE, EDIT_URL } from '../config.ts';
@@ -90,6 +93,12 @@ const softwareLd = {
         </div>
       </div>
     </section>
+
+    {/* ── Filling the wardrobe — answers the "must I photograph a hundred
+        things by hand?" objection right where it forms (just after the
+        Catalogue claim), by surfacing the real AI-assisted intake routes:
+        paste a link · snap a photo · sweep the closet. ── */}
+    <WaysIn />
 
     {/* ── Inside Atelier — interactive tour of the real app surfaces
         (Wardrobe / Styling Studio / Lookbook), desktop + mobile frames.
@@ -240,6 +249,16 @@ const softwareLd = {
 
     {/* ── Section 6: Journal rail — three latest essays ─────────────── */}
     <JournalRail />
+
+    {/* ── From the founder — honest credibility in place of testimonials
+        (no members to quote yet): a real, named founder and a thread of
+        her story, linking to the full note on /about. ── */}
+    <FounderNote />
+
+    {/* ── FAQ — objection-handling immediately before the ask, so the last
+        thing read before the CTA is a reassurance. Native <details>
+        accordion + FAQPage JSON-LD for rich-snippet eligibility. ── */}
+    <FAQ />
 
     {/* ── Closing CTA ────────────────────────────────────────────────── */}
     <Philosophy />

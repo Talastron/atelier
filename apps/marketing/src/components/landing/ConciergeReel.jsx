@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Pic } from '@atelier/ui';
-import { ChevronRight } from 'lucide-react';
 
 /**
  * ConciergeReel — the homepage hero.
@@ -360,23 +359,54 @@ export function ConciergeReel() {
 
   return (
     <section
-      className="relative flex flex-col items-center"
-      style={{ minHeight: '100vh', paddingTop: 'clamp(4.75rem, 5vw, 5.75rem)', paddingBottom: 'clamp(0.75rem, 1.5vw, 1.5rem)', paddingInline: 'var(--atelier-page-padding)', overflow: 'hidden' }}
+      id="concierge-reel"
+      className="relative overflow-hidden"
+      style={{ background: 'var(--atelier-stone-50)', paddingBlock: 'clamp(3.5rem, 7vw, 6rem)', paddingInline: 'var(--atelier-page-padding)', borderTop: '1px solid rgba(212,179,120,0.18)' }}
     >
-      {/* soft brass atmosphere */}
-      <div aria-hidden="true" className="absolute pointer-events-none" style={{ top: '3%', left: '50%', transform: 'translateX(-50%)', width: '70%', height: '46%', background: 'radial-gradient(ellipse at center, rgba(212,179,120,0.06) 0%, transparent 65%)' }} />
+      <div className="relative mx-auto" style={{ maxWidth: 'var(--atelier-content-max)' }}>
+        {/* section header */}
+        <div className="text-center" style={{ marginBottom: 'clamp(1.5rem, 3vw, 2.25rem)' }}>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
+            <p className="text-[10px] uppercase font-medium" style={{ letterSpacing: '0.28em', color: 'var(--atelier-brass-text, #836A3A)' }}>The Concierge at work</p>
+            <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
+          </div>
+          <h2 className="mx-auto" style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.875rem, 3.4vw, 2.875rem)', lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--atelier-stone-900)', maxWidth: '20ch' }}>
+            Ask. It answers from <em style={{ fontWeight: 400 }}>your</em> closet.
+          </h2>
+        </div>
 
-      <div className="relative w-full mx-auto flex flex-col items-center" style={{ maxWidth: 'var(--atelier-content-max)', flex: 1, minHeight: 0 }}>
-        {/* The visible hero is carried by the live demo (chat + rotating cards).
-            An sr-only H1 keeps the page's purpose statement for SEO / OAuth /
-            screen readers; the visible plain-language version lives just below
-            in "What Atelier does". */}
-        <h1 className="sr-only">Atelier — an AI stylist that dresses you from the clothes you already own.</h1>
+        {/* the "ask" — the conversation panel, now ABOVE the cards so the
+            answers below are fully visible. Light, wide, brass border-rule. */}
+        <div className="mx-auto" style={{ width: 'min(780px, 100%)' }}>
+          <div style={{ position: 'relative', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 20, padding: 'clamp(1.1rem, 2vw, 1.5rem) clamp(1.3rem, 2.6vw, 2rem)', boxShadow: '0 30px 70px -30px rgba(28,25,23,0.22), 0 8px 20px -12px rgba(28,25,23,0.1)' }}>
+            <div aria-hidden="true" style={{ position: 'absolute', inset: 8, border: '1px solid rgba(212,179,120,0.35)', borderRadius: 14, pointerEvents: 'none' }} />
+            <div className="relative">
+              <div className="flex items-center gap-2" style={{ marginBottom: 11 }}>
+                <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>✦</span>
+                <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700 }}>Ask the Concierge</span>
+              </div>
+              <div className="flex items-center justify-between gap-6" style={{ flexWrap: 'wrap' }}>
+                {/* fixed one-line height + nowrap so the panel never resizes as
+                    the question types or changes length */}
+                <p style={{ flex: '1 1 300px', minWidth: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.0625rem, 1.7vw, 1.4375rem)', lineHeight: 1.4, letterSpacing: '-0.005em', color: 'var(--atelier-stone-900)', margin: 0, textAlign: 'left', height: '1.4em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span ref={typedRef} /><span className="cr-cursor" aria-hidden="true" />
+                </p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <a href="/pricing" className="inline-flex items-center px-6 py-3 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]" style={{ background: 'var(--atelier-ink)', color: '#fff', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
+                    Begin curating
+                  </a>
+                  <a href="/studio" className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors group" style={{ color: 'var(--atelier-stone-600)', whiteSpace: 'nowrap' }}>
+                    See the Studio<span className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--atelier-brass-text, #836A3A)', display: 'inline-block' }}>→</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        {/* stage — the answer cards rotate in the BACKGROUND; the Concierge
-            conversation panel sits ON TOP, overlaying them (ActiveCampaign-style). */}
-        <div ref={stageWrapRef} className="relative w-full" style={{ flex: 1, minHeight: 0 }}>
-          {/* background layer: the depth carousel */}
+        {/* the answers — the depth carousel, fully visible below the ask */}
+        <div ref={stageWrapRef} className="relative w-full" style={{ height: 'clamp(340px, 46vh, 500px)', marginTop: 'clamp(1.75rem, 3.5vw, 3rem)' }}>
           <div ref={stageRef} className="cr-stage" style={{ position: 'absolute', inset: 0, maxWidth: 1500, margin: '0 auto' }}>
             {SLIDES.map((s, i) => (
               <div
@@ -390,41 +420,10 @@ export function ConciergeReel() {
               </div>
             ))}
           </div>
-
-          {/* foreground layer: the conversation panel, floating over the cards.
-              Wide + short (AC ratio), light with the brand's brass border-rule,
-              question on the left and CTAs to the right. */}
-          <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, width: 'min(780px, 94%)' }}>
-            <div style={{ position: 'relative', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 20, padding: 'clamp(1.1rem, 2vw, 1.5rem) clamp(1.3rem, 2.6vw, 2rem)', boxShadow: '0 40px 90px -30px rgba(28,25,23,0.28), 0 10px 24px -12px rgba(28,25,23,0.12)' }}>
-              {/* brand brass border-rule (same vocabulary as the vellum cards) */}
-              <div aria-hidden="true" style={{ position: 'absolute', inset: 8, border: '1px solid rgba(212,179,120,0.35)', borderRadius: 14, pointerEvents: 'none' }} />
-              <div className="relative">
-                <div className="flex items-center gap-2" style={{ marginBottom: 11 }}>
-                  <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>✦</span>
-                  <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700 }}>Ask the Concierge</span>
-                </div>
-                <div className="flex items-center justify-between gap-6" style={{ flexWrap: 'wrap' }}>
-                  {/* fixed one-line height + nowrap so the panel never resizes as
-                      the question types or changes length */}
-                  <p style={{ flex: '1 1 300px', minWidth: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.0625rem, 1.7vw, 1.4375rem)', lineHeight: 1.4, letterSpacing: '-0.005em', color: 'var(--atelier-stone-900)', margin: 0, textAlign: 'left', height: '1.4em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    <span ref={typedRef} /><span className="cr-cursor" aria-hidden="true" />
-                  </p>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <a href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]" style={{ background: 'var(--atelier-ink)', color: '#fff', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
-                      Begin curating<ChevronRight size={16} strokeWidth={1.75} />
-                    </a>
-                    <a href="/studio" className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors group" style={{ color: 'var(--atelier-stone-600)', whiteSpace: 'nowrap' }}>
-                      See the Studio<span className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--atelier-brass-text, #836A3A)', display: 'inline-block' }}>→</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* dots */}
-        <div className="flex items-center justify-center gap-2.5" role="tablist" aria-label="Concierge examples" onKeyDown={onKeyDots} style={{ marginTop: 'clamp(0.55rem, 1.3vh, 1rem)' }}>
+        <div className="flex items-center justify-center gap-2.5" role="tablist" aria-label="Concierge examples" onKeyDown={onKeyDots} style={{ marginTop: 'clamp(0.9rem, 2vh, 1.5rem)' }}>
           {SLIDES.map((s, i) => (
             <button key={i} type="button" role="tab" aria-selected={i === idx} aria-label={s.ask}
               className={`cr-dot${i === idx ? ' is-on' : ''}`} onClick={() => setIdx(i)} tabIndex={i === idx ? 0 : -1} />
@@ -432,7 +431,7 @@ export function ConciergeReel() {
         </div>
       </div>
 
-      {/* pause on hover of the whole stage area (cards + panel) */}
+      {/* pause on hover of the cards */}
       <PauseBinder stageRef={stageWrapRef} pausedRef={pausedRef} />
     </section>
   );

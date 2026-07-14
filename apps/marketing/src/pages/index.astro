@@ -9,6 +9,7 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Philosophy from '../components/Philosophy.astro';
 import ClosingMasthead from '../components/ClosingMasthead.astro';
+import { Hero } from '../components/landing/Hero.jsx';
 import { ConciergeReel } from '../components/landing/ConciergeReel.jsx';
 import { InsideAtelier } from '../components/landing/InsideAtelier.jsx';
 import { WhatAtelierDoes } from '../components/landing/WhatAtelierDoes.jsx';
@@ -50,13 +51,15 @@ const softwareLd = {
 >
   <Nav />
   <main>
-    {/* ── Hero: the Concierge Reel — a live conversation with the stylist.
-        A chat bar types a question; the answer composes onto the foreground
-        card of a three-card depth carousel that shuffles through four real
-        interactions (what to wear · pack a trip · worn least · cost-per-wear).
-        Replaces the old Suggest-a-Look hero and absorbs the three demo
-        sections that used to sit mid-page. ── */}
-    <ConciergeReel client:load />
+    {/* ── Hero: the Suggest-a-Look daily brief ──────────────────────── */}
+    <Hero client:load />
+
+    {/* ── The Concierge at work — a live conversation showcase: a question
+        types into the chat panel and the depth carousel below shuffles
+        through five real interactions (what to wear · pack a trip · worn
+        least · cost-per-wear · style manifesto). Consolidates what used to be
+        three separate mid-page demos. ── */}
+    <ConciergeReel client:visible />
 
     {/* ── What Atelier does — states the app's purpose plainly (header →
         four-capability grid: Catalogue / Log / Style / Track) for the Google

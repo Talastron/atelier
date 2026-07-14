@@ -344,23 +344,31 @@ export function ConciergeReel() {
             ))}
           </div>
 
-          {/* foreground layer: the conversation panel, floating over the cards */}
-          <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, width: 'min(520px, 92%)' }}>
-            <div style={{ background: 'linear-gradient(160deg, var(--atelier-ink) 0%, #292524 100%)', color: '#fff', borderRadius: 24, padding: 'clamp(1.25rem, 2.4vw, 1.9rem) clamp(1.25rem, 2.4vw, 2rem)', boxShadow: '0 50px 110px -28px rgba(28,25,23,0.62), 0 14px 34px -14px rgba(28,25,23,0.4)', textAlign: 'center' }}>
-              <div className="flex items-center justify-center gap-2" style={{ marginBottom: 13 }}>
-                <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13 }}>✦</span>
-                <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--atelier-brass-300)', fontWeight: 600 }}>Ask the Concierge</span>
-              </div>
-              <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.375rem, 2.6vw, 2rem)', lineHeight: 1.12, letterSpacing: '-0.01em', color: '#fff', margin: 0, minHeight: '2.24em', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span><span ref={typedRef} /><span className="cr-cursor" aria-hidden="true" /></span>
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3" style={{ marginTop: 16 }}>
-                <a href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]" style={{ background: 'var(--atelier-brass-300)', color: 'var(--atelier-stone-900)', letterSpacing: '0.03em' }}>
-                  Begin curating<ChevronRight size={16} strokeWidth={1.75} />
-                </a>
-                <a href="/studio" className="inline-flex items-center gap-1.5 text-sm transition-colors group" style={{ color: 'rgba(255,255,255,0.72)' }}>
-                  See the studio<span className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--atelier-brass-300)', display: 'inline-block' }}>→</span>
-                </a>
+          {/* foreground layer: the conversation panel, floating over the cards.
+              Wide + short (AC ratio), light with the brand's brass border-rule,
+              question on the left and CTAs to the right. */}
+          <div className="absolute" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, width: 'min(780px, 94%)' }}>
+            <div style={{ position: 'relative', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 20, padding: 'clamp(1.1rem, 2vw, 1.5rem) clamp(1.3rem, 2.6vw, 2rem)', boxShadow: '0 40px 90px -30px rgba(28,25,23,0.28), 0 10px 24px -12px rgba(28,25,23,0.12)' }}>
+              {/* brand brass border-rule (same vocabulary as the vellum cards) */}
+              <div aria-hidden="true" style={{ position: 'absolute', inset: 8, border: '1px solid rgba(212,179,120,0.35)', borderRadius: 14, pointerEvents: 'none' }} />
+              <div className="relative">
+                <div className="flex items-center gap-2" style={{ marginBottom: 11 }}>
+                  <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>✦</span>
+                  <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700 }}>Ask the Concierge</span>
+                </div>
+                <div className="flex items-center justify-between gap-6" style={{ flexWrap: 'wrap' }}>
+                  <p style={{ flex: '1 1 300px', minWidth: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.375rem, 2.4vw, 2rem)', lineHeight: 1.1, letterSpacing: '-0.01em', color: 'var(--atelier-stone-900)', margin: 0, textAlign: 'left', minHeight: '1.25em' }}>
+                    <span ref={typedRef} /><span className="cr-cursor" aria-hidden="true" />
+                  </p>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <a href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]" style={{ background: 'var(--atelier-ink)', color: '#fff', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
+                      Begin curating<ChevronRight size={16} strokeWidth={1.75} />
+                    </a>
+                    <a href="/studio" className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors group" style={{ color: 'var(--atelier-stone-600)', whiteSpace: 'nowrap' }}>
+                      See the Studio<span className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--atelier-brass-text, #836A3A)', display: 'inline-block' }}>→</span>
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

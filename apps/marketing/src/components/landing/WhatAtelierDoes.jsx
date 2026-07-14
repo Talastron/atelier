@@ -21,8 +21,8 @@ const CAPABILITIES = [
   {
     numeral: 'I',
     title: 'Catalogue',
-    claim: 'Photograph or import every piece you own. Atelier builds your private digital wardrobe.',
-    caption: 'Every piece, catalogued once — found in seconds.',
+    claim: 'Add every piece by photo, by link, or by sweeping the whole closet. Atelier builds your private digital wardrobe.',
+    caption: 'Every piece, catalogued once, and found in seconds.',
   },
   {
     numeral: 'II',

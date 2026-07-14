@@ -1,0 +1,129 @@
+---
+// apps/marketing/src/components/landing/ShareLooks.astro
+//
+// Surfaces a real feature that was invisible on the home page: sharing.
+// A member can share a single look (including the daily brief) or a whole
+// lookbook via a public link that opens without a sign-in.
+//
+// Grounded in the app: handleShareLookbook (App.jsx) mints a shared card
+// titled "Lookbook · N looks"; the daily brief gained the same Share modal.
+// The privacy policy (legal/privacy.mdx) documents the behaviour verbatim:
+// "anyone with the link can view it without signing in." The copy here says
+// exactly that and no more — a share link is public until you delete it.
+//
+// Static Astro, no hydration. The shared-card mock uses plain <img> with the
+// .jpg wardrobe photos (universally supported; no WebP fallback logic needed).
+import { BrassRule } from '@atelier/ui';
+
+// Three well-framed wardrobe photos standing in for three shared looks.
+const LOOKS = [
+  { src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg', label: 'A morning meeting' },
+  { src: '/wardrobe/claire-pleat-detail-dress.jpg', label: 'Drinks tonight' },
+  { src: '/wardrobe/jasmin-coat.jpg', label: 'A Saturday in town' },
+];
+---
+
+<section
+  id="share-looks"
+  style="background: var(--atelier-cream); padding-block: clamp(4rem, 8vw, 7rem); padding-inline: var(--atelier-page-padding); border-top: 1px solid rgba(212, 179, 120, 0.18);"
+>
+  <div
+    class="mx-auto grid grid-cols-1 lg:grid-cols-[5fr_6fr] gap-10 lg:gap-16 items-center"
+    style="max-width: var(--atelier-content-max);"
+  >
+    {/* Copy column */}
+    <div>
+      <div class="flex items-center gap-3 mb-5">
+        <BrassRule client:load />
+        <p
+          class="text-[10px] uppercase font-medium"
+          style="letter-spacing: 0.28em; color: var(--atelier-brass-600);"
+        >
+          Share a look
+        </p>
+      </div>
+      <h2
+        style="font-family: var(--atelier-font-display); font-size: clamp(2rem, 3.6vw, 3.25rem); line-height: 1.05; letter-spacing: -0.01em; color: var(--atelier-stone-900); margin-bottom: 1.5rem;"
+      >
+        Send a look, <em style="font-weight: 400;">not a screenshot</em>.
+      </h2>
+      <p style="font-size: clamp(1rem, 1.15vw, 1.125rem); line-height: 1.7; color: var(--atelier-stone-600); max-width: 52ch; margin-bottom: 1.25rem;">
+        Composed something you love? Share a single look, or a whole lookbook,
+        as a private link. Whoever you send it to can open it in the browser
+        without an account, and see the pieces laid out just as you styled them.
+      </p>
+      <p style="font-size: 0.9375rem; line-height: 1.65; color: var(--atelier-stone-500); max-width: 50ch; font-family: var(--atelier-font-display); font-style: italic;">
+        A share link is yours to keep or revoke. It stays live until you delete
+        it, and never asks your friends to sign in.
+      </p>
+    </div>
+
+    {/* Shared-card mock — a small rendition of what a recipient opens */}
+    <div class="flex justify-center lg:justify-end">
+      <div
+        style="width: 100%; max-width: 420px; background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 20px; overflow: hidden; box-shadow: 0 24px 60px -24px rgba(28, 25, 23, 0.18), 0 4px 12px rgba(28, 25, 23, 0.05);"
+      >
+        {/* Card header — mirrors the shared view's "Shared by …" masthead */}
+        <div
+          style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--atelier-stone-100); background: var(--atelier-cream);"
+        >
+          <div class="flex items-center gap-2 mb-1">
+            <span aria-hidden="true" style="display: inline-block; width: 16px; height: 1.5px; background: var(--atelier-brass-300);"></span>
+            <p style="font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--atelier-brass-600); font-weight: 700;">
+              A lookbook · 3 looks
+            </p>
+          </div>
+          <p style="font-family: var(--atelier-font-display); font-size: 1.125rem; color: var(--atelier-stone-900); line-height: 1.15;">
+            Shared by Sibylle
+          </p>
+        </div>
+
+        {/* Three look thumbnails */}
+        <div class="grid grid-cols-3" style="gap: 1px; background: var(--atelier-stone-100);">
+          {LOOKS.map((l) => (
+            <figure style="margin: 0; background: #fff;">
+              <div style="aspect-ratio: 3 / 4; overflow: hidden; background: var(--atelier-stone-50);">
+                <img
+                  src={l.src}
+                  alt={l.label}
+                  loading="lazy"
+                  style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                />
+              </div>
+              <figcaption
+                style="padding: 0.5rem 0.5rem 0.625rem; text-align: center; font-family: var(--atelier-font-display); font-size: 10px; line-height: 1.25; color: var(--atelier-stone-700);"
+              >
+                {l.label}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        {/* Footer — the share-link chip. No sign-in to view. */}
+        <div
+          class="flex items-center gap-2.5"
+          style="padding: 0.875rem 1.25rem; border-top: 1px solid var(--atelier-stone-100);"
+        >
+          {/* Link glyph */}
+          <span
+            aria-hidden="true"
+            style="flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: rgba(212, 179, 120, 0.14); display: inline-flex; align-items: center; justify-content: center;"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--atelier-brass-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </span>
+          <div style="min-width: 0;">
+            <p style="font-size: 8.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--atelier-stone-400); font-weight: 600;">
+              A private link
+            </p>
+            <p style="font-size: 12px; color: var(--atelier-stone-700);">
+              Open without signing in
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

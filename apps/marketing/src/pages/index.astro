@@ -17,6 +17,7 @@ import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
 import { InvestmentLens } from '../components/landing/InvestmentLens.jsx';
 import { TravelCapsuleDemo } from '../components/landing/TravelCapsuleDemo.jsx';
 import WaysIn from '../components/landing/WaysIn.astro';
+import ShareLooks from '../components/landing/ShareLooks.astro';
 import FounderNote from '../components/landing/FounderNote.astro';
 import FAQ from '../components/landing/FAQ.astro';
 import JournalRail from '../components/JournalRail.astro';
@@ -246,6 +247,11 @@ const softwareLd = {
 
     {/* ── Section 5: Travel Capsule — auto-rotating destinations ────── */}
     <TravelCapsuleDemo client:visible />
+
+    {/* ── Share a look — surfaces the real sharing feature (share a look or
+        a whole lookbook as a public link that opens without sign-in). Sits
+        after the compose/pack features and before the reflective content. ── */}
+    <ShareLooks />
 
     {/* ── Section 6: Journal rail — three latest essays ─────────────── */}
     <JournalRail />

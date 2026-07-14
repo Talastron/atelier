@@ -107,25 +107,25 @@ const HOLD = 7400; // ms per answer
 function Tile({ file, name, delay }) {
   return (
     <figure className="cr-rv" style={{ '--cr-d': `${delay}s`, margin: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ flex: 1, minHeight: 0, borderRadius: 9, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: 'var(--atelier-stone-100)' }}>
+      <div style={{ flex: 1, minHeight: 0, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)', background: 'var(--atelier-stone-100)' }}>
         <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" style={{ objectPosition: 'center 32%' }} />
       </div>
-      <figcaption style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11, marginTop: 4, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</figcaption>
+      <figcaption style={{ flexShrink: 0, fontFamily: 'var(--atelier-font-display)', fontSize: 11.5, marginTop: 6, lineHeight: 1.15, color: 'var(--atelier-stone-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</figcaption>
     </figure>
   );
 }
 
-function Row({ file, name, sub, val, cpw, delay }) {
+function Row({ file, name, sub, val, cpw, delay, isLast }) {
   return (
-    <div className="cr-rv" style={{ '--cr-d': `${delay}s`, display: 'flex', alignItems: 'center', gap: 12, padding: '9px 3px', borderBottom: '1px solid #f2f0ec' }}>
-      <div style={{ width: 32, height: 40, borderRadius: 6, flexShrink: 0, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)' }}>
+    <div className="cr-rv" style={{ '--cr-d': `${delay}s`, display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px', borderBottom: isLast ? 'none' : '1px solid var(--atelier-stone-200)' }}>
+      <div style={{ width: 34, height: 42, borderRadius: 8, flexShrink: 0, overflow: 'hidden', border: '1px solid var(--atelier-stone-200)' }}>
         <Pic src={W(file)} alt={name} loading="lazy" className="w-full h-full object-cover" />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 14, color: 'var(--atelier-stone-800)' }}>{name}</p>
-        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)' }}>{sub}</p>
+        <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 14, lineHeight: 1.25, color: 'var(--atelier-stone-800)' }}>{name}</p>
+        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', marginTop: 2 }}>{sub}</p>
       </div>
-      <p style={{ fontSize: 14.5, color: 'var(--atelier-brass-text, #836A3A)' }}>
+      <p style={{ fontSize: 14.5, color: 'var(--atelier-brass-text, #836A3A)', whiteSpace: 'nowrap' }}>
         {val}{cpw && <span style={{ fontSize: 9, color: 'var(--atelier-stone-500)' }}>/wear</span>}
       </p>
     </div>
@@ -134,20 +134,20 @@ function Row({ file, name, sub, val, cpw, delay }) {
 
 function DnaBody({ s }) {
   return (
-    <div>
-      <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22).toFixed(2)}s`, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 15, lineHeight: 1.55, color: 'var(--atelier-stone-700)', margin: '0 0 14px' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22).toFixed(2)}s`, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 15, lineHeight: 1.55, color: 'var(--atelier-stone-700)', margin: '0 0 15px' }}>
         {s.reading}
       </p>
-      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.4).toFixed(2)}s`, display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 14 }}>
+      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.4).toFixed(2)}s`, display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 }}>
         {s.traits.map((t) => (
           <span key={t} style={{ fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: '0.04em', padding: '5px 11px', borderRadius: 999, background: 'var(--atelier-cream)', border: '1px solid #eee7da', color: 'var(--atelier-stone-700)' }}>{t}</span>
         ))}
       </div>
       <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.58).toFixed(2)}s` }}>
-        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', margin: '0 0 7px' }}>Your palette</p>
+        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', margin: '0 0 8px' }}>Your palette</p>
         <div style={{ display: 'flex', gap: 6 }}>
           {s.palette.map((c, i) => (
-            <span key={i} style={{ flex: 1, height: 34, borderRadius: 7, background: c, border: '1px solid rgba(28,25,23,0.08)' }} />
+            <span key={i} style={{ flex: 1, height: 36, borderRadius: 8, background: c, border: '1px solid var(--atelier-stone-200)' }} />
           ))}
         </div>
       </div>
@@ -161,17 +161,18 @@ function CardBody({ s }) {
     // grid fills the flex body: equal auto-rows, tiles crop to fit — so the
     // outfit/capsule never overflows the card, whatever the card height.
     return (
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${s.cols}, 1fr)`, gridAutoRows: '1fr', gap: s.cols === 3 ? 7 : 9 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: `repeat(${s.cols}, 1fr)`, gridAutoRows: '1fr', gap: 8 }}>
         {s.tiles.map(([file, name], i) => (
           <Tile key={file + i} file={file} name={name} delay={(BASE + 0.22 + i * STEP).toFixed(2)} />
         ))}
       </div>
     );
   }
+  // rows centred in the available body so the card is balanced like the grids
   return (
-    <div style={{ flex: 1, minHeight: 0 }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       {s.rows.map(([file, name, sub, val], i) => (
-        <Row key={file + i} file={file} name={name} sub={sub} val={val} cpw={s.kind === 'cpw'} delay={(BASE + 0.22 + i * 0.18).toFixed(2)} />
+        <Row key={file + i} file={file} name={name} sub={sub} val={val} cpw={s.kind === 'cpw'} isLast={i === s.rows.length - 1} delay={(BASE + 0.22 + i * 0.18).toFixed(2)} />
       ))}
     </div>
   );
@@ -179,8 +180,8 @@ function CardBody({ s }) {
 
 function Card({ s }) {
   return (
-    <div style={{ height: '100%', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 24, overflow: 'hidden', boxShadow: '0 34px 74px -30px rgba(28,25,23,0.34)' }}>
-      <div style={{ padding: '16px 16px 18px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div style={{ height: '100%', background: '#fff', border: '1px solid var(--atelier-stone-200)', borderRadius: 22, overflow: 'hidden', boxShadow: '0 34px 74px -30px rgba(28,25,23,0.34)' }}>
+      <div style={{ padding: '18px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {/* Concierge reply */}
         <div className="cr-rv" style={{ '--cr-d': `${BASE}s`, display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 11, flexShrink: 0 }}>
           <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg, var(--atelier-brass-300), var(--atelier-brass-600))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12 }}>✦</span>
@@ -192,7 +193,7 @@ function Card({ s }) {
           <CardBody s={s} />
         </div>
         <div className="cr-rv" style={{ '--cr-d': '2.6s', display: 'flex', alignItems: 'center', gap: 10, marginTop: 11, flexShrink: 0 }}>
-          <p style={{ margin: 0, flex: 1, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 12, lineHeight: 1.35, color: 'var(--atelier-stone-700)', padding: '9px 12px', background: 'var(--atelier-cream)', border: '1px solid #eee7da', borderRadius: 11 }}>{s.note}</p>
+          <p style={{ margin: 0, flex: 1, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 12, lineHeight: 1.35, color: 'var(--atelier-stone-700)', padding: '9px 12px', background: 'var(--atelier-cream)', border: '1px solid #eee7da', borderRadius: 12 }}>{s.note}</p>
           <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--atelier-brass-text, #836A3A)', fontWeight: 700, whiteSpace: 'nowrap' }}>{s.stat}</span>
         </div>
       </div>

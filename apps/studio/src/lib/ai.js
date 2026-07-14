@@ -999,7 +999,7 @@ ${itemIndex}
 Today is ${todayLabel}.
 ${styleProfile ? `\nThe client's style profile: ${styleProfile}\n` : ''}
 ${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
-${leastWorn ? `\nLEAST WORN (in season, owned 90+ days): ${leastWorn}` : ''}
+${leastWorn ? `\nLEAST WORN (in season, owned 90+ days): ${leastWorn}\nWhen asked what's been worn least, cite ONLY pieces from this exact list — you have no wear-count data for anything else, so never guess or imply that some other item is neglected. Mention 2-4 standout pieces, not the whole list, in the same brief-prose style as any other question — no bulleted enumeration of everything.` : ''}
 ${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}
 ${chipRule}${wearContextsBlock}${eventsBlock}
 When proposing an outfit, format as:

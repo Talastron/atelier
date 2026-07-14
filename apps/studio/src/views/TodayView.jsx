@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { AlertCircle, Bookmark, Calendar, ChevronRight, Sparkles, Star, TrendingDown } from "lucide-react";
+import { AlertCircle, Bookmark, Calendar, ChevronRight, Share2, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
@@ -94,6 +94,10 @@ function DailyBriefCard({
   onEditPreferences,  // optional: jumps to Profile → Style so the user can
                        // change palette / formality / temperament from the
                        // "What the Concierge saw" capsule.
+  onExportOutfit = null,  // optional: opens the same editorial ShareLookModal
+                           // used from the Lookbook/OutfitDetailView — works
+                           // as-is on today's brief object even though it's
+                           // not yet a saved outfit (no .id needed).
   isAiEnabled,
 }) {
   const uid = user?.uid || 'anon';
@@ -605,6 +609,17 @@ function DailyBriefCard({
             {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? '✓ Saved to Lookbook' : 'Save as a Look'}
           </button>
         )}
+        {onExportOutfit && (
+          <button
+            type="button"
+            onClick={() => onExportOutfit(brief)}
+            className="rounded-full border border-stone-300 px-5 py-2.5 text-sm transition-colors hover:bg-stone-50 inline-flex items-center gap-2"
+            title="Preview, then share or save this look — Pinterest and Instagram ready"
+          >
+            <Share2 size={15} strokeWidth={1.5} />
+            Share
+          </button>
+        )}
       </div>
 
       {softNudgeActive() && (
@@ -741,7 +756,7 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
 // Favourites always float to the top within whichever mode is active — a small
 // curated touch that mirrors how most native gallery apps treat starred items.
 
-export default function TodayView({ user, items, measurements, schedules, outfits, inspirations, aiTemperature, onSaveOutfit, onLogOutfitWear, onOpenBrief, onOpenSavedLook, onItemClick, onEditPreferences, onOpenConcierge, onOpenInspiration, onOpenInspirationTab, onSelectCalendarDay }) {
+export default function TodayView({ user, items, measurements, schedules, outfits, inspirations, aiTemperature, onSaveOutfit, onLogOutfitWear, onOpenBrief, onOpenSavedLook, onItemClick, onEditPreferences, onOpenConcierge, onOpenInspiration, onOpenInspirationTab, onSelectCalendarDay, onExportOutfit }) {
   const [weather, setWeather] = useState(null);
   const [weatherSettled, setWeatherSettled] = useState(false);
   useEffect(() => {
@@ -823,6 +838,7 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         onOpenSavedLook={onOpenSavedLook}
         onOpenItem={onItemClick}
         onEditPreferences={onEditPreferences}
+        onExportOutfit={onExportOutfit}
       />
 
       {/* Ask your stylist — a slim concierge bar directly under the hero (it only

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Pic } from '@atelier/ui';
-import { ChevronRight, ArrowUp } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 /**
  * ConciergeReel — the homepage hero.
@@ -60,7 +60,6 @@ const SLIDES = [
     kind: 'rows',
     rows: [
       ['claire-pleat-detail-dress', 'Pleat-detail dress', 'bought in haste', '2×'],
-      ['sequin-embellished-vest', 'Sequin vest', 'a gift', '1×'],
       ['marina-single-breasted-blazer', 'Single-breasted blazer', 'inherited', '3×'],
     ],
     note: 'Wear them, or release them — your call, noted with reasons.',
@@ -73,7 +72,6 @@ const SLIDES = [
     kind: 'cpw',
     rows: [
       ['gael-wool-blend-trousers', 'Wool-blend trousers', '48 wears', '£2.29'],
-      ['robin-jumper', 'Fine-knit jumper', '36 wears', '£2.19'],
       ['claire-pleat-detail-dress', 'Pleat-detail dress', '3 wears', '£75'],
     ],
     note: 'Two have paid for themselves. One owes you evenings.',
@@ -311,7 +309,7 @@ export function ConciergeReel() {
   return (
     <section
       className="relative flex flex-col items-center"
-      style={{ minHeight: '100vh', paddingTop: 'clamp(5.5rem, 8vw, 7rem)', paddingBottom: 'clamp(1.5rem, 3vw, 2.5rem)', paddingInline: 'var(--atelier-page-padding)', overflow: 'hidden' }}
+      style={{ minHeight: '100vh', paddingTop: 'clamp(4.75rem, 5vw, 5.75rem)', paddingBottom: 'clamp(0.75rem, 1.5vw, 1.5rem)', paddingInline: 'var(--atelier-page-padding)', overflow: 'hidden' }}
     >
       {/* soft brass atmosphere */}
       <div aria-hidden="true" className="absolute pointer-events-none" style={{ top: '3%', left: '50%', transform: 'translateX(-50%)', width: '70%', height: '46%', background: 'radial-gradient(ellipse at center, rgba(212,179,120,0.06) 0%, transparent 65%)' }} />
@@ -324,12 +322,12 @@ export function ConciergeReel() {
           <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
         </div>
 
-        {/* headline + plain-purpose kicker (SEO / OAuth) */}
-        <h1 className="text-center mx-auto" style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(2rem, 4vw, 3.5rem)', lineHeight: 1.04, letterSpacing: '-0.015em', color: 'var(--atelier-stone-900)', maxWidth: '18ch', marginBottom: '0.5rem' }}>
-          Ask. It answers from <em style={{ fontWeight: 400 }}>your</em> closet.
+        {/* headline + plain-purpose kicker (kept short for SEO / OAuth) */}
+        <h1 className="text-center mx-auto" style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.75rem, 3vw, 2.875rem)', lineHeight: 1.03, letterSpacing: '-0.015em', color: 'var(--atelier-stone-900)', maxWidth: '16ch', marginBottom: '0.4rem' }}>
+          Ask your closet <em style={{ fontWeight: 400 }}>anything</em>.
         </h1>
-        <p className="text-center mx-auto" style={{ fontSize: 'clamp(0.9rem, 1.1vw, 1.0625rem)', color: 'var(--atelier-stone-600)', maxWidth: '46ch', marginBottom: 'clamp(0.9rem, 1.6vh, 1.4rem)' }}>
-          An AI stylist that composes outfits, packs your trips and tracks cost-per-wear — from the clothes you already own.
+        <p className="text-center mx-auto" style={{ fontSize: 'clamp(0.85rem, 1vw, 1rem)', color: 'var(--atelier-stone-600)', maxWidth: '48ch', marginBottom: 'clamp(0.7rem, 1.3vh, 1.05rem)' }}>
+          A private AI stylist that dresses you from the clothes you already own.
         </p>
 
         {/* chat bar */}
@@ -338,9 +336,10 @@ export function ConciergeReel() {
           <span style={{ flex: 1, minWidth: 0, fontFamily: 'Arial, sans-serif', fontSize: 15, color: 'var(--atelier-stone-900)', whiteSpace: 'nowrap', overflow: 'hidden' }}>
             <span ref={typedRef} /><span className="cr-cursor" aria-hidden="true" />
           </span>
-          <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'var(--atelier-ink)', color: '#fff', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ArrowUp size={16} strokeWidth={2} />
-          </span>
+          {/* the CTA lives in the chat bar (no separate CTA row below → saves height) */}
+          <a href="/pricing" className="inline-flex items-center gap-1.5 transition-all hover:opacity-90 active:scale-[0.98]" style={{ flexShrink: 0, background: 'var(--atelier-ink)', color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 13, fontWeight: 600, letterSpacing: '0.02em', padding: '9px 15px 9px 17px', borderRadius: 999 }}>
+            Begin curating<ChevronRight size={15} strokeWidth={2} />
+          </a>
         </div>
 
         {/* depth carousel */}
@@ -365,20 +364,15 @@ export function ConciergeReel() {
           </div>
         </div>
 
-        {/* dots */}
-        <div className="flex items-center justify-center gap-2.5" role="tablist" aria-label="Concierge examples" onKeyDown={onKeyDots} style={{ margin: 'clamp(0.6rem, 1.4vh, 1.1rem) 0 clamp(0.8rem, 1.6vh, 1.25rem)' }}>
-          {SLIDES.map((s, i) => (
-            <button key={i} type="button" role="tab" aria-selected={i === idx} aria-label={s.ask}
-              className={`cr-dot${i === idx ? ' is-on' : ''}`} onClick={() => setIdx(i)} tabIndex={i === idx ? 0 : -1} />
-          ))}
-        </div>
-
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a href="/pricing" className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-sm font-medium transition-all" style={{ background: 'var(--atelier-ink)', color: '#fff', letterSpacing: '0.04em', boxShadow: '0 4px 24px -8px rgba(28,25,23,0.3)' }}>
-            Begin curating<ChevronRight size={16} strokeWidth={1.75} />
-          </a>
-          <a href="/studio" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors group" style={{ color: 'var(--atelier-stone-600)' }}>
+        {/* dots + a quiet secondary link (the primary CTA is in the chat bar) */}
+        <div className="flex flex-col items-center" style={{ gap: 'clamp(0.5rem, 1.1vh, 0.85rem)', marginTop: 'clamp(0.55rem, 1.3vh, 1rem)' }}>
+          <div className="flex items-center justify-center gap-2.5" role="tablist" aria-label="Concierge examples" onKeyDown={onKeyDots}>
+            {SLIDES.map((s, i) => (
+              <button key={i} type="button" role="tab" aria-selected={i === idx} aria-label={s.ask}
+                className={`cr-dot${i === idx ? ' is-on' : ''}`} onClick={() => setIdx(i)} tabIndex={i === idx ? 0 : -1} />
+            ))}
+          </div>
+          <a href="/studio" className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors group" style={{ color: 'var(--atelier-stone-600)' }}>
             See the studio<span className="transition-transform group-hover:translate-x-1" style={{ color: 'var(--atelier-brass-text, #836A3A)', display: 'inline-block' }}>→</span>
           </a>
         </div>

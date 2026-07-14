@@ -10,12 +10,10 @@ import Footer from '../components/Footer.astro';
 import Philosophy from '../components/Philosophy.astro';
 import ClosingMasthead from '../components/ClosingMasthead.astro';
 import { Hero } from '../components/landing/Hero.jsx';
+import { ConciergeReel } from '../components/landing/ConciergeReel.jsx';
 import { InsideAtelier } from '../components/landing/InsideAtelier.jsx';
 import { WhatAtelierDoes } from '../components/landing/WhatAtelierDoes.jsx';
-import { ConciergeDemo } from '../components/landing/ConciergeDemo.jsx';
-import { SuggestALookDemo } from '../components/landing/SuggestALookDemo.jsx';
 import { InvestmentLens } from '../components/landing/InvestmentLens.jsx';
-import { TravelCapsuleDemo } from '../components/landing/TravelCapsuleDemo.jsx';
 import WaysIn from '../components/landing/WaysIn.astro';
 import ShareLooks from '../components/landing/ShareLooks.astro';
 import FounderNote from '../components/landing/FounderNote.astro';
@@ -53,8 +51,15 @@ const softwareLd = {
 >
   <Nav />
   <main>
-    {/* ── Hero ──────────────────────────────────────────────────────── */}
+    {/* ── Hero: the Suggest-a-Look daily brief ──────────────────────── */}
     <Hero client:load />
+
+    {/* ── The Concierge at work — a live conversation showcase: a question
+        types into the chat panel and the depth carousel below shuffles
+        through five real interactions (what to wear · pack a trip · worn
+        least · cost-per-wear · style manifesto). Consolidates what used to be
+        three separate mid-page demos. ── */}
+    <ConciergeReel client:load />
 
     {/* ── What Atelier does — states the app's purpose plainly (header →
         four-capability grid: Catalogue / Log / Style / Track) for the Google
@@ -106,147 +111,8 @@ const softwareLd = {
         Shows the homepage visitor exactly what they get on sign-in. ── */}
     <InsideAtelier client:load />
 
-    {/* ── Section 2: Meet the Concierge ─────────────────────────────── */}
-    <section
-      style="background: var(--atelier-stone-50); min-height: 100vh; display: flex; align-items: center; padding-block: clamp(3rem, 6vw, 5rem); padding-inline: var(--atelier-page-padding);"
-    >
-      {/* Uses the shared container token so every homepage section aligns to
-          the same page edge as the Nav/Hero (no per-section width drift); the
-          wide gap gives the copy block and the demo their own room. */}
-      <div
-        class="mx-auto grid lg:grid-cols-[5fr_7fr] gap-10 lg:gap-20 items-start w-full"
-        style="max-width: var(--atelier-content-max);"
-      >
-        {/* Copy column — top-aligned with the demo */}
-        <div class="text-left lg:pt-2">
-          <div class="flex items-center gap-3 mb-5">
-            <BrassRule client:load />
-            <p
-              class="text-[10px] uppercase font-medium"
-              style="letter-spacing: 0.28em; color: var(--atelier-brass-text);"
-            >
-              Meet The Concierge
-            </p>
-          </div>
-          <h2
-            class="mb-5"
-            style="font-family: var(--atelier-font-display); font-size: clamp(2rem, 3.5vw, 3.25rem); line-height: 1.05; color: var(--atelier-stone-900); letter-spacing: -0.01em; max-width: 18ch;"
-          >
-            A <em style="font-weight: 400;">private stylist</em> on call.
-          </h2>
-          <p
-            class="mb-9"
-            style="font-size: clamp(0.95rem, 1.1vw, 1.0625rem); line-height: 1.6; color: var(--atelier-stone-600); max-width: 48ch;"
-          >
-            The Concierge has read every piece in your wardrobe, every wear you've logged, every
-            look you've saved. Ask it what to wear, what's missing, what to pack. It answers from
-            <em>your</em> closet.
-          </p>
-
-          {/* Three editorial movements. Roman numerals in brass Playfair italic
-              match the Journal essay numbering pattern; brass-rule + uppercase
-              verb-eyebrow + descriptive line replaces the powerpoint bullets
-              with a magazine-spread treatment. */}
-          <ol class="flex flex-col gap-7" style="max-width: 46ch; list-style: none; padding: 0;">
-            {[
-              {
-                roman: 'I',
-                verb: 'Reads every piece',
-                text: 'Every garment you own, every wear you have logged, every look you have saved.',
-              },
-              {
-                roman: 'II',
-                verb: 'Sees the day',
-                text: 'The forecast, your Google Calendar — read-only, never edited or shared — and what is and is not in the wash.',
-              },
-              {
-                roman: 'III',
-                verb: 'Writes in your voice',
-                text: 'Briefs in your own taste, not generic suggestions.',
-              },
-            ].map((m) => (
-              <li class="grid" style="grid-template-columns: 2.25rem 1fr; gap: 1rem;">
-                <span
-                  style="font-family: var(--atelier-font-display); font-style: italic; font-size: 1.5rem; color: var(--atelier-brass-text); line-height: 1; padding-top: 0.125rem; font-feature-settings: 'onum' on;"
-                >
-                  {m.roman}
-                </span>
-                <div>
-                  <div class="flex items-center gap-3 mb-1.5">
-                    <span
-                      aria-hidden="true"
-                      style="display: inline-block; width: 18px; height: 1.5px; background: var(--atelier-brass-300); flex-shrink: 0;"
-                    />
-                    <p
-                      class="text-[10px] uppercase font-semibold"
-                      style="letter-spacing: 0.22em; color: var(--atelier-stone-900);"
-                    >
-                      {m.verb}
-                    </p>
-                  </div>
-                  <p
-                    style="font-size: 0.9375rem; line-height: 1.55; color: var(--atelier-stone-600);"
-                  >
-                    {m.text}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        {/* Live auto-play demo */}
-        <div class="flex justify-center lg:justify-end">
-          <ConciergeDemo client:visible />
-        </div>
-      </div>
-    </section>
-
-    {/* ── Section 3: Suggest a Look (modal demo) ────────────────────── */}
-    <section
-      style="background: var(--atelier-cream); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-block: clamp(2.5rem, 5vw, 4rem); padding-inline: var(--atelier-page-padding);"
-    >
-      <div
-        class="mx-auto w-full"
-        style="max-width: var(--atelier-content-max);"
-      >
-        {/* Header — tightened to fit on one screen with the demo */}
-        <div class="text-center mb-8">
-          <div class="flex items-center justify-center gap-3 mb-4">
-            <BrassRule client:load />
-            <p
-              class="text-[10px] uppercase font-medium"
-              style="letter-spacing: 0.28em; color: var(--atelier-brass-text);"
-            >
-              The Daily Brief
-            </p>
-            <BrassRule client:load />
-          </div>
-          <h2
-            class="mx-auto mb-3"
-            style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.75rem); line-height: 1.05; color: var(--atelier-stone-900); letter-spacing: -0.01em; max-width: 22ch;"
-          >
-            Tap once. <em style="font-weight: 400;">Get styled</em> for today.
-          </h2>
-          <p
-            class="mx-auto"
-            style="font-size: clamp(0.9rem, 1.1vw, 1rem); line-height: 1.6; color: var(--atelier-stone-500); max-width: 50ch;"
-          >
-            The Concierge composes a head-to-toe outfit from your wardrobe in seconds, with the
-            stylist's reasoning attached.
-          </p>
-        </div>
-
-        {/* Live auto-play modal demo */}
-        <SuggestALookDemo client:visible />
-      </div>
-    </section>
-
-    {/* ── Section 4: The Investment Lens — stats spread ─────────────── */}
+    {/* ── The Investment Lens — stats spread ────────────────────────── */}
     <InvestmentLens client:visible />
-
-    {/* ── Section 5: Travel Capsule — auto-rotating destinations ────── */}
-    <TravelCapsuleDemo client:visible />
 
     {/* ── Share a look — surfaces the real sharing feature (share a look or
         a whole lookbook as a public link that opens without sign-in). Sits

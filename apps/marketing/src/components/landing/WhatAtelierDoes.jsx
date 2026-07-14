@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Pic } from '@atelier/ui';
 
 /**
  * WhatAtelierDoes — the four capabilities (Catalogue / Log / Style / Track)
@@ -90,11 +89,15 @@ const EYEBROW = {
   fontWeight: 600,
 };
 
+// Photo via CSS background-image (cover) rather than an <img>, so the photo
+// paints into the element's own backing store — no <img> texture edge for a
+// software/mobile GL compositor to fringe green (same fix as the Concierge Reel).
 function Tile({ src, ratio = '3/4', radius = 10 }) {
   return (
-    <div style={{ aspectRatio: ratio, borderRadius: radius, overflow: 'hidden', background: '#fff', border: '1px solid var(--atelier-stone-200)' }}>
-      <Pic src={src} alt="" loading="lazy" className="w-full h-full object-cover" />
-    </div>
+    <div
+      role="img"
+      style={{ aspectRatio: ratio, borderRadius: radius, overflow: 'hidden', background: `#fff url("${src}") center / cover no-repeat`, border: '1px solid var(--atelier-stone-200)' }}
+    />
   );
 }
 
@@ -195,9 +198,7 @@ function LogVignette() {
             { src: 'mirabel-satin-blouse', n: 'Satin blouse', w: '2 wears' },
           ].map((m) => (
             <div key={m.src} className="flex items-center gap-2 rounded-xl px-2 py-1.5" style={{ background: 'var(--atelier-stone-50)', border: '1px solid var(--atelier-stone-100)' }}>
-              <div style={{ width: 26, height: 32, borderRadius: 6, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--atelier-stone-200)' }}>
-                <Pic src={W(m.src)} alt="" loading="lazy" className="w-full h-full object-cover" />
-              </div>
+              <div role="img" style={{ width: 26, height: 32, borderRadius: 6, flexShrink: 0, border: '1px solid var(--atelier-stone-200)', background: `#fff url("${W(m.src)}") center / cover no-repeat` }} />
               <div className="min-w-0">
                 <p className="text-[10px] truncate" style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-800)' }}>{m.n}</p>
                 <p style={{ ...EYEBROW, fontSize: 7.5 }}>{m.w}</p>
@@ -283,9 +284,7 @@ function TrackVignette() {
             className="flex items-center gap-2.5 rounded-xl px-2.5 py-2"
             style={{ background: r.flag ? 'rgba(212,179,120,0.10)' : 'var(--atelier-stone-50)', border: '1px solid var(--atelier-stone-100)' }}
           >
-            <div style={{ width: 30, height: 38, borderRadius: 7, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--atelier-stone-200)' }}>
-              <Pic src={W(r.src)} alt="" loading="lazy" className="w-full h-full object-cover" />
-            </div>
+            <div role="img" style={{ width: 30, height: 38, borderRadius: 7, flexShrink: 0, border: '1px solid var(--atelier-stone-200)', background: `#fff url("${W(r.src)}") center / cover no-repeat` }} />
             <div className="flex-1 min-w-0">
               <p className="text-[11px] truncate" style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-800)' }}>{r.name}</p>
               <p style={{ ...EYEBROW, fontSize: 8 }}>{r.wears} wears</p>
@@ -328,12 +327,21 @@ export function WhatAtelierDoes() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(false); // <lg: horizontal tabs, asset directly below
   const tabRefs = useRef([]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReduced(mq.matches);
     const onChange = (e) => setReduced(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)'); // matches Tailwind lg
+    setIsNarrow(mq.matches);
+    const onChange = (e) => setIsNarrow(e.matches);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
@@ -355,13 +363,80 @@ export function WhatAtelierDoes() {
 
   return (
     <div
-      className="grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-10 lg:gap-16 items-start"
+      className={
+        isNarrow
+          ? 'flex flex-col gap-6'
+          : 'grid grid-cols-1 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-10 lg:gap-16 items-start'
+      }
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      {/* Index — the four statements, always in the DOM, acting as tabs */}
+      {isNarrow ? (
+        /* Mobile: a compact horizontal tab bar keeps the vignette directly
+           below the tabs (no scrolling past four stacked claims to reach the
+           asset). The active claim is shown in full beneath the bar, so the
+           plain-language purpose statement stays visible for the OAuth review. */
+        <div>
+          <div
+            role="tablist"
+            aria-label="What Atelier does"
+            onKeyDown={onKeyDown}
+            className="flex justify-between gap-2 overflow-x-auto"
+            style={{ borderBottom: '1px solid rgba(28,25,23,0.08)', scrollbarWidth: 'none' }}
+          >
+            {CAPABILITIES.map((c, i) => {
+              const isActive = i === active;
+              return (
+                <button
+                  key={c.title}
+                  ref={(el) => { tabRefs.current[i] = el; }}
+                  type="button"
+                  role="tab"
+                  id={`wad-tab-${i}`}
+                  aria-selected={isActive}
+                  aria-controls="wad-stage"
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => setActive(i)}
+                  className="relative shrink-0 whitespace-nowrap"
+                  style={{
+                    padding: '0.55rem 0.1rem 0.7rem',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--atelier-font-display)',
+                    fontSize: '1.0625rem',
+                    color: isActive ? 'var(--atelier-stone-900)' : 'var(--atelier-stone-500)',
+                    transition: 'color 300ms ease',
+                  }}
+                >
+                  <span style={{ fontSize: '0.64rem', marginRight: 5, color: isActive ? 'var(--atelier-brass-text)' : 'var(--atelier-stone-400)' }}>{c.numeral}</span>
+                  {c.title}
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      bottom: -1,
+                      height: 2,
+                      background: 'var(--atelier-brass-400, #C9A55E)',
+                      width: isActive ? '100%' : 0,
+                      transition: isActive && !paused && !reduced ? `width ${ROTATE_MS}ms linear` : 'width 300ms ease',
+                    }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+          <p
+            className="mt-4"
+            style={{ fontSize: '0.9375rem', lineHeight: 1.55, color: 'var(--atelier-stone-600)', maxWidth: '46ch' }}
+          >
+            {CAPABILITIES[active].claim}
+          </p>
+        </div>
+      ) : (
+      /* Desktop — the four statements as a vertical index, always in the DOM */
       <div role="tablist" aria-label="What Atelier does" aria-orientation="vertical" onKeyDown={onKeyDown}>
         {CAPABILITIES.map((c, i) => {
           const isActive = i === active;
@@ -441,6 +516,7 @@ export function WhatAtelierDoes() {
           );
         })}
       </div>
+      )}
 
       {/* Stage — all four vignettes render stacked in ONE grid cell, so the
           stage permanently holds the height of the tallest and switching tabs

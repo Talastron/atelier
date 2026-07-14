@@ -282,8 +282,10 @@ body {
 }
 @keyframes cr-blink { 50% { opacity: 0; } }
 
-/* Off-frame cards are clipped by the bounded stage — never faded. */
-.cr-stage { overflow: hidden; }
+/* The stage must NOT clip — doing so cuts the visible cards' drop-shadows at
+   its edges. Off-frame cards are parked beyond the viewport and clipped by the
+   hero <section>'s overflow:hidden instead (which spans the full width). */
+.cr-stage { overflow: visible; }
 
 .cr-slot {
   position: absolute;

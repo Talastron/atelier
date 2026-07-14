@@ -272,9 +272,11 @@ export function ConciergeReel() {
     if (!stageW) return;
     const cardW = card ? card.offsetWidth : 420;
     const sideHalf = (cardW * 0.8) / 2; // visual half-width of a scaled side card
-    const maxNear = stageW / 2 - sideHalf - 14; // keep the outer edge inside the stage
+    const maxNear = stageW / 2 - sideHalf - 14; // keep the side card inside the stage width
     nearRef.current = Math.max(150, Math.min(NEAR, maxNear));
-    farRef.current = stageW / 2 + cardW; // safely off-frame (clipped by the stage)
+    // Park off-frame cards beyond the VIEWPORT edge so the section clips them
+    // (the stage no longer clips). Based on viewport width so it holds on any size.
+    farRef.current = (typeof window !== 'undefined' ? window.innerWidth : stageW) / 2 + cardW + 40;
   }, []);
 
   // Position every slot by its offset from the current index.

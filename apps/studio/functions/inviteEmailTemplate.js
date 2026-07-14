@@ -13,6 +13,7 @@
 
 const APP_URL = 'https://myatelier.style';
 const LOGO_URL = 'https://myatelier.style/brand/atelier-logo.png';
+const PRIVACY_URL = 'https://myatelier.style/legal/privacy';
 
 function buildInviteEmailHtml() {
   return `<!DOCTYPE html>
@@ -49,6 +50,18 @@ function buildInviteEmailHtml() {
               </td>
             </tr>
           </table>
+          <table role="presentation" width="100%" style="max-width:480px;">
+            <tr>
+              <td style="padding:24px 20px 0 20px;text-align:center;">
+                <p style="margin:0;font-size:11px;line-height:1.7;color:#A8A29E;">
+                  You're receiving this because an Atelier member invited you.<br />
+                  Talastron Ltd, registered in England and Wales, Company No. 15464691.<br />
+                  Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11 3NE.<br />
+                  <a href="${PRIVACY_URL}" style="color:#A8A29E;text-decoration:underline;">Privacy policy</a>
+                </p>
+              </td>
+            </tr>
+          </table>
         </td>
       </tr>
     </table>
@@ -65,7 +78,13 @@ Add what you own, save the looks that catch your eye, and let the Concierge help
 
 Open Atelier: ${APP_URL}
 
-Sign in with this email address and your wardrobe will be ready.`;
+Sign in with this email address and your wardrobe will be ready.
+
+---
+You're receiving this because an Atelier member invited you.
+Talastron Ltd, registered in England and Wales, Company No. 15464691.
+Registered office: The Long Barn, Cobham Park Road, Cobham, Surrey, KT11 3NE.
+Privacy policy: ${PRIVACY_URL}`;
 }
 
 module.exports = { buildInviteEmailHtml, buildInviteEmailText };

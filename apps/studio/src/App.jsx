@@ -1560,7 +1560,7 @@ function DigitalWardrobe() {
                       onDeleteTrip={handleDeleteTrip}
                     />
                   )}
-                  {activeTab === 'insights' && <InsightsView items={ownedItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} saveMeasurements={handleSaveProfile} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('calendar')} />}
+                  {activeTab === 'insights' && <InsightsView items={liveItems} inspirations={inspirations} onJumpToWardrobe={jumpToWardrobe} measurements={measurements} saveMeasurements={handleSaveProfile} onOpenProfile={() => setActiveTab('profile')} onOpenItem={setSelectedItemId} outfits={outfits} schedules={schedules} onOpenOutfit={setOpenOutfitId} onOpenDiary={() => setActiveTab('calendar')} />}
                   {activeTab === 'profile' && (
                     <ProfileView
                       user={user}

@@ -79,9 +79,9 @@ export default function MagicLinkComplete() {
         @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
         .font-display { font-family: 'Playfair Display', serif; }
         .font-sans { font-family: 'Jost', sans-serif; }
-        body { background-color: #F7F5F2; }
+        body { background-color: var(--atelier-cream); }
       `}</style>
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] px-6 font-sans">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-cream px-6 font-sans">
         {/* Animated wax-seal lockup — replaces the static stacked mark +
             wordmark. This page is single-visit per email-link click, so the
             5s play-once reveal lands exactly when the user is dwelling on

@@ -179,7 +179,7 @@ function WardrobeFiltersSheet({
   );
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh] sm:max-h-[90vh]"
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh] sm:max-h-[90vh]"
            onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">Filters</h3>
@@ -696,7 +696,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
           loses authority. A solid surface reads as a deliberate command
           plate. The lg:-mx-12 lg:px-12 cancels the parent padding so the
           bar bleeds edge-to-edge of the max-w-6xl content well. */}
-      <div className="hidden lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:sticky lg:top-0 lg:z-30 lg:items-center lg:-mx-12 lg:px-12 lg:py-3 lg:bg-[#F7F5F2] lg:border-b lg:border-stone-200/60">
+      <div className="hidden lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:sticky lg:top-0 lg:z-30 lg:items-center lg:-mx-12 lg:px-12 lg:py-3 lg:bg-cream lg:border-b lg:border-stone-200/60">
         {/* LEFT REGION — col-span-8. Sits directly above the pills + grid
             in the main column below. Contains search + all filter controls.
             By mirroring the page's grid template, the toolbar reads as
@@ -806,7 +806,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
       {/* MOBILE-ONLY sticky filter strip. Desktop uses the unified command
           toolbar at the top of the wardrobe view instead. lg:hidden so the
           two surfaces don't both render at lg+ (which would double-stick). */}
-      <div className="lg:hidden flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+      <div className="lg:hidden flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-cream border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         {filterControls}
       </div>

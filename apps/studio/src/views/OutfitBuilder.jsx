@@ -959,7 +959,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           Lookbook:  Lookbook · Diary      (saved outfits + the wear
                      journal/calendar that records WHEN they were worn —
                      two faces of the same outfit story) */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/40"
+      <div className="sticky top-0 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream/95 backdrop-blur-md border-b border-stone-200/40"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
           {(isLookbook
@@ -1658,7 +1658,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               {newCollectionOpen && (
                 <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6" onClick={() => setNewCollectionOpen(false)}>
                   <form
-                    className="bg-[#F7F5F2] rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+                    className="bg-cream rounded-2xl p-6 w-full max-w-sm shadow-2xl"
                     onClick={(e) => e.stopPropagation()}
                     onSubmit={async (e) => {
                       e.preventDefault();
@@ -2089,7 +2089,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh]">
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh]">
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">Build a capsule</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -2156,7 +2156,7 @@ function LookbookNamerModal({ count, busy, onCancel, onCreate }) {
   const submit = (e) => { e?.preventDefault?.(); if (busy) return; onCreate?.(name); };
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onCancel}>
-      <form onSubmit={submit} className="bg-[#F7F5F2] w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <form onSubmit={submit} className="bg-cream w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-stone-200/60 bg-white flex justify-between items-center">
           <h3 className="text-xl font-display text-stone-900">Create lookbook</h3>
           <button type="button" onClick={onCancel} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors" aria-label="Cancel">

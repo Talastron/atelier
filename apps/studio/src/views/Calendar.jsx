@@ -166,9 +166,9 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
   });
 
   return createPortal(
-    <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+    <div className="fixed inset-0 bg-cream z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       {/* Sticky top bar */}
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60">
+      <div className="sticky top-0 z-10 bg-cream/85 backdrop-blur-md border-b border-stone-200/60">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">
           <button
             onClick={onClose}
@@ -1120,7 +1120,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={handleBackdropClick}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Travel capsule</p>
@@ -1779,7 +1779,7 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6 print:bg-white print:relative print:p-0" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] print:max-h-none print:rounded-none print:shadow-none print:bg-white" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] print:max-h-none print:rounded-none print:shadow-none print:bg-white" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-8 py-5 border-b border-stone-200/60 bg-white shrink-0 print:border-0">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Packing list</p>
@@ -1870,7 +1870,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
   if (outfits.length === 0) {
     return createPortal(
       <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-6" onClick={onClose}>
-        <div className="bg-[#F7F5F2] rounded-[2rem] max-w-sm w-full p-8 text-center" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-cream rounded-[2rem] max-w-sm w-full p-8 text-center" onClick={(e) => e.stopPropagation()}>
           <p className="text-stone-500 text-sm">No saved looks yet — go to <span className="font-medium">Styling Studio → Create</span> to save one, then come back to schedule it.</p>
           <button onClick={onClose} className="mt-6 bg-stone-900 text-white px-6 py-3 rounded-full text-sm font-medium">Got it</button>
         </div>
@@ -1880,7 +1880,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
   }
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Schedule for</p>

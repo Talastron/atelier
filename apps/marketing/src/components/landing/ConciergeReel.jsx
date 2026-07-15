@@ -114,9 +114,11 @@ function Photo({ file, name }) {
       style={{
         width: '100%',
         height: '100%',
-        // WebP (half the bytes) with a JPG fallback, matching the preload — so a
-        // tile is fetched ONCE, in WebP, not doubled (webp preload + jpg display).
-        backgroundImage: `image-set(url("/wardrobe/${file}.webp") type("image/webp"), url("/wardrobe/${file}.jpg") type("image/jpeg"))`,
+        // Small (~480px, ~12KB) JPEG variant. JPEG, not WebP: WebP decoded onto
+        // the reel's scaled + blurred (GPU-composited) cards fringes green on
+        // some renderers; JPEG does not. At this size the JPEG is smaller than
+        // the full-size WebP anyway, so it is both fringe-free AND lighter.
+        backgroundImage: `url("/wardrobe/${file}-sm.jpg")`,
         backgroundSize: 'contain',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
@@ -260,12 +262,12 @@ export function ConciergeReel() {
   const [reduced, setReduced] = useState(false);
   const [docHidden, setDocHidden] = useState(false);
 
-  // preload outfit imagery (webp variant). Some slides (Style DNA) have no
-  // photography, so guard for missing tiles/rows.
+  // Preload the small tile variant actually shown (matches the Photo bg, so no
+  // wasted fetch). Some slides (Style DNA) have no photography, so guard.
   useEffect(() => {
     SLIDES.forEach((s) => {
       const files = s.tiles ? s.tiles.map((t) => t[0]) : (s.rows ? s.rows.map((r) => r[0]) : []);
-      files.forEach((f) => { const img = new Image(); img.src = `/wardrobe/${f}.webp`; });
+      files.forEach((f) => { const img = new Image(); img.src = `/wardrobe/${f}-sm.jpg`; });
     });
   }, []);
 

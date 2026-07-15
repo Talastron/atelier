@@ -44,8 +44,10 @@ const CAPABILITIES = [
 ];
 
 const W = (f) => `/wardrobe/${f}.jpg`;
-// A `background` value that serves WebP (half the bytes) with a JPG fallback.
-const BG = (jpg) => `#fff image-set(url("${jpg.replace(/\.jpg$/, '.webp')}") type("image/webp"), url("${jpg}") type("image/jpeg")) center / cover no-repeat`;
+// A `background` value using the small (~480px, ~12KB) JPEG variant. JPEG, not
+// WebP: WebP on GPU-composited layers fringes green on some renderers, and at
+// this size the JPEG is already smaller than the full-size WebP.
+const BG = (jpg) => `#fff url("${jpg.replace(/\.jpg$/, '-sm.jpg')}") center / cover no-repeat`;
 
 // ── Shared vignette chrome ─────────────────────────────────────────────────
 

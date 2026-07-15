@@ -187,9 +187,14 @@ export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
                     letterSpacing: '0.22em',
                     color: 'var(--atelier-stone-500)',
                     opacity: 0,
+                    // Zero-width at rest so the label adds NOTHING to the rail's
+                    // footprint (opacity alone still reserves its box); it grows
+                    // on hover only.
+                    maxWidth: 0,
+                    overflow: 'hidden',
                     transform: 'translateX(-0.5rem)',
                     transition:
-                      'opacity 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+                      'opacity 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1), max-width 220ms cubic-bezier(0.22, 1, 0.36, 1)',
                     whiteSpace: 'nowrap',
                     pointerEvents: 'none',
                   }}
@@ -212,6 +217,7 @@ export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
         }
         .chapter-link-item:hover .chapter-link-label {
           opacity: 1 !important;
+          max-width: 12rem !important;
           transform: translateX(0) !important;
         }
         .chapter-link-item:hover {

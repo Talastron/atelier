@@ -441,12 +441,16 @@ import ClosingMasthead from '../components/ClosingMasthead.astro';
             <div
               style="position: relative; padding: 14px; background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 4px; box-shadow: 0 30px 70px -30px rgba(28, 25, 23, 0.18), 0 8px 20px -8px rgba(28, 25, 23, 0.08);"
             >
-              <img
-                src="/about/sibylle.jpg"
-                alt="Sibylle Möller-Sherwood, founder of Atelier"
-                loading="lazy"
-                style="display: block; width: 100%; height: auto; filter: grayscale(0.9) contrast(1.05); border-radius: 2px; position: relative; z-index: 0;"
-              />
+              <picture>
+                <source srcset="/about/sibylle.webp" type="image/webp" />
+                <img
+                  src="/about/sibylle.jpg"
+                  alt="Sibylle Möller-Sherwood, founder of Atelier"
+                  loading="lazy"
+                  decoding="async"
+                  style="display: block; width: 100%; height: auto; filter: grayscale(0.9) contrast(1.05); border-radius: 2px; position: relative; z-index: 0;"
+                />
+              </picture>
               {/* Brass border-rule — sits on the white matte between the
                   photo edge and the outer card edge */}
               <div

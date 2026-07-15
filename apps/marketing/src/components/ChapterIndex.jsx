@@ -101,7 +101,10 @@ export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
   return (
     <nav
       aria-label="Chapter index"
-      className="hidden lg:block"
+      /* Only from xl (≥1280px): below that the wide sections (Maker 1080px,
+         Manifesto/Standard at container-max 1280px) have no room beside a
+         fixed rail, so it would overlap the prose. */
+      className="hidden xl:block"
       aria-hidden={footerVisible || undefined}
       style={{
         position: 'fixed',
@@ -170,7 +173,11 @@ export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
                 {/* Roman numeral — always shown */}
                 <span style={{ minWidth: '1.75ch' }}>{numeral}</span>
 
-                {/* Label — only visible when active or on hover */}
+                {/* Label — revealed on hover only. It was previously shown
+                    permanently for the active chapter, but that pushed the
+                    rail ~160px into the page and overlapped the wide sections'
+                    prose. The active chapter is still marked by the darkened
+                    numeral and the extended brass hairline. */}
                 <span
                   className="chapter-link-label"
                   style={{
@@ -179,8 +186,8 @@ export function ChapterIndex({ chapters = ABOUT_CHAPTERS }) {
                     textTransform: 'uppercase',
                     letterSpacing: '0.22em',
                     color: 'var(--atelier-stone-500)',
-                    opacity: isActive ? 1 : 0,
-                    transform: isActive ? 'translateX(0)' : 'translateX(-0.5rem)',
+                    opacity: 0,
+                    transform: 'translateX(-0.5rem)',
                     transition:
                       'opacity 220ms cubic-bezier(0.22, 1, 0.36, 1), transform 220ms cubic-bezier(0.22, 1, 0.36, 1)',
                     whiteSpace: 'nowrap',

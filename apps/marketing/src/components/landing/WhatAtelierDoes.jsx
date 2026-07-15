@@ -44,6 +44,8 @@ const CAPABILITIES = [
 ];
 
 const W = (f) => `/wardrobe/${f}.jpg`;
+// A `background` value that serves WebP (half the bytes) with a JPG fallback.
+const BG = (jpg) => `#fff image-set(url("${jpg.replace(/\.jpg$/, '.webp')}") type("image/webp"), url("${jpg}") type("image/jpeg")) center / cover no-repeat`;
 
 // ── Shared vignette chrome ─────────────────────────────────────────────────
 
@@ -96,7 +98,7 @@ function Tile({ src, ratio = '3/4', radius = 10 }) {
   return (
     <div
       role="img"
-      style={{ aspectRatio: ratio, borderRadius: radius, overflow: 'hidden', background: `#fff url("${src}") center / cover no-repeat`, border: '1px solid var(--atelier-stone-200)' }}
+      style={{ aspectRatio: ratio, borderRadius: radius, overflow: 'hidden', background: BG(src), border: '1px solid var(--atelier-stone-200)' }}
     />
   );
 }
@@ -198,7 +200,7 @@ function LogVignette() {
             { src: 'mirabel-satin-blouse', n: 'Satin blouse', w: '2 wears' },
           ].map((m) => (
             <div key={m.src} className="flex items-center gap-2 rounded-xl px-2 py-1.5" style={{ background: 'var(--atelier-stone-50)', border: '1px solid var(--atelier-stone-100)' }}>
-              <div role="img" style={{ width: 26, height: 32, borderRadius: 6, flexShrink: 0, border: '1px solid var(--atelier-stone-200)', background: `#fff url("${W(m.src)}") center / cover no-repeat` }} />
+              <div role="img" style={{ width: 26, height: 32, borderRadius: 6, flexShrink: 0, border: '1px solid var(--atelier-stone-200)', background: BG(W(m.src)) }} />
               <div className="min-w-0">
                 <p className="text-[10px] truncate" style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-800)' }}>{m.n}</p>
                 <p style={{ ...EYEBROW, fontSize: 7.5 }}>{m.w}</p>
@@ -284,7 +286,7 @@ function TrackVignette() {
             className="flex items-center gap-2.5 rounded-xl px-2.5 py-2"
             style={{ background: r.flag ? 'rgba(212,179,120,0.10)' : 'var(--atelier-stone-50)', border: '1px solid var(--atelier-stone-100)' }}
           >
-            <div role="img" style={{ width: 30, height: 38, borderRadius: 7, flexShrink: 0, border: '1px solid var(--atelier-stone-200)', background: `#fff url("${W(r.src)}") center / cover no-repeat` }} />
+            <div role="img" style={{ width: 30, height: 38, borderRadius: 7, flexShrink: 0, border: '1px solid var(--atelier-stone-200)', background: BG(W(r.src)) }} />
             <div className="flex-1 min-w-0">
               <p className="text-[11px] truncate" style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-800)' }}>{r.name}</p>
               <p style={{ ...EYEBROW, fontSize: 8 }}>{r.wears} wears</p>

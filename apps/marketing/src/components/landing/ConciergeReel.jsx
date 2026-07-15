@@ -111,7 +111,16 @@ function Photo({ file, name }) {
     <div
       role="img"
       aria-label={name}
-      style={{ width: '100%', height: '100%', backgroundImage: `url("${W(file)}")`, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+      style={{
+        width: '100%',
+        height: '100%',
+        // WebP (half the bytes) with a JPG fallback, matching the preload — so a
+        // tile is fetched ONCE, in WebP, not doubled (webp preload + jpg display).
+        backgroundImage: `image-set(url("/wardrobe/${file}.webp") type("image/webp"), url("/wardrobe/${file}.jpg") type("image/jpeg"))`,
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+      }}
     />
   );
 }

@@ -1,0 +1,54 @@
+---
+// apps/marketing/src/components/IllustrationPlate.astro
+//
+// A framed illustration "plate" in the brand's vellum-card vocabulary —
+// white matte, inner brass border-rule, four brass corner ornaments, soft
+// drop shadow. The same frame used for the founder photo (/about) and the
+// Manifesto certificate, so hand-drawn illustrations sit as matted prints
+// consistent with the rest of the page. Framing also resolves the tone gap
+// between an illustration's toned-paper background and the page cream: the
+// white matte reads the difference as "a drawing on paper," by design.
+//
+// Props:
+//   src       — image path (public/)
+//   alt       — accessible description
+//   caption   — optional italic display-serif caption beneath the plate
+//   maxWidth  — plate width cap (default 640px)
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  maxWidth?: string;
+}
+const { src, alt, caption, maxWidth = '640px' } = Astro.props;
+---
+
+<figure style={`margin: 0 auto; max-width: ${maxWidth};`}>
+  <div
+    style="position: relative; padding: 14px; background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 4px; box-shadow: 0 30px 70px -30px rgba(28, 25, 23, 0.18), 0 8px 20px -8px rgba(28, 25, 23, 0.08);"
+  >
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      style="display: block; width: 100%; height: auto; border-radius: 2px; position: relative; z-index: 0;"
+    />
+    {/* Brass border-rule on the matte, between image edge and card edge */}
+    <div
+      aria-hidden="true"
+      style="position: absolute; inset: 6px; border: 1px solid rgba(212, 179, 120, 0.4); pointer-events: none; border-radius: 2px; z-index: 1;"
+    />
+    {/* Brass corner ornaments — same vocabulary as the founder card + certificate */}
+    <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; top: 2px; left: 2px; z-index: 2;"></span>
+    <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; top: 2px; right: 2px; z-index: 2;"></span>
+    <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; bottom: 2px; left: 2px; z-index: 2;"></span>
+    <span aria-hidden="true" style="position: absolute; width: 5px; height: 5px; background: var(--atelier-brass-600); border-radius: 1px; bottom: 2px; right: 2px; z-index: 2;"></span>
+  </div>
+  {caption && (
+    <figcaption
+      style="margin-top: 1rem; text-align: center; font-family: var(--atelier-font-display); font-style: italic; font-size: 0.875rem; color: var(--atelier-stone-500); letter-spacing: 0.02em;"
+    >
+      {caption}
+    </figcaption>
+  )}
+</figure>

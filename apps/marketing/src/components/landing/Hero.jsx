@@ -257,51 +257,57 @@ function StudioFrame() {
       rafRef.current = requestAnimationFrame(tick);
     };
 
-    const runOnce = () => {
+    // The full button-press story (idle → glow → press → composing) plays ONCE,
+    // when the frame first comes into view. Cycling outfits skip the press and
+    // drop straight into a short compose, so the demo doesn't replay the same
+    // "tap the button" three times over. `firstRun` selects which.
+    const runOnce = (firstRun) => {
       if (cancelled) return;
-      // Reset the timer ID array at the start of each cycle. runOnce is
-      // called recursively every 14.2s and addTimer only ever appends —
-      // without this reset, the array would grow by ~10 IDs per cycle and
+      // Reset the timer ID array at the start of each cycle. addTimer only ever
+      // appends — without this reset, the array would grow ~10 IDs per cycle and
       // clearAllTimers would iterate the entire history on every cleanup.
       timersRef.current = [];
 
-      setStage(STAGE.IDLE);
       setRevealedSlots(0);
       setConfidence(0);
 
-      // 1. Brief idle so visitors register the button as a CTA
-      addTimer(() => !cancelled && setStage(STAGE.BUTTON_GLOW), 800);
-
-      // 2. Composing — spinning wand, brass eyebrow turns to "Composing"
-      addTimer(() => !cancelled && setStage(STAGE.COMPOSING), 1500);
-
-      // 3. Items reveal one at a time, 460ms between each — still reads as
-      //    "laid out piece by piece", but the first item now lands at ~3s
-      //    (was ~4.7s), so the proposal doesn't feel like it stalls.
-      addTimer(() => !cancelled && setStage(STAGE.REVEALING), 2600);
-      for (let i = 1; i <= 4; i += 1) {
-        addTimer(() => !cancelled && setRevealedSlots(i), 2600 + i * 460);
+      let revealAt;
+      if (firstRun) {
+        setStage(STAGE.IDLE);
+        // 1. Brief idle so visitors register the button as a CTA
+        addTimer(() => !cancelled && setStage(STAGE.BUTTON_GLOW), 800);
+        // 2. Press → composing (spinning wand, "Atelier is styling you…")
+        addTimer(() => !cancelled && setStage(STAGE.COMPOSING), 1500);
+        revealAt = 2600;
+      } else {
+        // Returning outfits: no idle-placeholder flash, no button-press — the
+        // faded-out grid fades back in already composing, then reveals.
+        setStage(STAGE.COMPOSING);
+        revealAt = 1200;
       }
 
+      // 3. Items reveal one at a time, 460ms between each — reads as "laid out
+      //    piece by piece"; first item lands ~3s (first run) / ~1.7s (cycling).
+      addTimer(() => !cancelled && setStage(STAGE.REVEALING), revealAt);
+      for (let i = 1; i <= 4; i += 1) {
+        addTimer(() => !cancelled && setRevealedSlots(i), revealAt + i * 460);
+      }
       // 4. Confidence count-up — kicks off the rAF loop
-      addTimer(startConfidenceCount, 4100);
-
+      addTimer(startConfidenceCount, revealAt + 1500);
       // 5. Complete state
-      addTimer(() => !cancelled && setStage(STAGE.COMPLETE), 4700);
-
-      // 6. Hold so visitors can read the stylist's note
-      addTimer(() => !cancelled && setStage(STAGE.TRANSITION), 10600);
-
-      // 7. Cross-fade to next outfit
+      addTimer(() => !cancelled && setStage(STAGE.COMPLETE), revealAt + 2100);
+      // 6. Hold ~5.9s so visitors can read the stylist's note
+      addTimer(() => !cancelled && setStage(STAGE.TRANSITION), revealAt + 8000);
+      // 7. Cross-fade to the next outfit (which skips the button-press)
       addTimer(() => {
         if (cancelled) return;
         localIdx = (localIdx + 1) % OUTFITS.length;
         setOutfitIdx(localIdx);
-        runOnce();
-      }, 11300);
+        runOnce(false);
+      }, revealAt + 8700);
     };
 
-    runOnce();
+    runOnce(true);
     return () => {
       cancelled = true;
       clearAllTimers();

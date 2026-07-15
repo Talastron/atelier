@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Pic } from '@atelier/ui';
 import {
   ChevronRight,
   Sparkles,
@@ -69,6 +68,11 @@ const OUTFITS = [
     ],
   },
 ];
+
+// The small (~480px, ~12KB) JPEG variant of a wardrobe photo. The grid slots
+// render at ~150px, so this is ample even at 2x — and it loads far faster than
+// the full 900px source, so revealed items appear crisply instead of popping in.
+const SM = (src) => src.replace(/\.(jpe?g|png)$/i, '-sm.jpg');
 
 // Sidebar icons + labels mirror the real studio nav (src/nav/Sidebar.jsx):
 // Concierge · Today · Wardrobe · Styling Studio · Calendar · Lookbook, then a
@@ -158,18 +162,16 @@ function StudioFrame() {
     rafRef.current = null;
   };
 
-  // Eagerly preload every outfit photo on mount. Without this, slots load
-  // lazily as they reveal — on slow networks visitors see a brief empty
-  // slot before the image resolves, which breaks the "items being laid
-  // out one at a time" feel. Preload the WebP variant (what <Pic> serves
-  // to the 97% of browsers that support it) rather than the JPG; old
-  // browsers will fall back to the JPG fetch on demand, accepting a
-  // small reveal lag in exchange for not paying double bandwidth.
+  // Eagerly preload the small variant actually shown (matches the grid's
+  // <img src={SM(...)}>, so no wasted fetch). Without this, slots would load as
+  // they reveal and visitors would see a brief empty slot pop-fill — the source
+  // of the "delay until images render" feel. At ~12KB each these prime the cache
+  // almost instantly, so every reveal is crisp.
   useEffect(() => {
     OUTFITS.forEach((outfit) => {
       outfit.items.forEach(({ src }) => {
         const img = new Image();
-        img.src = src.replace(/\.(jpe?g|png)$/i, '.webp');
+        img.src = SM(src);
       });
     });
   }, []);
@@ -267,28 +269,28 @@ function StudioFrame() {
       setRevealedSlots(0);
       setConfidence(0);
 
-      // 1. Pause on idle so visitors see the button as a CTA
-      addTimer(() => !cancelled && setStage(STAGE.BUTTON_GLOW), 1800);
+      // 1. Brief idle so visitors register the button as a CTA
+      addTimer(() => !cancelled && setStage(STAGE.BUTTON_GLOW), 800);
 
       // 2. Composing — spinning wand, brass eyebrow turns to "Composing"
-      addTimer(() => !cancelled && setStage(STAGE.COMPOSING), 2600);
+      addTimer(() => !cancelled && setStage(STAGE.COMPOSING), 1500);
 
-      // 3. Items reveal one at a time, 600ms between each.
-      //    600ms is slow enough to feel "laid out one piece at a time"
-      //    rather than dumped in a batch. Total reveal time: 2.4s.
-      addTimer(() => !cancelled && setStage(STAGE.REVEALING), 4100);
+      // 3. Items reveal one at a time, 460ms between each — still reads as
+      //    "laid out piece by piece", but the first item now lands at ~3s
+      //    (was ~4.7s), so the proposal doesn't feel like it stalls.
+      addTimer(() => !cancelled && setStage(STAGE.REVEALING), 2600);
       for (let i = 1; i <= 4; i += 1) {
-        addTimer(() => !cancelled && setRevealedSlots(i), 4100 + i * 600);
+        addTimer(() => !cancelled && setRevealedSlots(i), 2600 + i * 460);
       }
 
       // 4. Confidence count-up — kicks off the rAF loop
-      addTimer(startConfidenceCount, 6200);
+      addTimer(startConfidenceCount, 4100);
 
       // 5. Complete state
-      addTimer(() => !cancelled && setStage(STAGE.COMPLETE), 7400);
+      addTimer(() => !cancelled && setStage(STAGE.COMPLETE), 4700);
 
-      // 6. Hold for 6s so visitors can read the stylist's note
-      addTimer(() => !cancelled && setStage(STAGE.TRANSITION), 13400);
+      // 6. Hold so visitors can read the stylist's note
+      addTimer(() => !cancelled && setStage(STAGE.TRANSITION), 10600);
 
       // 7. Cross-fade to next outfit
       addTimer(() => {
@@ -296,7 +298,7 @@ function StudioFrame() {
         localIdx = (localIdx + 1) % OUTFITS.length;
         setOutfitIdx(localIdx);
         runOnce();
-      }, 14200);
+      }, 11300);
     };
 
     runOnce();
@@ -318,6 +320,15 @@ function StudioFrame() {
   const buttonGlowing = stage === STAGE.BUTTON_GLOW;
   const composing = stage === STAGE.COMPOSING;
   const fading = stage === STAGE.TRANSITION;
+
+  // The heading's three distinct texts. Keying the <h3> on this (rather than on
+  // `stage`) means its fade-in only replays when the words actually change —
+  // not on every idle→glow→revealing→complete step, which read as a flicker.
+  const headingText = composing
+    ? 'Atelier is styling you…'
+    : showingOutfit
+    ? `Today's proposal · ${current.label}`
+    : `Compose for ${current.label.toLowerCase()}.`;
 
   return (
     <div
@@ -594,10 +605,10 @@ function StudioFrame() {
                           </div>
                         )}
                         {isRevealed && (
-                          <Pic
-                            src={item.src}
+                          <img
+                            src={SM(item.src)}
                             alt={item.name}
-                            loading="lazy"
+                            decoding="async"
                             style={{
                               width: '100%',
                               height: '100%',
@@ -838,7 +849,7 @@ function StudioFrame() {
               Today · {current.weather}
             </p>
             <h3
-              key={`${outfitIdx}-${stage}`}
+              key={headingText}
               style={{
                 fontFamily: 'var(--atelier-font-display)',
                 fontSize: 'clamp(1.125rem, 1.6vw, 1.5rem)',
@@ -848,13 +859,7 @@ function StudioFrame() {
                 animation: 'hero-label-fade 600ms ease',
               }}
             >
-              {composing
-                ? 'Atelier is styling you…'
-                : showingOutfit && stage === STAGE.COMPLETE
-                ? `Today's proposal · ${current.label}`
-                : showingOutfit
-                ? `Today's proposal · ${current.label}`
-                : `Compose for ${current.label.toLowerCase()}.`}
+              {headingText}
             </h3>
           </div>
 
@@ -944,10 +949,10 @@ function StudioFrame() {
                     </div>
                   )}
                   {isRevealed && (
-                    <Pic
-                      src={item.src}
+                    <img
+                      src={SM(item.src)}
                       alt={item.name}
-                      loading="lazy"
+                      decoding="async"
                       style={{
                         width: '100%',
                         height: '100%',

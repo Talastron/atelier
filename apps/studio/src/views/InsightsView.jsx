@@ -96,7 +96,7 @@ function StyleDNAShareModal({ items, measurements, onClose }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
+      <div className="bg-cream w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
            onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div className="flex items-center gap-3">
@@ -1148,7 +1148,7 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
       )}
 
       {(manifesto || isStreaming) && (
-        <div className="relative z-10 mt-6 bg-[#F7F5F2] text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] font-display">
+        <div className="relative z-10 mt-6 bg-cream text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] font-display">
           {isStreaming ? (
             <div className="whitespace-pre-line italic">{streamingText}<span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" /></div>
           ) : (
@@ -1377,7 +1377,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           -mb-2 which pulled the hero cards up by 8px AND the nav sits
           at z-20, so the top of the cards was visually clipped behind
           the bar. Natural space-y spacing from the parent does the job. */}
-      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60"
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream/95 backdrop-blur-md border-b border-stone-200/60"
            style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex flex-wrap gap-2">
           {SECTIONS.map((s) => (

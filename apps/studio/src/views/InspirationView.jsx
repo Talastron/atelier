@@ -44,7 +44,7 @@ export default function InspirationView({ inspirations, onOpenInspiration, onAdd
               filter/sort toolbar. Stays visible while scrolling a long
               inspiration grid so the user can switch between All and
               Unanalysed without scrolling back to the top. */}
-          <div className="flex items-center gap-2 flex-wrap sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60"
+          <div className="flex items-center gap-2 flex-wrap sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream border-b border-stone-200/60"
                style={{ top: 'env(safe-area-inset-top, 0px)' }}>
             {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
               <button key={f} onClick={() => setFilter(f)}

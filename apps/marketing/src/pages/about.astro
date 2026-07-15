@@ -30,6 +30,7 @@ import { ChapterIndex } from '../components/ChapterIndex.jsx';
 import { SignatureDraw } from '../components/SignatureDraw.jsx';
 import SectionOrnament from '../components/SectionOrnament.astro';
 import ClosingMasthead from '../components/ClosingMasthead.astro';
+import IllustrationPlate from '../components/IllustrationPlate.astro';
 ---
 
 <Base title="About — Atelier" description="Atelier is a house for the considered wardrobe. A private studio that reads what you own, composes from what you already have, and writes the manifesto of how you dress.">
@@ -177,6 +178,20 @@ import ClosingMasthead from '../components/ClosingMasthead.astro';
           What goes on inside the studio.
         </h2>
       </RevealOnScroll>
+
+      {/* Editorial plate — a drawn wardrobe interior opens the section that
+          describes what is inside the studio. Framed as a matted print. */}
+      <RevealOnScroll client:visible>
+        <div style="margin: clamp(0.5rem, 2vw, 1.5rem) auto clamp(2.5rem, 4vw, 3.5rem);">
+          <IllustrationPlate
+            src="/about/the-wardrobe.png"
+            alt="A line drawing of an open wardrobe: garments on a rail, dress forms behind glass, a mirror, and a shelf of books."
+            caption="The wardrobe, kept in mind."
+            maxWidth="500px"
+          />
+        </div>
+      </RevealOnScroll>
+
       <div
         class="space-y-6"
         style="font-size: 1.0625rem; line-height: 1.75; color: var(--atelier-stone-700);"

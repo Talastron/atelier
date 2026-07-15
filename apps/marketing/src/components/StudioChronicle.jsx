@@ -183,14 +183,18 @@ export function StudioChronicle() {
               transition: `opacity 700ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 140}ms, transform 700ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 140}ms`,
             }}
           >
-            {/* Brass diamond on the timeline */}
+            {/* Brass diamond, centred ON the timeline rule. The rule sits at
+                top:0.875rem of the <ol>; the <li> content starts at the ol's
+                3rem padding-top, so the rule is at -2.125rem relative to the
+                li. translate(-50%,-50%) centres the diamond on that point so it
+                straddles the line instead of floating above it. */}
             <span
               aria-hidden="true"
               style={{
                 position: 'absolute',
-                top: '-3.625rem',
+                top: '-2.125rem',
                 left: '50%',
-                transform: 'translateX(-50%) rotate(45deg)',
+                transform: 'translate(-50%, -50%) rotate(45deg)',
                 width: '7px',
                 height: '7px',
                 background: 'var(--atelier-brass-600)',

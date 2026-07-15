@@ -334,6 +334,10 @@ function StudioFrame() {
     <div
       ref={containerRef}
       className="mx-auto"
+      // Decorative product mockup — the loop (cycling garment names, "Composing",
+      // confidence %) carries no information the H1/subhead/CTAs don't already
+      // state, so hide the whole surface from assistive tech.
+      aria-hidden="true"
       style={{
         marginTop: 'clamp(2.5rem, 4vw, 4rem)',
         // Full content width — matches the sections below and aligns to the
@@ -1135,10 +1139,6 @@ function StudioFrame() {
           from { opacity: 0; transform: scale(1.04); }
           to { opacity: 1; transform: scale(1); }
         }
-        @keyframes hero-caption-fade {
-          from { opacity: 0; transform: translateY(0.2rem); }
-          to { opacity: 1; transform: translateY(0); }
-        }
       `}</style>
     </div>
   );
@@ -1281,7 +1281,7 @@ export function Hero() {
             className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors group"
             style={{ color: 'var(--atelier-stone-600)' }}
           >
-            See the studio
+            See the Studio
             <span
               className="transition-transform group-hover:translate-x-1"
               style={{ color: 'var(--atelier-brass-text)', display: 'inline-block' }}

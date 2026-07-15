@@ -187,19 +187,19 @@ function CpwBody({ s }) {
 function DnaBody({ s }) {
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22).toFixed(2)}s`, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 'clamp(1rem, 1.5vw, 1.1875rem)', lineHeight: 1.55, color: 'var(--atelier-stone-800)', margin: '0 0 20px' }}>
+      <p className="cr-rv" style={{ '--cr-d': `${(BASE + 0.22).toFixed(2)}s`, fontFamily: 'var(--atelier-font-display)', fontStyle: 'italic', fontSize: 'clamp(1rem, 1.5vw, 1.1875rem)', lineHeight: 1.5, color: 'var(--atelier-stone-800)', margin: '0 0 13px' }}>
         “{s.reading}”
       </p>
-      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.4).toFixed(2)}s`, display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}>
+      <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.4).toFixed(2)}s`, display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 13 }}>
         {s.traits.map((t) => (
           <span key={t} style={{ fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, padding: '6px 13px', borderRadius: 999, background: 'var(--atelier-cream)', border: '1px solid #eee7da', color: 'var(--atelier-brass-text, #836A3A)' }}>{t}</span>
         ))}
       </div>
       <div className="cr-rv" style={{ '--cr-d': `${(BASE + 0.58).toFixed(2)}s` }}>
-        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', margin: '0 0 9px' }}>Your palette</p>
+        <p style={{ fontFamily: 'Arial, sans-serif', fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', margin: '0 0 7px' }}>Your palette</p>
         <div style={{ display: 'flex', gap: 7 }}>
           {s.palette.map((c, i) => (
-            <span key={i} style={{ flex: 1, height: 50, borderRadius: 8, background: c, border: '1px solid var(--atelier-stone-200)' }} />
+            <span key={i} style={{ flex: 1, height: 42, borderRadius: 8, background: c, border: '1px solid var(--atelier-stone-200)' }} />
           ))}
         </div>
       </div>

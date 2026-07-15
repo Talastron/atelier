@@ -213,7 +213,7 @@ export function InvestmentLens() {
       style={{
         paddingBlock: 'clamp(5rem, 9vw, 7rem)',
         paddingInline: 'var(--atelier-page-padding)',
-        background: 'var(--atelier-stone-50)',
+        background: 'var(--atelier-cream)',
       }}
     >
       <div

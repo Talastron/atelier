@@ -408,7 +408,7 @@ export function ConciergeReel() {
     <section
       id="concierge-reel"
       className="relative overflow-hidden"
-      style={{ background: 'var(--atelier-stone-50)', paddingBlock: 'clamp(2.75rem, 5vw, 4.5rem)', paddingInline: 'var(--atelier-page-padding)', borderTop: '1px solid rgba(212,179,120,0.18)' }}
+      style={{ background: 'var(--atelier-stone-50)', paddingBlock: 'clamp(2.75rem, 5vw, 4.5rem)', paddingInline: 'var(--atelier-page-padding)' }}
     >
       <div className="relative mx-auto" style={{ maxWidth: 'var(--atelier-content-max)' }}>
         {/* section header */}

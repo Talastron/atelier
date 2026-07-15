@@ -415,11 +415,11 @@ export function ConciergeReel() {
         <div className="text-center" style={{ marginBottom: 'clamp(1.15rem, 2.2vw, 1.6rem)' }}>
           <div className="flex items-center justify-center gap-3 mb-4">
             <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
-            <p className="text-[10px] uppercase font-medium" style={{ letterSpacing: '0.28em', color: 'var(--atelier-brass-text, #836A3A)' }}>The Concierge at work</p>
+            <p className="text-[10px] uppercase font-medium" style={{ letterSpacing: '0.28em', color: 'var(--atelier-brass-text, #836A3A)' }}>Meet The Concierge</p>
             <span aria-hidden="true" style={{ display: 'inline-block', width: 24, height: '1.5px', background: 'var(--atelier-brass-300)' }} />
           </div>
           <h2 style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(1.875rem, 3.4vw, 2.875rem)', lineHeight: 1.05, letterSpacing: '-0.01em', color: 'var(--atelier-stone-900)' }}>
-            Ask. It answers from <em style={{ fontWeight: 400 }}>your</em> closet.
+            A <em style={{ fontWeight: 400 }}>private stylist</em> on call.
           </h2>
         </div>
 

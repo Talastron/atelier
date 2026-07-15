@@ -20,19 +20,31 @@
 // Static Astro (no hydration): presentational only, ships zero JS.
 import { BrassRule } from '@atelier/ui';
 
+// Monoline brass icons (inner SVG paths), one per route — a quiet visual anchor
+// beside the roman numeral, in the same 24px lucide-style stroke vocabulary as
+// the studio nav so the section doesn't read as a plain wall of text.
+const ICON = {
+  link: '<path d="M9.5 12.5a3.5 3.5 0 0 0 5.3.4l2.7-2.7a3.5 3.5 0 0 0-4.95-4.95l-1.4 1.4"/><path d="M14.5 11.5a3.5 3.5 0 0 0-5.3-.4l-2.7 2.7a3.5 3.5 0 0 0 4.95 4.95l1.4-1.4"/>',
+  camera: '<path d="M14.6 5H9.4L7.5 7.5H4.5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h15a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-3L14.6 5Z"/><circle cx="12" cy="13" r="3.2"/>',
+  layers: '<path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="m3 16.5 9 4.5 9-4.5"/><path d="m3 12 9 4.5 9-4.5"/>',
+};
+
 const ROUTES = [
   {
     roman: 'I',
+    icon: 'link',
     title: 'Paste a link',
-    body: 'Drop in a product link from any store. Atelier reads the page and fills in the name, brand, colours, materials and price, then pulls in the official image. Some shops lock their pages. When one does, photograph the piece instead and the Concierge finds the matching listing for you.',
+    body: 'Drop in a product link from any store. Atelier reads the page and fills in the name, brand, colours, materials and price — official image and all. If a shop locks its page, photograph the piece instead and the Concierge finds the listing.',
   },
   {
     roman: 'II',
+    icon: 'camera',
     title: 'Snap a photo',
     body: 'Photograph anything you own. The Concierge names the category, brand and colours for you, or searches the web for the exact listing and imports it whole, official image and all.',
   },
   {
     roman: 'III',
+    icon: 'layers',
     title: 'Sweep the closet',
     body: 'Photograph one piece after another. Atelier identifies each as you go and files them together, so a whole wardrobe goes in during a single sitting.',
   },
@@ -56,11 +68,11 @@ const ROUTES = [
         </p>
       </div>
       <h2
-        style="font-family: var(--atelier-font-display); font-size: clamp(2rem, 3.6vw, 3.25rem); line-height: 1.05; letter-spacing: -0.01em; color: var(--atelier-stone-900); margin-bottom: 1.5rem;"
+        style="font-family: var(--atelier-font-display); font-size: clamp(2rem, 3.6vw, 3.25rem); line-height: 1.05; letter-spacing: -0.01em; color: var(--atelier-stone-900); margin-bottom: 1.5rem; text-wrap: balance;"
       >
-        You won't photograph it all <em style="font-weight: 400;">by hand</em>.
+        You won't photograph it all <em style="font-weight: 400; white-space: nowrap;">by hand</em>.
       </h2>
-      <p style="font-size: clamp(1rem, 1.15vw, 1.125rem); line-height: 1.7; color: var(--atelier-stone-600); max-width: 56ch;">
+      <p style="font-size: clamp(1rem, 1.15vw, 1.125rem); line-height: 1.7; color: var(--atelier-stone-600); max-width: 56ch; text-wrap: pretty;">
         Getting your wardrobe in is the part people dread. It needn't be. The
         Concierge does the cataloguing for you, and there are three quick ways
         to start.
@@ -76,15 +88,23 @@ const ROUTES = [
         <article
           style="background: #ffffff; border: 1px solid var(--atelier-stone-200); border-radius: 14px; padding: clamp(1.5rem, 2.5vw, 2rem); box-shadow: 0 12px 36px -18px rgba(28, 25, 23, 0.10);"
         >
-          <div class="flex items-center gap-3 mb-4">
+          <div class="flex items-center justify-between mb-4">
             <span
               style="font-family: var(--atelier-font-display); font-style: italic; font-size: 1.5rem; color: var(--atelier-brass-text); line-height: 1;"
             >
               {r.roman}
             </span>
-            <span
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--atelier-brass-600)"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
               aria-hidden="true"
-              style="display: inline-block; width: 18px; height: 1.5px; background: var(--atelier-brass-300);"
+              set:html={ICON[r.icon]}
             />
           </div>
           <h3
@@ -92,7 +112,7 @@ const ROUTES = [
           >
             {r.title}
           </h3>
-          <p style="font-size: 0.9375rem; line-height: 1.6; color: var(--atelier-stone-600);">
+          <p style="font-size: 0.9375rem; line-height: 1.6; color: var(--atelier-stone-600); text-wrap: pretty;">
             {r.body}
           </p>
         </article>
@@ -104,10 +124,18 @@ const ROUTES = [
         real: label scanning, ReceiptImportModal, and manual entry. */}
     <p
       class="mt-8"
-      style="font-family: var(--atelier-font-display); font-style: italic; font-size: 0.9375rem; line-height: 1.6; color: var(--atelier-stone-500); max-width: 60ch;"
+      style="font-family: var(--atelier-font-display); font-style: italic; font-size: 0.9375rem; line-height: 1.6; color: var(--atelier-stone-500); max-width: 60ch; text-wrap: pretty;"
     >
       Prefer to do it yourself? Scan a care label, import from a receipt, or
-      enter a piece by hand. Every route ends in the same considered record.
+      enter a piece <span style="white-space: nowrap;">by hand</span>. Every route ends in the same considered record.
     </p>
+
+    {/* Quiet pointer to the real flow — mirrors the "See the full studio →"
+        reference under the section above, so each section hands off consistently. */}
+    <div style="margin-top: clamp(1.75rem, 3vw, 2.25rem);">
+      <a href="/studio" class="section-cta">
+        See it in the Studio <span class="arrow">→</span>
+      </a>
+    </div>
   </div>
 </section>

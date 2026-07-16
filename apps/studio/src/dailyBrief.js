@@ -60,6 +60,67 @@ export function nextSlotIndex(uid) {
   return (existing?.slotIndex ?? 0) + 1;
 }
 
+// --- Freshness history (recent clothing bases) ---------------------------
+// The daily compose otherwise sends near-identical inputs every day (same
+// wardrobe, same intent, same style profile) and the model deterministically
+// re-picks the same base, so the brief reads as "the same outfit again".
+// We keep a short rolling record of the CLOTHING BASE (a Dress, or a Top +
+// Bottom) of recent briefs and feed it back into the prompt as an
+// anti-repetition nudge. Only bases are tracked — shoes, bags and jewellery
+// are free to repeat, and are what naturally vary anyway.
+//
+// NB: RECENT_DAYS is the last N distinct RECORDED compose-days, not a rolling
+// calendar window — after a fortnight away, the pre-gap bases still count as
+// "recent" until N fresher ones displace them. That's intended: the point is
+// not repeating the base the user last saw, however long ago that was.
+const RECENT_PREFIX = 'atelier.dailyBrief.recent';
+export const RECENT_DAYS = 3;
+function recentKey(uid) { return `${RECENT_PREFIX}.${uid || 'anon'}`; }
+
+// Pure. Newest-first, at most one entry per dateKey, capped at RECENT_DAYS.
+// Array.prototype.sort is stable, so for two entries sharing a dateKey the one
+// from the EARLIER argument wins — callers rely on this to let a freshly
+// composed base replace the stored one for the same day, and to let the
+// Firestore copy win over the local one. Malformed entries are dropped so a
+// half-written or hand-edited record can never crash a compose.
+export function mergeRecent(...lists) {
+  const seen = new Set();
+  return lists
+    .flat()
+    .filter((entry) => entry && typeof entry.dateKey === 'string' && Array.isArray(entry.baseIds))
+    .sort((a, b) => (a.dateKey < b.dateKey ? 1 : a.dateKey > b.dateKey ? -1 : 0))
+    .filter((entry) => {
+      if (seen.has(entry.dateKey)) return false;
+      seen.add(entry.dateKey);
+      return true;
+    })
+    .slice(0, RECENT_DAYS);
+}
+
+export function readRecentBases(uid) {
+  try {
+    const raw = localStorage.getItem(recentKey(uid));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? mergeRecent(parsed) : [];
+  } catch {
+    return [];
+  }
+}
+
+// `dateKey` is injectable so the rolling window is unit-testable without
+// mocking the clock (same rationale as `now` on markComposing above).
+// `base` is injectable so a caller holding a FRESHER view than this device's
+// localStorage — e.g. the Firestore-merged history — can seed from that
+// instead. Without it, a device with a cold cache would rebuild from its own
+// empty storage and overwrite the shared remote history on its next compose.
+// Returns the new list so callers can push it straight to Firestore.
+export function appendRecentBase(uid, baseIds, dateKey = todayKey(), base = readRecentBases(uid)) {
+  const next = mergeRecent([{ dateKey, baseIds: [...(baseIds || [])] }], base);
+  try { localStorage.setItem(recentKey(uid), JSON.stringify(next)); } catch { /* swallow */ }
+  return next;
+}
+
 // --- Cross-device persistence (Firestore) --------------------------------
 // The brief also lives at users/{uid}/state/dailyBrief so every device shows
 // the SAME look for the day, and we compose at most once per user per day (not
@@ -94,6 +155,40 @@ export async function writeRemoteDailyBrief(uid, brief) {
     });
   } catch {
     // Non-fatal: the local cache still works; we just miss cross-device sync.
+  }
+}
+
+// The freshness history is shared too, so the nudge is consistent no matter
+// which device composes the day's look. Same best-effort contract as the brief
+// helpers above: on failure we fall back to the local-only history rather than
+// blocking a compose. Covered by firestore.rules' users/{uid}/{document=**}.
+export async function readRemoteRecentBases(uid) {
+  if (!uid) return [];
+  try {
+    const { db } = await import('./firebase.js');
+    const { doc, getDoc } = await import('firebase/firestore');
+    const snap = await getDoc(doc(db, 'users', uid, 'state', 'dailyBriefHistory'));
+    if (!snap.exists()) return [];
+    return mergeRecent(snap.data()?.recent ?? []);
+  } catch {
+    return []; // offline / permission — the local history still nudges this device
+  }
+}
+
+export async function writeRemoteRecentBases(uid, list) {
+  if (!uid || !Array.isArray(list)) return;
+  try {
+    const { db } = await import('./firebase.js');
+    const { doc, setDoc } = await import('firebase/firestore');
+    await setDoc(doc(db, 'users', uid, 'state', 'dailyBriefHistory'), {
+      // Normalize on the way in as well as out: the read path sanitizes remote
+      // data, and this keeps a careless caller from persisting an unbounded or
+      // malformed list. mergeRecent is pure, so this is free.
+      recent: mergeRecent(list),
+      savedAt: Date.now(),
+    });
+  } catch {
+    // Non-fatal: this device's local history still works.
   }
 }
 

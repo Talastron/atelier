@@ -5,7 +5,7 @@ import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream, Schema } f
 import { currentSeasonLabel, itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
 import { buildItemFitPrompt, parseAndNormalizeFit, selectAspirationBasis, buildItemSummaryLine } from './itemFit.js';
 import { weatherLabel } from "./weather.js";
-import { ensureClothingBase, hasClothingBase } from "./outfit.js";
+import { ensureClothingBase, hasClothingBase, trimToOnePerSlot } from "./outfit.js";
 import { ALL_MATERIALS, CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
 
 // Locks the shape of a composed-outfit reply: all four fields required, with
@@ -38,7 +38,17 @@ const FIT_RESPONSE_SCHEMA = Schema.object({
   },
 });
 
-export async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null, calendarEvents = [] }) {
+// The marker rule promises every piece named in the reasoning is in itemIds. If
+// trimToOnePerSlot drops one, unwrap its <<item:ID|name>> marker back to plain
+// text so the prose can never cite a piece the look no longer contains.
+function unwrapMarkers(reasoning = '', ids = []) {
+  return ids.reduce((text, id) => {
+    const escaped = String(id).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp(`<<item:${escaped}\\|([^>]*)>>`, 'g'), '$1');
+  }, reasoning || '');
+}
+
+export async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null, calendarEvents = [], recentLooks = [] }) {
   if (!isAIEnabled()) {
     throw new Error('Concierge is not yet set up. Add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local to enable styling.');
   }
@@ -69,6 +79,35 @@ ${calendarEvents.map((e) => `- ${e.allDay ? 'All day' : new Date(e.startISO).toL
 Dress for the most demanding event of the day — if there's a board meeting AND a casual lunch, dress for the board meeting. Reflect this in the reasoning sentence.\n`
     : '';
 
+  // Freshness. Without this the daily brief sends identical inputs every day
+  // and the model re-picks the same base, so the same shirt and trousers come
+  // back each morning (only the optional slots jitter). Naming the recent bases
+  // steers AWAY from repeats rather than naming a piece to reach for — but that
+  // is not by itself a safety property: on a small wardrobe, ruling out all but
+  // one base effectively forces that one in, and it could be an occasion piece.
+  // What actually keeps a gown off an ordinary Tuesday is the explicit
+  // everyday-appropriateness carve-out in the PRIORITY paragraph. The block
+  // states its own priority, because the model never sees this comment: it
+  // OUTRANKS the ★FAVOURITE preference for the base (favourites are what tend
+  // to recur, so deferring to them would reinstate the bug), and stays
+  // subordinate to the weather, complete-the-look and everyday rules.
+  //
+  // CONTRACT: callers must pass `recentLooks` most-recent-day first (the order
+  // dailyBrief's mergeRecent already returns). The block says so in its header
+  // because the rendered lines carry no dates — without that cue "prefer the
+  // LEAST recent" is unactionable, and a wrong order would invert it into
+  // "repeat yesterday's", the exact bug this exists to fix.
+  const freshnessBlock = recentLooks.length > 0
+    ? `\n\nRECENT DAILY LOOKS were built on these pieces, most recent day first. Match them by id — the wardrobe can hold several pieces sharing a name, and a different colourway IS a different piece:
+${recentLooks.map((i) => `- id=${i.id} · ${i.category}: ${i.name}${itemColors(i).length ? ` (${itemColors(i).join(', ')})` : ''}`).join('\n')}
+
+Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look.
+
+PRIORITY: a different base is REQUIRED, not preferred. Returning a base listed above when any other everyday-appropriate base could have worked is a failed brief. This overrides the ★FAVOURITE preference below — a piece being a favourite is not a reason to repeat it (favourites are exactly what tend to recur), and "it goes together best" is not a reason either: a slightly less obvious pairing you style well beats yesterday's look again.
+
+Being different does NOT license breaking a hard rule. The WEATHER-DRIVEN RULES, COMPLETE THE LOOK, one-item-per-slot and everyday-appropriateness all still bind: never pad a slot with extra garments to manufacture variety, and never reach for an Occasion or eveningwear piece. You may repeat a base ONLY if every single everyday-appropriate alternative would break one of those hard rules — not merely because you judge it a weaker match. If you must repeat, prefer the LEAST recent of the pieces listed above.\n`
+    : '';
+
   // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed
   // FIRST, with everything else as complementary pieces after. An accessory-/
   // jewellery-heavy wardrobe otherwise buries the handful of garments in one flat
@@ -88,11 +127,12 @@ User context:
 - Intent: ${intent || 'an everyday look'}
 - Today's weather: ${weather ? `${weather.temp}°C, ${weatherLabel(weather.code, weather.precipProb)}${weather.precipProb != null ? ` (${weather.precipProb}% rain chance)` : ''}` : 'unknown'}
 - Current season: ${season}
-${styleProfile ? `- ${styleProfile}` : ''}${eventsHint}
+${styleProfile ? `- ${styleProfile}` : ''}${eventsHint}${freshnessBlock}
 
 Stylist rules:
 - Pick AT MOST one item per category slot for: Tops, Outerwear, Bottoms, Dresses, Shoes, Bags, Accessories.
 - Jewellery is layered — you MAY pick MULTIPLE items per jewellery slot (Earrings, Necklaces, Wrist). A complete look can carry two stacked necklaces, layered bracelets, or both pearl studs and a small drop earring. Compose jewellery as a curated stack, not a single piece — but only when the items genuinely work together.
+- A Pendant is not wearable on its own — it hangs on a chain, and the wardrobe lists Pendants and Necklaces as SEPARATE pieces. If you pick a Pendant you MUST also include a Necklace for it to hang on; if no suitable Necklace is available, do not pick the Pendant at all.
 - A Dress REPLACES Tops + Bottoms — never include all three.
 - COMPLETE THE LOOK — non-negotiable: itemIds MUST contain a full clothing base — EITHER one Dress, OR BOTH a Top AND a Bottom. Never return a look that is missing its bottom (a top with no trousers/skirt/shorts) or missing its top. If you describe trousers, shorts, a skirt or a top in the reasoning, that exact item MUST be in itemIds (see the marker rule) — a garment mentioned in prose but absent from itemIds is a hard failure.
 - Pick ONLY items whose category matches the slot — never put a bag in the shoes slot.
@@ -112,6 +152,7 @@ WEATHER-DRIVEN RULES (this is NON-NEGOTIABLE — temperature is the strongest fi
 - Skip Outerwear unless the weather/season warrants it.
 - Skip optional slots (Bags, Accessories, Jewellery) if nothing genuinely complements the look — better empty than wrong.
 - ★FAVOURITE items are pieces the user loves — give them meaningful preference when they fit the intent and palette. Don't force a favourite that clashes; do prefer one over an equally-suitable non-favourite.
+- Default to everyday-appropriate pieces. Reserve Occasion-tagged pieces and eveningwear (styles=Occasion, or Dresses/Cocktail, or Dresses/Evening / Gown) for days whose events call for them — on an ordinary day with no matching event, do not choose them.
 
 Reasoning rules:
 - The reasoning is saved with the look long-term — write it as a STANDALONE description of the final outfit. Describe why this combination works as a complete look (palette, silhouette, occasion). Do NOT reference the user's previous outfit, what was swapped, replaced, or kept — that context is meaningless when the user opens the saved look weeks later.
@@ -192,6 +233,17 @@ CRITICAL CORRECTION — your previous attempt is INVALID: it returned a look wit
     );
     parsed.itemIds = fixed.itemIds;
   }
+
+  // Deterministic slot cap — runs AFTER the base backstop so a base it injected
+  // is never trimmed away. Nothing above this catches a slot violation:
+  // hasClothingBase is satisfied by a top + three bottoms, so the retry and
+  // ensureClothingBase both pass it straight through to the user.
+  const { kept, dropped } = trimToOnePerSlot(parsed.itemIds, items);
+  if (dropped.length) {
+    parsed.itemIds = kept;
+    parsed.reasoning = unwrapMarkers(parsed.reasoning, dropped);
+  }
+
   const tags = Array.isArray(parsed.tags)
     ? parsed.tags
         .map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))

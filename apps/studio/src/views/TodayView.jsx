@@ -273,11 +273,15 @@ function DailyBriefCard({
     // compose a second, different look when another device already composed
     // today's shared one.
     if (!remoteChecked) return;
+    // Likewise wait for the shared freshness history: composing before it lands
+    // would steer off an incomplete picture and could repeat a base another
+    // device already used. This only ever DELAYS a compose — it sits after the
+    // other readiness gates and before the dedup below, so it can't duplicate one.
+    if (!historyChecked) return;
     // Reload backstop: a recent composing marker with NO in-memory in-flight
     // promise means a hard page reload interrupted a compose — skip so we don't
     // fire a duplicate paid call. (Same-session re-runs still hold the inflight
     // promise, so they fall through to the dedup below and set the brief.)
-    if (!historyChecked) return; // wait for the shared freshness history
     if (isComposingRecent(uid) && !getInflightCompose(uid)) return;
     let cancelled = false;
     setLoading(true);

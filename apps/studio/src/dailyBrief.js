@@ -60,6 +60,58 @@ export function nextSlotIndex(uid) {
   return (existing?.slotIndex ?? 0) + 1;
 }
 
+// --- Freshness history (recent clothing bases) ---------------------------
+// The daily compose otherwise sends near-identical inputs every day (same
+// wardrobe, same intent, same style profile) and the model deterministically
+// re-picks the same base, so the brief reads as "the same outfit again".
+// We keep a short rolling record of the CLOTHING BASE (a Dress, or a Top +
+// Bottom) of recent briefs and feed it back into the prompt as an
+// anti-repetition nudge. Only bases are tracked — shoes, bags and jewellery
+// are free to repeat, and are what naturally vary anyway.
+const RECENT_PREFIX = 'atelier.dailyBrief.recent';
+export const RECENT_DAYS = 3;
+function recentKey(uid) { return `${RECENT_PREFIX}.${uid || 'anon'}`; }
+
+// Pure. Newest-first, at most one entry per dateKey, capped at RECENT_DAYS.
+// Array.prototype.sort is stable, so for two entries sharing a dateKey the one
+// from the EARLIER argument wins — callers rely on this to let a freshly
+// composed base replace the stored one for the same day, and to let the
+// Firestore copy win over the local one. Malformed entries are dropped so a
+// half-written or hand-edited record can never crash a compose.
+export function mergeRecent(...lists) {
+  const seen = new Set();
+  return lists
+    .flat()
+    .filter((entry) => entry && typeof entry.dateKey === 'string' && Array.isArray(entry.baseIds))
+    .sort((a, b) => (a.dateKey < b.dateKey ? 1 : a.dateKey > b.dateKey ? -1 : 0))
+    .filter((entry) => {
+      if (seen.has(entry.dateKey)) return false;
+      seen.add(entry.dateKey);
+      return true;
+    })
+    .slice(0, RECENT_DAYS);
+}
+
+export function readRecentBases(uid) {
+  try {
+    const raw = localStorage.getItem(recentKey(uid));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? mergeRecent(parsed) : [];
+  } catch {
+    return [];
+  }
+}
+
+// `dateKey` is injectable so the rolling window is unit-testable without
+// mocking the clock (same rationale as `now` on markComposing above).
+// Returns the new list so callers can push it straight to Firestore.
+export function appendRecentBase(uid, baseIds, dateKey = todayKey()) {
+  const next = mergeRecent([{ dateKey, baseIds: [...(baseIds || [])] }], readRecentBases(uid));
+  try { localStorage.setItem(recentKey(uid), JSON.stringify(next)); } catch { /* swallow */ }
+  return next;
+}
+
 // --- Cross-device persistence (Firestore) --------------------------------
 // The brief also lives at users/{uid}/state/dailyBrief so every device shows
 // the SAME look for the day, and we compose at most once per user per day (not

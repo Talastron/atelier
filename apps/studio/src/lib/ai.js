@@ -5,7 +5,7 @@ import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream, Schema } f
 import { currentSeasonLabel, itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
 import { buildItemFitPrompt, parseAndNormalizeFit, selectAspirationBasis, buildItemSummaryLine } from './itemFit.js';
 import { weatherLabel } from "./weather.js";
-import { ensureClothingBase, hasClothingBase, trimToOnePerSlot } from "./outfit.js";
+import { ensureClothingBase, hasClothingBase, isClothingBase, trimToOnePerSlot } from "./outfit.js";
 import { ALL_MATERIALS, CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
 
 // Locks the shape of a composed-outfit reply: all four fields required, with
@@ -114,7 +114,6 @@ Being different does NOT license breaking a hard rule. The WEATHER-DRIVEN RULES,
   // list, and the model drifts to composing pure accessories. Bases are listed in
   // full (the look must be built from them); the deterministic ensureClothingBase
   // backstop below still guarantees correctness if the model slips anyway.
-  const isClothingBase = (i) => i.category === 'Dresses' || i.category === 'Tops' || i.category === 'Bottoms';
   const baseItems = items.filter(isClothingBase);
   const otherItems = items.filter((i) => !isClothingBase(i));
   const baseBlock = baseItems.length

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { trimToOnePerSlot } from './outfit.js';
+import { trimToOnePerSlot, hasClothingBase, isClothingBase, CLOTHING_CATEGORIES } from './outfit.js';
 
 // outfit.js is pure (no React, no Firebase), so the AI path's deterministic
 // guards are testable here even though ai.js itself isn't.
@@ -95,5 +95,77 @@ describe('trimToOnePerSlot', () => {
   it('does not resolve dress-vs-top+bottom (different slots, prompt rule)', () => {
     const look = ['dress1', 'top1', 'short1'];
     expect(ids(trimToOnePerSlot(look, WARDROBE))).toEqual(look);
+  });
+});
+
+// Characterization tests: written against the ORIGINAL hardcoded implementation
+// (`has('Dresses') || (has('Tops') && has('Bottoms'))`) BEFORE deriving it from
+// the standalone/paired split, so the refactor is provably behaviour-preserving
+// rather than hopefully so.
+describe('hasClothingBase — a Dress, or BOTH a Top and a Bottom', () => {
+  it('accepts a dress on its own', () => {
+    expect(hasClothingBase(['dress1', 'shoe1'], WARDROBE)).toBe(true);
+  });
+
+  it('accepts a top and a bottom together', () => {
+    expect(hasClothingBase(['top1', 'short1'], WARDROBE)).toBe(true);
+  });
+
+  it('rejects a top with no bottom', () => {
+    expect(hasClothingBase(['top1', 'shoe1', 'bag1'], WARDROBE)).toBe(false);
+  });
+
+  it('rejects a bottom with no top', () => {
+    expect(hasClothingBase(['short1', 'shoe1'], WARDROBE)).toBe(false);
+  });
+
+  it('rejects an accessories-only look (the bug the backstop exists for)', () => {
+    expect(hasClothingBase(['shoe1', 'bag1', 'hoops', 'sunnies'], WARDROBE)).toBe(false);
+  });
+
+  it('rejects an empty or unresolvable look', () => {
+    expect(hasClothingBase([], WARDROBE)).toBe(false);
+    expect(hasClothingBase(undefined, WARDROBE)).toBe(false);
+    expect(hasClothingBase(['ghost'], WARDROBE)).toBe(false);
+  });
+
+  it('a dress alone satisfies it even without a top or bottom present', () => {
+    expect(hasClothingBase(['dress1'], WARDROBE)).toBe(true);
+  });
+
+  it('sportswear is not a clothing base', () => {
+    expect(hasClothingBase(['gymtop'], WARDROBE)).toBe(false);
+  });
+});
+
+describe('isClothingBase — flat membership, distinct from the composition rule', () => {
+  it('is true for each base category', () => {
+    expect(isClothingBase(item('x', 'Dresses'))).toBe(true);
+    expect(isClothingBase(item('x', 'Tops'))).toBe(true);
+    expect(isClothingBase(item('x', 'Bottoms'))).toBe(true);
+  });
+
+  it('is false for non-base categories', () => {
+    for (const category of ['Shoes', 'Bags', 'Accessories', 'Jewellery', 'Outerwear', 'Sportswear']) {
+      expect(isClothingBase(item('x', category))).toBe(false);
+    }
+  });
+
+  it('tolerates a missing item', () => {
+    expect(isClothingBase(undefined)).toBe(false);
+    expect(isClothingBase(null)).toBe(false);
+    expect(isClothingBase({})).toBe(false);
+  });
+
+  // The two abstractions must not be conflated: a Top IS a base category, but a
+  // Top alone is NOT a complete base. This is why the flat list can't simply
+  // replace the composition rule.
+  it('membership does not imply a complete base', () => {
+    expect(isClothingBase(item('top1', 'Tops'))).toBe(true);
+    expect(hasClothingBase(['top1'], WARDROBE)).toBe(false);
+  });
+
+  it('CLOTHING_CATEGORIES is the single exported source of truth', () => {
+    expect([...CLOTHING_CATEGORIES].sort()).toEqual(['Bottoms', 'Dresses', 'Tops']);
   });
 });

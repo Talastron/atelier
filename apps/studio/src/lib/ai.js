@@ -38,7 +38,7 @@ const FIT_RESPONSE_SCHEMA = Schema.object({
   },
 });
 
-export async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null, calendarEvents = [] }) {
+export async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null, calendarEvents = [], recentLooks = [] }) {
   if (!isAIEnabled()) {
     throw new Error('Concierge is not yet set up. Add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic to .env.local to enable styling.');
   }
@@ -69,6 +69,20 @@ ${calendarEvents.map((e) => `- ${e.allDay ? 'All day' : new Date(e.startISO).toL
 Dress for the most demanding event of the day — if there's a board meeting AND a casual lunch, dress for the board meeting. Reflect this in the reasoning sentence.\n`
     : '';
 
+  // Freshness. Without this the daily brief sends identical inputs every day
+  // and the model re-picks the same base, so the same shirt and trousers come
+  // back each morning (only the optional slots jitter). Naming the recent bases
+  // is a soft steer: it never forces a piece IN — which is exactly why a
+  // rarely-worn occasion dress can't get dragged into an ordinary day — and it
+  // is deliberately subordinate to the NON-NEGOTIABLE weather and
+  // complete-the-look rules below.
+  const freshnessBlock = recentLooks.length > 0
+    ? `\n\nRECENT DAILY LOOKS were built on these pieces:
+${recentLooks.map((i) => `- ${i.category}: ${i.name}`).join('\n')}
+
+Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look. If the wardrobe is too small to avoid every piece above, differ at least from the most recent one.\n`
+    : '';
+
   // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed
   // FIRST, with everything else as complementary pieces after. An accessory-/
   // jewellery-heavy wardrobe otherwise buries the handful of garments in one flat
@@ -88,7 +102,7 @@ User context:
 - Intent: ${intent || 'an everyday look'}
 - Today's weather: ${weather ? `${weather.temp}°C, ${weatherLabel(weather.code, weather.precipProb)}${weather.precipProb != null ? ` (${weather.precipProb}% rain chance)` : ''}` : 'unknown'}
 - Current season: ${season}
-${styleProfile ? `- ${styleProfile}` : ''}${eventsHint}
+${styleProfile ? `- ${styleProfile}` : ''}${eventsHint}${freshnessBlock}
 
 Stylist rules:
 - Pick AT MOST one item per category slot for: Tops, Outerwear, Bottoms, Dresses, Shoes, Bags, Accessories.
@@ -112,6 +126,7 @@ WEATHER-DRIVEN RULES (this is NON-NEGOTIABLE — temperature is the strongest fi
 - Skip Outerwear unless the weather/season warrants it.
 - Skip optional slots (Bags, Accessories, Jewellery) if nothing genuinely complements the look — better empty than wrong.
 - ★FAVOURITE items are pieces the user loves — give them meaningful preference when they fit the intent and palette. Don't force a favourite that clashes; do prefer one over an equally-suitable non-favourite.
+- Default to everyday-appropriate pieces. Reserve Occasion-tagged pieces and eveningwear (styles=Occasion, or Dresses/Cocktail and Dresses/Evening / Gown) for days whose events call for them — on an ordinary day with no matching event, do not choose them.
 
 Reasoning rules:
 - The reasoning is saved with the look long-term — write it as a STANDALONE description of the final outfit. Describe why this combination works as a complete look (palette, silhouette, occasion). Do NOT reference the user's previous outfit, what was swapped, replaced, or kept — that context is meaningless when the user opens the saved look weeks later.

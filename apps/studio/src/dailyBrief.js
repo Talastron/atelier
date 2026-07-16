@@ -110,9 +110,13 @@ export function readRecentBases(uid) {
 
 // `dateKey` is injectable so the rolling window is unit-testable without
 // mocking the clock (same rationale as `now` on markComposing above).
+// `base` is injectable so a caller holding a FRESHER view than this device's
+// localStorage — e.g. the Firestore-merged history — can seed from that
+// instead. Without it, a device with a cold cache would rebuild from its own
+// empty storage and overwrite the shared remote history on its next compose.
 // Returns the new list so callers can push it straight to Firestore.
-export function appendRecentBase(uid, baseIds, dateKey = todayKey()) {
-  const next = mergeRecent([{ dateKey, baseIds: [...(baseIds || [])] }], readRecentBases(uid));
+export function appendRecentBase(uid, baseIds, dateKey = todayKey(), base = readRecentBases(uid)) {
+  const next = mergeRecent([{ dateKey, baseIds: [...(baseIds || [])] }], base);
   try { localStorage.setItem(recentKey(uid), JSON.stringify(next)); } catch { /* swallow */ }
   return next;
 }

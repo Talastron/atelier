@@ -168,11 +168,13 @@ function DailyBriefCard({
     return () => { alive = false; };
   }, [uid, user]);
 
-  // Record a composed look's base so tomorrow steers away from it. Local write
-  // is synchronous and authoritative for this device; the Firestore push is
-  // best-effort and shares it with the user's other devices.
+  // Record a composed look's base so tomorrow steers away from it. Seeds from
+  // `recentBases` (the Firestore-merged view), NOT this device's localStorage —
+  // otherwise a device with a cold cache would rebuild the list from empty and
+  // overwrite the shared history it just loaded. Local write is synchronous and
+  // authoritative for this device; the Firestore push shares it with the rest.
   const recordBase = (out) => {
-    const next = appendRecentBase(uid, baseIdsOf(out?.itemIds, items));
+    const next = appendRecentBase(uid, baseIdsOf(out?.itemIds, items), undefined, recentBases);
     setRecentBases(next);
     writeRemoteRecentBases(uid, next);
   };
@@ -306,6 +308,10 @@ function DailyBriefCard({
     return () => { cancelled = true; };
   }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady, remoteChecked, historyChecked]); // re-fires when weather, calendar, the shared-brief check AND the freshness history resolve
 
+  // Not gated on `historyChecked` (unlike the auto-compose): a fast re-roll on a
+  // cached brief can record before the remote history has landed, so it may miss
+  // not-yet-fetched entries — it no longer deletes known-good ones. Accepted: we
+  // won't delay a user-initiated action for a cosmetic nudge.
   async function composeAnother() {
     setLoading(true);
     setError(null);

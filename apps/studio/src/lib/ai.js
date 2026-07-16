@@ -81,13 +81,19 @@ Dress for the most demanding event of the day — if there's a board meeting AND
   // OUTRANKS the ★FAVOURITE preference for the base (favourites are what tend
   // to recur, so deferring to them would reinstate the bug), and stays
   // subordinate to the weather, complete-the-look and everyday rules.
+  //
+  // CONTRACT: callers must pass `recentLooks` most-recent-day first (the order
+  // dailyBrief's mergeRecent already returns). The block says so in its header
+  // because the rendered lines carry no dates — without that cue "prefer the
+  // LEAST recent" is unactionable, and a wrong order would invert it into
+  // "repeat yesterday's", the exact bug this exists to fix.
   const freshnessBlock = recentLooks.length > 0
-    ? `\n\nRECENT DAILY LOOKS were built on these pieces:
+    ? `\n\nRECENT DAILY LOOKS were built on these pieces, most recent day first:
 ${recentLooks.map((i) => `- ${i.category}: ${i.name}`).join('\n')}
 
 Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look.
 
-PRIORITY: this freshness steer OUTRANKS the ★FAVOURITE preference below when choosing the base — a piece being a favourite is not a reason to repeat a recent base (favourites are exactly what tend to recur). It does NOT outrank the WEATHER-DRIVEN RULES, the COMPLETE THE LOOK requirement, or the everyday-appropriateness rule below — an Occasion or eveningwear piece is never a valid way to be "different". If no everyday-appropriate different base can satisfy those and still form a coherent look, repeat a base rather than break them.\n`
+PRIORITY: this freshness steer OUTRANKS the ★FAVOURITE preference below when choosing the base — a piece being a favourite is not a reason to repeat a recent base (favourites are exactly what tend to recur). It does NOT outrank the WEATHER-DRIVEN RULES, the COMPLETE THE LOOK requirement, or the everyday-appropriateness rule below — an Occasion or eveningwear piece is never a valid way to be "different". If no everyday-appropriate different base can satisfy those and still form a coherent look, repeat a base rather than break them — and when repeating, prefer the LEAST recent of the pieces listed above.\n`
     : '';
 
   // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed

@@ -72,19 +72,22 @@ Dress for the most demanding event of the day — if there's a board meeting AND
   // Freshness. Without this the daily brief sends identical inputs every day
   // and the model re-picks the same base, so the same shirt and trousers come
   // back each morning (only the optional slots jitter). Naming the recent bases
-  // steers AWAY from repeats; it never forces a piece IN — which is exactly why
-  // a rarely-worn occasion dress can't get dragged into an ordinary day. The
-  // block states its own priority, because the model never sees this comment:
-  // it OUTRANKS the ★FAVOURITE preference for the base (favourites are what
-  // tend to recur, so deferring to them would reinstate the bug), and stays
-  // subordinate to the NON-NEGOTIABLE weather and complete-the-look rules.
+  // steers AWAY from repeats rather than naming a piece to reach for — but that
+  // is not by itself a safety property: on a small wardrobe, ruling out all but
+  // one base effectively forces that one in, and it could be an occasion piece.
+  // What actually keeps a gown off an ordinary Tuesday is the explicit
+  // everyday-appropriateness carve-out in the PRIORITY paragraph. The block
+  // states its own priority, because the model never sees this comment: it
+  // OUTRANKS the ★FAVOURITE preference for the base (favourites are what tend
+  // to recur, so deferring to them would reinstate the bug), and stays
+  // subordinate to the weather, complete-the-look and everyday rules.
   const freshnessBlock = recentLooks.length > 0
     ? `\n\nRECENT DAILY LOOKS were built on these pieces:
 ${recentLooks.map((i) => `- ${i.category}: ${i.name}`).join('\n')}
 
 Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look.
 
-PRIORITY: this freshness steer OUTRANKS the ★FAVOURITE preference below when choosing the base — a piece being a favourite is not a reason to repeat a recent base (favourites are exactly what tend to recur). It does NOT outrank the WEATHER-DRIVEN RULES or the COMPLETE THE LOOK requirement: if no different base can satisfy those and still form a coherent look, repeat a base rather than break them. If the wardrobe is too small to avoid every piece above, differ at least from the most recent one.\n`
+PRIORITY: this freshness steer OUTRANKS the ★FAVOURITE preference below when choosing the base — a piece being a favourite is not a reason to repeat a recent base (favourites are exactly what tend to recur). It does NOT outrank the WEATHER-DRIVEN RULES, the COMPLETE THE LOOK requirement, or the everyday-appropriateness rule below — an Occasion or eveningwear piece is never a valid way to be "different". If no everyday-appropriate different base can satisfy those and still form a coherent look, repeat a base rather than break them.\n`
     : '';
 
   // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed

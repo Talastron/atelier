@@ -1446,7 +1446,11 @@ function DigitalWardrobe() {
           <main ref={mainScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden lg:pb-0 relative scroll-smooth hide-scrollbar"
                 style={{
                   paddingTop: 'env(safe-area-inset-top, 0px)',
-                  paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)',
+                  // Clears the fixed mobile bottom nav. Must stay >= that bar's
+                  // height (its own padding + nav items) or the last row of
+                  // content hides behind it — the inset is added on top here
+                  // because the bar also sits above the home-indicator strip.
+                  paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)',
                 }}>
             {subStatus.kind === 'subscriber' && subStatus.isTrial && subStatus.daysRemaining !== null && subStatus.daysRemaining <= 3 && (
               <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
@@ -1457,12 +1461,14 @@ function DigitalWardrobe() {
               {loading ? (
                 <WardrobeSkeleton />
               ) : (
-                // No transform-based animation here — slide-in-from-bottom
-                // leaves a translateY(0) on the element after the animation
-                // completes, which establishes a containing block and breaks
-                // position:sticky for descendants (they end up scoped to this
-                // wrapper instead of the main scroll ancestor). Fade-in only.
-                <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
+                // Opacity-only entrance (see .animate-view-in in index.css).
+                // MUST NOT use `.animate-in`: its keyframe animates translateY
+                // with `both` fill, which holds `transform: translateY(0)` on
+                // this wrapper forever. Any non-`none` transform makes it a
+                // containing block, which re-scopes position:sticky for the
+                // per-view filter bars off the <main> scroll ancestor AND, on
+                // iOS, composites a layer that intermittently eats touch-scroll.
+                <div key={activeTab} className="animate-view-in">
                   {/* Lazy-loaded views: each non-home view is a separate chunk
                       fetched on first navigation. Suspense shows a brief loader
                       while a view's chunk downloads (once, then cached). Today
@@ -1609,6 +1615,21 @@ function DigitalWardrobe() {
               )}
             </div>
           </main>
+
+          {/* Status-bar scrim. The app runs edge-to-edge (black-translucent
+              status bar) and <main> reserves the top inset via paddingTop, so
+              in-view sticky filter bars pin just BELOW the status bar — leaving
+              the inset-height strip at the very top uncovered, where scrolling
+              content would otherwise show through behind the clock/battery.
+              This opaque strip covers exactly that band on every view. Zero
+              height (invisible) wherever the inset is 0 (browser, desktop,
+              Android). pointer-events-none so the tap-to-top target still
+              receives taps. */}
+          <div
+            className="lg:hidden fixed top-0 inset-x-0 z-30 bg-cream pointer-events-none"
+            style={{ height: 'env(safe-area-inset-top, 0px)' }}
+            aria-hidden="true"
+          />
 
           {/* iOS-style "tap the status bar to scroll to top". The safe-area
               inset is the notch / Dynamic-Island strip on iPhone PWA, where
@@ -1768,8 +1789,14 @@ function DigitalWardrobe() {
             </div>
           )}
 
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
+          {/* Kept deliberately trim: the glass panel's own padding stacks on top
+              of the nav items' height AND the bottom safe-area inset (the home-
+              indicator strip), so generous padding here reads as a tall white
+              slab eating the screen. Pair any change with the matching bottom
+              padding on <main> above, which must stay >= this bar's height or
+              the last row of content hides behind it. */}
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-1 z-40 smooth-shadow"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.25rem)' }}>
             {/* MOBILE BOTTOM NAV — four destinations + central + FAB,
                 arranged as a 5-column grid with the FAB in column 3.
                 With grid-cols-5 + equal-width cells, the FAB sits at

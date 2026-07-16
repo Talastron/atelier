@@ -10,7 +10,9 @@ function MobileNavItem({ icon: Icon, label, id, activeTab, setTab, onScrollTop }
         if (isActive) onScrollTop?.();
         else setTab(id);
       }}
-      className="flex flex-col items-center gap-1 px-3 py-2 w-[68px] min-h-[56px] transition-all active:scale-95 relative"
+      // min-h stays >= 44px (iOS HIG minimum tap target) — do not trim further
+      // to shorten the bar; take it out of the wrapper's padding instead.
+      className="flex flex-col items-center gap-0.5 px-3 py-1.5 w-[68px] min-h-[46px] transition-all active:scale-95 relative"
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
     >

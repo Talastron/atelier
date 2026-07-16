@@ -806,8 +806,12 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
       {/* MOBILE-ONLY sticky filter strip. Desktop uses the unified command
           toolbar at the top of the wardrobe view instead. lg:hidden so the
           two surfaces don't both render at lg+ (which would double-stick). */}
-      <div className="lg:hidden flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-cream border-b border-stone-200/60"
-           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+      {/* Sticks at top-0 — NOT top:env(safe-area-inset-top). <main> already
+          pads its top by the inset, and Safari folds a scroll container's own
+          padding into its sticky child's offset. Re-adding the inset here
+          double-offsets the bar (~one inset too low) in standalone/PWA, where
+          the inset is non-zero — while looking fine in the browser (inset 0). */}
+      <div className="lg:hidden flex flex-wrap items-center gap-2 sticky top-0 z-20 -mx-4 px-4 py-3 bg-cream border-b border-stone-200/60">
         {filterControls}
       </div>
 

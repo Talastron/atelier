@@ -1377,8 +1377,9 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           -mb-2 which pulled the hero cards up by 8px AND the nav sits
           at z-20, so the top of the cards was visually clipped behind
           the bar. Natural space-y spacing from the parent does the job. */}
-      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream/95 backdrop-blur-md border-b border-stone-200/60"
-           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+      {/* top-0 only — <main> supplies the safe-area inset; re-adding
+          top:inset double-offsets this bar in standalone/PWA. */}
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream/95 backdrop-blur-md border-b border-stone-200/60">
         <div className="flex flex-wrap gap-2">
           {SECTIONS.map((s) => (
             <a key={s.id} href={`#${s.id}`}

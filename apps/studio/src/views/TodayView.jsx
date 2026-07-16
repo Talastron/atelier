@@ -176,7 +176,14 @@ function DailyBriefCard({
   const recordBase = (out) => {
     const next = appendRecentBase(uid, baseIdsOf(out?.itemIds, items), undefined, recentBases);
     setRecentBases(next);
-    writeRemoteRecentBases(uid, next);
+    // Only push once the shared history has landed. Before that, `next` is
+    // seeded from this device's local view alone, so pushing it would overwrite
+    // remote-only entries (a pre-feature user has NO local history, so a re-roll
+    // during the loader's getDoc would clobber the shared list with today's base
+    // alone). The local append still stands, and the next record — after the
+    // loader merges remote into state — pushes the full list. Auto-compose is
+    // unaffected: it's gated on historyChecked, so this is always true there.
+    if (historyChecked) writeRemoteRecentBases(uid, next);
   };
   useEffect(() => { setSaveState('idle'); setWearState('idle'); setSavedOutfitId(null); }, [brief?.savedAt]);
 
@@ -308,10 +315,9 @@ function DailyBriefCard({
     return () => { cancelled = true; };
   }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady, remoteChecked, historyChecked]); // re-fires when weather, calendar, the shared-brief check AND the freshness history resolve
 
-  // Not gated on `historyChecked` (unlike the auto-compose): a fast re-roll on a
-  // cached brief can record before the remote history has landed, so it may miss
-  // not-yet-fetched entries — it no longer deletes known-good ones. Accepted: we
-  // won't delay a user-initiated action for a cosmetic nudge.
+  // Not gated on `historyChecked` (unlike the auto-compose): we won't delay a
+  // user-initiated action for a cosmetic nudge. A re-roll before the shared
+  // history lands records locally and defers its push (see recordBase).
   async function composeAnother() {
     setLoading(true);
     setError(null);

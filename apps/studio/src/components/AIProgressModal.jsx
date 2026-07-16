@@ -9,7 +9,7 @@ export default function AIProgressModal({ open, stage, title = 'Putting together
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-in fade-in duration-200">
-      <div className="bg-[#F7F5F2] rounded-[2rem] max-w-md w-full p-8 sm:p-12 shadow-2xl text-center animate-in slide-in-from-bottom-4 zoom-in-95 duration-300">
+      <div className="bg-cream rounded-[2rem] max-w-md w-full p-8 sm:p-12 shadow-2xl text-center animate-in slide-in-from-bottom-4 zoom-in-95 duration-300">
         <div className="relative w-20 h-20 mx-auto mb-6">
           <span className="absolute inset-0 rounded-full bg-amber-300/40 animate-ping" />
           <span className="absolute inset-2 rounded-full bg-amber-200/40 animate-ping" style={{ animationDelay: '0.4s' }} />

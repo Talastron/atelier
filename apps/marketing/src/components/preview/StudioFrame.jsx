@@ -183,7 +183,7 @@ function Sidebar({ activeView, setActiveView }) {
             fontWeight: 500,
           }}
         >
-          Atelier<span style={{ color: 'var(--atelier-brass-600)' }}>.</span>
+          Atelier<span style={{ color: 'var(--atelier-brass-text)' }}>.</span>
         </h2>
       </div>
 
@@ -192,7 +192,7 @@ function Sidebar({ activeView, setActiveView }) {
         <BrassRule />
         <p
           className="text-[9px] uppercase font-medium"
-          style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-400)' }}
+          style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-500)' }}
         >
           Studio
         </p>
@@ -206,11 +206,11 @@ function Sidebar({ activeView, setActiveView }) {
         onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(212, 179, 120, 0.12)')}
         onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
       >
-        <Sparkles size={15} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-600)' }} />
+        <Sparkles size={15} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-text)' }} />
         <span className="text-[13px] font-medium">Concierge</span>
         <span
           className="ml-auto text-[9px] uppercase font-semibold"
-          style={{ letterSpacing: '0.2em', color: 'var(--atelier-brass-600)' }}
+          style={{ letterSpacing: '0.2em', color: 'var(--atelier-brass-text)' }}
         >
           Ask
         </span>
@@ -247,7 +247,7 @@ function Sidebar({ activeView, setActiveView }) {
                   size={13}
                   strokeWidth={1.5}
                   className="ml-auto"
-                  style={{ color: 'var(--atelier-stone-400)' }}
+                  style={{ color: 'var(--atelier-stone-500)' }}
                 />
               )}
             </button>
@@ -291,7 +291,7 @@ function Sidebar({ activeView, setActiveView }) {
         <button
           type="button"
           className="w-full flex items-center gap-2 mt-1 px-2 py-2 rounded-xl text-[10px] uppercase transition-colors"
-          style={{ letterSpacing: '0.22em', color: 'var(--atelier-stone-400)' }}
+          style={{ letterSpacing: '0.22em', color: 'var(--atelier-stone-500)' }}
           onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(168, 162, 158, 0.12)')}
           onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
         >
@@ -399,7 +399,7 @@ function WardrobeView() {
               maxWidth: '320px',
             }}
           >
-            <Search size={14} strokeWidth={1.75} style={{ color: 'var(--atelier-stone-400)' }} />
+            <Search size={14} strokeWidth={1.75} style={{ color: 'var(--atelier-stone-500)' }} />
             <input
               type="text"
               placeholder="Search by name, brand, description"
@@ -440,7 +440,7 @@ function WardrobeView() {
           >
             <ArrowUpDown size={13} strokeWidth={1.75} />
             Recently added
-            <ChevronDown size={13} strokeWidth={1.75} style={{ color: 'var(--atelier-stone-400)' }} />
+            <ChevronDown size={13} strokeWidth={1.75} style={{ color: 'var(--atelier-stone-500)' }} />
           </button>
 
           <div className="flex-1" />
@@ -613,7 +613,7 @@ function DailyBriefCard() {
         >
           The Daily Brief
         </p>
-        <p className="text-[9px]" style={{ letterSpacing: '0.04em', color: 'var(--atelier-stone-400)' }}>
+        <p className="text-[9px]" style={{ letterSpacing: '0.04em', color: 'var(--atelier-stone-500)' }}>
           100% confidence
         </p>
       </div>
@@ -798,7 +798,7 @@ function TodayCard() {
       <div className="relative">
         <p
           className="text-[9px] uppercase font-bold mb-0.5"
-          style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-400)' }}
+          style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-500)' }}
         >
           Today
         </p>
@@ -849,14 +849,14 @@ function TodayCard() {
               ))}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[8px] uppercase" style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-400)' }}>
+              <p className="text-[8px] uppercase" style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-500)' }}>
                 4 pieces · 92% confidence
               </p>
               <p className="text-[11px] mt-0.5 truncate" style={{ fontFamily: 'var(--atelier-font-display)' }}>
                 Soft volume, sharp below
               </p>
             </div>
-            <ChevronRight size={12} strokeWidth={1.5} style={{ color: 'var(--atelier-stone-400)' }} />
+            <ChevronRight size={12} strokeWidth={1.5} style={{ color: 'var(--atelier-stone-500)' }} />
           </div>
         )}
       </div>
@@ -993,7 +993,7 @@ function TodaysPickCard() {
         </p>
         <p
           className="text-[10px] truncate"
-          style={{ color: 'var(--atelier-stone-400)' }}
+          style={{ color: 'var(--atelier-stone-500)' }}
         >
           {pick.cat} · {pick.season}
         </p>
@@ -1116,7 +1116,7 @@ function StylingView() {
                 {!isRevealed && (
                   <div
                     className="absolute inset-0 flex items-center justify-center text-[9px] uppercase"
-                    style={{ letterSpacing: '0.22em', color: 'var(--atelier-stone-400)', fontWeight: 500 }}
+                    style={{ letterSpacing: '0.22em', color: 'var(--atelier-stone-500)', fontWeight: 500 }}
                   >
                     {item.slot}
                   </div>
@@ -1162,7 +1162,7 @@ function StylingView() {
           transition: 'opacity 500ms ease, transform 500ms ease',
         }}
       >
-        <Wand2 size={20} strokeWidth={1.3} style={{ color: 'var(--atelier-brass-600)', flexShrink: 0 }} />
+        <Wand2 size={20} strokeWidth={1.3} style={{ color: 'var(--atelier-brass-text)', flexShrink: 0 }} />
         <div className="flex-1">
           <p
             className="text-[9px] uppercase mb-1"
@@ -1358,7 +1358,7 @@ function InsightsView() {
                   display: 'inline-block',
                   width: '0.55ch',
                   marginLeft: '0.05ch',
-                  color: 'var(--atelier-brass-600)',
+                  color: 'var(--atelier-brass-text)',
                   animation: 'blink-iw 1s steps(2, start) infinite',
                   fontStyle: 'normal',
                 }}
@@ -1370,7 +1370,7 @@ function InsightsView() {
           {!busy && (
             <p
               className="text-[9px] uppercase mt-3 flex items-center gap-2"
-              style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-400)', fontWeight: 500 }}
+              style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-500)', fontWeight: 500 }}
             >
               <BrassRule />
               Written {current.date} · {current.label}

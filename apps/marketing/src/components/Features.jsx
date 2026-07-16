@@ -84,13 +84,13 @@ function ToolkitCard({ icon: Icon, eyebrow, title, titleEm, description, demo })
             border: '1px solid var(--atelier-stone-200)',
           }}
         >
-          <Icon size={15} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-600)' }} />
+          <Icon size={15} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-text)' }} />
         </span>
         <p
           className="text-[9.5px] uppercase font-semibold"
           style={{
             letterSpacing: '0.28em',
-            color: 'var(--atelier-brass-600)',
+            color: 'var(--atelier-brass-text)',
           }}
         >
           {eyebrow}
@@ -315,7 +315,7 @@ function TravelDemo() {
           borderRadius: 999,
         }}
       >
-        <MapPin size={11} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-600)' }} />
+        <MapPin size={11} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-text)' }} />
         <span
           style={{
             fontSize: 11,
@@ -466,7 +466,7 @@ function CPWDemo() {
         style={{
           fontFamily: 'var(--atelier-font-display)',
           fontSize: 22,
-          color: 'var(--atelier-brass-600)',
+          color: 'var(--atelier-brass-text)',
           fontFeatureSettings: '"onum" on',
           letterSpacing: '-0.01em',
           flexShrink: 0,
@@ -558,7 +558,7 @@ function ManifestoDemo() {
                 display: 'inline-block',
                 width: '0.45ch',
                 marginLeft: 1,
-                color: 'var(--atelier-brass-600)',
+                color: 'var(--atelier-brass-text)',
                 animation: 'toolkit-blink 1s steps(2, start) infinite',
                 fontStyle: 'normal',
               }}
@@ -630,7 +630,7 @@ function LookbookDemo() {
           color: 'var(--atelier-stone-700)',
         }}
       >
-        <Link2 size={10} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-600)' }} />
+        <Link2 size={10} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-text)' }} />
         <span key={activeIdx} style={{ animation: 'toolkit-fade 400ms ease' }}>
           {sample.url}
         </span>
@@ -642,7 +642,7 @@ function LookbookDemo() {
             textTransform: 'uppercase',
             fontFamily: 'var(--atelier-font-sans)',
             fontWeight: 600,
-            color: 'var(--atelier-brass-600)',
+            color: 'var(--atelier-brass-text)',
             background: 'rgba(212, 179, 120, 0.12)',
             padding: '0.15rem 0.4rem',
             borderRadius: 4,
@@ -884,7 +884,7 @@ export function Features() {
             className="text-[10px] uppercase font-medium"
             style={{
               letterSpacing: '0.28em',
-              color: 'var(--atelier-brass-600)',
+              color: 'var(--atelier-brass-text)',
             }}
           >
             The Toolkit

@@ -44,7 +44,7 @@ function fmtDate(d: Date) {
           <BrassRule client:load />
           <p
             class="text-[10px] uppercase font-medium"
-            style="letter-spacing: 0.32em; color: var(--atelier-brass-600);"
+            style="letter-spacing: 0.32em; color: var(--atelier-brass-text);"
           >
             From the Journal
           </p>
@@ -90,13 +90,13 @@ function fmtDate(d: Date) {
             />
             <p
               class="text-[10px] uppercase font-medium"
-              style="letter-spacing: 0.28em; color: var(--atelier-brass-600);"
+              style="letter-spacing: 0.28em; color: var(--atelier-brass-text);"
             >
               {post.data.kind === 'essay' ? 'Essay' : 'Note'}
             </p>
             <span
               class="text-[10px] uppercase"
-              style="letter-spacing: 0.18em; color: var(--atelier-stone-400);"
+              style="letter-spacing: 0.18em; color: var(--atelier-stone-500);"
             >
               {fmtDate(post.data.date)}
             </span>
@@ -126,7 +126,7 @@ function fmtDate(d: Date) {
             Read on
             <span
               class="transition-transform group-hover:translate-x-1"
-              style="color: var(--atelier-brass-600); display: inline-block;"
+              style="color: var(--atelier-brass-text); display: inline-block;"
             >→</span>
           </span>
         </a>

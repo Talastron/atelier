@@ -1,36 +1,42 @@
+/* Design tokens — the single source of truth for BOTH apps. Imported so the
+   @theme below can REFERENCE them instead of mirroring hexes: edit
+   packages/design-tokens/colors.css once and it flows through to the app.
+   (apps/marketing consumes the same package the same way.) */
+@import '@atelier/design-tokens/colors.css';
 @import "tailwindcss";
 
 @theme {
   --font-display: 'Playfair Display', serif;
   --font-sans: 'Jost', sans-serif;
-  /* Brass / champagne accent. MIRRORS @atelier/design-tokens (the single
-     source of truth — edit colors.css there first, then sync here). Golden
-     champagne per the brand brief: #D4B378 (light) -> #A8884C (deep), a
-     consistent gold hue that no longer browns out at the deep stops. */
-  --color-brass-50:  #fbf6ec;
-  --color-brass-100: #f5ead1;
-  --color-brass-200: #e9d3a6;
-  --color-brass-300: #d4b378;
-  --color-brass-400: #c4a063;
-  --color-brass-500: #b69154;
-  --color-brass-600: #a8884c;
-  --color-brass-700: #8c7040;
-  --color-brass-800: #6e5833;
-  --color-brass-900: #4e3f26;
-  /* Claret — a deep editorial wine for "over budget" / restrained alerts.
-     Replaces saturated web-red (bg-red-500/text-red-700) on Insights so the
-     warning stays in the brass/stone luxury palette instead of shouting like
-     an iOS notification. Used sparingly: meter fill + one italic caption. */
-  --color-claret-50:  #f7eeec;
-  --color-claret-100: #ecd6d2;
-  --color-claret-200: #d8a8a1;
-  --color-claret-300: #b97a72;
-  --color-claret-400: #9a5048;
-  --color-claret-500: #7d3a32;
-  --color-claret-600: #6a2e27;
-  --color-claret-700: #56241f;
-  --color-claret-800: #401a16;
-  --color-claret-900: #2a110e;
+
+  /* Neutrals — cream/ink now exist as utilities (bg-cream, text-ink) so the
+     app can stop hardcoding #F7F5F2 / #1c1917. */
+  --color-cream: var(--atelier-cream);
+  --color-ink:   var(--atelier-ink);
+
+  /* Brass / champagne accent — references the token ramp (no longer a copy). */
+  --color-brass-50:  var(--atelier-brass-50);
+  --color-brass-100: var(--atelier-brass-100);
+  --color-brass-200: var(--atelier-brass-200);
+  --color-brass-300: var(--atelier-brass-300);
+  --color-brass-400: var(--atelier-brass-400);
+  --color-brass-500: var(--atelier-brass-500);
+  --color-brass-600: var(--atelier-brass-600);
+  --color-brass-700: var(--atelier-brass-700);
+  --color-brass-800: var(--atelier-brass-800);
+  --color-brass-900: var(--atelier-brass-900);
+
+  /* Claret — deep editorial wine for restrained "over budget" alerts. */
+  --color-claret-50:  var(--atelier-claret-50);
+  --color-claret-100: var(--atelier-claret-100);
+  --color-claret-200: var(--atelier-claret-200);
+  --color-claret-300: var(--atelier-claret-300);
+  --color-claret-400: var(--atelier-claret-400);
+  --color-claret-500: var(--atelier-claret-500);
+  --color-claret-600: var(--atelier-claret-600);
+  --color-claret-700: var(--atelier-claret-700);
+  --color-claret-800: var(--atelier-claret-800);
+  --color-claret-900: var(--atelier-claret-900);
 }
 
 /* A thin editorial rule placed under display headings. Hand-cut to read as a
@@ -76,7 +82,7 @@ html, body, #root {
   height: var(--app-vh);
   min-height: var(--app-vh);
   margin: 0;
-  background-color: #F7F5F2;
+  background-color: var(--atelier-cream);
   overflow-x: hidden;
   /* Lock width to the visible viewport. iOS Safari otherwise allows the
      document to extend past viewport when any descendant exceeds it (even
@@ -120,6 +126,27 @@ html, body, #root {
 }
 .fade-in, .slide-in-from-bottom-4, .slide-in-from-bottom-10, .zoom-in-95, .duration-300, .duration-700 {
   /* Composed by .animate-in; left as no-ops so classnames don't error. */
+}
+
+/* Opacity-ONLY entrance for the main view wrapper. Deliberately carries no
+   transform: `.animate-in` above animates translateY with `both` fill, so it
+   holds `transform: translateY(0)` on the element forever after the animation
+   ends. A non-`none` transform turns the wrapper into a containing block, which
+   (a) re-scopes position:sticky for the per-view filter bars away from the
+   <main> scroll ancestor — they render off the top with content sliding under —
+   and (b) promotes a composited layer that intermittently swallows touch-scroll
+   inside <main> on iOS ("sometimes the page won't scroll"). Fading opacity only
+   means the wrapper never retains a transform, so sticky and scroll both hold.
+   Keep this OFF the shared `.animate-in` — modals still want the slide/zoom. */
+@keyframes atelier-view-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-view-in {
+  animation: atelier-view-fade 0.5s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-view-in { animation: none; }
 }
 
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }

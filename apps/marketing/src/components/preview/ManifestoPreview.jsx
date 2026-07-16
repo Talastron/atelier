@@ -121,7 +121,7 @@ export function ManifestoPreview() {
       <p
         className="text-sm md:text-base mt-4"
         style={{
-          color: 'var(--atelier-stone-400)',
+          color: 'var(--atelier-stone-500)',
           lineHeight: 'var(--atelier-leading-body)',
           maxWidth: '52ch',
         }}
@@ -159,7 +159,7 @@ export function ManifestoPreview() {
                 display: 'inline-block',
                 width: '0.55ch',
                 marginLeft: '0.05ch',
-                color: 'var(--atelier-brass-600)',
+                color: 'var(--atelier-brass-text)',
                 animation: 'blink 1s steps(2, start) infinite',
                 fontStyle: 'normal',
               }}
@@ -174,7 +174,7 @@ export function ManifestoPreview() {
           className="text-[10px] uppercase mt-7 flex items-center gap-3"
           style={{
             letterSpacing: 'var(--atelier-tracking-eyebrow)',
-            color: 'var(--atelier-stone-400)',
+            color: 'var(--atelier-stone-500)',
             fontFamily: 'var(--atelier-font-sans)',
             opacity: showingFullText ? 1 : 0,
             transition: 'opacity 350ms ease',

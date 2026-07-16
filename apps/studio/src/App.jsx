@@ -164,7 +164,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
+      <div className="bg-cream w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
            onClick={(e) => e.stopPropagation()}>
         {/* Editorial header — same eyebrow + brass-rule pattern as every
             other main-column header. Tiny X close in a stone-100 chip. */}
@@ -1390,7 +1390,7 @@ function DigitalWardrobe() {
         .glass-panel { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.4); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .smooth-shadow { box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08); }
-        body { background-color: #F7F5F2; }
+        body { background-color: var(--atelier-cream); }
       `}</style>
 
       {!authReady ? (
@@ -1400,7 +1400,7 @@ function DigitalWardrobe() {
       ) : accessDenied && !demoMode ? (
         <AccessDeniedScreen user={user} onSignOut={signOutUser} />
       ) : (
-        <div className="flex font-sans text-stone-900 overflow-hidden bg-[#F7F5F2] w-full"
+        <div className="flex font-sans text-stone-900 overflow-hidden bg-cream w-full"
              style={{ height: 'var(--app-vh, 100dvh)' }}>
           {demoMode && (
             // Editorial pill banner pinned to the top of the viewport. Visible
@@ -1446,7 +1446,11 @@ function DigitalWardrobe() {
           <main ref={mainScrollRef} className="flex-1 overflow-y-auto overflow-x-hidden lg:pb-0 relative scroll-smooth hide-scrollbar"
                 style={{
                   paddingTop: 'env(safe-area-inset-top, 0px)',
-                  paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)',
+                  // Clears the fixed mobile bottom nav. Must stay >= that bar's
+                  // height (its own padding + nav items) or the last row of
+                  // content hides behind it — the inset is added on top here
+                  // because the bar also sits above the home-indicator strip.
+                  paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)',
                 }}>
             {subStatus.kind === 'subscriber' && subStatus.isTrial && subStatus.daysRemaining !== null && subStatus.daysRemaining <= 3 && (
               <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
@@ -1457,12 +1461,14 @@ function DigitalWardrobe() {
               {loading ? (
                 <WardrobeSkeleton />
               ) : (
-                // No transform-based animation here — slide-in-from-bottom
-                // leaves a translateY(0) on the element after the animation
-                // completes, which establishes a containing block and breaks
-                // position:sticky for descendants (they end up scoped to this
-                // wrapper instead of the main scroll ancestor). Fade-in only.
-                <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
+                // Opacity-only entrance (see .animate-view-in in index.css).
+                // MUST NOT use `.animate-in`: its keyframe animates translateY
+                // with `both` fill, which holds `transform: translateY(0)` on
+                // this wrapper forever. Any non-`none` transform makes it a
+                // containing block, which re-scopes position:sticky for the
+                // per-view filter bars off the <main> scroll ancestor AND, on
+                // iOS, composites a layer that intermittently eats touch-scroll.
+                <div key={activeTab} className="animate-view-in">
                   {/* Lazy-loaded views: each non-home view is a separate chunk
                       fetched on first navigation. Suspense shows a brief loader
                       while a view's chunk downloads (once, then cached). Today
@@ -1609,6 +1615,21 @@ function DigitalWardrobe() {
               )}
             </div>
           </main>
+
+          {/* Status-bar scrim. The app runs edge-to-edge (black-translucent
+              status bar) and <main> reserves the top inset via paddingTop, so
+              in-view sticky filter bars pin just BELOW the status bar — leaving
+              the inset-height strip at the very top uncovered, where scrolling
+              content would otherwise show through behind the clock/battery.
+              This opaque strip covers exactly that band on every view. Zero
+              height (invisible) wherever the inset is 0 (browser, desktop,
+              Android). pointer-events-none so the tap-to-top target still
+              receives taps. */}
+          <div
+            className="lg:hidden fixed top-0 inset-x-0 z-30 bg-cream pointer-events-none"
+            style={{ height: 'env(safe-area-inset-top, 0px)' }}
+            aria-hidden="true"
+          />
 
           {/* iOS-style "tap the status bar to scroll to top". The safe-area
               inset is the notch / Dynamic-Island strip on iPhone PWA, where
@@ -1768,8 +1789,14 @@ function DigitalWardrobe() {
             </div>
           )}
 
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-2 z-40 smooth-shadow"
-            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}>
+          {/* Kept deliberately trim: the glass panel's own padding stacks on top
+              of the nav items' height AND the bottom safe-area inset (the home-
+              indicator strip), so generous padding here reads as a tall white
+              slab eating the screen. Pair any change with the matching bottom
+              padding on <main> above, which must stay >= this bar's height or
+              the last row of content hides behind it. */}
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-white/50 px-2 sm:px-6 pt-1 z-40 smooth-shadow"
+            style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.25rem)' }}>
             {/* MOBILE BOTTOM NAV — four destinations + central + FAB,
                 arranged as a 5-column grid with the FAB in column 3.
                 With grid-cols-5 + equal-width cells, the FAB sits at
@@ -2266,7 +2293,7 @@ function WardrobeSkeleton() {
 
 function FullScreenLoader({ label }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] text-stone-400">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cream text-stone-400">
       <Shirt size={40} className="mb-4 opacity-30 animate-pulse" strokeWidth={1} />
       <p className="font-display text-xl">{label}…</p>
     </div>
@@ -2308,7 +2335,7 @@ function SignInScreen({ onSignIn }) {
   // before. justify-center on a min-h-screen flex broke on mobile when the
   // keyboard opened — content scrolled off-screen.
   return (
-    <div className="relative min-h-screen flex flex-col items-center bg-[#F7F5F2] px-6 py-12 sm:py-0 sm:justify-center font-sans">
+    <div className="relative min-h-screen flex flex-col items-center bg-cream px-6 py-12 sm:py-0 sm:justify-center font-sans">
       <div className="mb-8"><AtelierMark size={88} /></div>
       <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier<span className="text-[#D4B378]">.</span></h1>
       <p className="text-stone-500 text-sm tracking-wide mb-10 text-center max-w-sm">
@@ -2390,7 +2417,7 @@ function SignInScreen({ onSignIn }) {
 
 function AccessDeniedScreen({ user, onSignOut }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] px-6 font-sans text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cream px-6 font-sans text-center">
       <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mb-8">
         <AlertCircle className="text-stone-900" size={26} strokeWidth={1.5} />
       </div>
@@ -2926,7 +2953,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
   return (
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6 transition-all">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+      <div className="bg-cream w-full sm:max-w-xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh] sm:max-h-[90vh]">
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">{isEdit ? 'Edit Item' : 'Add to Atelier'}</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -3642,7 +3669,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
       <div className="text-[10px] tracking-[0.18em] uppercase text-[#c9a85f] mb-2">The Concierge's read</div>
       {fit ? (
         <>
-          <p className="font-display italic text-[15px] leading-relaxed text-[#F7F5F2]">{fit.verdict}</p>
+          <p className="font-display italic text-[15px] leading-relaxed text-cream">{fit.verdict}</p>
           <div className="text-xs text-stone-400 mt-2">{fit.tier}</div>
           <button onClick={() => setExpanded((v) => !v)} className="text-xs underline text-stone-300 mt-3">
             {expanded ? 'Hide the detail' : 'Why?'}
@@ -3805,8 +3832,8 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
     : null;
 
   return (
-    <div ref={swipeRef} className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
+    <div ref={swipeRef} className="fixed inset-0 bg-cream z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+      <div className="sticky top-0 z-10 bg-cream/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
@@ -4845,7 +4872,7 @@ function PhotoEditorModal({ src, onClose, onSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-md z-[70] flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-5 py-4 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <h3 className="text-lg font-display text-stone-900">Edit photo</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -4994,7 +5021,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Closet sweep</p>
@@ -5185,7 +5212,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Bulk import</p>
@@ -5506,7 +5533,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
 
   return (
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+      <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">Paste a receipt</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -5777,7 +5804,7 @@ function AddInspirationModal({ onClose, onSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">Save inspiration</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -5948,9 +5975,9 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
   const recreateable = hasMatches && !!onRecreateLook;
 
   return createPortal(
-    <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+    <div className="fixed inset-0 bg-cream z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       {/* ─── TOP NAV ─── */}
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
+      <div className="sticky top-0 z-10 bg-cream/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-7xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
@@ -6866,7 +6893,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       {/* Slide-in panel from the right edge. On mobile this fills the
           viewport; on tablet+ it sits as a 480-560px concierge desk. */}
       <div
-        className="ml-auto relative w-full sm:w-[480px] lg:w-[560px] bg-[#F7F5F2] shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300"
+        className="ml-auto relative w-full sm:w-[480px] lg:w-[560px] bg-cream shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="The Atelier Concierge"
@@ -7322,7 +7349,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-stone-200/60 bg-white flex justify-between items-start">
           <div className="min-w-0">
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Share {label}</p>
@@ -7541,7 +7568,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   })();
 
   return (
-    <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+    <div className="fixed inset-0 bg-cream z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       {/* Prev/next navigation — fixed at viewport edges. Hidden on mobile
           where edge-tap conflicts with normal scroll/swipe gestures. */}
       {prevOutfitId && (
@@ -7565,7 +7592,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
         </button>
       )}
       {/* Sticky toolbar */}
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
+      <div className="sticky top-0 z-10 bg-cream/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-xs sm:text-sm tracking-wide text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={16} strokeWidth={1.5} className="rotate-180" />
@@ -8703,7 +8730,7 @@ function PublicShareView({ shareId }) {
   if (state.status === 'loading') return <FullScreenLoader label="Loading shared look" />;
   if (state.status === 'not-found') {
     return (
-      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-cream flex items-center justify-center p-6">
         <div className="bg-white border border-stone-200 rounded-[2rem] p-10 max-w-md text-center smooth-shadow">
           <Shirt size={48} strokeWidth={1} className="mx-auto text-stone-300 mb-4" />
           <h1 className="font-display text-2xl text-stone-900">Look unavailable</h1>
@@ -8715,7 +8742,7 @@ function PublicShareView({ shareId }) {
   }
   if (state.status === 'error') {
     return (
-      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-cream flex items-center justify-center p-6">
         <p className="text-sm text-red-700">{state.error || 'Could not load this look.'}</p>
       </div>
     );
@@ -8731,7 +8758,7 @@ function PublicShareView({ shareId }) {
     const data = state.data;
     const itemImages = Array.isArray(data.images) ? data.images : [];
     return (
-      <div className="min-h-screen bg-[#F7F5F2] font-sans text-stone-900">
+      <div className="min-h-screen bg-cream font-sans text-stone-900">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
           .font-display { font-family: 'Playfair Display', serif; }
@@ -8817,7 +8844,7 @@ function PublicShareView({ shareId }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F5F2] font-sans text-stone-900">
+    <div className="min-h-screen bg-cream font-sans text-stone-900">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
         .font-display { font-family: 'Playfair Display', serif; }
@@ -8846,7 +8873,7 @@ function PublicShareView({ shareId }) {
 
         {isLookbook ? (
           <div className="mt-10">
-            <nav className="flex flex-wrap gap-2 mb-12 sticky top-2 z-10 bg-[#F7F5F2]/80 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
+            <nav className="flex flex-wrap gap-2 mb-12 sticky top-2 z-10 bg-cream/80 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
               {looks.map((l, i) => (
                 <a key={l.id || i} href={`#look-${i}`}
                   className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors">
@@ -9070,7 +9097,7 @@ function OnboardingTour({ onJumpTo }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[80] bg-stone-900/80 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col min-h-[320px]">
+      <div className="bg-cream w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col min-h-[320px]">
         <div className="bg-stone-900 text-white px-6 py-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400">Welcome to Atelier</p>

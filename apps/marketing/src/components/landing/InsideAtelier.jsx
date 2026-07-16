@@ -161,7 +161,7 @@ function ItemTile({ slug, name, brand, cat, sub, price, wears, cpw, fav, dense }
         <img src={IMG(slug)} alt={name || ''} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         {fav && (
           <span style={{ position: 'absolute', top: 9, right: 9, width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(28,25,23,0.12)' }}>
-            <Star size={12} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-600)', fill: 'var(--atelier-brass-300)' }} />
+            <Star size={12} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-text)', fill: 'var(--atelier-brass-300)' }} />
           </span>
         )}
       </div>
@@ -197,11 +197,11 @@ function WardrobeContent({ dense }) {
             Your Collection
           </h3>
           <p style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--atelier-stone-500)', fontWeight: 500, marginTop: 7 }}>
-            146 Pieces Curated <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--atelier-stone-400)', fontWeight: 400 }}>· 12 on wishlist</span>
+            146 Pieces Curated <span style={{ textTransform: 'none', letterSpacing: 0, color: 'var(--atelier-stone-500)', fontWeight: 400 }}>· 12 on wishlist</span>
           </p>
           {/* Ask the Concierge — the inline CTA under the header */}
           <span className="inline-flex items-center gap-2" style={{ marginTop: 12, padding: '0.4rem 0.85rem', borderRadius: 999, background: '#fff', border: '1px solid var(--atelier-stone-200)' }}>
-            <Sparkles size={12} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-600)' }} />
+            <Sparkles size={12} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-text)' }} />
             <span style={{ fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--atelier-stone-600)', fontWeight: 500 }}>Ask the Concierge</span>
           </span>
         </div>
@@ -215,8 +215,8 @@ function WardrobeContent({ dense }) {
       {/* Command toolbar — search + filter pills */}
       <div className="flex items-center gap-2" style={{ marginBottom: 14, flexWrap: 'nowrap', overflow: 'hidden' }}>
         <div className="flex items-center gap-2" style={{ width: dense ? '100%' : 248, flexShrink: 0, padding: '0.55rem 0.85rem', borderRadius: 999, background: '#fff', border: '1px solid var(--atelier-stone-300)' }}>
-          <Search size={13} strokeWidth={1.7} style={{ color: 'var(--atelier-stone-400)', flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: 'var(--atelier-stone-400)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Search by name, brand, description…</span>
+          <Search size={13} strokeWidth={1.7} style={{ color: 'var(--atelier-stone-500)', flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: 'var(--atelier-stone-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Search by name, brand, description…</span>
         </div>
         {!dense && WARDROBE_SCOPES.map((s, i) => (
           <Chip key={s} active={i === 0}>{i === 1 ? '★ ' : ''}{s}</Chip>
@@ -258,7 +258,7 @@ function StudioContent({ dense }) {
       {/* Compose / AI History tabs */}
       <div className="flex items-center gap-2" style={{ marginBottom: 14 }}>
         <Chip active>Compose</Chip>
-        <span style={{ fontSize: 10.5, color: 'var(--atelier-stone-400)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 10.5, color: 'var(--atelier-stone-500)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
           AI History <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 999, background: 'var(--atelier-stone-100,#efece8)' }}>4</span>
         </span>
       </div>
@@ -267,7 +267,7 @@ function StudioContent({ dense }) {
       <div style={{ borderRadius: 16, border: '1px solid var(--atelier-stone-200)', background: '#fff', padding: dense ? '0.9rem' : '1.1rem 1.2rem', marginBottom: dense ? 12 : 16 }}>
         <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
           <span style={EYEBROW}>Style intent</span>
-          {!dense && <span style={{ fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--atelier-brass-600)', fontWeight: 600 }}>+ Custom intent</span>}
+          {!dense && <span style={{ fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--atelier-brass-text)', fontWeight: 600 }}>+ Custom intent</span>}
         </div>
         <div className="flex items-center gap-1.5" style={{ flexWrap: 'wrap', marginBottom: 14 }}>
           {STYLE_INTENTS.slice(0, dense ? 5 : 7).map((s, i) => (
@@ -306,7 +306,7 @@ function StudioContent({ dense }) {
           <div>
             <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
               <p style={EYEBROW}>Wardrobe Archives</p>
-              <span style={{ fontSize: 9.5, color: 'var(--atelier-stone-400)' }}>Tops · 33</span>
+              <span style={{ fontSize: 9.5, color: 'var(--atelier-stone-500)' }}>Tops · 33</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {ARCHIVE_TOPS.slice(0, 3).map((s) => (
@@ -359,7 +359,7 @@ function LookbookContent({ dense }) {
             </div>
             <div className="flex items-baseline justify-between gap-2" style={{ marginTop: 10 }}>
               <p style={{ fontFamily: 'var(--atelier-font-display)', fontSize: '1.1rem', color: 'var(--atelier-stone-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{look.name}</p>
-              <span style={{ fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--atelier-stone-400)', flexShrink: 0 }}>{look.count} pieces</span>
+              <span style={{ fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--atelier-stone-500)', flexShrink: 0 }}>{look.count} pieces</span>
             </div>
           </div>
         ))}
@@ -398,12 +398,12 @@ function DesktopFrame({ active, setActive }) {
         <div style={{ padding: '0.25rem 0.5rem 1.1rem', display: 'flex', alignItems: 'center', gap: 9 }}>
           <AtelierMark size={26} />
           <span style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 17, color: 'var(--atelier-stone-900)', letterSpacing: '-0.01em', lineHeight: 1 }}>
-            Atelier<span style={{ color: 'var(--atelier-brass-600)' }}>.</span>
+            Atelier<span style={{ color: 'var(--atelier-brass-text)' }}>.</span>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 0.5rem 0.625rem' }}>
           <BrassRule />
-          <span style={{ ...EYEBROW, fontSize: 8.5, color: 'var(--atelier-stone-400)' }}>Studio</span>
+          <span style={{ ...EYEBROW, fontSize: 8.5, color: 'var(--atelier-stone-500)' }}>Studio</span>
         </div>
         {NAV.map(({ id, icon: Icon, label, brass, ask, divider, view }) => {
           const isActive = id === active;
@@ -425,7 +425,7 @@ function DesktopFrame({ active, setActive }) {
               >
                 <Icon size={13} strokeWidth={1.6} style={{ color: brass ? 'var(--atelier-brass-600)' : isActive ? 'var(--atelier-stone-700)' : 'var(--atelier-stone-400)', flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>{label}</span>
-                {ask && <span style={{ fontSize: 8.5, letterSpacing: '0.22em', color: 'var(--atelier-brass-600)', fontWeight: 600, textTransform: 'uppercase' }}>Ask</span>}
+                {ask && <span style={{ fontSize: 8.5, letterSpacing: '0.22em', color: 'var(--atelier-brass-text)', fontWeight: 600, textTransform: 'uppercase' }}>Ask</span>}
               </button>
             </React.Fragment>
           );
@@ -435,7 +435,7 @@ function DesktopFrame({ active, setActive }) {
           <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--atelier-stone-900)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--atelier-font-display)', fontSize: 13, flexShrink: 0 }}>S</span>
           <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--atelier-stone-900)', lineHeight: 1.1 }}>Sibylle Sherwood</p>
-            <p style={{ fontSize: 9, color: 'var(--atelier-stone-400)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>The founding member</p>
+            <p style={{ fontSize: 9, color: 'var(--atelier-stone-500)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>The founding member</p>
           </div>
           <ChevronRight size={13} style={{ color: 'var(--atelier-stone-300)', flexShrink: 0 }} />
         </div>
@@ -469,7 +469,7 @@ function MobileFrame({ active, setActive }) {
       <div className="flex items-center justify-between" style={{ padding: '0.85rem 1rem', borderBottom: '1px solid var(--atelier-stone-200)', background: 'rgba(247,245,242,0.7)' }}>
         <div className="flex items-center gap-2">
           <AtelierMark size={22} />
-          <span style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 15, color: 'var(--atelier-stone-900)' }}>Atelier<span style={{ color: 'var(--atelier-brass-600)' }}>.</span></span>
+          <span style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 15, color: 'var(--atelier-stone-900)' }}>Atelier<span style={{ color: 'var(--atelier-brass-text)' }}>.</span></span>
         </div>
         <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--atelier-brass-300)', color: 'var(--atelier-stone-900)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--atelier-font-display)', fontSize: 12 }}>S</span>
       </div>
@@ -525,7 +525,7 @@ export function InsideAtelier() {
         <div className="text-center" style={{ marginBottom: 'clamp(2rem, 4vw, 3rem)' }}>
           <div className="flex items-center justify-center gap-3" style={{ marginBottom: 18 }}>
             <BrassRule />
-            <span style={{ ...EYEBROW, letterSpacing: '0.28em', color: 'var(--atelier-brass-600)' }}>Inside Atelier</span>
+            <span style={{ ...EYEBROW, letterSpacing: '0.28em', color: 'var(--atelier-brass-text)' }}>Inside Atelier</span>
             <BrassRule />
           </div>
           <h2 style={{ fontFamily: 'var(--atelier-font-display)', fontSize: 'clamp(2rem, 3.6vw, 3.25rem)', lineHeight: 1.04, letterSpacing: '-0.01em', color: 'var(--atelier-stone-900)', maxWidth: '20ch', margin: '0 auto 1rem' }}>

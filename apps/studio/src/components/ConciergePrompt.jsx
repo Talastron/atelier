@@ -33,9 +33,12 @@ export default function ConciergePrompt({ events = [], onOpen }) {
       <Sparkles size={18} strokeWidth={1.4} className="shrink-0 text-brass-300" aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="text-[10px] uppercase tracking-[0.22em] text-brass-300">Ask your stylist</p>
-        <p className="mt-0.5 truncate text-sm text-stone-100">
+        {/* Question + hint on their own lines so neither is clipped on narrow
+            mobile widths (there's ample vertical room). On wider screens the
+            hint tucks back inline after the question. */}
+        <p className="mt-0.5 text-sm text-stone-100">
           <span className="font-display italic">“{text}”</span>
-          <span className="text-stone-500"> · {hint}</span>
+          <span className="block text-stone-500 sm:inline"><span className="hidden sm:inline"> · </span>{hint}</span>
         </p>
       </div>
       <ArrowRight size={16} strokeWidth={1.5} className="shrink-0 text-stone-400 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />

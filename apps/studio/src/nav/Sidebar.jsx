@@ -28,7 +28,7 @@ function DesktopNavItem({ icon: Icon, label, id, activeTab, setTab }) {
 
 export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user, demoMode, signOutUser, setInspirationDefaultFilter }) {
   return (
-    <aside className="hidden lg:flex flex-col w-72 bg-[#F7F5F2] border-r border-stone-200/60 px-8 pb-6 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}>
+    <aside className="hidden lg:flex flex-col w-72 bg-cream border-r border-stone-200/60 px-8 pb-6 h-full" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}>
       {/* Logo block. The account avatar lives as a fixed top-right pill (App.jsx,
           desktop) so the sidebar is a clean nav column and nothing clips. */}
       <div className="flex items-center gap-3 mb-8">

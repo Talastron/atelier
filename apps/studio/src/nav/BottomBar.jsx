@@ -10,7 +10,9 @@ function MobileNavItem({ icon: Icon, label, id, activeTab, setTab, onScrollTop }
         if (isActive) onScrollTop?.();
         else setTab(id);
       }}
-      className="flex flex-col items-center gap-1 px-3 py-2 w-[68px] min-h-[56px] transition-all active:scale-95 relative"
+      // min-h stays >= 44px (iOS HIG minimum tap target) — do not trim further
+      // to shorten the bar; take it out of the wrapper's padding instead.
+      className="flex flex-col items-center gap-0.5 px-3 py-1.5 w-[68px] min-h-[46px] transition-all active:scale-95 relative"
       aria-label={label}
       aria-current={isActive ? 'page' : undefined}
     >
@@ -122,7 +124,7 @@ function MobileFAB({ onTap, onLongPress }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
         onContextMenu={(e) => e.preventDefault()}
-        className={`w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all duration-200 active:scale-90 hover:scale-105 ring-4 ${holdActive ? 'ring-brass-300 scale-105' : 'ring-[#F7F5F2]'}`}
+        className={`w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all duration-200 active:scale-90 hover:scale-105 ring-4 ${holdActive ? 'ring-brass-300 scale-105' : 'ring-cream'}`}
         style={{
           boxShadow: '0 10px 30px -8px rgba(28, 25, 23, 0.45)',
           // Disables iOS Safari's long-press callout (the "copy / share" menu)

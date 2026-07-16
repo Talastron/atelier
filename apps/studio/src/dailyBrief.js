@@ -177,7 +177,10 @@ export async function writeRemoteRecentBases(uid, list) {
     const { db } = await import('./firebase.js');
     const { doc, setDoc } = await import('firebase/firestore');
     await setDoc(doc(db, 'users', uid, 'state', 'dailyBriefHistory'), {
-      recent: list,
+      // Normalize on the way in as well as out: the read path sanitizes remote
+      // data, and this keeps a careless caller from persisting an unbounded or
+      // malformed list. mergeRecent is pure, so this is free.
+      recent: mergeRecent(list),
       savedAt: Date.now(),
     });
   } catch {

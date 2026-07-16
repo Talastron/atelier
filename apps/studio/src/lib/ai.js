@@ -5,7 +5,7 @@ import { isAIEnabled, geminiText, geminiTextVision, geminiTextStream, Schema } f
 import { currentSeasonLabel, itemColors, itemMaterials, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemWearOccasions, resolveOutfitItems, todayISO } from "./items.js";
 import { buildItemFitPrompt, parseAndNormalizeFit, selectAspirationBasis, buildItemSummaryLine } from './itemFit.js';
 import { weatherLabel } from "./weather.js";
-import { ensureClothingBase, hasClothingBase } from "./outfit.js";
+import { ensureClothingBase, hasClothingBase, trimToOnePerSlot } from "./outfit.js";
 import { ALL_MATERIALS, CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
 
 // Locks the shape of a composed-outfit reply: all four fields required, with
@@ -37,6 +37,16 @@ const FIT_RESPONSE_SCHEMA = Schema.object({
     }),
   },
 });
+
+// The marker rule promises every piece named in the reasoning is in itemIds. If
+// trimToOnePerSlot drops one, unwrap its <<item:ID|name>> marker back to plain
+// text so the prose can never cite a piece the look no longer contains.
+function unwrapMarkers(reasoning = '', ids = []) {
+  return ids.reduce((text, id) => {
+    const escaped = String(id).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp(`<<item:${escaped}\\|([^>]*)>>`, 'g'), '$1');
+  }, reasoning || '');
+}
 
 export async function generateOutfitWithGemini({ items, intent, weather, season, previousOutfit = null, temperature = 0.7, styleProfile = '', mustIncludeItem = null, calendarEvents = [], recentLooks = [] }) {
   if (!isAIEnabled()) {
@@ -88,12 +98,12 @@ Dress for the most demanding event of the day — if there's a board meeting AND
   // LEAST recent" is unactionable, and a wrong order would invert it into
   // "repeat yesterday's", the exact bug this exists to fix.
   const freshnessBlock = recentLooks.length > 0
-    ? `\n\nRECENT DAILY LOOKS were built on these pieces, most recent day first:
-${recentLooks.map((i) => `- ${i.category}: ${i.name}`).join('\n')}
+    ? `\n\nRECENT DAILY LOOKS were built on these pieces, most recent day first. Match them by id — the wardrobe can hold several pieces sharing a name, and a different colourway IS a different piece:
+${recentLooks.map((i) => `- id=${i.id} · ${i.category}: ${i.name}${itemColors(i).length ? ` (${itemColors(i).join(', ')})` : ''}`).join('\n')}
 
 Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look.
 
-PRIORITY: this freshness steer OUTRANKS the ★FAVOURITE preference below when choosing the base — a piece being a favourite is not a reason to repeat a recent base (favourites are exactly what tend to recur). It does NOT outrank the WEATHER-DRIVEN RULES, the COMPLETE THE LOOK requirement, or the everyday-appropriateness rule below — an Occasion or eveningwear piece is never a valid way to be "different". If no everyday-appropriate different base can satisfy those and still form a coherent look, repeat a base rather than break them — and when repeating, prefer the LEAST recent of the pieces listed above.\n`
+PRIORITY: this freshness steer outranks EXACTLY ONE rule — the ★FAVOURITE preference below, and only when choosing the base (a piece being a favourite is not a reason to repeat a recent base; favourites are exactly what tend to recur). It outranks NOTHING ELSE. Every other rule below still binds in full: one item per category slot, the weather rules, complete-the-look, colour and style cohesion, and everyday-appropriateness. Being "different" is NEVER a licence to break one of them — do not add extra garments to a slot to manufacture variety, and never reach for an Occasion or eveningwear piece. If no everyday-appropriate different base can satisfy every rule and still form a coherent look, repeat a base rather than break one — and when repeating, prefer the LEAST recent of the pieces listed above.\n`
     : '';
 
   // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed
@@ -120,6 +130,7 @@ ${styleProfile ? `- ${styleProfile}` : ''}${eventsHint}${freshnessBlock}
 Stylist rules:
 - Pick AT MOST one item per category slot for: Tops, Outerwear, Bottoms, Dresses, Shoes, Bags, Accessories.
 - Jewellery is layered — you MAY pick MULTIPLE items per jewellery slot (Earrings, Necklaces, Wrist). A complete look can carry two stacked necklaces, layered bracelets, or both pearl studs and a small drop earring. Compose jewellery as a curated stack, not a single piece — but only when the items genuinely work together.
+- A Pendant is not wearable on its own — it hangs on a chain, and the wardrobe lists Pendants and Necklaces as SEPARATE pieces. If you pick a Pendant you MUST also include a Necklace for it to hang on; if no suitable Necklace is available, do not pick the Pendant at all.
 - A Dress REPLACES Tops + Bottoms — never include all three.
 - COMPLETE THE LOOK — non-negotiable: itemIds MUST contain a full clothing base — EITHER one Dress, OR BOTH a Top AND a Bottom. Never return a look that is missing its bottom (a top with no trousers/skirt/shorts) or missing its top. If you describe trousers, shorts, a skirt or a top in the reasoning, that exact item MUST be in itemIds (see the marker rule) — a garment mentioned in prose but absent from itemIds is a hard failure.
 - Pick ONLY items whose category matches the slot — never put a bag in the shoes slot.
@@ -220,6 +231,17 @@ CRITICAL CORRECTION — your previous attempt is INVALID: it returned a look wit
     );
     parsed.itemIds = fixed.itemIds;
   }
+
+  // Deterministic slot cap — runs AFTER the base backstop so a base it injected
+  // is never trimmed away. Nothing above this catches a slot violation:
+  // hasClothingBase is satisfied by a top + three bottoms, so the retry and
+  // ensureClothingBase both pass it straight through to the user.
+  const { kept, dropped } = trimToOnePerSlot(parsed.itemIds, items);
+  if (dropped.length) {
+    parsed.itemIds = kept;
+    parsed.reasoning = unwrapMarkers(parsed.reasoning, dropped);
+  }
+
   const tags = Array.isArray(parsed.tags)
     ? parsed.tags
         .map((t) => (typeof t === 'string' ? t.trim().toLowerCase() : ''))

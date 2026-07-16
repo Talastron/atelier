@@ -51,6 +51,37 @@ export const emptyOutfit = () => Object.fromEntries(OUTFIT_SLOTS.map((s) => [s.t
 
 const CLOTHING_CATEGORIES = ['Dresses', 'Tops', 'Bottoms'];
 
+// ── One-per-slot guarantee ─────────────────────────────────────────────────
+// The Styling Studio enforces the strict 1:1 slot model above by construction —
+// you physically can't drop two pairs of shorts into Bottoms. The AI path had no
+// such enforcement: "Pick AT MOST one item per category slot" was a prompt rule
+// only, and the model does ignore it (it has returned a look carrying THREE
+// pairs of shorts). hasClothingBase can't catch it either — a top + three
+// bottoms satisfies "has a base", so it sails through the retry and
+// ensureClothingBase untouched. This gives the AI path the same guarantee the
+// builder already has, using the same slot model rather than a second opinion
+// about what a slot is.
+//
+// MULTI_SLOTS (Earrings/Necklaces/Wrist) are deliberately exempt — stacking is
+// real styling, and the prompt asks for a curated jewellery stack. Items in no
+// slot at all (e.g. Sportswear) are left alone rather than silently dropped.
+// Keeps the model's FIRST pick per slot: the one its reasoning leads with.
+export function trimToOnePerSlot(itemIds, items) {
+  const used = new Set();
+  const kept = [];
+  const dropped = [];
+  for (const id of itemIds || []) {
+    const item = (items || []).find((i) => i.id === id);
+    const slot = item ? slotForItem(item) : null;
+    if (slot && !isMultiSlot(slot)) {
+      if (used.has(slot)) { dropped.push(id); continue; }
+      used.add(slot);
+    }
+    kept.push(id);
+  }
+  return { kept, dropped };
+}
+
 // True iff the resolved ids contain a Dress, or BOTH a Top and a Bottom.
 export function hasClothingBase(itemIds, items) {
   const picked = (itemIds || []).map((id) => items.find((i) => i.id === id)).filter(Boolean);

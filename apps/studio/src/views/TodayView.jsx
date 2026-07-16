@@ -4,7 +4,7 @@ import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
-import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief } from "../dailyBrief";
+import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief, readRecentBases, appendRecentBase, readRemoteRecentBases, writeRemoteRecentBases, mergeRecent } from "../dailyBrief";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
 import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
@@ -74,6 +74,26 @@ function ComposingPlaceholder({ title = 'The Daily Brief', stage }) {
 }
 
 
+// The freshness nudge tracks only a look's CLOTHING BASE — shoes, bags and
+// jewellery are free to repeat day to day (and are what already vary). Mirrors
+// the isClothingBase categories used by the prompt in lib/ai.js.
+const BASE_CATEGORIES = ['Dresses', 'Tops', 'Bottoms'];
+
+function baseIdsOf(itemIds = [], items = []) {
+  return (itemIds || []).filter((id) => BASE_CATEGORIES.includes(items.find((it) => it.id === id)?.category));
+}
+
+// Flatten the stored history to the actual item objects the prompt names.
+// ORDER IS LOAD-BEARING: the prompt renders these under a "most recent day
+// first" header and tells the model to prefer the LEAST recent when it has to
+// repeat. mergeRecent returns newest-first, and flatMap/Set/map all preserve
+// that order — do NOT sort or group these. Ids that no longer resolve (piece
+// deleted since) are dropped.
+function resolveRecentItems(recent = [], items = []) {
+  const ids = [...new Set(recent.flatMap((entry) => entry.baseIds || []))];
+  return ids.map((id) => items.find((it) => it.id === id)).filter(Boolean);
+}
+
 function DailyBriefCard({
   user,
   items,
@@ -125,6 +145,37 @@ function DailyBriefCard({
   // auto-compose so a device doesn't compose locally before learning another
   // device already composed today's shared look.
   const [remoteChecked, setRemoteChecked] = useState(false);
+  // Freshness history — the recent clothing bases, so the compose can steer off
+  // them. Local first (instant), then merged with the Firestore copy so the
+  // nudge is consistent whichever device composes. `historyChecked` gates the
+  // auto-compose below for the same reason `remoteChecked`/`calendarReady` do:
+  // composing before the shared history lands would nudge off an incomplete
+  // picture and repeat a base another device already used today.
+  const [recentBases, setRecentBases] = useState(() => readRecentBases(uid));
+  const [historyChecked, setHistoryChecked] = useState(false);
+  useEffect(() => {
+    if (!user) { setHistoryChecked(true); return; }
+    let alive = true;
+    (async () => {
+      try {
+        const remote = await readRemoteRecentBases(uid);
+        // Remote first — Firestore wins a same-day tie (see mergeRecent).
+        if (alive && remote.length) setRecentBases((local) => mergeRecent(remote, local));
+      } finally {
+        if (alive) setHistoryChecked(true);
+      }
+    })();
+    return () => { alive = false; };
+  }, [uid, user]);
+
+  // Record a composed look's base so tomorrow steers away from it. Local write
+  // is synchronous and authoritative for this device; the Firestore push is
+  // best-effort and shares it with the user's other devices.
+  const recordBase = (out) => {
+    const next = appendRecentBase(uid, baseIdsOf(out?.itemIds, items));
+    setRecentBases(next);
+    writeRemoteRecentBases(uid, next);
+  };
   useEffect(() => { setSaveState('idle'); setWearState('idle'); setSavedOutfitId(null); }, [brief?.savedAt]);
 
   // One-time validation of the cached brief: if today's cached look has no
@@ -217,6 +268,7 @@ function DailyBriefCard({
     // promise means a hard page reload interrupted a compose — skip so we don't
     // fire a duplicate paid call. (Same-session re-runs still hold the inflight
     // promise, so they fall through to the dedup below and set the brief.)
+    if (!historyChecked) return; // wait for the shared freshness history
     if (isComposingRecent(uid) && !getInflightCompose(uid)) return;
     let cancelled = false;
     setLoading(true);
@@ -232,9 +284,11 @@ function DailyBriefCard({
         temperature: aiTemperature,
         slotIndex: 0,
         calendarEvents,
+        recentLooks: resolveRecentItems(recentBases, items),
       });
       const saved = writeDailyBrief(uid, { ...out, intent: 'a considered look for today', slotIndex: 0 });
       writeRemoteDailyBrief(uid, saved); // publish to Firestore so other devices show the same look (best-effort)
+      recordBase(out);
       return saved;
     })
       .then((saved) => {
@@ -250,7 +304,7 @@ function DailyBriefCard({
       });
 
     return () => { cancelled = true; };
-  }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady, remoteChecked]); // re-fires when weather, calendar AND the shared-brief check resolve
+  }, [uid, isAiEnabled, items?.length, weatherSettled, calendarReady, remoteChecked, historyChecked]); // re-fires when weather, calendar, the shared-brief check AND the freshness history resolve
 
   async function composeAnother() {
     setLoading(true);
@@ -264,9 +318,11 @@ function DailyBriefCard({
         slotIndex: slot,
         previous: brief,
         calendarEvents,
+        recentLooks: resolveRecentItems(recentBases, items),
       });
       const saved = writeDailyBrief(uid, { ...out, intent: 'a different considered look for today', slotIndex: slot });
       writeRemoteDailyBrief(uid, saved); // a re-roll becomes the new shared look across devices
+      recordBase(out); // a re-roll replaces today's recorded base (same dateKey)
       setBrief(saved);
     } catch (err) {
       setError(err?.message || 'Could not compose another brief.');
@@ -812,7 +868,7 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         season={currentSeason}
         aiTemperature={aiTemperature}
         isAiEnabled={isAIEnabled()}
-        onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents }) => {
+        onGenerateOutfit={async ({ intent, temperature, previous, calendarEvents, recentLooks }) => {
           return generateOutfitWithGemini({
             // Owned pieces only — using the raw `items` (owned + wishlist)
             // let the model build "today's look" partly out of something
@@ -830,6 +886,7 @@ export default function TodayView({ user, items, measurements, schedules, outfit
             temperature,
             previousOutfit: previous ? (previous.itemIds || []).map((id) => ownedAvailable.find((it) => it.id === id)).filter(Boolean) : null,
             calendarEvents,
+            recentLooks,
           });
         }}
         onSaveOutfit={onSaveOutfit}

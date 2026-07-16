@@ -68,6 +68,11 @@ export function nextSlotIndex(uid) {
 // Bottom) of recent briefs and feed it back into the prompt as an
 // anti-repetition nudge. Only bases are tracked — shoes, bags and jewellery
 // are free to repeat, and are what naturally vary anyway.
+//
+// NB: RECENT_DAYS is the last N distinct RECORDED compose-days, not a rolling
+// calendar window — after a fortnight away, the pre-gap bases still count as
+// "recent" until N fresher ones displace them. That's intended: the point is
+// not repeating the base the user last saw, however long ago that was.
 const RECENT_PREFIX = 'atelier.dailyBrief.recent';
 export const RECENT_DAYS = 3;
 function recentKey(uid) { return `${RECENT_PREFIX}.${uid || 'anon'}`; }

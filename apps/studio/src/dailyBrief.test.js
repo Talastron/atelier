@@ -80,6 +80,11 @@ describe('daily-brief freshness history (recent clothing bases)', () => {
     expect(readRecentBases('u1')).toEqual([]);
   });
 
+  it('readRecentBases returns [] when stored data is valid JSON but not an array', () => {
+    localStorage.setItem('atelier.dailyBrief.recent.u1', JSON.stringify({ not: 'an array' }));
+    expect(readRecentBases('u1')).toEqual([]);
+  });
+
   it('appendRecentBase stores todays base and reads it back', () => {
     appendRecentBase('u1', ['top1', 'bottom1'], '2026-07-16');
     expect(readRecentBases('u1')).toEqual([e('2026-07-16', 'top1', 'bottom1')]);

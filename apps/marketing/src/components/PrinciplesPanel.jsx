@@ -87,7 +87,7 @@ export function PrinciplesPanel() {
               fontSize: '10px',
               letterSpacing: '0.32em',
               textTransform: 'uppercase',
-              color: 'var(--atelier-brass-600)',
+              color: 'var(--atelier-brass-text)',
               fontWeight: 600,
               margin: '0 0 1rem 0',
             }}

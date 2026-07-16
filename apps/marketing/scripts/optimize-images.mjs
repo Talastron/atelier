@@ -34,7 +34,20 @@ const MAX_WIDTH = 1024;
 // bytes. Drop to 75 for further savings; 85+ kills the whole point.
 const WEBP_QUALITY = 80;
 
+// Small JPEG variant for the CSS background-image tiles (Concierge Reel,
+// What-Atelier-does). Two reasons it is JPEG, not WebP: (1) the tiles never
+// render larger than ~230 CSS px, so a 480px source is ample even at 2x; and
+// (2) WebP decoded onto a GPU-composited layer (the reel's scaled + blurred
+// cards) fringes green on some renderers, whereas JPEG does not. A 480px JPEG
+// (~20KB) is already smaller than the full-size WebP, so we keep the perf win.
+const SM_WIDTH = 480;
+const SM_QUALITY = 74;
+const SM_SUFFIX = '-sm';
+
 const SOURCE_EXTS = new Set(['.jpg', '.jpeg', '.png']);
+
+// True when `outPath` already exists and is newer than its source.
+const upToDate = (outPath, srcMtime) => existsSync(outPath) && statSync(outPath).mtimeMs >= srcMtime;
 
 let processed = 0;
 let skipped = 0;
@@ -46,33 +59,44 @@ for (const SOURCE_DIR of SOURCE_DIRS) {
     continue;
   }
 
-  const files = readdirSync(SOURCE_DIR).filter((f) => SOURCE_EXTS.has(extname(f).toLowerCase()));
+  const files = readdirSync(SOURCE_DIR)
+    .filter((f) => SOURCE_EXTS.has(extname(f).toLowerCase()))
+    // Never treat a generated small variant as a source (would spawn
+    // name-sm-sm.jpg and name-sm.webp on the next run).
+    .filter((f) => !basename(f, extname(f)).endsWith(SM_SUFFIX));
 
   for (const file of files) {
     const sourcePath = join(SOURCE_DIR, file);
     const baseName = basename(file, extname(file));
-    const webpPath = join(SOURCE_DIR, `${baseName}.webp`);
+    const srcMtime = statSync(sourcePath).mtimeMs;
+    const sourceBytes = statSync(sourcePath).size;
 
-    // Idempotency: if the .webp exists and is newer than the source, leave
-    // it alone. mtimeMs comparison is cheap and accurate for build caches.
-    if (existsSync(webpPath)) {
-      const srcMtime = statSync(sourcePath).mtimeMs;
-      const webpMtime = statSync(webpPath).mtimeMs;
-      if (webpMtime >= srcMtime) {
-        skipped += 1;
-        continue;
-      }
+    // 1) Full-size WebP sibling, for <picture> / <Pic> usages.
+    const webpPath = join(SOURCE_DIR, `${baseName}.webp`);
+    if (upToDate(webpPath, srcMtime)) {
+      skipped += 1;
+    } else {
+      await sharp(sourcePath)
+        .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+        .webp({ quality: WEBP_QUALITY, effort: 6 })
+        .toFile(webpPath);
+      saved += sourceBytes - statSync(webpPath).size;
+      processed += 1;
+      console.log(`  ✓ ${baseName}.webp  (${Math.round(sourceBytes / 1024)} KB → ${Math.round(statSync(webpPath).size / 1024)} KB)`);
     }
 
-    const sourceBytes = statSync(sourcePath).size;
-    await sharp(sourcePath)
-      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
-      .webp({ quality: WEBP_QUALITY, effort: 6 })
-      .toFile(webpPath);
-    const outputBytes = statSync(webpPath).size;
-    saved += sourceBytes - outputBytes;
-    processed += 1;
-    console.log(`  ✓ ${file} → ${baseName}.webp  (${Math.round(sourceBytes / 1024)} KB → ${Math.round(outputBytes / 1024)} KB)`);
+    // 2) Small JPEG variant, for the CSS background-image tiles.
+    const smPath = join(SOURCE_DIR, `${baseName}${SM_SUFFIX}.jpg`);
+    if (upToDate(smPath, srcMtime)) {
+      skipped += 1;
+    } else {
+      await sharp(sourcePath)
+        .resize({ width: SM_WIDTH, withoutEnlargement: true })
+        .jpeg({ quality: SM_QUALITY, mozjpeg: true })
+        .toFile(smPath);
+      processed += 1;
+      console.log(`  ✓ ${baseName}${SM_SUFFIX}.jpg  (${Math.round(statSync(smPath).size / 1024)} KB)`);
+    }
   }
 }
 

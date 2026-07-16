@@ -150,6 +150,20 @@ import { ChevronRight } from 'lucide-react';
           </span>
         </a>
       </div>
+
+      {/* Quiet closing reassurances — data ownership + the app being a real
+          installable PWA. Both are true: the privacy policy grants export and
+          erasure (legal/privacy.mdx), and the studio ships a standalone web
+          manifest + service worker (apps/studio/vite.config.js VitePWA). Set
+          as fine print on the dark card, light enough to stay quiet, dark-
+          ground contrast well clear of AA. */}
+      <p
+        class="mx-auto italic"
+        style="margin-top: clamp(2rem, 3vw, 2.5rem); font-family: var(--atelier-font-display); font-size: clamp(0.8125rem, 1vw, 0.9375rem); line-height: 1.7; color: rgba(255,255,255,0.62); max-width: 52ch;"
+      >
+        Your wardrobe stays yours, to export or delete whenever you like. And it
+        installs to your home screen, opening in its own window like an app.
+      </p>
     </div>
   </section>
 </div>

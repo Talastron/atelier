@@ -529,7 +529,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
 
       {/* top-0 only — <main> supplies the safe-area inset; re-adding
           top:inset double-offsets this bar in standalone/PWA. */}
-      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/60">
+      <nav className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream/95 backdrop-blur-md border-b border-stone-200/60">
         <div className="flex flex-wrap gap-2">
           {[['group-account', 'Account'], ['group-you', 'Style & Fit'], ['group-preferences', 'Preferences'], ['group-data', 'Your Data'], ...(isOwner ? [['group-people', 'People']] : [])].map(([gid, label]) => (
             <a key={gid} href={`#${gid}`}

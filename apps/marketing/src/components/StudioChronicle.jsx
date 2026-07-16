@@ -80,7 +80,7 @@ export function StudioChronicle() {
           fontFamily: 'var(--atelier-font-display)',
           fontStyle: 'italic',
           fontSize: 'clamp(1.5rem, 2.2vw, 1.875rem)',
-          color: 'var(--atelier-brass-600)',
+          color: 'var(--atelier-brass-text)',
           lineHeight: 1,
           margin: '0 0 0.5rem 0',
           letterSpacing: '0.02em',
@@ -183,14 +183,18 @@ export function StudioChronicle() {
               transition: `opacity 700ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 140}ms, transform 700ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 140}ms`,
             }}
           >
-            {/* Brass diamond on the timeline */}
+            {/* Brass diamond, centred ON the timeline rule. The rule sits at
+                top:0.875rem of the <ol>; the <li> content starts at the ol's
+                3rem padding-top, so the rule is at -2.125rem relative to the
+                li. translate(-50%,-50%) centres the diamond on that point so it
+                straddles the line instead of floating above it. */}
             <span
               aria-hidden="true"
               style={{
                 position: 'absolute',
-                top: '-3.625rem',
+                top: '-2.125rem',
                 left: '50%',
-                transform: 'translateX(-50%) rotate(45deg)',
+                transform: 'translate(-50%, -50%) rotate(45deg)',
                 width: '7px',
                 height: '7px',
                 background: 'var(--atelier-brass-600)',
@@ -203,7 +207,7 @@ export function StudioChronicle() {
                 fontFamily: 'var(--atelier-font-display)',
                 fontStyle: 'italic',
                 fontSize: '0.9375rem',
-                color: 'var(--atelier-brass-600)',
+                color: 'var(--atelier-brass-text)',
                 letterSpacing: '0.04em',
                 whiteSpace: 'nowrap',
                 margin: '0 0 0.75rem 0',
@@ -270,7 +274,7 @@ export function StudioChronicle() {
                 fontFamily: 'var(--atelier-font-display)',
                 fontStyle: 'italic',
                 fontSize: '0.9375rem',
-                color: 'var(--atelier-brass-600)',
+                color: 'var(--atelier-brass-text)',
                 letterSpacing: '0.04em',
                 whiteSpace: 'nowrap',
               }}

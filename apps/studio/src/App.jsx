@@ -164,7 +164,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6 animate-in fade-in duration-200" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
+      <div className="bg-cream w-full sm:max-w-md rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300"
            onClick={(e) => e.stopPropagation()}>
         {/* Editorial header — same eyebrow + brass-rule pattern as every
             other main-column header. Tiny X close in a stone-100 chip. */}
@@ -1390,7 +1390,7 @@ function DigitalWardrobe() {
         .glass-panel { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.4); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .smooth-shadow { box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08); }
-        body { background-color: #F7F5F2; }
+        body { background-color: var(--atelier-cream); }
       `}</style>
 
       {!authReady ? (
@@ -1400,7 +1400,7 @@ function DigitalWardrobe() {
       ) : accessDenied && !demoMode ? (
         <AccessDeniedScreen user={user} onSignOut={signOutUser} />
       ) : (
-        <div className="flex font-sans text-stone-900 overflow-hidden bg-[#F7F5F2] w-full"
+        <div className="flex font-sans text-stone-900 overflow-hidden bg-cream w-full"
              style={{ height: 'var(--app-vh, 100dvh)' }}>
           {demoMode && (
             // Editorial pill banner pinned to the top of the viewport. Visible
@@ -1626,7 +1626,7 @@ function DigitalWardrobe() {
               Android). pointer-events-none so the tap-to-top target still
               receives taps. */}
           <div
-            className="lg:hidden fixed top-0 inset-x-0 z-30 bg-[#F7F5F2] pointer-events-none"
+            className="lg:hidden fixed top-0 inset-x-0 z-30 bg-cream pointer-events-none"
             style={{ height: 'env(safe-area-inset-top, 0px)' }}
             aria-hidden="true"
           />
@@ -2293,7 +2293,7 @@ function WardrobeSkeleton() {
 
 function FullScreenLoader({ label }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] text-stone-400">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cream text-stone-400">
       <Shirt size={40} className="mb-4 opacity-30 animate-pulse" strokeWidth={1} />
       <p className="font-display text-xl">{label}…</p>
     </div>
@@ -2335,7 +2335,7 @@ function SignInScreen({ onSignIn }) {
   // before. justify-center on a min-h-screen flex broke on mobile when the
   // keyboard opened — content scrolled off-screen.
   return (
-    <div className="relative min-h-screen flex flex-col items-center bg-[#F7F5F2] px-6 py-12 sm:py-0 sm:justify-center font-sans">
+    <div className="relative min-h-screen flex flex-col items-center bg-cream px-6 py-12 sm:py-0 sm:justify-center font-sans">
       <div className="mb-8"><AtelierMark size={88} /></div>
       <h1 className="text-5xl font-display font-medium tracking-wide mb-3">Atelier<span className="text-[#D4B378]">.</span></h1>
       <p className="text-stone-500 text-sm tracking-wide mb-10 text-center max-w-sm">
@@ -2417,7 +2417,7 @@ function SignInScreen({ onSignIn }) {
 
 function AccessDeniedScreen({ user, onSignOut }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F7F5F2] px-6 font-sans text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-cream px-6 font-sans text-center">
       <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mb-8">
         <AlertCircle className="text-stone-900" size={26} strokeWidth={1.5} />
       </div>
@@ -2953,7 +2953,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
   return (
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6 transition-all">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+      <div className="bg-cream w-full sm:max-w-xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 flex flex-col max-h-[92vh] sm:max-h-[90vh]">
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">{isEdit ? 'Edit Item' : 'Add to Atelier'}</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -3669,7 +3669,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
       <div className="text-[10px] tracking-[0.18em] uppercase text-[#c9a85f] mb-2">The Concierge's read</div>
       {fit ? (
         <>
-          <p className="font-display italic text-[15px] leading-relaxed text-[#F7F5F2]">{fit.verdict}</p>
+          <p className="font-display italic text-[15px] leading-relaxed text-cream">{fit.verdict}</p>
           <div className="text-xs text-stone-400 mt-2">{fit.tier}</div>
           <button onClick={() => setExpanded((v) => !v)} className="text-xs underline text-stone-300 mt-3">
             {expanded ? 'Hide the detail' : 'Why?'}
@@ -3832,8 +3832,8 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
     : null;
 
   return (
-    <div ref={swipeRef} className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
+    <div ref={swipeRef} className="fixed inset-0 bg-cream z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+      <div className="sticky top-0 z-10 bg-cream/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
@@ -4872,7 +4872,7 @@ function PhotoEditorModal({ src, onClose, onSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/80 backdrop-blur-md z-[70] flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-5 py-4 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <h3 className="text-lg font-display text-stone-900">Edit photo</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -5021,7 +5021,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Closet sweep</p>
@@ -5212,7 +5212,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <div>
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Bulk import</p>
@@ -5533,7 +5533,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
 
   return (
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+      <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">Paste a receipt</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -5804,7 +5804,7 @@ function AddInspirationModal({ onClose, onSave }) {
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <h3 className="text-xl sm:text-2xl font-display font-medium text-stone-900">Save inspiration</h3>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -5975,9 +5975,9 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
   const recreateable = hasMatches && !!onRecreateLook;
 
   return createPortal(
-    <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+    <div className="fixed inset-0 bg-cream z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       {/* ─── TOP NAV ─── */}
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
+      <div className="sticky top-0 z-10 bg-cream/80 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-7xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 py-2 rounded-full text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={18} strokeWidth={1.5} className="rotate-180" />
@@ -6893,7 +6893,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       {/* Slide-in panel from the right edge. On mobile this fills the
           viewport; on tablet+ it sits as a 480-560px concierge desk. */}
       <div
-        className="ml-auto relative w-full sm:w-[480px] lg:w-[560px] bg-[#F7F5F2] shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300"
+        className="ml-auto relative w-full sm:w-[480px] lg:w-[560px] bg-cream shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="The Atelier Concierge"
@@ -7349,7 +7349,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
 
   return createPortal(
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[60] flex items-end sm:items-center justify-center sm:p-6" onClick={onClose}>
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-cream w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-stone-200/60 bg-white flex justify-between items-start">
           <div className="min-w-0">
             <p className="text-[10px] tracking-widest uppercase text-stone-500">Share {label}</p>
@@ -7568,7 +7568,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   })();
 
   return (
-    <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
+    <div className="fixed inset-0 bg-cream z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
       {/* Prev/next navigation — fixed at viewport edges. Hidden on mobile
           where edge-tap conflicts with normal scroll/swipe gestures. */}
       {prevOutfitId && (
@@ -7592,7 +7592,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
         </button>
       )}
       {/* Sticky toolbar */}
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
+      <div className="sticky top-0 z-10 bg-cream/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">
           <button onClick={onClose} className="flex items-center gap-2 pl-2 pr-3 sm:pl-3 sm:pr-4 py-2 rounded-full text-xs sm:text-sm tracking-wide text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 transition-colors">
             <ChevronRight size={16} strokeWidth={1.5} className="rotate-180" />
@@ -8730,7 +8730,7 @@ function PublicShareView({ shareId }) {
   if (state.status === 'loading') return <FullScreenLoader label="Loading shared look" />;
   if (state.status === 'not-found') {
     return (
-      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-cream flex items-center justify-center p-6">
         <div className="bg-white border border-stone-200 rounded-[2rem] p-10 max-w-md text-center smooth-shadow">
           <Shirt size={48} strokeWidth={1} className="mx-auto text-stone-300 mb-4" />
           <h1 className="font-display text-2xl text-stone-900">Look unavailable</h1>
@@ -8742,7 +8742,7 @@ function PublicShareView({ shareId }) {
   }
   if (state.status === 'error') {
     return (
-      <div className="min-h-screen bg-[#F7F5F2] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-cream flex items-center justify-center p-6">
         <p className="text-sm text-red-700">{state.error || 'Could not load this look.'}</p>
       </div>
     );
@@ -8758,7 +8758,7 @@ function PublicShareView({ shareId }) {
     const data = state.data;
     const itemImages = Array.isArray(data.images) ? data.images : [];
     return (
-      <div className="min-h-screen bg-[#F7F5F2] font-sans text-stone-900">
+      <div className="min-h-screen bg-cream font-sans text-stone-900">
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
           .font-display { font-family: 'Playfair Display', serif; }
@@ -8844,7 +8844,7 @@ function PublicShareView({ shareId }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F5F2] font-sans text-stone-900">
+    <div className="min-h-screen bg-cream font-sans text-stone-900">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
         .font-display { font-family: 'Playfair Display', serif; }
@@ -8873,7 +8873,7 @@ function PublicShareView({ shareId }) {
 
         {isLookbook ? (
           <div className="mt-10">
-            <nav className="flex flex-wrap gap-2 mb-12 sticky top-2 z-10 bg-[#F7F5F2]/80 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
+            <nav className="flex flex-wrap gap-2 mb-12 sticky top-2 z-10 bg-cream/80 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
               {looks.map((l, i) => (
                 <a key={l.id || i} href={`#look-${i}`}
                   className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors">
@@ -9097,7 +9097,7 @@ function OnboardingTour({ onJumpTo }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[80] bg-stone-900/80 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-6">
-      <div className="bg-[#F7F5F2] w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col min-h-[320px]">
+      <div className="bg-cream w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col min-h-[320px]">
         <div className="bg-stone-900 text-white px-6 py-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400">Welcome to Atelier</p>

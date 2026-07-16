@@ -124,7 +124,7 @@ function MobileFAB({ onTap, onLongPress }) {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
         onContextMenu={(e) => e.preventDefault()}
-        className={`w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all duration-200 active:scale-90 hover:scale-105 ring-4 ${holdActive ? 'ring-brass-300 scale-105' : 'ring-[#F7F5F2]'}`}
+        className={`w-16 h-16 bg-stone-900 rounded-full flex items-center justify-center text-white transition-all duration-200 active:scale-90 hover:scale-105 ring-4 ${holdActive ? 'ring-brass-300 scale-105' : 'ring-cream'}`}
         style={{
           boxShadow: '0 10px 30px -8px rgba(28, 25, 23, 0.45)',
           // Disables iOS Safari's long-press callout (the "copy / share" menu)

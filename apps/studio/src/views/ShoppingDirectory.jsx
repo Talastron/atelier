@@ -151,7 +151,7 @@ export default function ShoppingDirectory({ shops, saveShop, deleteShop }) {
       {/* top-0 only — <main> supplies the safe-area inset; re-adding
           top:inset double-offsets this bar in standalone/PWA. */}
       {shops.length >= 3 && (
-        <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2] border-b border-stone-200/60">
+        <div className="sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream border-b border-stone-200/60">
           <div className="relative max-w-md">
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search boutiques by name or aesthetic…"

@@ -248,7 +248,7 @@ export function ConciergeDemo() {
             aria-hidden="true"
             tabIndex={-1}
             className="p-2 rounded-full transition-colors"
-            style={{ color: 'var(--atelier-stone-400)' }}
+            style={{ color: 'var(--atelier-stone-500)' }}
           >
             <X size={16} strokeWidth={1.5} />
           </button>
@@ -264,7 +264,7 @@ export function ConciergeDemo() {
         <div className="mb-4">
           <p
             className="text-[10px] uppercase mb-1.5"
-            style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-400)', fontWeight: 600 }}
+            style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-500)', fontWeight: 600 }}
           >
             Concierge
           </p>
@@ -289,7 +289,7 @@ export function ConciergeDemo() {
           <div className="mb-4 flex flex-col items-end" style={{ animation: 'bubble-in 320ms ease' }}>
             <p
               className="text-[10px] uppercase mb-1.5"
-              style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-400)', fontWeight: 600 }}
+              style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-500)', fontWeight: 600 }}
             >
               You
             </p>
@@ -313,7 +313,7 @@ export function ConciergeDemo() {
           <div className="mb-4" style={{ animation: 'bubble-in 320ms ease' }}>
             <p
               className="text-[10px] uppercase mb-1.5"
-              style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-400)', fontWeight: 600 }}
+              style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-500)', fontWeight: 600 }}
             >
               Concierge
             </p>
@@ -360,7 +360,7 @@ export function ConciergeDemo() {
           <div className="mb-4" style={{ animation: 'bubble-in 320ms ease' }}>
             <p
               className="text-[10px] uppercase mb-1.5"
-              style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-400)', fontWeight: 600 }}
+              style={{ letterSpacing: '0.2em', color: 'var(--atelier-stone-500)', fontWeight: 600 }}
             >
               Concierge
             </p>
@@ -418,7 +418,7 @@ export function ConciergeDemo() {
                     display: 'inline-block',
                     width: '0.55ch',
                     marginLeft: '0.05ch',
-                    color: 'var(--atelier-brass-600)',
+                    color: 'var(--atelier-brass-text)',
                     animation: 'cursor-blink 1s steps(2, start) infinite',
                     fontStyle: 'normal',
                   }}
@@ -439,7 +439,7 @@ export function ConciergeDemo() {
         >
           <p
             className="text-[9px] uppercase mb-2.5"
-            style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-400)', fontWeight: 600 }}
+            style={{ letterSpacing: '0.24em', color: 'var(--atelier-stone-500)', fontWeight: 600 }}
           >
             Try
           </p>
@@ -488,7 +488,7 @@ export function ConciergeDemo() {
           <Sparkles
             size={14}
             strokeWidth={1.5}
-            style={{ color: 'var(--atelier-brass-600)', flexShrink: 0, marginRight: 8 }}
+            style={{ color: 'var(--atelier-brass-text)', flexShrink: 0, marginRight: 8 }}
           />
           <span
             className="flex-1 text-[13px] truncate"

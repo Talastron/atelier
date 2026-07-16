@@ -72,15 +72,19 @@ Dress for the most demanding event of the day — if there's a board meeting AND
   // Freshness. Without this the daily brief sends identical inputs every day
   // and the model re-picks the same base, so the same shirt and trousers come
   // back each morning (only the optional slots jitter). Naming the recent bases
-  // is a soft steer: it never forces a piece IN — which is exactly why a
-  // rarely-worn occasion dress can't get dragged into an ordinary day — and it
-  // is deliberately subordinate to the NON-NEGOTIABLE weather and
-  // complete-the-look rules below.
+  // steers AWAY from repeats; it never forces a piece IN — which is exactly why
+  // a rarely-worn occasion dress can't get dragged into an ordinary day. The
+  // block states its own priority, because the model never sees this comment:
+  // it OUTRANKS the ★FAVOURITE preference for the base (favourites are what
+  // tend to recur, so deferring to them would reinstate the bug), and stays
+  // subordinate to the NON-NEGOTIABLE weather and complete-the-look rules.
   const freshnessBlock = recentLooks.length > 0
     ? `\n\nRECENT DAILY LOOKS were built on these pieces:
 ${recentLooks.map((i) => `- ${i.category}: ${i.name}`).join('\n')}
 
-Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look. If the wardrobe is too small to avoid every piece above, differ at least from the most recent one.\n`
+Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look.
+
+PRIORITY: this freshness steer OUTRANKS the ★FAVOURITE preference below when choosing the base — a piece being a favourite is not a reason to repeat a recent base (favourites are exactly what tend to recur). It does NOT outrank the WEATHER-DRIVEN RULES or the COMPLETE THE LOOK requirement: if no different base can satisfy those and still form a coherent look, repeat a base rather than break them. If the wardrobe is too small to avoid every piece above, differ at least from the most recent one.\n`
     : '';
 
   // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed
@@ -126,7 +130,7 @@ WEATHER-DRIVEN RULES (this is NON-NEGOTIABLE — temperature is the strongest fi
 - Skip Outerwear unless the weather/season warrants it.
 - Skip optional slots (Bags, Accessories, Jewellery) if nothing genuinely complements the look — better empty than wrong.
 - ★FAVOURITE items are pieces the user loves — give them meaningful preference when they fit the intent and palette. Don't force a favourite that clashes; do prefer one over an equally-suitable non-favourite.
-- Default to everyday-appropriate pieces. Reserve Occasion-tagged pieces and eveningwear (styles=Occasion, or Dresses/Cocktail and Dresses/Evening / Gown) for days whose events call for them — on an ordinary day with no matching event, do not choose them.
+- Default to everyday-appropriate pieces. Reserve Occasion-tagged pieces and eveningwear (styles=Occasion, or Dresses/Cocktail, or Dresses/Evening / Gown) for days whose events call for them — on an ordinary day with no matching event, do not choose them.
 
 Reasoning rules:
 - The reasoning is saved with the look long-term — write it as a STANDALONE description of the final outfit. Describe why this combination works as a complete look (palette, silhouette, occasion). Do NOT reference the user's previous outfit, what was swapped, replaced, or kept — that context is meaningless when the user opens the saved look weeks later.

@@ -154,6 +154,37 @@ export async function writeRemoteDailyBrief(uid, brief) {
   }
 }
 
+// The freshness history is shared too, so the nudge is consistent no matter
+// which device composes the day's look. Same best-effort contract as the brief
+// helpers above: on failure we fall back to the local-only history rather than
+// blocking a compose. Covered by firestore.rules' users/{uid}/{document=**}.
+export async function readRemoteRecentBases(uid) {
+  if (!uid) return [];
+  try {
+    const { db } = await import('./firebase.js');
+    const { doc, getDoc } = await import('firebase/firestore');
+    const snap = await getDoc(doc(db, 'users', uid, 'state', 'dailyBriefHistory'));
+    if (!snap.exists()) return [];
+    return mergeRecent(snap.data()?.recent ?? []);
+  } catch {
+    return []; // offline / permission — the local history still nudges this device
+  }
+}
+
+export async function writeRemoteRecentBases(uid, list) {
+  if (!uid || !Array.isArray(list)) return;
+  try {
+    const { db } = await import('./firebase.js');
+    const { doc, setDoc } = await import('firebase/firestore');
+    await setDoc(doc(db, 'users', uid, 'state', 'dailyBriefHistory'), {
+      recent: list,
+      savedAt: Date.now(),
+    });
+  } catch {
+    // Non-fatal: this device's local history still works.
+  }
+}
+
 // --- Reload backstop -----------------------------------------------------
 // The in-flight Map below is in-memory, so a HARD PAGE RELOAD mid-compose loses
 // it — and since the result is only cached on completion, the reload would fire

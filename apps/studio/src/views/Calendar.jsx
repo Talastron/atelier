@@ -167,8 +167,11 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
 
   return createPortal(
     <div className="fixed inset-0 bg-[#F7F5F2] z-50 overflow-y-auto overflow-x-hidden animate-in fade-in duration-300">
-      {/* Sticky top bar */}
-      <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60">
+      {/* Sticky top bar. This overlay is its own scroll container with no top
+          padding, so — unlike the in-<main> views — the safe-area inset belongs
+          HERE, via pt-safe (matches the item-detail overlay pattern). Keeps the
+          bar clear of the translucent status bar in standalone/PWA. */}
+      <div className="sticky top-0 z-10 bg-[#F7F5F2]/85 backdrop-blur-md border-b border-stone-200/60 pt-safe">
         <div className="max-w-6xl mx-auto flex justify-between items-center p-3 sm:p-4 lg:p-6 gap-3">
           <button
             onClick={onClose}

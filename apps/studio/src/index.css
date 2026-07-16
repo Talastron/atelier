@@ -122,6 +122,27 @@ html, body, #root {
   /* Composed by .animate-in; left as no-ops so classnames don't error. */
 }
 
+/* Opacity-ONLY entrance for the main view wrapper. Deliberately carries no
+   transform: `.animate-in` above animates translateY with `both` fill, so it
+   holds `transform: translateY(0)` on the element forever after the animation
+   ends. A non-`none` transform turns the wrapper into a containing block, which
+   (a) re-scopes position:sticky for the per-view filter bars away from the
+   <main> scroll ancestor — they render off the top with content sliding under —
+   and (b) promotes a composited layer that intermittently swallows touch-scroll
+   inside <main> on iOS ("sometimes the page won't scroll"). Fading opacity only
+   means the wrapper never retains a transform, so sticky and scroll both hold.
+   Keep this OFF the shared `.animate-in` — modals still want the slide/zoom. */
+@keyframes atelier-view-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-view-in {
+  animation: atelier-view-fade 0.5s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-view-in { animation: none; }
+}
+
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
 .pt-safe { padding-top: env(safe-area-inset-top, 0); }
 .pt-safe-header { padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem); }

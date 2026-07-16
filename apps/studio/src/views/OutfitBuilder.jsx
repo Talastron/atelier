@@ -959,8 +959,9 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           Lookbook:  Lookbook · Diary      (saved outfits + the wear
                      journal/calendar that records WHEN they were worn —
                      two faces of the same outfit story) */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/40"
-           style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+      {/* top-0 only — <main> supplies the safe-area inset; re-adding
+          top:inset double-offsets this bar in standalone/PWA. */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-[#F7F5F2]/95 backdrop-blur-md border-b border-stone-200/40">
         <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit overflow-x-auto hide-scrollbar max-w-full">
           {(isLookbook
             ? [

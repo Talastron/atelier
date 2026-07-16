@@ -1457,12 +1457,14 @@ function DigitalWardrobe() {
               {loading ? (
                 <WardrobeSkeleton />
               ) : (
-                // No transform-based animation here — slide-in-from-bottom
-                // leaves a translateY(0) on the element after the animation
-                // completes, which establishes a containing block and breaks
-                // position:sticky for descendants (they end up scoped to this
-                // wrapper instead of the main scroll ancestor). Fade-in only.
-                <div key={activeTab} className="animate-in fade-in duration-500 ease-out">
+                // Opacity-only entrance (see .animate-view-in in index.css).
+                // MUST NOT use `.animate-in`: its keyframe animates translateY
+                // with `both` fill, which holds `transform: translateY(0)` on
+                // this wrapper forever. Any non-`none` transform makes it a
+                // containing block, which re-scopes position:sticky for the
+                // per-view filter bars off the <main> scroll ancestor AND, on
+                // iOS, composites a layer that intermittently eats touch-scroll.
+                <div key={activeTab} className="animate-view-in">
                   {/* Lazy-loaded views: each non-home view is a separate chunk
                       fetched on first navigation. Suspense shows a brief loader
                       while a view's chunk downloads (once, then cached). Today

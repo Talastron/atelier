@@ -14,7 +14,7 @@ import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
-import { hasClothingBase } from "../lib/outfit.js";
+import { hasClothingBase, isClothingBase } from "../lib/outfit.js";
 
 const COMPOSE_STAGES = [
   'Reading your wardrobe…',
@@ -75,12 +75,12 @@ function ComposingPlaceholder({ title = 'The Daily Brief', stage }) {
 
 
 // The freshness nudge tracks only a look's CLOTHING BASE — shoes, bags and
-// jewellery are free to repeat day to day (and are what already vary). Mirrors
-// the isClothingBase categories used by the prompt in lib/ai.js.
-const BASE_CATEGORIES = ['Dresses', 'Tops', 'Bottoms'];
-
+// jewellery are free to repeat day to day (and are what already vary).
+// isClothingBase comes from lib/outfit.js, the same source the prompt's base
+// block uses, so what we RECORD as a base can't drift from what the model is
+// TOLD is a base.
 function baseIdsOf(itemIds = [], items = []) {
-  return (itemIds || []).filter((id) => BASE_CATEGORIES.includes(items.find((it) => it.id === id)?.category));
+  return (itemIds || []).filter((id) => isClothingBase(items.find((it) => it.id === id)));
 }
 
 // Flatten the stored history to the actual item objects the prompt names.

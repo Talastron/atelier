@@ -49,7 +49,26 @@ export const emptyOutfit = () => Object.fromEntries(OUTFIT_SLOTS.map((s) => [s.t
 // that runs AFTER the model's own retry, so an incomplete look never reaches
 // the user. Pure — covered by scripts/test-outfit-base.mjs.
 
-const CLOTHING_CATEGORIES = ['Dresses', 'Tops', 'Bottoms'];
+// The base taxonomy, split by how a category behaves rather than as one flat
+// list — because two different questions get asked of it, and only the split
+// answers both from one place:
+//   • "is this piece part of a base?"      → flat membership (isClothingBase)
+//   • "is this look's base complete?"      → a composition rule (hasClothingBase)
+// A Dress stands alone; a Top and a Bottom need each other. Adding a category
+// (e.g. Jumpsuits → STANDALONE) therefore flows to BOTH answers, and to every
+// consumer below, instead of needing the same three strings updated in four
+// places and one of them being missed.
+const STANDALONE_BASE_CATEGORIES = ['Dresses'];
+const PAIRED_BASE_CATEGORIES = ['Tops', 'Bottoms'];
+
+// The single source of truth for "which categories make up a clothing base".
+// Consumed by ai.js (to list the mandatory base block in the prompt) and
+// TodayView (to record which pieces of a brief were its base).
+export const CLOTHING_CATEGORIES = [...STANDALONE_BASE_CATEGORIES, ...PAIRED_BASE_CATEGORIES];
+
+// Flat membership: is this piece part of a base at all? NOT the same question
+// as hasClothingBase — a Top is a base category, but a Top alone is not a base.
+export const isClothingBase = (item) => !!item && CLOTHING_CATEGORIES.includes(item.category);
 
 // ── One-per-slot guarantee ─────────────────────────────────────────────────
 // The Styling Studio enforces the strict 1:1 slot model above by construction —
@@ -83,10 +102,12 @@ export function trimToOnePerSlot(itemIds, items) {
 }
 
 // True iff the resolved ids contain a Dress, or BOTH a Top and a Bottom.
+// Derived from the standalone/paired split above rather than restating those
+// category names, so the rule can't drift out of step with CLOTHING_CATEGORIES.
 export function hasClothingBase(itemIds, items) {
-  const picked = (itemIds || []).map((id) => items.find((i) => i.id === id)).filter(Boolean);
+  const picked = (itemIds || []).map((id) => (items || []).find((i) => i.id === id)).filter(Boolean);
   const has = (cat) => picked.some((i) => i.category === cat);
-  return has('Dresses') || (has('Tops') && has('Bottoms'));
+  return STANDALONE_BASE_CATEGORIES.some(has) || PAIRED_BASE_CATEGORIES.every(has);
 }
 
 // Highest-fidelity recovery: the model named a garment in its reasoning prose
@@ -99,7 +120,7 @@ export function recoverBaseFromProse(reasoning, itemIds, items) {
   if (!prose) return [];
   const already = new Set(itemIds || []);
   return items
-    .filter((i) => CLOTHING_CATEGORIES.includes(i.category) && !already.has(i.id))
+    .filter((i) => isClothingBase(i) && !already.has(i.id))
     .filter((i) => typeof i.name === 'string' && i.name.trim().length >= 4)
     .filter((i) => prose.includes(i.name.trim().toLowerCase()))
     .map((i) => i.id);

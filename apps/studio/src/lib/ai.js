@@ -103,7 +103,9 @@ ${recentLooks.map((i) => `- id=${i.id} · ${i.category}: ${i.name}${itemColors(i
 
 Build today's look on a DIFFERENT clothing base — a different Top + Bottom pair, or a different Dress. Shoes, bags and jewellery MAY repeat if they genuinely finish the new look.
 
-PRIORITY: this freshness steer outranks EXACTLY ONE rule — the ★FAVOURITE preference below, and only when choosing the base (a piece being a favourite is not a reason to repeat a recent base; favourites are exactly what tend to recur). It outranks NOTHING ELSE. Every other rule below still binds in full: one item per category slot, the weather rules, complete-the-look, colour and style cohesion, and everyday-appropriateness. Being "different" is NEVER a licence to break one of them — do not add extra garments to a slot to manufacture variety, and never reach for an Occasion or eveningwear piece. If no everyday-appropriate different base can satisfy every rule and still form a coherent look, repeat a base rather than break one — and when repeating, prefer the LEAST recent of the pieces listed above.\n`
+PRIORITY: a different base is REQUIRED, not preferred. Returning a base listed above when any other everyday-appropriate base could have worked is a failed brief. This overrides the ★FAVOURITE preference below — a piece being a favourite is not a reason to repeat it (favourites are exactly what tend to recur), and "it goes together best" is not a reason either: a slightly less obvious pairing you style well beats yesterday's look again.
+
+Being different does NOT license breaking a hard rule. The WEATHER-DRIVEN RULES, COMPLETE THE LOOK, one-item-per-slot and everyday-appropriateness all still bind: never pad a slot with extra garments to manufacture variety, and never reach for an Occasion or eveningwear piece. You may repeat a base ONLY if every single everyday-appropriate alternative would break one of those hard rules — not merely because you judge it a weaker match. If you must repeat, prefer the LEAST recent of the pieces listed above.\n`
     : '';
 
   // Fix C — present clothing as a clearly-labelled, MANDATORY foundation listed

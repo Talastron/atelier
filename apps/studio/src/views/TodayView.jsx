@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Share2, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
-import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
+import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief, readRecentBases, appendRecentBase, readRemoteRecentBases, writeRemoteRecentBases, mergeRecent } from "../dailyBrief";
@@ -10,6 +10,7 @@ import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
+import { groupDigestCards } from "../lib/digest.js";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
@@ -715,23 +716,47 @@ function DailyBriefCard({
   );
 }
 
-// ─── Home-screen tile: at-a-glance weather summary + tomorrow's planned outfit.
+// ─── Home-screen tile: at-a-glance weather summary.
 // Compose functionality lives exclusively in the Daily Brief card above — this
 // tile is a quiet information strip, not a second compose surface.
 
-function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem, onOpenOutfit, onOpenInspiration, onOpenInspirationTab }) {
+// The group header carries the KIND, so a row no longer needs its icon — that
+// slot shows the actual piece instead. `item` is omitted for cards that
+// aren't about a piece (the inspirations nudge), and ItemTileImage returns
+// null for a piece with no photo, so the icon stays as the fallback for both.
+// Declared at module scope, not inside DailyDigest: React reconciles by type
+// identity, so a type recreated each render would remount every row's DOM
+// subtree instead of patching it — losing hover/focus state and restarting the
+// transition. It closes over nothing, so one stable identity costs nothing.
+const Row = ({ icon, accent, title, sub, onClick, item }) => (
+  <li>
+    <button onClick={onClick}
+      className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
+      {/* 48px, not the 32px this slot held when it was an icon: a garment read
+          at icon size defeats the point of showing the piece at all. The icon
+          fallback matches so a photoless row doesn't jump. */}
+      {item && itemImages(item).length > 0 ? (
+        <span className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-stone-100">
+          <ItemTileImage item={item} alt={item.name} />
+        </span>
+      ) : (
+        <span className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-stone-900 truncate">{title}</p>
+        <p className="text-[11px] text-stone-500 truncate">{sub}</p>
+      </div>
+      <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
+    </button>
+  </li>
+);
+
+function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, onOpenInspirationTab }) {
   const owned = items.filter((i) => i.status === 'owned');
   const todayKey = todayISO();
-  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
 
   // Care due
   const careDue = owned.map((i) => ({ i, r: itemCareReminder(i) })).filter((x) => x.r?.due).slice(0, 3);
-
-  // Tomorrow's planned outfit (today's, if not yet logged)
-  const todaySched = schedules?.[todayKey];
-  const tomorrowSched = schedules?.[tomorrow];
-  const todayOutfit = todaySched?.outfitId ? outfits.find((o) => o.id === todaySched.outfitId) : null;
-  const tomorrowOutfit = tomorrowSched?.outfitId ? outfits.find((o) => o.id === tomorrowSched.outfitId) : null;
 
   // Stale favourite (worn 30+ days ago, or never)
   const staleFav = owned.find((i) => i.favorite && (daysSinceLastWorn(i) === null || daysSinceLastWorn(i) >= 30));
@@ -754,8 +779,6 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
   const showInspoNudge = unanalysedInspos.length >= 3;
 
   const cards = [];
-  if (todayOutfit) cards.push({ kind: 'planned-today', outfit: todayOutfit, label: todaySched?.eventName ? `Today · ${todaySched.eventName}` : "Today's plan", eventName: todaySched?.eventName });
-  if (tomorrowOutfit) cards.push({ kind: 'planned-tomorrow', outfit: tomorrowOutfit, label: tomorrowSched?.eventName ? `Tomorrow · ${tomorrowSched.eventName}` : 'Planned tomorrow', eventName: tomorrowSched?.eventName });
   for (const { i, r } of careDue) cards.push({ kind: 'care', item: i, reminder: r });
   if (staleFav) cards.push({ kind: 'stale-fav', item: staleFav });
   for (const i of drops) cards.push({ kind: 'price-drop', item: i });
@@ -764,59 +787,60 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
 
   if (cards.length === 0) return null;
 
+  // Ranked, non-empty themes. The rank is what stops an urgent card being
+  // buried by arriving late — a lent piece 3 days overdue used to render below
+  // three care nudges purely because of push order. See lib/digest.js.
+  const groups = groupDigestCards(cards);
+  // A single header over a single group labels nothing, so drop it.
+  const showHeaders = groups.length > 1;
+
+  const renderCard = (c, i) => {
+    if (c.kind === 'care') {
+      return <Row key={i} item={c.item} icon={<Sparkles size={20} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+        title={c.item.name} sub={`${c.reminder.material} · ${c.reminder.wearsSince} wears since care · usually every ${c.reminder.everyN}`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'stale-fav') {
+      const d = daysSinceLastWorn(c.item);
+      return <Row key={i} item={c.item} icon={<Star size={20} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+        title={c.item.name} sub={d === null ? 'Favourite · never worn' : `Favourite · ${d} days since last wear`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'price-drop') {
+      const h = c.item.priceHistory;
+      const drop = Math.round((1 - h[h.length - 1].price / h[h.length - 2].price) * 100);
+      return <Row key={i} item={c.item} icon={<TrendingDown size={20} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+        title={c.item.name} sub={`Price dropped ${drop}% · now £${h[h.length - 1].price}`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'overdue') {
+      const daysOver = Math.floor((new Date(todayKey) - new Date(c.item.lentReturnBy)) / 86_400_000);
+      return <Row key={i} item={c.item} icon={<AlertCircle size={20} strokeWidth={1.5} />} accent="bg-claret-50 text-claret-700"
+        title={c.item.name} sub={`Lent to ${c.item.lentTo} · ${daysOver} day${daysOver === 1 ? '' : 's'} overdue`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'inspo-unanalysed') {
+      return <Row key={i} icon={<Bookmark size={20} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+        title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with the Concierge"
+        onClick={() => onOpenInspirationTab ? onOpenInspirationTab() : onOpenInspiration?.(c.inspiration.id)} />;
+    }
+    return null;
+  };
+
   return (
     <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-7 smooth-shadow">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg sm:text-xl text-stone-900">Needs attention</h3>
         <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
       </div>
-      <ul className="space-y-1">
-        {cards.map((c, i) => {
-          const Row = ({ icon, accent, title, sub, onClick }) => (
-            <li>
-              <button onClick={onClick}
-                className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
-                <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-stone-900 truncate">{title}</p>
-                  <p className="text-[11px] text-stone-500 truncate">{sub}</p>
-                </div>
-                <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
-              </button>
-            </li>
-          );
-          if (c.kind === 'planned-today' || c.kind === 'planned-tomorrow') {
-            return <Row key={i} icon={<Calendar size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
-              title={c.outfit.name} sub={c.label} onClick={() => onOpenOutfit?.(c.outfit.id)} />;
-          }
-          if (c.kind === 'care') {
-            return <Row key={i} icon={<Sparkles size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
-              title={c.item.name} sub={`${c.reminder.material} care · ${c.reminder.wearsSince} wears`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'stale-fav') {
-            const d = daysSinceLastWorn(c.item);
-            return <Row key={i} icon={<Star size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
-              title={c.item.name} sub={d === null ? 'Favourite · never worn' : `Favourite · ${d} days since last wear`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'price-drop') {
-            const h = c.item.priceHistory;
-            const drop = Math.round((1 - h[h.length - 1].price / h[h.length - 2].price) * 100);
-            return <Row key={i} icon={<TrendingDown size={16} strokeWidth={1.5} />} accent="bg-emerald-100 text-emerald-800"
-              title={c.item.name} sub={`Price dropped ${drop}% · now £${h[h.length - 1].price}`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'overdue') {
-            const daysOver = Math.floor((new Date(todayKey) - new Date(c.item.lentReturnBy)) / 86_400_000);
-            return <Row key={i} icon={<AlertCircle size={16} strokeWidth={1.5} />} accent="bg-red-100 text-red-700"
-              title={c.item.name} sub={`Lent to ${c.item.lentTo} · ${daysOver} day${daysOver === 1 ? '' : 's'} overdue`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'inspo-unanalysed') {
-            return <Row key={i} icon={<Bookmark size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
-              title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with the Concierge"
-              onClick={() => onOpenInspirationTab ? onOpenInspirationTab() : onOpenInspiration?.(c.inspiration.id)} />;
-          }
-          return null;
-        })}
-      </ul>
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <div key={group.id}>
+            {showHeaders && (
+              <p className="mb-1 text-[10px] tracking-[0.2em] uppercase text-stone-400">{group.label}</p>
+            )}
+            <ul className="space-y-1">
+              {group.cards.map(renderCard)}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -923,14 +947,11 @@ export default function TodayView({ user, items, measurements, schedules, outfit
           "Needs attention" renders nothing, the week strip grows to full width
           instead of leaving a dead column. */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch [&>*]:min-w-0 lg:[&>*]:flex-1">
-        <WeekStrip events={weekEvents} schedules={schedules} onSelectDay={onSelectCalendarDay} />
+        <WeekStrip events={weekEvents} schedules={schedules} outfits={outfits} onSelectDay={onSelectCalendarDay} onOpenOutfit={onOpenSavedLook} />
         <DailyDigest
           items={items}
-          outfits={outfits}
-          schedules={schedules}
           inspirations={inspirations}
           onOpenItem={onItemClick}
-          onOpenOutfit={onOpenBrief}
           onOpenInspiration={onOpenInspiration}
           onOpenInspirationTab={onOpenInspirationTab}
         />

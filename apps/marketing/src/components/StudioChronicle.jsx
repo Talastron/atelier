@@ -84,17 +84,20 @@ export function StudioChronicle() {
           lineHeight: 1,
           margin: '0 0 0.5rem 0',
           letterSpacing: '0.02em',
+          textAlign: 'center',
         }}
       >
         III
       </p>
 
       {/* Eyebrow — brass rule + small-caps, matches the other section
-          eyebrows on /about (Where we began, The Practice, For Whom). */}
+          eyebrows on /about (Where we began, The Practice, For Whom).
+          Centred with bracketing rules, same as every chapter heading. */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: '0.75rem',
           marginBottom: '1.5rem',
         }}
@@ -120,6 +123,15 @@ export function StudioChronicle() {
         >
           The Chronicle
         </p>
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-block',
+            width: '24px',
+            height: '1.5px',
+            background: 'var(--atelier-brass-300)',
+          }}
+        />
       </div>
 
       {/* Headline */}
@@ -133,6 +145,8 @@ export function StudioChronicle() {
           maxWidth: '24ch',
           marginBottom: '2.5rem',
           marginTop: 0,
+          marginInline: 'auto',
+          textAlign: 'center',
         }}
       >
         How the studio came to be.

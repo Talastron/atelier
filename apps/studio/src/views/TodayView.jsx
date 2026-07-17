@@ -719,19 +719,13 @@ function DailyBriefCard({
 // Compose functionality lives exclusively in the Daily Brief card above — this
 // tile is a quiet information strip, not a second compose surface.
 
-function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem, onOpenOutfit, onOpenInspiration, onOpenInspirationTab }) {
+function DailyDigest({ items, schedules, inspirations = [], onOpenItem, onOpenInspiration, onOpenInspirationTab }) {
   const owned = items.filter((i) => i.status === 'owned');
   const todayKey = todayISO();
   const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
 
   // Care due
   const careDue = owned.map((i) => ({ i, r: itemCareReminder(i) })).filter((x) => x.r?.due).slice(0, 3);
-
-  // Tomorrow's planned outfit (today's, if not yet logged)
-  const todaySched = schedules?.[todayKey];
-  const tomorrowSched = schedules?.[tomorrow];
-  const todayOutfit = todaySched?.outfitId ? outfits.find((o) => o.id === todaySched.outfitId) : null;
-  const tomorrowOutfit = tomorrowSched?.outfitId ? outfits.find((o) => o.id === tomorrowSched.outfitId) : null;
 
   // Stale favourite (worn 30+ days ago, or never)
   const staleFav = owned.find((i) => i.favorite && (daysSinceLastWorn(i) === null || daysSinceLastWorn(i) >= 30));
@@ -754,8 +748,6 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
   const showInspoNudge = unanalysedInspos.length >= 3;
 
   const cards = [];
-  if (todayOutfit) cards.push({ kind: 'planned-today', outfit: todayOutfit, label: todaySched?.eventName ? `Today · ${todaySched.eventName}` : "Today's plan", eventName: todaySched?.eventName });
-  if (tomorrowOutfit) cards.push({ kind: 'planned-tomorrow', outfit: tomorrowOutfit, label: tomorrowSched?.eventName ? `Tomorrow · ${tomorrowSched.eventName}` : 'Planned tomorrow', eventName: tomorrowSched?.eventName });
   for (const { i, r } of careDue) cards.push({ kind: 'care', item: i, reminder: r });
   if (staleFav) cards.push({ kind: 'stale-fav', item: staleFav });
   for (const i of drops) cards.push({ kind: 'price-drop', item: i });
@@ -785,10 +777,6 @@ function DailyDigest({ items, outfits, schedules, inspirations = [], onOpenItem,
               </button>
             </li>
           );
-          if (c.kind === 'planned-today' || c.kind === 'planned-tomorrow') {
-            return <Row key={i} icon={<Calendar size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
-              title={c.outfit.name} sub={c.label} onClick={() => onOpenOutfit?.(c.outfit.id)} />;
-          }
           if (c.kind === 'care') {
             return <Row key={i} icon={<Sparkles size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
               title={c.item.name} sub={`${c.reminder.material} care · ${c.reminder.wearsSince} wears`} onClick={() => onOpenItem?.(c.item.id)} />;
@@ -926,11 +914,9 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         <WeekStrip events={weekEvents} schedules={schedules} outfits={outfits} onSelectDay={onSelectCalendarDay} onOpenOutfit={onOpenBrief} />
         <DailyDigest
           items={items}
-          outfits={outfits}
           schedules={schedules}
           inspirations={inspirations}
           onOpenItem={onItemClick}
-          onOpenOutfit={onOpenBrief}
           onOpenInspiration={onOpenInspiration}
           onOpenInspirationTab={onOpenInspirationTab}
         />

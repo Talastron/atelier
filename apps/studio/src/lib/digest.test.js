@@ -9,6 +9,23 @@ describe('groupDigestCards', () => {
   it('returns [] when there are no cards', () => {
     expect(groupDigestCards([])).toEqual([]);
     expect(groupDigestCards(undefined)).toEqual([]);
+    expect(groupDigestCards(null)).toEqual([]);
+    expect(groupDigestCards('not an array')).toEqual([]);
+  });
+
+  // This sits on the Today home screen: a throw here blanks the user's home.
+  it('never throws on malformed cards', () => {
+    expect(groupDigestCards([{}, { kind: 5 }, { kind: ['care'] }, { kind: null }])).toEqual([]);
+    expect(groupDigestCards([{}, { kind: 'care' }])).toHaveLength(1);
+  });
+
+  // The caller passes the same array it counts for the card's total, so an
+  // in-place mutation would silently corrupt the number shown to the user.
+  it("does not mutate the caller's array", () => {
+    const input = Object.freeze([{ kind: 'care' }, { kind: 'overdue' }]);
+    expect(() => groupDigestCards(input)).not.toThrow();
+    expect(input).toHaveLength(2);
+    expect(input[0].kind).toBe('care');
   });
 
   // The reported bug: an overdue lent piece rendered BELOW three care nudges

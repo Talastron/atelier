@@ -115,7 +115,7 @@ TodayView
 ## Error handling
 
 - `groupDigestCards` ignores cards whose `kind` matches no theme rather than throwing, so an unknown or future kind can never crash Today. Unknown kinds are dropped; the pure helper is the single place this is decided.
-- `ItemTileImage` already handles a missing image internally; rows do not add their own fallback.
+- `ItemTileImage` **returns `null`** when an item has no image (`ItemTileImage.jsx`: `if (!src) return null`), which would leave a blank slot where the icon used to be. So each row keeps its per-kind icon as a **fallback**, rendered when `itemImages(item)` is empty. The icon is not deleted — it is demoted to the no-photo path. (`itemImages` is already exported from `lib/items.js`, which `TodayView` imports; the local `imgOf` at `TodayView.jsx:429` is component-scoped and is deliberately not reused or duplicated.)
 - `WeekStrip`'s plan line renders nothing when `schedules[iso]` is absent or its `outfitId` no longer resolves against `outfits` — the same defensive resolve `DailyDigest` does today.
 - `DailyDigest` continues to return `null` when there are no cards at all, so the two-up layout still collapses to a full-width week strip.
 

@@ -720,6 +720,34 @@ function DailyBriefCard({
 // Compose functionality lives exclusively in the Daily Brief card above — this
 // tile is a quiet information strip, not a second compose surface.
 
+// The group header carries the KIND, so a row no longer needs its icon — that
+// slot shows the actual piece instead. `item` is omitted for cards that
+// aren't about a piece (the inspirations nudge), and ItemTileImage returns
+// null for a piece with no photo, so the icon stays as the fallback for both.
+// Declared at module scope, not inside DailyDigest: React reconciles by type
+// identity, so a type recreated each render would remount every row's DOM
+// subtree instead of patching it — losing hover/focus state and restarting the
+// transition. It closes over nothing, so one stable identity costs nothing.
+const Row = ({ icon, accent, title, sub, onClick, item }) => (
+  <li>
+    <button onClick={onClick}
+      className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
+      {item && itemImages(item).length > 0 ? (
+        <span className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-stone-100">
+          <ItemTileImage item={item} alt={item.name} />
+        </span>
+      ) : (
+        <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-stone-900 truncate">{title}</p>
+        <p className="text-[11px] text-stone-500 truncate">{sub}</p>
+      </div>
+      <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
+    </button>
+  </li>
+);
+
 function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, onOpenInspirationTab }) {
   const owned = items.filter((i) => i.status === 'owned');
   const todayKey = todayISO();
@@ -762,30 +790,6 @@ function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, 
   const groups = groupDigestCards(cards);
   // A single header over a single group labels nothing, so drop it.
   const showHeaders = groups.length > 1;
-
-  // The group header carries the KIND, so a row no longer needs its icon — that
-  // slot shows the actual piece instead. `item` is omitted for cards that
-  // aren't about a piece (the inspirations nudge), and ItemTileImage returns
-  // null for a piece with no photo, so the icon stays as the fallback for both.
-  const Row = ({ icon, accent, title, sub, onClick, item }) => (
-    <li>
-      <button onClick={onClick}
-        className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
-        {item && itemImages(item).length > 0 ? (
-          <span className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-stone-100">
-            <ItemTileImage item={item} alt={item.name} />
-          </span>
-        ) : (
-          <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-stone-900 truncate">{title}</p>
-          <p className="text-[11px] text-stone-500 truncate">{sub}</p>
-        </div>
-        <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
-      </button>
-    </li>
-  );
 
   const renderCard = (c, i) => {
     if (c.kind === 'care') {

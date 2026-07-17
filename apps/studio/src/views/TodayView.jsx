@@ -923,7 +923,7 @@ export default function TodayView({ user, items, measurements, schedules, outfit
           "Needs attention" renders nothing, the week strip grows to full width
           instead of leaving a dead column. */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch [&>*]:min-w-0 lg:[&>*]:flex-1">
-        <WeekStrip events={weekEvents} schedules={schedules} onSelectDay={onSelectCalendarDay} />
+        <WeekStrip events={weekEvents} schedules={schedules} outfits={outfits} onSelectDay={onSelectCalendarDay} onOpenOutfit={onOpenBrief} />
         <DailyDigest
           items={items}
           outfits={outfits}

@@ -104,7 +104,7 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
       style="max-width: 760px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem); scroll-margin-top: 6rem;"
     >
       <p class="chapter-numeral">I</p>
-      <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center justify-center gap-3 mb-6">
         <BrassRule client:load />
         <p
           class="text-[10px] uppercase font-semibold"
@@ -112,10 +112,11 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
         >
           Where we began
         </p>
+        <BrassRule client:load />
       </div>
       <RevealOnScroll client:visible>
         <h2
-          class="mb-8"
+          class="mb-8 mx-auto text-center"
           style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 22ch;"
         >
           It started with a private question.
@@ -161,7 +162,7 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
       style="max-width: 760px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem); scroll-margin-top: 6rem;"
     >
       <p class="chapter-numeral">II</p>
-      <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center justify-center gap-3 mb-6">
         <BrassRule client:load />
         <p
           class="text-[10px] uppercase font-semibold"
@@ -169,10 +170,11 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
         >
           The Practice
         </p>
+        <BrassRule client:load />
       </div>
       <RevealOnScroll client:visible>
         <h2
-          class="mb-8"
+          class="mb-8 mx-auto text-center"
           style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 24ch;"
         >
           What goes on inside the studio.
@@ -272,7 +274,7 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
       style="max-width: 760px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem); scroll-margin-top: 6rem;"
     >
       <p class="chapter-numeral">IV</p>
-      <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center justify-center gap-3 mb-6">
         <BrassRule client:load />
         <p
           class="text-[10px] uppercase font-semibold"
@@ -280,10 +282,11 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
         >
           For Whom
         </p>
+        <BrassRule client:load />
       </div>
       <RevealOnScroll client:visible>
         <h2
-          class="mb-8"
+          class="mb-8 mx-auto text-center"
           style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900); max-width: 24ch;"
         >
           For the considered closet.
@@ -427,7 +430,7 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
       style="max-width: 1080px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 7vw, 6rem); scroll-margin-top: 6rem;"
     >
       <p class="chapter-numeral">VII</p>
-      <div class="flex items-center gap-3 mb-6">
+      <div class="flex items-center justify-center gap-3 mb-6">
         <BrassRule client:load />
         <p
           class="text-[10px] uppercase font-semibold"
@@ -435,10 +438,11 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
         >
           The Maker
         </p>
+        <BrassRule client:load />
       </div>
       <RevealOnScroll client:visible>
         <h2
-          class="mb-10"
+          class="mb-10 text-center"
           style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.15; letter-spacing: -0.01em; color: var(--atelier-stone-900);"
         >
           Atelier is composed by<br /><em style="font-weight: 400;">Sibylle Möller-Sherwood</em>.
@@ -484,21 +488,23 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
         </RevealOnScroll>
 
         {/* Prose column — first-person founder voice. Four paragraphs:
-            credentials as character; personal fashion background; origin
-            moment (the husband's question); studio + business status. */}
+            the day work in data; personal fashion background; origin
+            moment (the husband's question); studio + business status.
+            Deliberately understated: no job titles, employers, year
+            counts, or vendor names — keep it that way. */}
         <div
           class="space-y-6"
           style="font-size: 1.0625rem; line-height: 1.75; color: var(--atelier-stone-700);"
         >
           <p class="dropcap">
-            Technology has been my work for twenty years. By trade I'm a
-            project and product manager. Most recently I was Head of Data and
-            Systems; in 2024 I founded Talastron, my own AI consultancy and
-            software practice. Microsoft platforms and large data systems are
-            what I know.
+            My day work is data. I am the person organisations bring in to
+            make sense of what they know: the reporting, the systems behind
+            it, and lately the question of what AI should be allowed to do
+            with it all. It is careful, exacting work, and it turns out to
+            be very good training for keeping a wardrobe.
           </p>
           <p>
-            Atelier is the other half of my life. I've always loved fashion
+            Atelier is the other half of my life. I have always loved fashion
             and, when I could afford it, invested in pieces meant to last.
             The wardrobe I've quietly built over the years isn't one I want
             to replace each season.
@@ -523,11 +529,11 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
       </div>
 
       {/* Hand-signed name — real signature image at /about/sibylle-signature.png,
-          revealed via a clip-path draw animation as the section enters view.
-          The visual effect is "a hand drawing the signature left-to-right at
-          ~2.5s, with a short pause before drawing starts" — not a true
-          stroke-by-stroke draw (would need SVG paths) but the closest
-          approximation possible with the existing PNG.
+          drawn stroke-by-stroke as the section enters view: an SVG mask
+          traces the pen's actual route (the S, then "ibylle", then the
+          i-dot) via animated stroke-dashoffset spines fitted to the
+          raster. See SignatureDraw.jsx; the spine coordinates are
+          specific to this PNG.
 
           Letters CTA balances on the right. */}
       <div class="flex items-end justify-between gap-6 flex-wrap pt-2">
@@ -535,7 +541,7 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
           client:load
           src="/about/sibylle-signature.png"
           alt="Sibylle Möller-Sherwood, signed"
-          style={{ display: 'block', height: 'clamp(4.5rem, 6vw, 5rem)', width: 'auto' }}
+          style={{ display: 'block', height: 'clamp(6rem, 8vw, 6.75rem)', width: 'auto' }}
         />
         <a
           href="mailto:contact@myatelier.style"
@@ -616,7 +622,9 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
 
   /* Chapter numeral — italic display serif, brass, above the eyebrow.
      Marks the page as a publication with structured chapters rather
-     than a long scroll. */
+     than a long scroll. Centred: every chapter opens with the same
+     book-style ceremony (centred numeral, eyebrow, title) while body
+     prose stays left-aligned for reading. */
   .chapter-numeral {
     font-family: var(--atelier-font-display);
     font-style: italic;
@@ -625,6 +633,7 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
     line-height: 1;
     margin: 0 0 0.5rem 0;
     letter-spacing: 0.02em;
+    text-align: center;
   }
 
   /* Drop cap — the opening letter of each body section, set in display
@@ -701,6 +710,10 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
     flex-direction: column;
     gap: 1rem;
   }
+  /* No left border-rules on the exchange — the framed box plus the
+     nearby pull-quote already supply vertical lines; more would clutter
+     (user feedback, 2026-07-17). Typography alone carries the roles:
+     italic grey question, roman ink reply, brass attribution. */
   .specimen-prompt {
     font-family: var(--atelier-font-display);
     font-style: italic;
@@ -708,8 +721,6 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
     color: var(--atelier-stone-500);
     line-height: 1.5;
     margin: 0;
-    padding-left: 1rem;
-    border-left: 2px solid var(--atelier-stone-200);
   }
   .specimen-reply {
     font-family: var(--atelier-font-display);
@@ -717,8 +728,6 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
     color: var(--atelier-stone-800);
     line-height: 1.65;
     margin: 0;
-    padding-left: 1rem;
-    border-left: 2px solid var(--atelier-brass-600);
   }
   .specimen-attribution {
     display: block;

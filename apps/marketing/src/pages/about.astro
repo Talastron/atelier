@@ -529,11 +529,11 @@ import IllustrationPlate from '../components/IllustrationPlate.astro';
       </div>
 
       {/* Hand-signed name — real signature image at /about/sibylle-signature.png,
-          revealed via a clip-path draw animation as the section enters view.
-          The visual effect is "a hand drawing the signature left-to-right at
-          ~2.5s, with a short pause before drawing starts" — not a true
-          stroke-by-stroke draw (would need SVG paths) but the closest
-          approximation possible with the existing PNG.
+          drawn stroke-by-stroke as the section enters view: an SVG mask
+          traces the pen's actual route (the S, then "ibylle", then the
+          i-dot) via animated stroke-dashoffset spines fitted to the
+          raster. See SignatureDraw.jsx; the spine coordinates are
+          specific to this PNG.
 
           Letters CTA balances on the right. */}
       <div class="flex items-end justify-between gap-6 flex-wrap pt-2">

@@ -84,7 +84,7 @@ export default function WeekStrip({ events = [], schedules = {}, outfits = [], o
               <button
                 type="button"
                 onClick={() => onOpenOutfit?.(outfit.id)}
-                className="w-full flex items-center gap-2 text-left py-1 px-2 -mx-2 rounded-lg hover:bg-stone-100 transition-colors"
+                className="w-full flex items-center gap-2 text-left py-1 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors"
               >
                 <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400 shrink-0">{label}</span>
                 <span className="text-sm text-stone-900 truncate">{outfit.name}</span>

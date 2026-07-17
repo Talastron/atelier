@@ -715,7 +715,7 @@ function DailyBriefCard({
   );
 }
 
-// ─── Home-screen tile: at-a-glance weather summary + tomorrow's planned outfit.
+// ─── Home-screen tile: at-a-glance weather summary.
 // Compose functionality lives exclusively in the Daily Brief card above — this
 // tile is a quiet information strip, not a second compose surface.
 
@@ -910,7 +910,7 @@ export default function TodayView({ user, items, measurements, schedules, outfit
           "Needs attention" renders nothing, the week strip grows to full width
           instead of leaving a dead column. */}
       <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch [&>*]:min-w-0 lg:[&>*]:flex-1">
-        <WeekStrip events={weekEvents} schedules={schedules} outfits={outfits} onSelectDay={onSelectCalendarDay} onOpenOutfit={onOpenBrief} />
+        <WeekStrip events={weekEvents} schedules={schedules} outfits={outfits} onSelectDay={onSelectCalendarDay} onOpenOutfit={onOpenSavedLook} />
         <DailyDigest
           items={items}
           inspirations={inspirations}

@@ -732,12 +732,15 @@ const Row = ({ icon, accent, title, sub, onClick, item }) => (
   <li>
     <button onClick={onClick}
       className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
+      {/* 48px, not the 32px this slot held when it was an icon: a garment read
+          at icon size defeats the point of showing the piece at all. The icon
+          fallback matches so a photoless row doesn't jump. */}
       {item && itemImages(item).length > 0 ? (
-        <span className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-stone-100">
+        <span className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-stone-100">
           <ItemTileImage item={item} alt={item.name} />
         </span>
       ) : (
-        <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
+        <span className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-stone-900 truncate">{title}</p>
@@ -793,27 +796,27 @@ function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, 
 
   const renderCard = (c, i) => {
     if (c.kind === 'care') {
-      return <Row key={i} item={c.item} icon={<Sparkles size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+      return <Row key={i} item={c.item} icon={<Sparkles size={20} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
         title={c.item.name} sub={`${c.reminder.material} · ${c.reminder.wearsSince} wears since care · usually every ${c.reminder.everyN}`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'stale-fav') {
       const d = daysSinceLastWorn(c.item);
-      return <Row key={i} item={c.item} icon={<Star size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+      return <Row key={i} item={c.item} icon={<Star size={20} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
         title={c.item.name} sub={d === null ? 'Favourite · never worn' : `Favourite · ${d} days since last wear`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'price-drop') {
       const h = c.item.priceHistory;
       const drop = Math.round((1 - h[h.length - 1].price / h[h.length - 2].price) * 100);
-      return <Row key={i} item={c.item} icon={<TrendingDown size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+      return <Row key={i} item={c.item} icon={<TrendingDown size={20} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
         title={c.item.name} sub={`Price dropped ${drop}% · now £${h[h.length - 1].price}`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'overdue') {
       const daysOver = Math.floor((new Date(todayKey) - new Date(c.item.lentReturnBy)) / 86_400_000);
-      return <Row key={i} item={c.item} icon={<AlertCircle size={16} strokeWidth={1.5} />} accent="bg-claret-50 text-claret-700"
+      return <Row key={i} item={c.item} icon={<AlertCircle size={20} strokeWidth={1.5} />} accent="bg-claret-50 text-claret-700"
         title={c.item.name} sub={`Lent to ${c.item.lentTo} · ${daysOver} day${daysOver === 1 ? '' : 's'} overdue`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'inspo-unanalysed') {
-      return <Row key={i} icon={<Bookmark size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+      return <Row key={i} icon={<Bookmark size={20} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
         title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with the Concierge"
         onClick={() => onOpenInspirationTab ? onOpenInspirationTab() : onOpenInspiration?.(c.inspiration.id)} />;
     }

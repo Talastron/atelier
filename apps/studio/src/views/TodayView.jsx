@@ -719,10 +719,9 @@ function DailyBriefCard({
 // Compose functionality lives exclusively in the Daily Brief card above — this
 // tile is a quiet information strip, not a second compose surface.
 
-function DailyDigest({ items, schedules, inspirations = [], onOpenItem, onOpenInspiration, onOpenInspirationTab }) {
+function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, onOpenInspirationTab }) {
   const owned = items.filter((i) => i.status === 'owned');
   const todayKey = todayISO();
-  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
 
   // Care due
   const careDue = owned.map((i) => ({ i, r: itemCareReminder(i) })).filter((x) => x.r?.due).slice(0, 3);
@@ -914,7 +913,6 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         <WeekStrip events={weekEvents} schedules={schedules} outfits={outfits} onSelectDay={onSelectCalendarDay} onOpenOutfit={onOpenBrief} />
         <DailyDigest
           items={items}
-          schedules={schedules}
           inspirations={inspirations}
           onOpenItem={onItemClick}
           onOpenInspiration={onOpenInspiration}

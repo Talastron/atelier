@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Share2, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
-import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn } from "../lib/items.js";
+import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief, readRecentBases, appendRecentBase, readRemoteRecentBases, writeRemoteRecentBases, mergeRecent } from "../dailyBrief";
@@ -10,6 +10,7 @@ import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
+import { groupDigestCards } from "../lib/digest.js";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
@@ -755,55 +756,84 @@ function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, 
 
   if (cards.length === 0) return null;
 
+  // Ranked, non-empty themes. The rank is what stops an urgent card being
+  // buried by arriving late — a lent piece 3 days overdue used to render below
+  // three care nudges purely because of push order. See lib/digest.js.
+  const groups = groupDigestCards(cards);
+  // A single header over a single group labels nothing, so drop it.
+  const showHeaders = groups.length > 1;
+
+  // The group header carries the KIND, so a row no longer needs its icon — that
+  // slot shows the actual piece instead. `item` is omitted for cards that
+  // aren't about a piece (the inspirations nudge), and ItemTileImage returns
+  // null for a piece with no photo, so the icon stays as the fallback for both.
+  const Row = ({ icon, accent, title, sub, onClick, item }) => (
+    <li>
+      <button onClick={onClick}
+        className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
+        {item && itemImages(item).length > 0 ? (
+          <span className="w-8 h-8 rounded-lg overflow-hidden shrink-0 bg-stone-100">
+            <ItemTileImage item={item} alt={item.name} />
+          </span>
+        ) : (
+          <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-stone-900 truncate">{title}</p>
+          <p className="text-[11px] text-stone-500 truncate">{sub}</p>
+        </div>
+        <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
+      </button>
+    </li>
+  );
+
+  const renderCard = (c, i) => {
+    if (c.kind === 'care') {
+      return <Row key={i} item={c.item} icon={<Sparkles size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+        title={c.item.name} sub={`${c.reminder.material} · ${c.reminder.wearsSince} wears since care · usually every ${c.reminder.everyN}`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'stale-fav') {
+      const d = daysSinceLastWorn(c.item);
+      return <Row key={i} item={c.item} icon={<Star size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+        title={c.item.name} sub={d === null ? 'Favourite · never worn' : `Favourite · ${d} days since last wear`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'price-drop') {
+      const h = c.item.priceHistory;
+      const drop = Math.round((1 - h[h.length - 1].price / h[h.length - 2].price) * 100);
+      return <Row key={i} item={c.item} icon={<TrendingDown size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+        title={c.item.name} sub={`Price dropped ${drop}% · now £${h[h.length - 1].price}`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'overdue') {
+      const daysOver = Math.floor((new Date(todayKey) - new Date(c.item.lentReturnBy)) / 86_400_000);
+      return <Row key={i} item={c.item} icon={<AlertCircle size={16} strokeWidth={1.5} />} accent="bg-claret-50 text-claret-700"
+        title={c.item.name} sub={`Lent to ${c.item.lentTo} · ${daysOver} day${daysOver === 1 ? '' : 's'} overdue`} onClick={() => onOpenItem?.(c.item.id)} />;
+    }
+    if (c.kind === 'inspo-unanalysed') {
+      return <Row key={i} icon={<Bookmark size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+        title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with the Concierge"
+        onClick={() => onOpenInspirationTab ? onOpenInspirationTab() : onOpenInspiration?.(c.inspiration.id)} />;
+    }
+    return null;
+  };
+
   return (
     <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-7 smooth-shadow">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg sm:text-xl text-stone-900">Needs attention</h3>
         <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
       </div>
-      <ul className="space-y-1">
-        {cards.map((c, i) => {
-          const Row = ({ icon, accent, title, sub, onClick }) => (
-            <li>
-              <button onClick={onClick}
-                className="w-full flex items-center gap-3 text-left py-2 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors">
-                <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-stone-900 truncate">{title}</p>
-                  <p className="text-[11px] text-stone-500 truncate">{sub}</p>
-                </div>
-                <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
-              </button>
-            </li>
-          );
-          if (c.kind === 'care') {
-            return <Row key={i} icon={<Sparkles size={16} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
-              title={c.item.name} sub={`${c.reminder.material} care · ${c.reminder.wearsSince} wears`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'stale-fav') {
-            const d = daysSinceLastWorn(c.item);
-            return <Row key={i} icon={<Star size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
-              title={c.item.name} sub={d === null ? 'Favourite · never worn' : `Favourite · ${d} days since last wear`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'price-drop') {
-            const h = c.item.priceHistory;
-            const drop = Math.round((1 - h[h.length - 1].price / h[h.length - 2].price) * 100);
-            return <Row key={i} icon={<TrendingDown size={16} strokeWidth={1.5} />} accent="bg-emerald-100 text-emerald-800"
-              title={c.item.name} sub={`Price dropped ${drop}% · now £${h[h.length - 1].price}`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'overdue') {
-            const daysOver = Math.floor((new Date(todayKey) - new Date(c.item.lentReturnBy)) / 86_400_000);
-            return <Row key={i} icon={<AlertCircle size={16} strokeWidth={1.5} />} accent="bg-red-100 text-red-700"
-              title={c.item.name} sub={`Lent to ${c.item.lentTo} · ${daysOver} day${daysOver === 1 ? '' : 's'} overdue`} onClick={() => onOpenItem?.(c.item.id)} />;
-          }
-          if (c.kind === 'inspo-unanalysed') {
-            return <Row key={i} icon={<Bookmark size={16} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
-              title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with the Concierge"
-              onClick={() => onOpenInspirationTab ? onOpenInspirationTab() : onOpenInspiration?.(c.inspiration.id)} />;
-          }
-          return null;
-        })}
-      </ul>
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <div key={group.id}>
+            {showHeaders && (
+              <p className="mb-1 text-[10px] tracking-[0.2em] uppercase text-stone-400">{group.label}</p>
+            )}
+            <ul className="space-y-1">
+              {group.cards.map(renderCard)}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -145,12 +145,18 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.font = '500 76px "Playfair Display", Georgia, serif';
   ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
-  wrapCanvasText(ctx, outfit?.name || 'A composed look', PAD, 248, W - PAD * 2, 88, 2);
+  // wrapCanvasText returns the number of lines it drew. A two-line title's
+  // second baseline reaches y≈336, which would collide with the palette and
+  // grid pinned below — so shift everything under the title down by one line
+  // height (88) when the title wraps. The stylist note and footer stay
+  // anchored to the bottom; the grid simply gets a little shorter.
+  const titleLines = wrapCanvasText(ctx, outfit?.name || 'A composed look', PAD, 248, W - PAD * 2, 88, 2);
+  const titleOffset = titleLines > 1 ? 88 : 0;
 
   // === PALETTE STRIP ===
   // Computed across all outfit pieces, sorted by prevalence, capped at 6
   // so the row fits cleanly in one line at this resolution.
-  const paletteY = 320;
+  const paletteY = 320 + titleOffset;
   const paletteCounts = new Map();
   for (const p of pieces) {
     for (const c of (itemColors(p) || [])) {
@@ -209,7 +215,7 @@ export async function composeOutfitExportImage(outfit, items) {
              : pieces.length <= 6 ? 2
              : 3;
   const rows = Math.ceil(pieces.length / cols);
-  const GRID_TOP = 420;
+  const GRID_TOP = 420 + titleOffset;
   const GRID_BOTTOM = H - 400;
   const GUTTER = 36;
   const cellW = (W - PAD * 2 - GUTTER * (cols - 1)) / cols;

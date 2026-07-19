@@ -578,30 +578,34 @@ export async function generateOutfitNameWithGemini(picked, intent) {
     .slice(0, 8)
     .join('\n- ');
   const briefLine = (intent && intent.trim() && intent !== 'Any')
-    ? `The user's brief: "${intent.trim()}"\n\nUse that brief to anchor the name — echo a place, a moment, a mood from it. The name should feel like the editor's title for THIS specific brief, not a generic stylist label.`
+    ? `The user's brief: "${intent.trim()}"\n\nTransform the brief into the name — catch its place, moment, or mood, but do NOT restate it word-for-word (a brief of "casual date night" must never become "Casual Date Night Outfit"). The name is the editor's title for this brief, not a label of it.`
     : `No specific brief — name the look as a self-contained editorial piece.`;
 
   const prompt = `You are an editorial fashion stylist titling a saved look for Atelier, a private digital wardrobe.
 
 Give it a SHORT but evocative name: 3 to 6 words, title case, no quotes, no full stops, no emoji.
 
-Voice: like a couturier captioning a piece for a private client — refined, considered, a little romantic. Reach for atmosphere over function: a place, a time of day, a weather, a mood, a moment. Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Avoid restating the items.
+Voice: like a couturier captioning a piece for a private client — refined, considered, a little romantic. Reach for atmosphere over function.
+
+VARY the structure and the imagery every single time. Do NOT default to a "Place, Time-of-day" formula, and do NOT reach for weather or seaside motifs. Draw from a wide, changing range instead: a colour, a fabric, a texture, an hour, a single object, a destination, a line of feeling, a wry aside. At most one name in four should use a comma; build the rest without one.
+
+Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move") and never restate the items. Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
 
 ${briefLine}
 
 Items in this look:
 - ${itemList}
 
-Examples of the tone wanted (note the rhythm, not the words):
-- "Storm Light at the Lido"
-- "Mayfair Hour, Late Spring"
-- "Quiet Power, Quiet Wool"
-- "Gallery Opening in Linen"
-- "Sunday Coffee, Slow Sunday"
-- "Black Tie at the Sea"
+Examples — note how DIFFERENTLY each one is built; do not copy them:
+- "The Weight of Good Wool"
+- "Ledger Grey"
+- "An Argument for Linen"
+- "Nine Parts Navy"
+- "Sunday, and No Plans"
+- "Dressed for the Long Way Round"
 
 Reply with the name ONLY — no preamble, no explanation, no quotes.`;
-  const result = await geminiText(prompt, { temperature: 0.9 }, 'name-look');
+  const result = await geminiText(prompt, { temperature: 1.0 }, 'name-look');
   return (result || '')
     .trim()
     .split('\n')[0]

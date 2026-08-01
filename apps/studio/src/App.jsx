@@ -777,10 +777,33 @@ function DigitalWardrobe() {
       return;
     }
     if (!user) return;
-    await setDoc(doc(userOutfitsRef(user.uid), outfit.id), outfit);
+    // Worn photos live inline on the look (6 × ~80 KB), so an outfit doc can
+    // approach Firestore's 1 MiB ceiling. Fail here, where the caller's catch
+    // can show it, rather than letting the server reject the write long after
+    // the user was told the look saved.
+    const tooLarge = docTooLargeMessage(outfit, 'look');
+    if (tooLarge) throw new Error(tooLarge);
+
+    // Same offline hazard as handleAddItem: setDoc resolves only on a server
+    // acknowledgement, so awaiting it directly strands every "Saving…" state
+    // that calls through here — TodayView's "Save as a Look" most visibly.
+    // See lib/persist.js.
+    const { synced } = await settleWhenLocallyWritten(
+      setDoc(doc(userOutfitsRef(user.uid), outfit.id), outfit),
+      {
+        onLateError: (err) => {
+          console.error('[lookbook] outfit write rejected after the save UI closed', err);
+          toast.show(
+            `"${outfit.name || 'Look'}" didn't save — ${err?.message || 'please try again'}`,
+            { kind: 'error', duration: 7000 }
+          );
+        },
+      }
+    );
     // Capsule generator handles its own summary toast — don't spam per-look here.
     if (!outfit.capsule) {
-      toast.show(outfit.name, { kind: 'success', eyebrow: 'SAVED' });
+      if (synced) toast.show(outfit.name, { kind: 'success', eyebrow: 'SAVED' });
+      else toast.show(`${outfit.name} · syncing when you're back online`, { kind: 'default', eyebrow: 'SAVED HERE', duration: 5000 });
     }
   };
   const handleDeleteOutfit = async (id) => {

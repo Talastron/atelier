@@ -7,6 +7,7 @@ import { buildItemFitPrompt, parseAndNormalizeFit, selectAspirationBasis, buildI
 import { weatherLabel } from "./weather.js";
 import { ensureClothingBase, hasClothingBase, isClothingBase, trimToOnePerSlot } from "./outfit.js";
 import { ALL_MATERIALS, CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
+import { normalizeInspirationGarments } from "./inspiration.js";
 
 // Locks the shape of a composed-outfit reply: all four fields required, with
 // the right types. Stops malformed/partial JSON at the source (fix A); the
@@ -475,6 +476,13 @@ EXAMPLES of what counts as a match:
 - Inspiration "leather loafer" + Wardrobe "Barnsbury Driver Shoe" (Tan, by Ralph Lauren) → MATCH (both Shoes/Loafers, compatible colour)
 - Inspiration "gold cuff bracelet" + Wardrobe "MV Siren Muse Bold Cuff" (Gold, by Monica Vinader) → MATCH (both Jewellery/Cuffs, both gold)
 
+BETTER MATCH (for every garment you MATCH to a wardrobe item):
+Owning something close enough is not the end of the advice. For each garment you match, ask whether a different piece would wear THIS look more faithfully than the one they own. Set "betterMatch" to a short, specific description of that piece — the kind of thing they could search a shop for (<=90 chars). Name the silhouette, the material and the colour, and add a brand-or-style reference where it sharpens the picture (e.g. "a slouchy unstructured hobo in tan — Polène or Wandler style").
+- The weaker the match, the more useful this is. A "low" or "medium" match nearly always has a closer version worth naming — that gap is exactly what the confidence rating is reporting.
+- Set it to null ONLY when the owned piece genuinely IS the inspiration's piece in every respect worth naming. Never invent a difference to justify a suggestion: a fabricated upgrade is worse than no suggestion at all, and a user told to replace a piece that already works will stop trusting the rest of this analysis.
+- Never describe a piece the user already owns — this is always something to acquire, and never a second item from the wardrobe list.
+- Describe the garment, never the shop or the price.
+
 BRAND IDENTIFICATION (be conservative):
 - For each garment, set "brand_guess" ONLY if you can clearly identify the brand from a visible logo, signature design element, or extremely distinctive style (e.g. a Cartier Tank watch, Chanel quilted bag with CC clasp, Bottega Veneta intrecciato weave).
 - If uncertain — even slightly — leave brand_guess as null. Wrong brand guesses are worse than no guess.
@@ -503,7 +511,8 @@ Respond ONLY with valid JSON in this exact shape:
       "brand_guess": "brand name or null — see brand identification rules above",
       "matchedItemId": "id_xyz_or_null",
       "matchConfidence": "high|medium|low or null — only set when matchedItemId is set",
-      "buyingNote": "string or null — only when matchedItemId is null. Include a brand-or-style suggestion when useful (e.g. 'a tailored navy blazer with peak lapels — Ralph Lauren or Theory style'). When matchedItemId is set with confidence medium or low, you MAY instead include a note of the form 'you have a similar piece but the inspiration\\'s is [more relaxed / more cropped / different material]' only if the difference is meaningful — otherwise leave null."
+      "buyingNote": "string or null — only when matchedItemId is null. Include a brand-or-style suggestion when useful (e.g. 'a tailored navy blazer with peak lapels — Ralph Lauren or Theory style'). When matchedItemId is set with confidence medium or low, you MAY instead include a note of the form 'you have a similar piece but the inspiration\\'s is [more relaxed / more cropped / different material]' only if the difference is meaningful — otherwise leave null.",
+      "betterMatch": "string or null — only when matchedItemId is set. A piece that would wear this look more faithfully than the one they own. See BETTER MATCH rules above."
     }
   ],
   "completionVerdict": "one calm line — see COMPLETION VERDICT rules above",
@@ -513,8 +522,8 @@ Respond ONLY with valid JSON in this exact shape:
 Rules for the response:
 - One object per visible garment in the inspiration.
 - matchedItemId MUST be an exact id from the wardrobe list above, or null if no match.
-- When matchedItemId is set: matchConfidence MUST be 'high', 'medium', or 'low'. buyingNote is optional (null unless you want to note a meaningful difference).
-- When matchedItemId is null: matchConfidence MUST be null. buyingNote MUST be a short specific suggestion (<=90 chars).
+- When matchedItemId is set: matchConfidence MUST be 'high', 'medium', or 'low'. buyingNote is optional (null unless you want to note a meaningful difference). betterMatch is a short specific piece (<=90 chars), or null per the BETTER MATCH rules.
+- When matchedItemId is null: matchConfidence MUST be null. buyingNote MUST be a short specific suggestion (<=90 chars). betterMatch MUST be null — buyingNote already carries the suggestion for a missing garment.
 - brand_guess is independent of matching — you can guess a brand on the inspiration whether or not the user owns something matching.
 - Never invent ids. Never list the same id twice.
 - completionVerdict must be consistent with the garments array you return in THIS SAME response: judge how many of exactly those garments are matched vs missing. Never mention price or money.`;
@@ -523,32 +532,14 @@ Rules for the response:
   if (!text) throw new Error('The Concierge could not analyse this photo');
   const parsed = JSON.parse(text);
 
-  // Derive the legacy shape from the new structure so existing consumers
-  // (the UI that renders wardrobeMatchIds / missingPieces) don't need
-  // updates yet. Mutual exclusion is now enforced by the per-garment
-  // matchedItemId being null XOR set.
-  const garments = Array.isArray(parsed.garments) ? parsed.garments : [];
-  const wardrobeMatchIds = [];
-  const missingPieces = [];
-  for (const g of garments) {
-    if (g.matchedItemId && typeof g.matchedItemId === 'string') {
-      // Verify the id exists AND that its category matches the garment's
-      // stated category before trusting the match. The model's own bias
-      // toward avoiding "missing" can otherwise produce cross-category
-      // matches (e.g. a belt matched to a bag) at low confidence — this is
-      // a hard rule in the prompt too, but checked here in code since it's
-      // mechanically verifiable and must never depend on the model alone.
-      const matchedItem = items.find((i) => i.id === g.matchedItemId);
-      const sameCategory = matchedItem && String(matchedItem.category || '').trim().toLowerCase() === String(g.category || '').trim().toLowerCase();
-      if (sameCategory) {
-        wardrobeMatchIds.push(g.matchedItemId);
-        continue;
-      }
-    }
-    // Otherwise treat as missing — prefer the model's buyingNote, fallback to description
-    const note = g.buyingNote || g.description;
-    if (note) missingPieces.push(note);
-  }
+  // Verify every match against the real wardrobe and derive the legacy list
+  // shape from it, so existing consumers (the UI that renders
+  // wardrobeMatchIds / missingPieces) don't need updates. A rejected match is
+  // rewritten in `garments` too, not merely excluded from the derived lists —
+  // that array is what the detail view renders, so a match the verdict counts
+  // as missing must not still show "✓ In your wardrobe" on its card. See
+  // lib/inspiration.js for why category is the line we check in code.
+  const { garments, wardrobeMatchIds, missingPieces } = normalizeInspirationGarments(parsed.garments, items);
 
   // Derived deterministically from the already-validated match list, not
   // from the model — piecesOwned/piecesMissing can never drift from the
@@ -557,10 +548,9 @@ Rules for the response:
   // count stays consistent even if the model mistakenly matches two
   // different garments to the same wardrobe id — each garment is still
   // counted individually, matching what the garment list itself will show.
-  const dedupedMatchIds = [...new Set(wardrobeMatchIds)];
   return {
     garments,                                  // new shape (preferred)
-    wardrobeMatchIds: dedupedMatchIds,
+    wardrobeMatchIds,
     missingPieces,
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
     completionVerdict: typeof parsed.completionVerdict === 'string' ? parsed.completionVerdict : '',

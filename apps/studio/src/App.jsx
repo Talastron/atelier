@@ -53,6 +53,7 @@ import { parseReceiptText } from './lib/receipts.js';
 import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
 import { settleWhenLocallyWritten, docTooLargeMessage } from './lib/persist.js';
+import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
@@ -2040,20 +2041,25 @@ function DigitalWardrobe() {
                 setSelectedInspirationId(null);
                 setOpenOutfitId(outfit.id);
               }}
-              onAddMissingToWishlist={async (piece) => {
+              onAddMissingToWishlist={async (piece, { category = '', upgradeFor = '' } = {}) => {
                 const ins = selectedInspiration;
+                const fromInspiration = ins.caption ? `From inspiration: ${ins.caption}` : 'From an inspiration';
                 const newItem = {
                   id: newId(),
                   name: piece,
                   brand: '',
                   price: 0,
-                  category: 'Tops',
+                  // File it under the garment's own category rather than always
+                  // Tops — a suggested bag landing in Tops is a chore to fix.
+                  category: wishlistCategoryFor(category),
                   subCategory: '',
                   status: 'wishlist',
                   seasons: [], styles: [], images: ins.image ? [ins.image] : [], colors: [], care: [], materials: [],
                   description: '',
                   sourceUrl: '',
-                  wishlistReason: ins.caption ? `From inspiration: ${ins.caption}` : 'From an inspiration',
+                  wishlistReason: upgradeFor
+                    ? `A closer match than your ${upgradeFor} · ${fromInspiration}`
+                    : fromInspiration,
                   inspirationId: ins.id,
                   createdAt: new Date().toISOString(),
                 };
@@ -6282,6 +6288,33 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                   )}
                                   {g.buyingNote && (
                                     <p className="w-full text-[11px] text-stone-400 italic mt-1">{g.buyingNote}</p>
+                                  )}
+                                  {/* Owning something close enough isn't the end of the
+                                      advice — name the piece that would wear this look
+                                      more faithfully, and make it actionable. */}
+                                  {g.betterMatch && (
+                                    <div className="w-full mt-2 pt-2.5 border-t border-stone-100">
+                                      <p className="text-[9px] tracking-widest uppercase text-stone-400">A closer match would be</p>
+                                      <p className="text-[12px] text-stone-700 leading-snug mt-1">{g.betterMatch}</p>
+                                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                        {onAddMissingToWishlist && (
+                                          <button onClick={() => onAddMissingToWishlist(g.betterMatch, { category: g.category, upgradeFor: matchedItem.name })}
+                                            className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-300 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
+                                            <Heart size={10} strokeWidth={1.5} /> Wishlist
+                                          </button>
+                                        )}
+                                        <a href={googleShopUrl(g.betterMatch)} target="_blank" rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                          <Store size={10} strokeWidth={1.5} /> Shop
+                                        </a>
+                                        {yourShopsUrl(g.betterMatch) && (
+                                          <a href={yourShopsUrl(g.betterMatch)} target="_blank" rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                            <Bookmark size={10} strokeWidth={1.5} /> Your shops
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
                               ) : (

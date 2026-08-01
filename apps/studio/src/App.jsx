@@ -52,6 +52,7 @@ import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from
 import { parseReceiptText } from './lib/receipts.js';
 import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
+import { settleWhenLocallyWritten, docTooLargeMessage } from './lib/persist.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
@@ -575,7 +576,26 @@ function DigitalWardrobe() {
       return;
     }
     if (!user) return;
-    await setDoc(doc(userItemsRef(user.uid), newItem.id), newItem);
+    // Never block the save UI on a server acknowledgement. With offline
+    // persistence the write below is committed locally straight away, but its
+    // promise only resolves once the server acks — and offline it never
+    // resolves at all, which used to leave the Add Item modal pinned on
+    // "Saving…" with the item already safely queued. See lib/persist.js.
+    const { synced } = await settleWhenLocallyWritten(
+      setDoc(doc(userItemsRef(user.uid), newItem.id), newItem),
+      {
+        onLateError: (err) => {
+          console.error('[wardrobe] item write rejected after the save UI closed', err);
+          toast.show(
+            `"${newItem.name || 'Item'}" didn't save — ${err?.message || 'please try again'}`,
+            { kind: 'error', duration: 7000 }
+          );
+        },
+      }
+    );
+    if (!synced) {
+      toast.show('Saved on this device · syncing when you\'re back online', { kind: 'default', duration: 5000 });
+    }
 
     // Fire-and-forget rehost: if any image is still an external URL (not a
     // data URL), copy it into inline data in the background. The initial save
@@ -2942,6 +2962,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       for (const [k, v] of Object.entries(raw)) {
         if (v !== undefined && k !== 'imageUrl') payload[k] = v;
       }
+      // Catch an oversized doc here rather than letting Firestore reject it
+      // minutes later, once the queued write finally reaches the server and
+      // the user has long since been told the item was saved.
+      const tooLarge = docTooLargeMessage(payload, 'item');
+      if (tooLarge) { setError(tooLarge); return; }
       await onSave(payload);
     } catch (err) {
       console.error('[wardrobe] item save failed:', err);

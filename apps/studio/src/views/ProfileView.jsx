@@ -10,6 +10,7 @@ import ItemTileImage from "../components/ItemTileImage.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
+import { BUILD_LABEL } from "../buildInfo.js";
 import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, BODY_SHAPE_GUIDES, MATERIALS, materialsForCategory, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
 
 // Complete-my-data backfill: scan the wardrobe for items missing key fields
@@ -1104,6 +1105,14 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       )}
       </section>
       )}
+
+      {/* Build stamp. Deliberately the last and quietest thing on the page —
+          nobody comes looking for it, but when something is wrong it answers
+          "which version are you running?" without anyone opening DevTools.
+          select-text because the usual next step is pasting it into an email. */}
+      <p className="text-center text-xs text-stone-400 select-text pt-4 pb-2">
+        Atelier · {BUILD_LABEL}
+      </p>
 
     </div>
   );

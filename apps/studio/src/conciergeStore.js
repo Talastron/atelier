@@ -66,7 +66,12 @@ export async function saveCurrentThread(messages) {
         createdAt: serverTimestamp(), // setDoc with merge keeps the original if already set
       },
       { merge: true }
-    ));
+    ), {
+      // A rejection after the grace window (doc over 1 MiB, rules change)
+      // means the conversation silently never persisted — at least say so in
+      // the console, since the catch below can't see a post-settle failure.
+      onLateError: (err) => console.warn('[concierge] thread write rejected after settling:', err?.message || err),
+    });
   } catch (err) {
     console.warn('[concierge] save failed:', err?.message || err);
   }
@@ -76,7 +81,9 @@ export async function clearCurrentThread() {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
   try {
-    await settleWhenLocallyWritten(setDoc(threadRef(uid), { messages: [], updatedAt: serverTimestamp() }, { merge: true }));
+    await settleWhenLocallyWritten(setDoc(threadRef(uid), { messages: [], updatedAt: serverTimestamp() }, { merge: true }), {
+      onLateError: (err) => console.warn('[concierge] clear rejected after settling:', err?.message || err),
+    });
   } catch (err) {
     console.warn('[concierge] clear failed:', err?.message || err);
   }

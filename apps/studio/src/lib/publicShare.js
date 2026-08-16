@@ -34,10 +34,16 @@ export async function uploadShareCardImage(shareId, blob) {
 }
 
 // Create a lightweight `kind:'card'` public share (Style DNA / Manifesto):
-// upload the image, write the public doc, return { shareId, url, cardImageUrl }.
+// upload the image, write the public doc, return { shareId, url, cardImageUrl,
+// synced }. The doc write is capped by settleWhenLocallyWritten — offline it
+// never settles on its own, which pinned the Pinterest button's busy state.
+// `synced: false` means the write is queued locally: the returned url will
+// only start resolving for recipients once this device reconnects, so callers
+// should say so before handing the link anywhere public.
 export async function createCardShare({ cardType, name, sharedByName, blob }) {
   const { db } = await import('../firebase.js');
   const { doc, setDoc } = await import('firebase/firestore');
+  const { settleWhenLocallyWritten } = await import('./persist.js');
   const shareId = newShareId();
   const cardImageUrl = await uploadShareCardImage(shareId, blob);
   const snapshot = {
@@ -49,7 +55,9 @@ export async function createCardShare({ cardType, name, sharedByName, blob }) {
     sharedAt: new Date().toISOString(),
     sharedByName: sharedByName || 'Atelier',
   };
-  await setDoc(doc(db, 'public', shareId), snapshot);
+  const { synced } = await settleWhenLocallyWritten(setDoc(doc(db, 'public', shareId), snapshot), {
+    onLateError: (err) => console.error('[share] card share doc rejected after the link was handed out', err),
+  });
   const url = `${window.location.origin}/?share=${shareId}`;
-  return { shareId, url, cardImageUrl };
+  return { shareId, url, cardImageUrl, synced };
 }

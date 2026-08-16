@@ -52,7 +52,7 @@ import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from
 import { parseReceiptText } from './lib/receipts.js';
 import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
-import { settleWhenLocallyWritten, docTooLargeMessage } from './lib/persist.js';
+import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WARN_BYTES } from './lib/persist.js';
 import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
@@ -678,7 +678,11 @@ function DigitalWardrobe() {
               console.warn('[rehost] skipped patch for item', newItem.id, '—', tooLarge);
               return;
             }
-            await setDoc(doc(userItemsRef(uid), newItem.id), patch);
+            // No UI waits on this, but a bare await never settling offline
+            // pins this closure (holding up-to-1MB of base64) until reload.
+            await settleWhenLocallyWritten(setDoc(doc(userItemsRef(uid), newItem.id), patch), {
+              onLateError: (err) => console.warn('[rehost] patch rejected after settling:', err?.message),
+            });
             console.log('[rehost] patched item', newItem.id, 'with', externalRefs.length, 'rehosted image(s)');
           }
         } catch (err) {
@@ -737,21 +741,21 @@ function DigitalWardrobe() {
     }
     if (!user) return;
     // Soft delete: 30-day grace period (restorable from Profile → Trash).
-    await runWrite(setDoc(doc(userItemsRef(user.uid), id), { ...item, deletedAt: new Date().toISOString() }), 'Move to Trash');
-    toast.show('Moved to Trash · restore from Profile', { kind: 'default' });
+    const trashSynced = await runWrite(setDoc(doc(userItemsRef(user.uid), id), { ...item, deletedAt: new Date().toISOString() }), 'Move to Trash');
+    toast.show(trashSynced ? 'Moved to Trash · restore from Profile' : 'Moved to Trash' + OFFLINE_SUFFIX, { kind: 'default' });
   };
   const handleRestoreItem = async (id) => {
     if (!user) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
     const { deletedAt, ...rest } = item;
-    await runWrite(setDoc(doc(userItemsRef(user.uid), id), rest), 'Restore');
-    toast.show('Restored to your wardrobe', { kind: 'success' });
+    const synced = await runWrite(setDoc(doc(userItemsRef(user.uid), id), rest), 'Restore');
+    toast.show(synced ? 'Restored to your wardrobe' : 'Restored to your wardrobe' + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleHardDeleteItem = async (id) => {
     if (!user) return;
-    await runWrite(deleteDoc(doc(userItemsRef(user.uid), id)), 'Permanent delete');
-    toast.show('Permanently removed', { kind: 'default' });
+    const synced = await runWrite(deleteDoc(doc(userItemsRef(user.uid), id)), 'Permanent delete');
+    toast.show(synced ? 'Permanently removed' : 'Permanently removed' + OFFLINE_SUFFIX, { kind: 'default' });
   };
 
   // Auto-purge items soft-deleted more than 30 days ago. Runs once when
@@ -970,6 +974,13 @@ function DigitalWardrobe() {
       sharedByName: user.displayName || 'Atelier',
       looks,
     };
+    // Size-gate before writing: an oversized share queues fine locally, then
+    // the server rejects it — leaving a handed-out link permanently dead,
+    // with the offline toast having promised it would come alive.
+    if (docSizeBytes(snapshot) > DOC_SIZE_WARN_BYTES) {
+      toast.show('This lookbook is too large to share — try fewer looks.', { kind: 'error', duration: 6000 });
+      return null;
+    }
     await runShareWrite(setDoc(publicShareDoc(shareId), snapshot));
     const url = `${window.location.origin}/?share=${shareId}`;
     setShareTarget({ url, title, kind: 'lookbook' });
@@ -1007,6 +1018,11 @@ function DigitalWardrobe() {
       sharedByName: user.displayName || 'Atelier',
       pieces,
     };
+    // Same size gate as the lookbook share — see comment there.
+    if (docSizeBytes(snapshot) > DOC_SIZE_WARN_BYTES) {
+      toast.show('This look is too large to share. Re-add a photo at lower quality and try again.', { kind: 'error', duration: 6000 });
+      return null;
+    }
     await runShareWrite(setDoc(publicShareDoc(shareId), snapshot));
     const url = `${window.location.origin}/?share=${shareId}`;
     setShareTarget({ url, title, kind: 'outfit' });
@@ -1057,10 +1073,12 @@ function DigitalWardrobe() {
       sharedByName: user.displayName || 'Atelier',
     };
     try {
-      const docSizeKB = Math.round(JSON.stringify(snapshot).length / 1024);
-      console.log(`[share] item snapshot ${docSizeKB} KB · kind=item · image=${primaryImage ? 'yes' : 'no'}`);
-      if (docSizeKB > 900) {
-        // 1 MiB Firestore cap with ~10% buffer. The photo is the likely culprit.
+      // Same threshold + measurement as every other doc-size gate (persist.js)
+      // — the old hand-rolled check counted UTF-16 code units, undercounting
+      // multi-byte characters against Firestore's byte-based cap.
+      const bytes = docSizeBytes(snapshot);
+      console.log(`[share] item snapshot ${Math.round(bytes / 1024)} KB · kind=item · image=${primaryImage ? 'yes' : 'no'}`);
+      if (bytes > DOC_SIZE_WARN_BYTES) {
         toast.show('Photo is too large to share. Try a different item or re-add the photo at lower quality.', { kind: 'error', duration: 6000 });
         return null;
       }
@@ -1266,7 +1284,12 @@ function DigitalWardrobe() {
   };
   const handleRemoveInvite = async (email) => {
     if (OWNER_EMAILS.includes(email)) throw new Error('Owners cannot be revoked from the allowlist.');
-    await runWrite(deleteDoc(allowlistDoc(email)), `Invite removal for ${email}`);
+    const synced = await runWrite(deleteDoc(allowlistDoc(email)), `Invite removal for ${email}`);
+    // Higher stakes than adding: until the delete reaches the server, the
+    // revoked person can still sign in. Don't let offline read as revoked.
+    if (!synced) {
+      toast.show(`${email} still has access until you're back online — the revocation is queued`, { kind: 'default', duration: 7000 });
+    }
   };
   const handleSaveAIHistory = async (entry) => {
     if (!user) return;
@@ -1297,15 +1320,16 @@ function DigitalWardrobe() {
   const handleScheduleOutfit = async (dateISO, outfitId, eventName = '', meta = null) => {
     if (!user) return;
     if (!outfitId) {
-      await runWrite(deleteDoc(userScheduleDoc(user.uid, dateISO)), 'Schedule removal');
-      toast.show('Removed from schedule', { kind: 'default' });
+      const synced = await runWrite(deleteDoc(userScheduleDoc(user.uid, dateISO)), 'Schedule removal');
+      toast.show(synced ? 'Removed from schedule' : 'Removed from schedule' + OFFLINE_SUFFIX, { kind: 'default' });
     } else {
       const trimmed = (eventName || '').trim();
       const doc = { outfitId, scheduledAt: new Date().toISOString() };
       if (trimmed) doc.eventName = trimmed;
       if (meta && typeof meta === 'object') Object.assign(doc, meta);
-      await runWrite(setDoc(userScheduleDoc(user.uid, dateISO), doc), 'Schedule');
-      toast.show(trimmed ? `Scheduled · ${trimmed}` : 'Scheduled', { kind: 'success' });
+      const synced = await runWrite(setDoc(userScheduleDoc(user.uid, dateISO), doc), 'Schedule');
+      const label = trimmed ? `Scheduled · ${trimmed}` : 'Scheduled';
+      toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
     }
   };
 
@@ -1315,8 +1339,8 @@ function DigitalWardrobe() {
   // snapshot updates.
   const handleDeleteTrip = async (trip) => {
     if (!user || !trip?.days?.length) return;
-    await runWrite(Promise.all(trip.days.map((d) => deleteDoc(userScheduleDoc(user.uid, d.dateISO)))), `Trip removal · ${trip.name}`);
-    toast.show(`Trip removed · ${trip.name}`, { kind: 'default' });
+    const synced = await runWrite(Promise.all(trip.days.map((d) => deleteDoc(userScheduleDoc(user.uid, d.dateISO)))), `Trip removal · ${trip.name}`);
+    toast.show(synced ? `Trip removed · ${trip.name}` : `Trip removed · ${trip.name}` + OFFLINE_SUFFIX, { kind: 'default' });
   };
 
   const handleSaveInspiration = async (insp) => {
@@ -1325,8 +1349,8 @@ function DigitalWardrobe() {
   };
   const handleDeleteInspiration = async (id) => {
     if (!user) return;
-    await runWrite(deleteDoc(doc(userInspirationRef(user.uid), id)), 'Inspiration removal');
-    toast.show('Inspiration removed', { kind: 'default' });
+    const synced = await runWrite(deleteDoc(doc(userInspirationRef(user.uid), id)), 'Inspiration removal');
+    toast.show(synced ? 'Inspiration removed' : 'Inspiration removed' + OFFLINE_SUFFIX, { kind: 'default' });
   };
   const handleAnalyzeInspiration = async (insp) => {
     if (!user) return;
@@ -1334,8 +1358,8 @@ function DigitalWardrobe() {
     // The AI call above needs the network, but on a flaky connection it can
     // succeed moments before the write stalls — without the wrapper that
     // pins the "Analysing…" spinner after the analysis already finished.
-    await runWrite(setDoc(doc(userInspirationRef(user.uid), insp.id), { ...insp, analysis }), 'Analysis save');
-    toast.show('Analysis complete', { kind: 'success' });
+    const synced = await runWrite(setDoc(doc(userInspirationRef(user.uid), insp.id), { ...insp, analysis }), 'Analysis save');
+    toast.show(synced ? 'Analysis complete' : 'Analysis complete' + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
 
   const handleDuplicateItem = async (item) => {

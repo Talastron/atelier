@@ -24,7 +24,10 @@ function PinToPinterestButton({ imageBlob, busy, setBusy, cardType, name, shared
         if (!imageBlob || busy) return;
         setBusy(true);
         try {
-          const { url, cardImageUrl } = await createCardShare({ cardType, name, sharedByName, blob: imageBlob });
+          const { url, cardImageUrl, synced } = await createCardShare({ cardType, name, sharedByName, blob: imageBlob });
+          // Offline the share doc is only queued locally — the pinned link
+          // stays dead for everyone else until this device reconnects.
+          if (!synced) toast.show("You look offline — the pinned link will start working once you're back online", { kind: 'default', duration: 6500 });
           const pin = buildPinterestUrl({ url, media: cardImageUrl, description });
           window.open(pin, '_blank', 'noopener,noreferrer,width=750,height=600');
         } catch (e) {

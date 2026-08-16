@@ -539,23 +539,24 @@ Rules for the response:
   // that array is what the detail view renders, so a match the verdict counts
   // as missing must not still show "✓ In your wardrobe" on its card. See
   // lib/inspiration.js for why category is the line we check in code.
-  const { garments, wardrobeMatchIds, missingPieces } = normalizeInspirationGarments(parsed.garments, items);
+  const { garments, wardrobeMatchIds, missingPieces, missingCount } = normalizeInspirationGarments(parsed.garments, items);
 
   // Derived deterministically from the already-validated match list, not
   // from the model — piecesOwned/piecesMissing can never drift from the
   // garments actually shown, unlike a count the model states separately.
-  // Uses missingPieces.length (not the deduped wardrobeMatchIds set) so the
-  // count stays consistent even if the model mistakenly matches two
-  // different garments to the same wardrobe id — each garment is still
-  // counted individually, matching what the garment list itself will show.
+  // Counts GARMENTS (missingCount), not the missingPieces text list: a garment
+  // can be missing without producing usable suggestion text, and it is still
+  // one missing garment on the card. Counting garments also keeps the total
+  // right when the model matches two garments to the same wardrobe id — each
+  // garment is counted individually, matching what the list itself shows.
   return {
     garments,                                  // new shape (preferred)
     wardrobeMatchIds,
     missingPieces,
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
     completionVerdict: typeof parsed.completionVerdict === 'string' ? parsed.completionVerdict : '',
-    piecesOwned: garments.length - missingPieces.length,
-    piecesMissing: missingPieces.length,
+    piecesOwned: garments.length - missingCount,
+    piecesMissing: missingCount,
   };
 }
 

@@ -26,9 +26,26 @@ describe('normalizeInspirationGarments', () => {
   it('returns empty results for anything that is not a garment array', () => {
     for (const input of [undefined, null, 'nope', {}, 42]) {
       expect(normalizeInspirationGarments(input, WARDROBE)).toEqual({
-        garments: [], wardrobeMatchIds: [], missingPieces: [],
+        garments: [], wardrobeMatchIds: [], missingPieces: [], missingCount: 0,
       });
     }
+  });
+
+  // piecesOwned is derived as garments.length - missingCount, so counting the
+  // suggestion TEXT instead of the garments would show a garment as "missing"
+  // on its card while the verdict above it counted that garment as owned.
+  it('counts a missing garment even when it yields no usable suggestion text', () => {
+    const result = normalizeInspirationGarments(
+      [
+        garment({ description: '', buyingNote: null }),
+        garment({ description: 'null', buyingNote: 'N/A' }),
+        garment({ matchedItemId: 'i1', matchConfidence: 'high' }),
+      ],
+      WARDROBE
+    );
+    expect(result.missingPieces).toEqual([]);
+    expect(result.missingCount).toBe(2);
+    expect(result.garments).toHaveLength(3);
   });
 
   it('skips malformed entries instead of throwing', () => {
@@ -135,6 +152,19 @@ describe('normalizeInspirationGarments', () => {
       );
       expect(result.garments[0].betterMatch).toBeNull();
     });
+  });
+
+  // The card renders buyingNote verbatim under a match as the difference note.
+  it('cleans buyingNote on a verified match too, not just on missing garments', () => {
+    const result = normalizeInspirationGarments(
+      [
+        garment({ matchedItemId: 'i1', matchConfidence: 'medium', buyingNote: 'N/A' }),
+        garment({ matchedItemId: 'i2', category: 'Bags', matchConfidence: 'low', buyingNote: '  yours is more structured  ' }),
+      ],
+      WARDROBE
+    );
+    expect(result.garments[0].buyingNote).toBeNull();
+    expect(result.garments[1].buyingNote).toBe('yours is more structured');
   });
 });
 

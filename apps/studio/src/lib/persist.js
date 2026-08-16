@@ -99,7 +99,10 @@ export function docSizeBytes(value) {
 export function docTooLargeMessage(value, noun = 'item') {
   const bytes = docSizeBytes(value);
   if (bytes <= DOC_SIZE_WARN_BYTES) return null;
-  const mb = (bytes / 1_048_576).toFixed(1);
-  return `This ${noun} is ${mb} MB — over the 1 MB a single ${noun} can hold. ` +
+  // Report the size against the threshold we actually enforce. Saying "over
+  // the 1 MB limit" about a 0.9 MB payload reads as a bug in the app rather
+  // than a real ceiling — the headroom is deliberate, so name it as headroom.
+  const kb = Math.round(bytes / 1024);
+  return `This ${noun} is ${kb} KB — too close to the 1 MB a single ${noun} can hold. ` +
     `Remove a photo (or re-add it at a lower quality) and save again.`;
 }

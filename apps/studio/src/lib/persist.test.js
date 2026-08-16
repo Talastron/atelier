@@ -111,8 +111,18 @@ describe('docTooLargeMessage', () => {
   it('flags a payload over the warning threshold', () => {
     const huge = { images: ['x'.repeat(DOC_SIZE_WARN_BYTES + 1)] };
     const msg = docTooLargeMessage(huge);
-    expect(msg).toMatch(/over the 1 MB/);
+    expect(msg).toMatch(/too close to the 1 MB/);
     expect(msg).toMatch(/Remove a photo/);
+  });
+
+  // We block below the real ceiling on purpose. Reporting a 0.9 MB payload as
+  // "over the 1 MB limit" reads as an app bug rather than a real constraint,
+  // so the message states the measured size and calls the gap headroom.
+  it('reports the measured size honestly rather than claiming the limit was passed', () => {
+    const huge = { blob: 'x'.repeat(DOC_SIZE_WARN_BYTES + 1) };
+    const msg = docTooLargeMessage(huge);
+    expect(msg).not.toMatch(/over the 1 MB/);
+    expect(msg).toMatch(/\d+ KB/);
   });
 
   it('names what is being saved', () => {

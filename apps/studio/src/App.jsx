@@ -633,6 +633,17 @@ function DigitalWardrobe() {
             }
           }
           if (changed) {
+            // The rehost runs AFTER the save-time size check and swaps each
+            // external URL for a data URL up to 150 KB — more than the headroom
+            // the guard leaves. Re-check before writing, or an item that saved
+            // fine gets pushed over the ceiling by a background patch whose
+            // rejection nobody ever sees. Keeping the external URLs is exactly
+            // the graceful degradation this block already falls back to.
+            const tooLarge = docTooLargeMessage(patch, 'item');
+            if (tooLarge) {
+              console.warn('[rehost] skipped patch for item', newItem.id, '—', tooLarge);
+              return;
+            }
             await setDoc(doc(userItemsRef(uid), newItem.id), patch);
             console.log('[rehost] patched item', newItem.id, 'with', externalRefs.length, 'rehosted image(s)');
           }
@@ -778,13 +789,12 @@ function DigitalWardrobe() {
       return;
     }
     if (!user) return;
-    // Worn photos live inline on the look (6 × ~80 KB), so an outfit doc can
-    // approach Firestore's 1 MiB ceiling. Fail here, where the caller's catch
-    // can show it, rather than letting the server reject the write long after
-    // the user was told the look saved.
-    const tooLarge = docTooLargeMessage(outfit, 'look');
-    if (tooLarge) throw new Error(tooLarge);
-
+    // No size guard here, unlike handleAddItem: a look's heaviest field is its
+    // worn photos, capped at 6 × 80 KB ≈ 480 KB — half the ceiling. Throwing on
+    // size would buy nothing real and would cost something: the favourite,
+    // rename, tag and remove-photo call sites neither await nor catch this, so
+    // a throw there would be a silent no-op rather than a message.
+    //
     // Same offline hazard as handleAddItem: setDoc resolves only on a server
     // acknowledgement, so awaiting it directly strands every "Saving…" state
     // that calls through here — TodayView's "Save as a Look" most visibly.
@@ -6326,7 +6336,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                   {missingText && (
                                     <div className="flex flex-wrap gap-1.5 mt-2.5">
                                       {onAddMissingToWishlist && (
-                                        <button onClick={() => onAddMissingToWishlist(missingText)}
+                                        <button onClick={() => onAddMissingToWishlist(missingText, { category: g.category })}
                                           className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-stone-900 hover:bg-stone-700 text-white rounded-full transition-colors">
                                           <Heart size={10} strokeWidth={1.5} /> Wishlist
                                         </button>

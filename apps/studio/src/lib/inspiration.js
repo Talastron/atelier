@@ -54,7 +54,12 @@ export function wishlistCategoryFor(garmentCategory) {
  * from, so leaving a rejected match in place there would show "✓ In your
  * wardrobe" on a garment the verdict above it counts as missing.
  *
- * Returns { garments, wardrobeMatchIds, missingPieces }.
+ * Returns { garments, wardrobeMatchIds, missingPieces, missingCount }.
+ *
+ * `missingCount` counts unmatched GARMENTS; `missingPieces` collects the
+ * suggestion text for them, and a garment can be missing without yielding any
+ * usable text. Counting the text would let a garment render as "◯ Missing from
+ * wardrobe" while the verdict above it counted that garment as owned.
  */
 export function normalizeInspirationGarments(rawGarments, items = []) {
   const list = Array.isArray(rawGarments) ? rawGarments : [];
@@ -63,6 +68,7 @@ export function normalizeInspirationGarments(rawGarments, items = []) {
   const garments = [];
   const wardrobeMatchIds = [];
   const missingPieces = [];
+  let missingCount = 0;
 
   for (const g of list) {
     if (!g || typeof g !== 'object') continue;
@@ -76,6 +82,9 @@ export function normalizeInspirationGarments(rawGarments, items = []) {
       const better = cleanSuggestion(g.betterMatch);
       garments.push({
         ...g,
+        // Cleaned on this branch too — the card renders buyingNote verbatim as
+        // the difference note, so a model-written "N/A" would read as advice.
+        buyingNote: cleanSuggestion(g.buyingNote),
         betterMatch: better && norm(better) !== norm(g.description) ? better : null,
       });
       wardrobeMatchIds.push(g.matchedItemId);
@@ -90,8 +99,9 @@ export function normalizeInspirationGarments(rawGarments, items = []) {
       buyingNote: note,
       betterMatch: null, // a missing garment's suggestion IS its buyingNote
     });
+    missingCount += 1;
     if (note) missingPieces.push(note);
   }
 
-  return { garments, wardrobeMatchIds: [...new Set(wardrobeMatchIds)], missingPieces };
+  return { garments, wardrobeMatchIds: [...new Set(wardrobeMatchIds)], missingPieces, missingCount };
 }

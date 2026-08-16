@@ -148,11 +148,15 @@ export async function writeRemoteDailyBrief(uid, brief) {
   try {
     const { db } = await import('./firebase.js');
     const { doc, setDoc } = await import('firebase/firestore');
-    await setDoc(doc(db, 'users', uid, 'state', 'dailyBrief'), {
+    // Capped wait: offline, a bare setDoc await never settles (it doesn't
+    // reject — the catch below is no protection) and would hold the compose
+    // flow that awaits this. The queued write still syncs on reconnect.
+    const { settleWhenLocallyWritten } = await import('./lib/persist.js');
+    await settleWhenLocallyWritten(setDoc(doc(db, 'users', uid, 'state', 'dailyBrief'), {
       ...brief,
       dateKey: todayKey(),
       savedAt: Date.now(),
-    });
+    }));
   } catch {
     // Non-fatal: the local cache still works; we just miss cross-device sync.
   }
@@ -180,13 +184,15 @@ export async function writeRemoteRecentBases(uid, list) {
   try {
     const { db } = await import('./firebase.js');
     const { doc, setDoc } = await import('firebase/firestore');
-    await setDoc(doc(db, 'users', uid, 'state', 'dailyBriefHistory'), {
+    // Same capped wait as writeRemoteDailyBrief, same reason.
+    const { settleWhenLocallyWritten } = await import('./lib/persist.js');
+    await settleWhenLocallyWritten(setDoc(doc(db, 'users', uid, 'state', 'dailyBriefHistory'), {
       // Normalize on the way in as well as out: the read path sanitizes remote
       // data, and this keeps a careless caller from persisting an unbounded or
       // malformed list. mergeRecent is pure, so this is free.
       recent: mergeRecent(list),
       savedAt: Date.now(),
-    });
+    }));
   } catch {
     // Non-fatal: this device's local history still works.
   }

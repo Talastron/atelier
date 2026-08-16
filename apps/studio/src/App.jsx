@@ -567,6 +567,23 @@ function DigitalWardrobe() {
     );
   }, [isOwner]);
 
+  // Batched writes carry the same offline hazard as a single setDoc:
+  // batch.commit() resolves only when the server acknowledges it, and offline
+  // it never settles at all — so awaiting it directly strands whichever
+  // spinner is waiting on the action. Returns true when the server confirmed,
+  // false when the write is committed locally and still queued. See
+  // lib/persist.js.
+  const runWrite = async (writePromise, label) => {
+    const { synced } = await settleWhenLocallyWritten(writePromise, {
+      onLateError: (err) => {
+        console.error(`[wardrobe] ${label} rejected after the UI moved on`, err);
+        toast.show(`${label} didn't save — ${err?.message || 'please try again'}`, { kind: 'error', duration: 7000 });
+      },
+    });
+    return synced;
+  };
+  const OFFLINE_SUFFIX = ' · syncing when you\'re back online';
+
   const handleAddItem = async (newItem) => {
     if (demoMode) {
       // Local-state only; visitor's changes evaporate on refresh / reset.
@@ -667,8 +684,9 @@ function DigitalWardrobe() {
       if (!item) continue;
       batch.set(doc(userItemsRef(user.uid), id), { ...item, ...partial });
     }
-    await batch.commit();
-    toast.show(`Updated ${ids.length} item${ids.length === 1 ? '' : 's'}`, { kind: 'success' });
+    const synced = await runWrite(batch.commit(), `Update of ${ids.length} item${ids.length === 1 ? '' : 's'}`);
+    const label = `Updated ${ids.length} item${ids.length === 1 ? '' : 's'}`;
+    toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleBulkDeleteItems = async (ids) => {
     if (!user || !ids.length) return;
@@ -679,16 +697,18 @@ function DigitalWardrobe() {
       if (!item) continue;
       batch.set(doc(userItemsRef(user.uid), id), { ...item, deletedAt: now });
     }
-    await batch.commit();
-    toast.show(`Moved ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash`, { kind: 'default' });
+    const synced = await runWrite(batch.commit(), `Move of ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash`);
+    const label = `Moved ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash`;
+    toast.show(synced ? label : label + OFFLINE_SUFFIX, { kind: 'default', duration: synced ? undefined : 5000 });
   };
 
   const handleBulkAddItems = async (newItems) => {
     if (!user || !newItems.length) return;
     const batch = writeBatch(db);
     for (const item of newItems) batch.set(doc(userItemsRef(user.uid), item.id), item);
-    await batch.commit();
-    toast.show(`${newItems.length} item${newItems.length === 1 ? '' : 's'} added from receipt`, { kind: 'success' });
+    const synced = await runWrite(batch.commit(), `Import of ${newItems.length} item${newItems.length === 1 ? '' : 's'}`);
+    const label = `${newItems.length} item${newItems.length === 1 ? '' : 's'} added from receipt`;
+    toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleDeleteItem = async (id) => {
     const item = items.find((i) => i.id === id);
@@ -1380,9 +1400,11 @@ function DigitalWardrobe() {
       touched++;
     }
     if (touched === 0) { toast.show('Already logged for today', { kind: 'default', eyebrow: 'NOTED' }); return; }
-    await batch.commit();
+    const synced = await runWrite(batch.commit(), `Wear log for ${outfit.name}`);
     haptic('success');
-    toast.show(`${outfit.name} · ${touched} ${touched === 1 ? 'piece' : 'pieces'}`, { kind: 'success', eyebrow: 'WORN' });
+    const wearLabel = `${outfit.name} · ${touched} ${touched === 1 ? 'piece' : 'pieces'}`;
+    toast.show(synced ? wearLabel : wearLabel + OFFLINE_SUFFIX,
+      synced ? { kind: 'success', eyebrow: 'WORN' } : { kind: 'default', eyebrow: 'WORN', duration: 5000 });
     // Also record the wear at the OUTFIT level (separate from per-item
     // wearHistory). The outfit's wearLog is what powers the "Worn N times"
     // counter on the detail view — without this, a wear without a photo
@@ -1397,27 +1419,33 @@ function DigitalWardrobe() {
         if (v) entry.verdict = v;
         if (occ) entry.occasion = occ;
         const nextLog = [...existingLog, entry].sort((a, b) => a.date.localeCompare(b.date));
-        await setDoc(doc(userOutfitsRef(user.uid), outfit.id), {
+        // Supplementary, so it must not hold the caller's spinner either — a
+        // catch alone doesn't cover an offline write, which never rejects.
+        await runWrite(setDoc(doc(userOutfitsRef(user.uid), outfit.id), {
           ...outfit,
           wearLog: nextLog,
-        });
+        }), `Wear count for ${outfit.name}`);
       }
     } catch (e) {
       console.warn('[outfit-wear-log] failed to write outfit-level wearLog:', e?.message);
       // Non-blocking — per-item wears already committed; outfit-level is supplementary
     }
-    // Fire-and-forget Gemini narration. Won't block the wear log.
-    try {
-      const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
-      const recentLog = pieces.flatMap((p) => (itemWearHistory(p) || []).map((d) => ({ date: d, name: p.name }))).slice(-5);
-      const line = await narrateWearWithGemini({ outfit, items, recentLog, weather });
-      // Longer than the routine confirmation toasts (default 2.8s) — this is
-      // a one-off styling compliment worth actually reading, not a status
-      // ping, and it's the only toast left in this flow once the wear is
-      // logged (the redundant "Logged for today" toast at the call site
-      // was removed so this doesn't have to compete for attention).
-      if (line) toast.show(line, { kind: 'default', duration: 9000 });
-    } catch { /* AI offline — no problem */ }
+    // Gemini narration, genuinely fire-and-forget. Awaiting it here made the
+    // caller's spinner ("Wear this" on Today) wait out a full AI round-trip on
+    // every wear, online or off, despite the comment claiming otherwise.
+    (async () => {
+      try {
+        const weather = (() => { try { return JSON.parse(localStorage.getItem('atelier-weather') || 'null')?.data; } catch { return null; } })();
+        const recentLog = pieces.flatMap((p) => (itemWearHistory(p) || []).map((d) => ({ date: d, name: p.name }))).slice(-5);
+        const line = await narrateWearWithGemini({ outfit, items, recentLog, weather });
+        // Longer than the routine confirmation toasts (default 2.8s) — this is
+        // a one-off styling compliment worth actually reading, not a status
+        // ping, and it's the only toast left in this flow once the wear is
+        // logged (the redundant "Logged for today" toast at the call site
+        // was removed so this doesn't have to compete for attention).
+        if (line) toast.show(line, { kind: 'default', duration: 9000 });
+      } catch { /* AI offline — no problem */ }
+    })();
   };
   const handleSetWearNote = async (item, dateISO, note) => {
     if (!user) return;

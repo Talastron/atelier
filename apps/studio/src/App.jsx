@@ -52,6 +52,8 @@ import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from
 import { parseReceiptText } from './lib/receipts.js';
 import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
+import { settleWhenLocallyWritten, docTooLargeMessage } from './lib/persist.js';
+import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
@@ -575,7 +577,26 @@ function DigitalWardrobe() {
       return;
     }
     if (!user) return;
-    await setDoc(doc(userItemsRef(user.uid), newItem.id), newItem);
+    // Never block the save UI on a server acknowledgement. With offline
+    // persistence the write below is committed locally straight away, but its
+    // promise only resolves once the server acks — and offline it never
+    // resolves at all, which used to leave the Add Item modal pinned on
+    // "Saving…" with the item already safely queued. See lib/persist.js.
+    const { synced } = await settleWhenLocallyWritten(
+      setDoc(doc(userItemsRef(user.uid), newItem.id), newItem),
+      {
+        onLateError: (err) => {
+          console.error('[wardrobe] item write rejected after the save UI closed', err);
+          toast.show(
+            `"${newItem.name || 'Item'}" didn't save — ${err?.message || 'please try again'}`,
+            { kind: 'error', duration: 7000 }
+          );
+        },
+      }
+    );
+    if (!synced) {
+      toast.show('Saved on this device · syncing when you\'re back online', { kind: 'default', duration: 5000 });
+    }
 
     // Fire-and-forget rehost: if any image is still an external URL (not a
     // data URL), copy it into inline data in the background. The initial save
@@ -612,6 +633,17 @@ function DigitalWardrobe() {
             }
           }
           if (changed) {
+            // The rehost runs AFTER the save-time size check and swaps each
+            // external URL for a data URL up to 150 KB — more than the headroom
+            // the guard leaves. Re-check before writing, or an item that saved
+            // fine gets pushed over the ceiling by a background patch whose
+            // rejection nobody ever sees. Keeping the external URLs is exactly
+            // the graceful degradation this block already falls back to.
+            const tooLarge = docTooLargeMessage(patch, 'item');
+            if (tooLarge) {
+              console.warn('[rehost] skipped patch for item', newItem.id, '—', tooLarge);
+              return;
+            }
             await setDoc(doc(userItemsRef(uid), newItem.id), patch);
             console.log('[rehost] patched item', newItem.id, 'with', externalRefs.length, 'rehosted image(s)');
           }
@@ -757,10 +789,32 @@ function DigitalWardrobe() {
       return;
     }
     if (!user) return;
-    await setDoc(doc(userOutfitsRef(user.uid), outfit.id), outfit);
+    // No size guard here, unlike handleAddItem: a look's heaviest field is its
+    // worn photos, capped at 6 × 80 KB ≈ 480 KB — half the ceiling. Throwing on
+    // size would buy nothing real and would cost something: the favourite,
+    // rename, tag and remove-photo call sites neither await nor catch this, so
+    // a throw there would be a silent no-op rather than a message.
+    //
+    // Same offline hazard as handleAddItem: setDoc resolves only on a server
+    // acknowledgement, so awaiting it directly strands every "Saving…" state
+    // that calls through here — TodayView's "Save as a Look" most visibly.
+    // See lib/persist.js.
+    const { synced } = await settleWhenLocallyWritten(
+      setDoc(doc(userOutfitsRef(user.uid), outfit.id), outfit),
+      {
+        onLateError: (err) => {
+          console.error('[lookbook] outfit write rejected after the save UI closed', err);
+          toast.show(
+            `"${outfit.name || 'Look'}" didn't save — ${err?.message || 'please try again'}`,
+            { kind: 'error', duration: 7000 }
+          );
+        },
+      }
+    );
     // Capsule generator handles its own summary toast — don't spam per-look here.
     if (!outfit.capsule) {
-      toast.show(outfit.name, { kind: 'success', eyebrow: 'SAVED' });
+      if (synced) toast.show(outfit.name, { kind: 'success', eyebrow: 'SAVED' });
+      else toast.show(`${outfit.name} · syncing when you're back online`, { kind: 'default', eyebrow: 'SAVED HERE', duration: 5000 });
     }
   };
   const handleDeleteOutfit = async (id) => {
@@ -1997,20 +2051,25 @@ function DigitalWardrobe() {
                 setSelectedInspirationId(null);
                 setOpenOutfitId(outfit.id);
               }}
-              onAddMissingToWishlist={async (piece) => {
+              onAddMissingToWishlist={async (piece, { category = '', upgradeFor = '' } = {}) => {
                 const ins = selectedInspiration;
+                const fromInspiration = ins.caption ? `From inspiration: ${ins.caption}` : 'From an inspiration';
                 const newItem = {
                   id: newId(),
                   name: piece,
                   brand: '',
                   price: 0,
-                  category: 'Tops',
+                  // File it under the garment's own category rather than always
+                  // Tops — a suggested bag landing in Tops is a chore to fix.
+                  category: wishlistCategoryFor(category),
                   subCategory: '',
                   status: 'wishlist',
                   seasons: [], styles: [], images: ins.image ? [ins.image] : [], colors: [], care: [], materials: [],
                   description: '',
                   sourceUrl: '',
-                  wishlistReason: ins.caption ? `From inspiration: ${ins.caption}` : 'From an inspiration',
+                  wishlistReason: upgradeFor
+                    ? `A closer match than your ${upgradeFor} · ${fromInspiration}`
+                    : fromInspiration,
                   inspirationId: ins.id,
                   createdAt: new Date().toISOString(),
                 };
@@ -2942,6 +3001,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       for (const [k, v] of Object.entries(raw)) {
         if (v !== undefined && k !== 'imageUrl') payload[k] = v;
       }
+      // Catch an oversized doc here rather than letting Firestore reject it
+      // minutes later, once the queued write finally reaches the server and
+      // the user has long since been told the item was saved.
+      const tooLarge = docTooLargeMessage(payload, 'item');
+      if (tooLarge) { setError(tooLarge); return; }
       await onSave(payload);
     } catch (err) {
       console.error('[wardrobe] item save failed:', err);
@@ -6235,6 +6299,33 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                   {g.buyingNote && (
                                     <p className="w-full text-[11px] text-stone-400 italic mt-1">{g.buyingNote}</p>
                                   )}
+                                  {/* Owning something close enough isn't the end of the
+                                      advice — name the piece that would wear this look
+                                      more faithfully, and make it actionable. */}
+                                  {g.betterMatch && (
+                                    <div className="w-full mt-2 pt-2.5 border-t border-stone-100">
+                                      <p className="text-[9px] tracking-widest uppercase text-stone-400">A closer match would be</p>
+                                      <p className="text-[12px] text-stone-700 leading-snug mt-1">{g.betterMatch}</p>
+                                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                                        {onAddMissingToWishlist && (
+                                          <button onClick={() => onAddMissingToWishlist(g.betterMatch, { category: g.category, upgradeFor: matchedItem.name })}
+                                            className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-300 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
+                                            <Heart size={10} strokeWidth={1.5} /> Wishlist
+                                          </button>
+                                        )}
+                                        <a href={googleShopUrl(g.betterMatch)} target="_blank" rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                          <Store size={10} strokeWidth={1.5} /> Shop
+                                        </a>
+                                        {yourShopsUrl(g.betterMatch) && (
+                                          <a href={yourShopsUrl(g.betterMatch)} target="_blank" rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                            <Bookmark size={10} strokeWidth={1.5} /> Your shops
+                                          </a>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="mt-1.5">
@@ -6245,7 +6336,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                   {missingText && (
                                     <div className="flex flex-wrap gap-1.5 mt-2.5">
                                       {onAddMissingToWishlist && (
-                                        <button onClick={() => onAddMissingToWishlist(missingText)}
+                                        <button onClick={() => onAddMissingToWishlist(missingText, { category: g.category })}
                                           className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-stone-900 hover:bg-stone-700 text-white rounded-full transition-colors">
                                           <Heart size={10} strokeWidth={1.5} /> Wishlist
                                         </button>

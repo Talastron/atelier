@@ -584,6 +584,23 @@ function DigitalWardrobe() {
   };
   const OFFLINE_SUFFIX = ' · syncing when you\'re back online';
 
+  // Shares are the one write where "queued locally" is NOT success: the link
+  // points at a /public doc the recipient reads from the SERVER, so until the
+  // write lands, the link is dead in their hands. We still hand the link over —
+  // the queued write ships the moment connectivity returns — but say so
+  // plainly instead of implying it works right now.
+  const runShareWrite = async (writePromise) => {
+    const { synced } = await settleWhenLocallyWritten(writePromise, {
+      onLateError: (err) => {
+        console.error('[share] share doc rejected after the link was handed out', err);
+        toast.show(`That share link never published — ${err?.message || 'create it again'}`, { kind: 'error', duration: 8000 });
+      },
+    });
+    if (!synced) {
+      toast.show("You look offline — this link will start working once you're back online", { kind: 'default', duration: 6500 });
+    }
+  };
+
   const handleAddItem = async (newItem) => {
     if (demoMode) {
       // Local-state only; visitor's changes evaporate on refresh / reset.
@@ -720,7 +737,7 @@ function DigitalWardrobe() {
     }
     if (!user) return;
     // Soft delete: 30-day grace period (restorable from Profile → Trash).
-    await setDoc(doc(userItemsRef(user.uid), id), { ...item, deletedAt: new Date().toISOString() });
+    await runWrite(setDoc(doc(userItemsRef(user.uid), id), { ...item, deletedAt: new Date().toISOString() }), 'Move to Trash');
     toast.show('Moved to Trash · restore from Profile', { kind: 'default' });
   };
   const handleRestoreItem = async (id) => {
@@ -728,12 +745,12 @@ function DigitalWardrobe() {
     const item = items.find((i) => i.id === id);
     if (!item) return;
     const { deletedAt, ...rest } = item;
-    await setDoc(doc(userItemsRef(user.uid), id), rest);
+    await runWrite(setDoc(doc(userItemsRef(user.uid), id), rest), 'Restore');
     toast.show('Restored to your wardrobe', { kind: 'success' });
   };
   const handleHardDeleteItem = async (id) => {
     if (!user) return;
-    await deleteDoc(doc(userItemsRef(user.uid), id));
+    await runWrite(deleteDoc(doc(userItemsRef(user.uid), id)), 'Permanent delete');
     toast.show('Permanently removed', { kind: 'default' });
   };
 
@@ -843,7 +860,7 @@ function DigitalWardrobe() {
       return;
     }
     if (!user) return;
-    await deleteDoc(doc(userOutfitsRef(user.uid), id));
+    await runWrite(deleteDoc(doc(userOutfitsRef(user.uid), id)), 'Look removal');
   };
   // Persist the user's Lookbook order. Receives the outfits in their NEW
   // sequence; assigns sequential `order` values and writes them back in
@@ -862,11 +879,11 @@ function DigitalWardrobe() {
     }
     if (!user) return;
     try {
-      await Promise.all(orderedIds.map((id, idx) => {
+      await runWrite(Promise.all(orderedIds.map((id, idx) => {
         const o = outfits.find((x) => x.id === id);
         if (!o || o.order === idx) return null;
         return setDoc(doc(userOutfitsRef(user.uid), id), { ...o, order: idx });
-      }).filter(Boolean));
+      }).filter(Boolean)), 'Lookbook order');
     } catch (err) {
       toast.show('Could not save the new order', { kind: 'error' });
     }
@@ -883,7 +900,7 @@ function DigitalWardrobe() {
       cover: null,
       createdAt: new Date().toISOString(),
     };
-    await setDoc(doc(userCollectionsRef(user.uid), id), data);
+    await runWrite(setDoc(doc(userCollectionsRef(user.uid), id), data), 'Collection');
     return id;
   };
 
@@ -891,35 +908,35 @@ function DigitalWardrobe() {
     if (!user) return;
     const coll = collections.find((c) => c.id === collectionId);
     if (!coll || coll.outfitIds.includes(outfitId)) return;
-    await setDoc(doc(userCollectionsRef(user.uid), collectionId), {
+    await runWrite(setDoc(doc(userCollectionsRef(user.uid), collectionId), {
       ...coll,
       outfitIds: [...coll.outfitIds, outfitId],
-    });
+    }), 'Collection update');
   };
 
   const handleRemoveOutfitFromCollection = async (collectionId, outfitId) => {
     if (!user) return;
     const coll = collections.find((c) => c.id === collectionId);
     if (!coll) return;
-    await setDoc(doc(userCollectionsRef(user.uid), collectionId), {
+    await runWrite(setDoc(doc(userCollectionsRef(user.uid), collectionId), {
       ...coll,
       outfitIds: coll.outfitIds.filter((id) => id !== outfitId),
-    });
+    }), 'Collection update');
   };
 
   const handleRenameCollection = async (collectionId, name) => {
     if (!user || !name?.trim()) return;
     const coll = collections.find((c) => c.id === collectionId);
     if (!coll) return;
-    await setDoc(doc(userCollectionsRef(user.uid), collectionId), {
+    await runWrite(setDoc(doc(userCollectionsRef(user.uid), collectionId), {
       ...coll,
       name: name.trim(),
-    });
+    }), 'Collection rename');
   };
 
   const handleDeleteCollection = async (collectionId) => {
     if (!user) return;
-    await deleteDoc(doc(userCollectionsRef(user.uid), collectionId));
+    await runWrite(deleteDoc(doc(userCollectionsRef(user.uid), collectionId)), 'Collection removal');
   };
 
   // Snapshot a collection of outfits as a lookbook. Same /public/{shareId}
@@ -953,7 +970,7 @@ function DigitalWardrobe() {
       sharedByName: user.displayName || 'Atelier',
       looks,
     };
-    await setDoc(publicShareDoc(shareId), snapshot);
+    await runShareWrite(setDoc(publicShareDoc(shareId), snapshot));
     const url = `${window.location.origin}/?share=${shareId}`;
     setShareTarget({ url, title, kind: 'lookbook' });
     return url;
@@ -990,7 +1007,7 @@ function DigitalWardrobe() {
       sharedByName: user.displayName || 'Atelier',
       pieces,
     };
-    await setDoc(publicShareDoc(shareId), snapshot);
+    await runShareWrite(setDoc(publicShareDoc(shareId), snapshot));
     const url = `${window.location.origin}/?share=${shareId}`;
     setShareTarget({ url, title, kind: 'outfit' });
     return { url, cardImageUrl };
@@ -1047,7 +1064,7 @@ function DigitalWardrobe() {
         toast.show('Photo is too large to share. Try a different item or re-add the photo at lower quality.', { kind: 'error', duration: 6000 });
         return null;
       }
-      await setDoc(publicShareDoc(shareId), snapshot);
+      await runShareWrite(setDoc(publicShareDoc(shareId), snapshot));
     } catch (err) {
       console.error('[share] failed to save item share doc', err);
       toast.show(`Could not create share link: ${err?.message || 'unknown error'}`, { kind: 'error', duration: 6000 });
@@ -1223,32 +1240,37 @@ function DigitalWardrobe() {
 
   const handleSaveProfile = async (newMeasurements) => {
     if (!user) return;
-    await setDoc(userProfileDoc(user.uid), newMeasurements);
+    await runWrite(setDoc(userProfileDoc(user.uid), newMeasurements), 'Profile save');
   };
   const handleSaveShop = async (shop) => {
     if (!user) return;
-    await setDoc(doc(userShopsRef(user.uid), shop.id), shop);
+    await runWrite(setDoc(doc(userShopsRef(user.uid), shop.id), shop), 'Shop save');
   };
   const handleDeleteShop = async (id) => {
     if (!user) return;
-    await deleteDoc(doc(userShopsRef(user.uid), id));
+    await runWrite(deleteDoc(doc(userShopsRef(user.uid), id)), 'Shop removal');
   };
   const handleAddInvite = async (rawEmail, displayName = '') => {
     const email = rawEmail?.trim().toLowerCase();
     if (!email || !email.includes('@')) throw new Error('Please enter a valid email.');
-    await setDoc(allowlistDoc(email), {
+    const synced = await runWrite(setDoc(allowlistDoc(email), {
       addedBy: user.email,
       addedAt: new Date().toISOString(),
       ...(displayName ? { displayName } : {}),
-    });
+    }), `Invite for ${email}`);
+    // An allowlist entry only admits the friend once it reaches the server —
+    // like a share link, a locally-queued invite is not yet usable.
+    if (!synced) {
+      toast.show("Invite saved — it will activate once you're back online", { kind: 'default', duration: 6000 });
+    }
   };
   const handleRemoveInvite = async (email) => {
     if (OWNER_EMAILS.includes(email)) throw new Error('Owners cannot be revoked from the allowlist.');
-    await deleteDoc(allowlistDoc(email));
+    await runWrite(deleteDoc(allowlistDoc(email)), `Invite removal for ${email}`);
   };
   const handleSaveAIHistory = async (entry) => {
     if (!user) return;
-    await setDoc(doc(userAIHistoryRef(user.uid), entry.id), entry);
+    await runWrite(setDoc(doc(userAIHistoryRef(user.uid), entry.id), entry), 'Style note');
     // Auto-prune to keep most recent 50
     if (aiHistory.length >= 50) {
       const sorted = [...aiHistory].sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
@@ -1260,11 +1282,11 @@ function DigitalWardrobe() {
   };
   const handleDeleteAIHistory = async (id) => {
     if (!user) return;
-    await deleteDoc(doc(userAIHistoryRef(user.uid), id));
+    await runWrite(deleteDoc(doc(userAIHistoryRef(user.uid), id)), 'Style note removal');
   };
   const handleToggleAIHistoryFavorite = async (entry) => {
     if (!user) return;
-    await setDoc(doc(userAIHistoryRef(user.uid), entry.id), { ...entry, favorite: !entry.favorite });
+    await runWrite(setDoc(doc(userAIHistoryRef(user.uid), entry.id), { ...entry, favorite: !entry.favorite }), 'Favourite');
   };
   // meta is an optional plain object written verbatim into the schedule doc.
   // TravelPlannerModal uses it to stamp trip metadata onto each scheduled day:
@@ -1275,14 +1297,14 @@ function DigitalWardrobe() {
   const handleScheduleOutfit = async (dateISO, outfitId, eventName = '', meta = null) => {
     if (!user) return;
     if (!outfitId) {
-      await deleteDoc(userScheduleDoc(user.uid, dateISO));
+      await runWrite(deleteDoc(userScheduleDoc(user.uid, dateISO)), 'Schedule removal');
       toast.show('Removed from schedule', { kind: 'default' });
     } else {
       const trimmed = (eventName || '').trim();
       const doc = { outfitId, scheduledAt: new Date().toISOString() };
       if (trimmed) doc.eventName = trimmed;
       if (meta && typeof meta === 'object') Object.assign(doc, meta);
-      await setDoc(userScheduleDoc(user.uid, dateISO), doc);
+      await runWrite(setDoc(userScheduleDoc(user.uid, dateISO), doc), 'Schedule');
       toast.show(trimmed ? `Scheduled · ${trimmed}` : 'Scheduled', { kind: 'success' });
     }
   };
@@ -1293,23 +1315,26 @@ function DigitalWardrobe() {
   // snapshot updates.
   const handleDeleteTrip = async (trip) => {
     if (!user || !trip?.days?.length) return;
-    await Promise.all(trip.days.map((d) => deleteDoc(userScheduleDoc(user.uid, d.dateISO))));
+    await runWrite(Promise.all(trip.days.map((d) => deleteDoc(userScheduleDoc(user.uid, d.dateISO)))), `Trip removal · ${trip.name}`);
     toast.show(`Trip removed · ${trip.name}`, { kind: 'default' });
   };
 
   const handleSaveInspiration = async (insp) => {
     if (!user) return;
-    await setDoc(doc(userInspirationRef(user.uid), insp.id), insp);
+    await runWrite(setDoc(doc(userInspirationRef(user.uid), insp.id), insp), 'Inspiration save');
   };
   const handleDeleteInspiration = async (id) => {
     if (!user) return;
-    await deleteDoc(doc(userInspirationRef(user.uid), id));
+    await runWrite(deleteDoc(doc(userInspirationRef(user.uid), id)), 'Inspiration removal');
     toast.show('Inspiration removed', { kind: 'default' });
   };
   const handleAnalyzeInspiration = async (insp) => {
     if (!user) return;
     const analysis = await analyzeInspirationWithGemini({ imageDataUrl: insp.image, items: ownedItems });
-    await setDoc(doc(userInspirationRef(user.uid), insp.id), { ...insp, analysis });
+    // The AI call above needs the network, but on a flaky connection it can
+    // succeed moments before the write stalls — without the wrapper that
+    // pins the "Analysing…" spinner after the analysis already finished.
+    await runWrite(setDoc(doc(userInspirationRef(user.uid), insp.id), { ...insp, analysis }), 'Analysis save');
     toast.show('Analysis complete', { kind: 'success' });
   };
 

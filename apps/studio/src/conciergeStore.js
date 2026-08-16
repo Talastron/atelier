@@ -26,6 +26,7 @@
 
 import { db, auth } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { settleWhenLocallyWritten } from './lib/persist.js';
 
 const CURRENT_THREAD_ID = 'current'; // v1: one active thread per user
 
@@ -47,11 +48,17 @@ export async function loadCurrentThread() {
   }
 }
 
+// Both writers are awaited inside the Concierge send flow — the user-message
+// save runs BEFORE the AI call — so they must always settle. With offline
+// persistence a bare setDoc await never resolves offline (it doesn't reject,
+// so the catch is no protection), which froze the composer before the AI
+// could even produce its "offline" error. settleWhenLocallyWritten caps the
+// wait; the queued write still syncs on reconnect.
 export async function saveCurrentThread(messages) {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
   try {
-    await setDoc(
+    await settleWhenLocallyWritten(setDoc(
       threadRef(uid),
       {
         messages,
@@ -59,7 +66,7 @@ export async function saveCurrentThread(messages) {
         createdAt: serverTimestamp(), // setDoc with merge keeps the original if already set
       },
       { merge: true }
-    );
+    ));
   } catch (err) {
     console.warn('[concierge] save failed:', err?.message || err);
   }
@@ -69,7 +76,7 @@ export async function clearCurrentThread() {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
   try {
-    await setDoc(threadRef(uid), { messages: [], updatedAt: serverTimestamp() }, { merge: true });
+    await settleWhenLocallyWritten(setDoc(threadRef(uid), { messages: [], updatedAt: serverTimestamp() }, { merge: true }));
   } catch (err) {
     console.warn('[concierge] clear failed:', err?.message || err);
   }

@@ -18,6 +18,7 @@ import { useToast } from "../ui/toast.jsx";
 import { useEscapeKey } from "../ui/hooks.js";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
+import { noteIsStale } from "../lib/lookNote.js";
 import AIProgressModal from "../components/AIProgressModal.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
 import DiaryView from "./Calendar.jsx";
@@ -495,16 +496,28 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
     // wornPhotos/favorite/reasoning that we shouldn't blow away.
     const orig = editingId ? outfits.find((o) => o.id === editingId) : null;
     const savedId = editingId || newId();
-    await saveOutfit({
+    // Refuse to persist a description that names a garment the look no longer
+    // contains. Without this the falsehood outlives the edit: it is written to
+    // Firestore and follows the look into the Lookbook for good. Re-checked
+    // here against `picked` rather than reusing aiNoteStale so the fallback to
+    // the original outfit's reasoning is held to the same standard.
+    const candidateNote = aiNote || orig?.reasoning || null;
+    const noteToSave = noteIsStale(candidateNote, picked.map((p) => p.id)) ? null : candidateNote;
+    const payload = {
       ...(orig || {}),
       id: savedId,
       name: outfitName,
       itemIds: picked.map((p) => p.id),
       createdAt: orig?.createdAt || new Date().toISOString(),
-      ...(aiNote ? { reasoning: aiNote } : (orig?.reasoning ? { reasoning: orig.reasoning } : {})),
+      ...(noteToSave ? { reasoning: noteToSave } : {}),
       ...(customIntent.trim() || styleIntent !== 'Any' ? { intent: customIntent.trim() || styleIntent } : {}),
       ...(aiTags && aiTags.length > 0 ? { tags: aiTags } : (orig?.tags ? { tags: orig.tags } : {})),
-    });
+    };
+    // `...orig` above re-introduces the original reasoning, so dropping the key
+    // has to happen after the spread — a conditional spread alone would leave
+    // the stale text in place when editing a saved look.
+    if (!noteToSave) delete payload.reasoning;
+    await saveOutfit(payload);
     setOutfitName(''); setCurrentOutfit(emptyOutfit());
     setAiNote(null);
     setAiTags([]);
@@ -637,6 +650,16 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
   const [aiNote, setAiNote] = useState(null);
   const [aiTags, setAiTags] = useState([]);
   const [aiConfidence, setAiConfidence] = useState(null);
+
+  // The note is prose about a specific set of garments. Swapping a piece leaves
+  // it describing something that is no longer in the look — and because the
+  // <<item:…>> markers still resolve, the chip renders the departed garment as
+  // though it were present. Recomputed from the live composition rather than
+  // tracked at each setAiNote call site, so no future path can forget to.
+  const currentItemIds = OUTFIT_SLOTS
+    .flatMap((s) => slotItems(currentOutfit[s.toLowerCase()]))
+    .map((p) => p.id);
+  const aiNoteStale = noteIsStale(aiNote, currentItemIds);
   const [abComparing, setAbComparing] = useState(false);
   const [abPair, setAbPair] = useState(null); // { a: { outfit, reasoning, confidence }, b: {...} }
 
@@ -1100,10 +1123,21 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           {aiNote && (
             <div className="bg-stone-900 text-white rounded-2xl p-4 text-sm leading-relaxed animate-in fade-in duration-300">
               <div className="flex items-start gap-3">
-                <Sparkles size={14} strokeWidth={1.5} className="shrink-0 mt-0.5 text-brass-300" />
-                <p className="flex-1 italic">{renderTextWithChips(aiNote, { items, onOpenItem })}</p>
+                <Sparkles size={14} strokeWidth={1.5} className={`shrink-0 mt-0.5 ${aiNoteStale ? 'text-stone-500' : 'text-brass-300'}`} />
+                {/* Dimmed rather than hidden when stale: the note is still worth
+                    reading as the reasoning behind the look you started from —
+                    it just no longer describes what is on screen, and saying so
+                    is better than either asserting it or silently binning it. */}
+                <p className={`flex-1 italic ${aiNoteStale ? 'text-stone-400' : ''}`}>
+                  {renderTextWithChips(aiNote, { items, onOpenItem })}
+                </p>
                 <button onClick={() => setAiNote(null)} className="text-stone-400 hover:text-white shrink-0"><X size={14} /></button>
               </div>
+              {aiNoteStale && (
+                <p className="mt-3 ml-7 text-[10px] tracking-widest uppercase text-amber-300/90">
+                  You&rsquo;ve changed this look since the Concierge described it
+                </p>
+              )}
               {typeof aiConfidence === 'number' && (
                 <div className="mt-3 ml-7 flex items-center gap-2 text-[10px] tracking-widest uppercase">
                   <span className="text-stone-400">Confidence</span>

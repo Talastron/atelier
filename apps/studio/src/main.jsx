@@ -4,6 +4,7 @@ import './index.css';
 import App from './App.jsx';
 import MagicLinkComplete from './MagicLinkComplete.jsx';
 import ErrorBoundary from './ErrorBoundary.jsx';
+import UpdatePrompt from './UpdatePrompt.jsx';
 import { auth, isSignInWithEmailLink, isDemoMode } from './firebase.js';
 
 // Catch stray promise rejections that never reach a try/catch (e.g. a Firestore
@@ -43,6 +44,11 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
       {isMagicLink ? <MagicLinkComplete /> : <App />}
+      {/* Outside the view switch on purpose: a waiting update is worth
+          surfacing whichever screen is showing, and it must not be unmounted
+          by a route change. Inside ErrorBoundary so a failure here is caught
+          rather than taking down the app. */}
+      <UpdatePrompt />
     </ErrorBoundary>
   </StrictMode>
 );

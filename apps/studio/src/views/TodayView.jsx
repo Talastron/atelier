@@ -204,6 +204,28 @@ function DailyBriefCard({
     }
   }, [brief, items, uid]);
 
+  // A brief whose pieces no longer resolve AT ALL cannot be shown: the card
+  // would render a confident description of an outfit without displaying a
+  // single piece of it, and the item chips in that description would quietly
+  // degrade to plain text. The ids are usually fine — the pieces have been
+  // marked in the wash, moved to wishlist or deleted, and so dropped out of
+  // the owned-and-available list this card is given.
+  //
+  // Deliberately not behind validatedRef: availability changes long after the
+  // one-shot check above has run, which is how a brief goes bad mid-day. This
+  // cannot loop, because a recomposed brief is built from the pieces that are
+  // available right now.
+  useEffect(() => {
+    if (!brief || !(items?.length)) return;
+    const ids = brief.itemIds || [];
+    if (ids.length === 0) return;
+    const anyResolve = ids.some((id) => items.some((it) => it.id === id));
+    if (!anyResolve) {
+      clearDailyBrief(uid);
+      setBrief(null);
+    }
+  }, [brief, items, uid]);
+
   // Cross-device sync: if this device has no local brief for today, check the
   // Firestore-shared one. If another device already composed today's look,
   // adopt it (and cache locally) rather than composing a second, different one.
@@ -476,7 +498,7 @@ function DailyBriefCard({
           <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
           {/* Display name, not the raw listing: a caption this narrow used to
               clip "Straight-Leg Dark Wash Jeans" to "Straight-Leg Dark W…". */}
-          <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800" title={t.name}>{itemDisplayName(t)}</p>
+          <p className="mt-0.5 line-clamp-2 font-display text-[13px] leading-snug text-stone-800" title={t.name}>{itemDisplayName(t)}</p>
         </div>
       </button>
     );

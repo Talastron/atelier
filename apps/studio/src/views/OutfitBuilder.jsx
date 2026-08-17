@@ -35,6 +35,10 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   const wornPhoto = Array.isArray(outfit.wornPhotos) && outfit.wornPhotos.length > 0
     ? outfit.wornPhotos[outfit.wornPhotos.length - 1]?.image
     : null;
+  // Silhouette first, finishing last. A look of twelve pieces is not twelve
+  // equal things: the jacket, shirt, trouser and shoe are what it *is*, and
+  // the cuff, watch and sunglasses are how it is finished. The preview has
+  // room for four, so it spends them on the garments that define the look.
   const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
   const orderedPieces = [...resolvedItems].sort((a, b) => {
     const ai = SLOT_PRIORITY.indexOf(a.category);
@@ -42,7 +46,6 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   });
   const gridPieces = orderedPieces.slice(0, isHero ? 6 : 4);
-  const extraCount = Math.max(0, resolvedItems.length - gridPieces.length);
   // Hero gets landscape 16:10 (magazine-cover proportions) on desktop
   // where it spans 2 cols. On mobile (single col) it'd render SHORTER
   // than secondary portrait cards — defeating the "featured" treatment.
@@ -96,19 +99,12 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
                   const piece = gridPieces[slotIdx];
                   if (!piece) return <div key={slotIdx} aria-hidden="true" />;
-                  const lastSlot = isHero ? 5 : 3;
-                  const showExtra = slotIdx === lastSlot && extraCount > 0;
                   return (
                     <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
                       {itemImages(piece)[0] ? (
                         <ItemTileImage item={piece} alt={piece.name} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={24} strokeWidth={1} /></div>
-                      )}
-                      {showExtra && (
-                        <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[1px] flex items-center justify-center">
-                          <span className="font-display text-3xl text-white">+{extraCount}</span>
-                        </div>
                       )}
                     </div>
                   );

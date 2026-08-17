@@ -27,6 +27,8 @@ import Footer from '../components/Footer.astro';
 import ClosingMasthead from '../components/ClosingMasthead.astro';
 import { BrassRule } from '@atelier/ui';
 import { DeviceFrame } from '../components/preview/DeviceFrame.jsx';
+import { Toolkit } from '../components/studio/Toolkit.jsx';
+import SurfaceIndex from '../components/studio/SurfaceIndex.astro';
 import { ChevronRight, ArrowUpRight } from 'lucide-react';
 import { EDIT_URL } from '../config.ts';
 
@@ -87,6 +89,17 @@ const DEMO_URL = `${EDIT_URL}/?demo=1`;
         <ArrowUpRight size={14} strokeWidth={1.75} client:load />
       </a>
     </div>
+
+    {/* ── The Toolkit — six methods, each with a scroll-triggered micro-demo.
+        Sits after the embed because the visitor has just driven the studio
+        and is now asking what else is in it. `client:visible` rather than
+        client:load so six animating cards do not compete with the app in
+        the frame above for the main thread on first paint. ── */}
+    <Toolkit client:visible />
+
+    {/* ── Inside the Studio — the contents page: all nine surfaces named as
+        the app names them, one line each. Static Astro, zero JavaScript. ── */}
+    <SurfaceIndex />
 
     {/* Closing CTA — visitors who've just played with the preview are in
         the best frame of mind to subscribe. Lead them to the keys. */}

@@ -1,20 +1,34 @@
-// apps/marketing/src/components/Features.jsx
+// apps/marketing/src/components/studio/Toolkit.jsx
 //
 // The Toolkit — editorial spread of six methods. ALL six cards have
 // scroll-triggered micro-demos so the grid weight is equal: the bottom
 // row no longer reads as supporting features. Brass palette throughout
 // (no emerald). Hover lift on every card.
+//
+// Lives on /studio, beneath the embedded live app and above SurfaceIndex.
+// This was components/Features.jsx and sat on the home page, where it was
+// cut for reading SaaS-by-default in a column of editorial sections. That
+// judgement held there; it does not hold here, where the visitor has just
+// driven the real studio and is asking what else is in it. The six cards
+// go deep on the methods that persuade, and SurfaceIndex below names all
+// nine surfaces so nothing goes unmentioned.
+//
+// Two cards changed when it moved. "Add a piece, in seconds" and "A
+// lookbook, read-only" each duplicated a home-page section that already
+// does the job better at full width (WaysIn and ShareLooks). They gave
+// their places to Today and the Styling Studio, which nothing on the
+// site sold at all.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Pic } from '@atelier/ui';
 import {
+  Home,
   Camera,
   MapPin,
   TrendingUp,
   Sparkles,
-  BookOpen,
   CalendarDays,
-  Link2,
+  Wand2,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -33,18 +47,44 @@ const BrassRule = ({ width = 24 }) => (
   />
 );
 
+// Playback gate for the six demo loops. Returns two flags:
+//
+//   play    — start the timer choreography (scrolled into view, motion OK)
+//   settled — skip the choreography and render the finished frame
+//
+// `settled` is the reduced-motion path and it matters that it is a separate
+// flag rather than simply withholding `play`. Every demo starts from an
+// empty state and fills in on a timer, so a demo that is never played shows
+// dashed placeholders — the one frame that communicates nothing. Reduced
+// motion should mean "show me the result, don't dance", so each demo reads
+// `settled` and jumps straight to its last frame. Six cards animating at
+// once, directly beneath an iframe running the whole studio, is exactly the
+// case that browser setting exists for.
+//
+// The observer disconnects on first intersection instead of tracking
+// visibility both ways. The demos self-cycle once started, so a later
+// callback has nothing left to decide, and six live observers would mean
+// six callbacks on every scroll frame past this section.
 function useInView(ref, threshold = 0.3) {
-  const [inView, setInView] = useState(false);
+  const [play, setPlay] = useState(false);
+  const [settled, setSettled] = useState(false);
+
   useEffect(() => {
-    if (!ref.current) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold }
-    );
+    if (!ref.current) return undefined;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setSettled(true);
+      return undefined;
+    }
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setPlay(true);
+      obs.disconnect();
+    }, { threshold });
     obs.observe(ref.current);
     return () => obs.disconnect();
   }, [ref, threshold]);
-  return inView;
+
+  return { play, settled };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -133,43 +173,62 @@ function ToolkitCard({ icon: Icon, eyebrow, title, titleEm, description, demo })
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Card 1: Identify — restructured: image left (larger), chips right
+// Card 1: Today — the weather line resolves, then the day's look fills in
+// four slots and the stylist's note lands underneath. Same choreography the
+// hero uses at full size (compose → reveal → note), compressed to a card.
+// No confidence figure: the studio removed that in d4d9bf8 and the note is
+// what the daily brief actually shows.
 // ─────────────────────────────────────────────────────────────────────────
 
-const IDENTIFY_SAMPLES = [
+const TODAY_SAMPLES = [
   {
-    src: '/wardrobe/jasmin-coat.jpg',
-    chips: ['OUTERWEAR', 'WOOL BLEND', 'NAVY', '£269'],
+    weather: '18–24°C · Bright',
+    items: [
+      '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg',
+      '/wardrobe/gael-wool-blend-trousers.jpg',
+      '/wardrobe/suedette-2-part-block-heel-sandals.jpg',
+      '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
+    ],
+    note: 'Champagne silk over sharp tailoring, warmed by gold.',
   },
   {
-    src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
-    chips: ['JEWELLERY', 'GOLD VERMEIL', 'DELICATE', '£95'],
+    weather: '9–14°C · Rain later',
+    items: [
+      '/wardrobe/reg-classic-button-down-blouse.jpg',
+      '/wardrobe/gael-wool-blend-trousers.jpg',
+      '/wardrobe/jasmin-coat.jpg',
+      '/wardrobe/england-elektra-ladies-leather-gloves.jpg',
+    ],
+    note: 'Wool and a proper coat. Dressed for the walk, not the office.',
   },
 ];
 
-function IdentifyDemo() {
+function TodayDemo() {
   const ref = useRef(null);
-  const inView = useInView(ref);
+  const { play, settled } = useInView(ref);
   const [activeIdx, setActiveIdx] = useState(0);
   const [revealed, setRevealed] = useState(0);
   const timerRef = useRef([]);
 
   useEffect(() => {
-    if (!inView) return;
-    let cancelled = false;
-    const sample = IDENTIFY_SAMPLES[activeIdx];
+    const sample = TODAY_SAMPLES[activeIdx];
+    // Reduced motion: skip the reveal, show the composed look.
+    if (settled) { setRevealed(sample.items.length); return undefined; }
+    if (!play) return undefined;
 
+    let cancelled = false;
     setRevealed(0);
-    sample.chips.forEach((_, i) => {
+
+    sample.items.forEach((_, i) => {
       const t = setTimeout(() => {
         if (!cancelled) setRevealed(i + 1);
-      }, 500 + i * 380);
+      }, 600 + i * 320);
       timerRef.current.push(t);
     });
 
     const cycleTimer = setTimeout(() => {
-      if (!cancelled) setActiveIdx((i) => (i + 1) % IDENTIFY_SAMPLES.length);
-    }, 500 + sample.chips.length * 380 + 3000);
+      if (!cancelled) setActiveIdx((i) => (i + 1) % TODAY_SAMPLES.length);
+    }, 600 + sample.items.length * 320 + 4200);
     timerRef.current.push(cycleTimer);
 
     return () => {
@@ -177,72 +236,110 @@ function IdentifyDemo() {
       timerRef.current.forEach(clearTimeout);
       timerRef.current = [];
     };
-  }, [inView, activeIdx]);
+  }, [play, settled, activeIdx]);
 
-  const sample = IDENTIFY_SAMPLES[activeIdx];
+  const sample = TODAY_SAMPLES[activeIdx];
+  const complete = revealed >= sample.items.length;
 
   return (
-    <div ref={ref} className="flex gap-3.5 items-start">
+    <div ref={ref}>
+      {/* Weather strip — the studio's Today header in miniature */}
       <div
+        className="flex items-center gap-2 mb-2.5"
         style={{
-          width: 88,
-          aspectRatio: '3/4',
+          padding: '0.4rem 0.75rem',
+          background: 'var(--atelier-cream)',
+          border: '1px solid var(--atelier-stone-200)',
           borderRadius: 8,
-          overflow: 'hidden',
-          background: 'var(--atelier-stone-100)',
-          flexShrink: 0,
         }}
       >
-        <Pic
-          key={activeIdx}
-          src={sample.src}
-          alt=""
-          loading="lazy"
+        <span
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            animation: 'identify-image-in 600ms ease',
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: 'var(--atelier-brass-600)',
+            flexShrink: 0,
           }}
         />
+        <span
+          key={activeIdx}
+          style={{
+            fontSize: 8.5,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            fontWeight: 600,
+            color: 'var(--atelier-stone-500)',
+            animation: 'toolkit-fade 400ms ease',
+          }}
+        >
+          Today · {sample.weather}
+        </span>
       </div>
 
-      <div className="flex flex-col gap-1.5 flex-1 min-w-0 pt-1">
-        {sample.chips.map((chip, i) => {
-          const isOn = i < revealed;
+      <div className="grid grid-cols-4 gap-1.5">
+        {sample.items.map((src, i) => {
+          const isRevealed = i < revealed;
           return (
-            <span
+            <div
               key={`${activeIdx}-${i}`}
               style={{
-                display: 'inline-block',
-                fontSize: 9,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                color: isOn ? 'var(--atelier-stone-800)' : 'var(--atelier-stone-300)',
-                background: isOn ? '#ffffff' : 'transparent',
-                border: isOn
-                  ? '1px solid var(--atelier-stone-200)'
-                  : '1px dashed var(--atelier-stone-200)',
-                borderRadius: 999,
-                padding: '0.25rem 0.625rem',
-                alignSelf: 'flex-start',
-                opacity: isOn ? 1 : 0.45,
-                transition: 'all 320ms ease',
+                aspectRatio: '3/4',
+                borderRadius: 6,
+                overflow: 'hidden',
+                background: isRevealed ? 'var(--atelier-stone-100)' : 'transparent',
+                border: isRevealed ? 'none' : '1px dashed var(--atelier-stone-200)',
+                opacity: isRevealed ? 1 : 0.4,
+                transform: isRevealed ? 'translateY(0)' : 'translateY(0.25rem)',
+                transition: 'all 400ms ease',
               }}
             >
-              {chip}
-            </span>
+              {isRevealed && (
+                <Pic
+                  src={src}
+                  alt=""
+                  loading="lazy"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    animation: 'toolkit-drop-in 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  }}
+                />
+              )}
+            </div>
           );
         })}
       </div>
 
-      <style>{`
-        @keyframes identify-image-in {
-          from { opacity: 0; transform: scale(1.03); }
-          to { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
+      {/* The stylist's note, once the look is composed */}
+      <div
+        className="flex items-start gap-2"
+        style={{
+          marginTop: 10,
+          minHeight: '2.4em',
+          opacity: complete ? 1 : 0,
+          transform: complete ? 'translateY(0)' : 'translateY(0.25rem)',
+          transition: 'opacity 450ms ease, transform 450ms ease',
+        }}
+      >
+        <Wand2
+          size={11}
+          strokeWidth={1.4}
+          style={{ color: 'var(--atelier-brass-text)', flexShrink: 0, marginTop: 3 }}
+        />
+        <p
+          style={{
+            fontFamily: 'var(--atelier-font-display)',
+            fontStyle: 'italic',
+            fontSize: 11.5,
+            lineHeight: 1.45,
+            color: 'var(--atelier-stone-700)',
+          }}
+        >
+          {sample.note}
+        </p>
+      </div>
     </div>
   );
 }
@@ -258,16 +355,22 @@ const DESTINATIONS = [
 
 function TravelDemo() {
   const ref = useRef(null);
-  const inView = useInView(ref);
+  const { play, settled } = useInView(ref);
   const [activeIdx, setActiveIdx] = useState(0);
   const [typedName, setTypedName] = useState('');
   const [revealed, setRevealed] = useState(0);
   const timerRef = useRef([]);
 
   useEffect(() => {
-    if (!inView) return;
-    let cancelled = false;
     const dest = DESTINATIONS[activeIdx];
+    // Reduced motion: the destination is already typed and the capsule packed.
+    if (settled) {
+      setTypedName(dest.name);
+      setRevealed(dest.items.length);
+      return undefined;
+    }
+    if (!play) return undefined;
+    let cancelled = false;
 
     setTypedName('');
     setRevealed(0);
@@ -300,7 +403,7 @@ function TravelDemo() {
       timerRef.current.forEach(clearTimeout);
       timerRef.current = [];
     };
-  }, [inView, activeIdx]);
+  }, [play, settled, activeIdx]);
 
   const dest = DESTINATIONS[activeIdx];
 
@@ -387,15 +490,18 @@ const CPW_SAMPLES = [
 
 function CPWDemo() {
   const ref = useRef(null);
-  const inView = useInView(ref);
+  const { play, settled } = useInView(ref);
   const [activeIdx, setActiveIdx] = useState(0);
   const [wears, setWears] = useState(1);
   const timerRef = useRef([]);
 
   useEffect(() => {
-    if (!inView) return;
-    let cancelled = false;
     const sample = CPW_SAMPLES[activeIdx];
+    // Reduced motion: land on the settled cost per wear, not the £-per-one
+    // opening figure, which would misstate the piece.
+    if (settled) { setWears(sample.maxWears); return undefined; }
+    if (!play) return undefined;
+    let cancelled = false;
 
     setWears(1);
 
@@ -416,7 +522,7 @@ function CPWDemo() {
       timerRef.current.forEach(clearTimeout);
       timerRef.current = [];
     };
-  }, [inView, activeIdx]);
+  }, [play, settled, activeIdx]);
 
   const sample = CPW_SAMPLES[activeIdx];
   const cpw = (sample.price / wears).toFixed(2);
@@ -459,7 +565,9 @@ function CPWDemo() {
             marginTop: 2,
           }}
         >
-          {sample.brand} · {wears} wears
+          {/* The counter starts at one, so this needs the singular or the
+              card opens on "1 wears" for the first half-second. */}
+          {sample.brand} · {wears} {wears === 1 ? 'wear' : 'wears'}
         </p>
       </div>
       <p
@@ -490,15 +598,18 @@ const MANIFESTO_SNIPPETS = [
 
 function ManifestoDemo() {
   const ref = useRef(null);
-  const inView = useInView(ref);
+  const { play, settled } = useInView(ref);
   const [activeIdx, setActiveIdx] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const timerRef = useRef([]);
 
   useEffect(() => {
-    if (!inView) return;
-    let cancelled = false;
     const snippet = MANIFESTO_SNIPPETS[activeIdx];
+    // Reduced motion: the brief is written, not typing. Setting the full
+    // snippet also clears isStreaming below, so the caret does not blink.
+    if (settled) { setDisplayText(snippet); return undefined; }
+    if (!play) return undefined;
+    let cancelled = false;
 
     setDisplayText('');
 
@@ -526,7 +637,7 @@ function ManifestoDemo() {
       timerRef.current.forEach(clearTimeout);
       timerRef.current = [];
     };
-  }, [inView, activeIdx]);
+  }, [play, settled, activeIdx]);
 
   const isStreaming = displayText !== MANIFESTO_SNIPPETS[activeIdx];
 
@@ -576,35 +687,66 @@ function ManifestoDemo() {
 // Card 5: Lookbook — share URL + 3 thumbnails reveal
 // ─────────────────────────────────────────────────────────────────────────
 
-const LOOKBOOK_SAMPLES = [
-  { url: 'atelier.co/sh/3kF9p', items: ['/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg', '/wardrobe/gael-wool-blend-trousers.jpg', '/wardrobe/suedette-2-part-block-heel-sandals.jpg'] },
-  { url: 'atelier.co/sh/M2qZx', items: ['/wardrobe/claire-pleat-detail-dress.jpg', '/wardrobe/jasmin-coat.jpg', '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg'] },
+// Occasion pills over a four-slot grid — the Styling Studio's own
+// arrangement, borrowed from the (now unused) preview/OutfitPreview.jsx.
+// The pill for the active occasion lights in brass and the slots refill
+// beneath it, which is the point of the card: the same four slots, a
+// different answer per occasion, all of it from one wardrobe.
+const OCCASIONS = [
+  {
+    label: 'A morning meeting',
+    items: [
+      '/wardrobe/mirabel-satin-blouse.jpg',
+      '/wardrobe/gael-wool-blend-trousers.jpg',
+      '/wardrobe/marina-single-breasted-blazer.jpg',
+      '/wardrobe/y-sparks-stick-gold-necklace.jpg',
+    ],
+  },
+  {
+    label: 'Drinks tonight',
+    items: [
+      '/wardrobe/claire-pleat-detail-dress.jpg',
+      '/wardrobe/jasmin-coat.jpg',
+      '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg',
+      '/wardrobe/gold-vermeil-baroque-pearl-pendant-pearl.jpg',
+    ],
+  },
+  {
+    label: 'A Saturday in town',
+    items: [
+      '/wardrobe/pippa-silk-front-colourblock-vest.jpg',
+      '/wardrobe/high-rise-denim-shorts.jpg',
+      '/wardrobe/suedette-2-part-block-heel-sandals.jpg',
+      '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
+    ],
+  },
 ];
 
-function LookbookDemo() {
+function StylingDemo() {
   const ref = useRef(null);
-  const inView = useInView(ref);
+  const { play, settled } = useInView(ref);
   const [activeIdx, setActiveIdx] = useState(0);
   const [revealed, setRevealed] = useState(0);
   const timerRef = useRef([]);
 
   useEffect(() => {
-    if (!inView) return;
-    let cancelled = false;
-    const sample = LOOKBOOK_SAMPLES[activeIdx];
+    const sample = OCCASIONS[activeIdx];
+    if (settled) { setRevealed(sample.items.length); return undefined; }
+    if (!play) return undefined;
 
+    let cancelled = false;
     setRevealed(0);
 
     sample.items.forEach((_, i) => {
       const t = setTimeout(() => {
         if (!cancelled) setRevealed(i + 1);
-      }, 500 + i * 280);
+      }, 420 + i * 240);
       timerRef.current.push(t);
     });
 
     const cycleTimer = setTimeout(() => {
-      if (!cancelled) setActiveIdx((i) => (i + 1) % LOOKBOOK_SAMPLES.length);
-    }, 500 + sample.items.length * 280 + 3500);
+      if (!cancelled) setActiveIdx((i) => (i + 1) % OCCASIONS.length);
+    }, 420 + sample.items.length * 240 + 3200);
     timerRef.current.push(cycleTimer);
 
     return () => {
@@ -612,47 +754,43 @@ function LookbookDemo() {
       timerRef.current.forEach(clearTimeout);
       timerRef.current = [];
     };
-  }, [inView, activeIdx]);
+  }, [play, settled, activeIdx]);
 
-  const sample = LOOKBOOK_SAMPLES[activeIdx];
+  const sample = OCCASIONS[activeIdx];
 
   return (
     <div ref={ref}>
-      <div
-        className="flex items-center gap-2 mb-2.5"
-        style={{
-          padding: '0.4rem 0.75rem',
-          background: 'var(--atelier-cream)',
-          border: '1px solid var(--atelier-stone-200)',
-          borderRadius: 8,
-          fontFamily: 'monospace',
-          fontSize: 10.5,
-          color: 'var(--atelier-stone-700)',
-        }}
-      >
-        <Link2 size={10} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-text)' }} />
-        <span key={activeIdx} style={{ animation: 'toolkit-fade 400ms ease' }}>
-          {sample.url}
-        </span>
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontSize: 8,
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            fontFamily: 'var(--atelier-font-sans)',
-            fontWeight: 600,
-            color: 'var(--atelier-brass-text)',
-            background: 'rgba(212, 179, 120, 0.12)',
-            padding: '0.15rem 0.4rem',
-            borderRadius: 4,
-          }}
-        >
-          Read-only
-        </span>
+      {/* Occasion pills. Presentational only — the real thing is a click
+          away in the embed above, so these are not buttons and carry no
+          keyboard affordance they could not honour. */}
+      <div className="flex flex-wrap gap-1.5 mb-2.5" aria-hidden="true">
+        {OCCASIONS.map((o, i) => {
+          const isActive = i === activeIdx;
+          return (
+            <span
+              key={o.label}
+              style={{
+                fontSize: 8.5,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                padding: '0.25rem 0.6rem',
+                borderRadius: 999,
+                color: isActive ? 'var(--atelier-stone-900)' : 'var(--atelier-stone-400)',
+                background: isActive ? 'rgba(212, 179, 120, 0.16)' : 'transparent',
+                border: isActive
+                  ? '1px solid var(--atelier-brass-300)'
+                  : '1px solid var(--atelier-stone-200)',
+                transition: 'all 320ms ease',
+              }}
+            >
+              {o.label}
+            </span>
+          );
+        })}
       </div>
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-4 gap-1.5">
         {sample.items.map((src, i) => {
           const isRevealed = i < revealed;
           return (
@@ -674,7 +812,12 @@ function LookbookDemo() {
                   src={src}
                   alt=""
                   loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    animation: 'toolkit-drop-in 450ms cubic-bezier(0.22, 1, 0.36, 1)',
+                  }}
                 />
               )}
             </div>
@@ -712,15 +855,17 @@ const CALENDAR_SAMPLES = [
 
 function CalendarDemo() {
   const ref = useRef(null);
-  const inView = useInView(ref);
+  const { play, settled } = useInView(ref);
   const [activeIdx, setActiveIdx] = useState(0);
   const [revealed, setRevealed] = useState(0);
   const timerRef = useRef([]);
 
   useEffect(() => {
-    if (!inView) return;
-    let cancelled = false;
     const sample = CALENDAR_SAMPLES[activeIdx];
+    // Reduced motion: the week is already planned.
+    if (settled) { setRevealed(sample.plan.length); return undefined; }
+    if (!play) return undefined;
+    let cancelled = false;
 
     setRevealed(0);
 
@@ -741,7 +886,7 @@ function CalendarDemo() {
       timerRef.current.forEach(clearTimeout);
       timerRef.current = [];
     };
-  }, [inView, activeIdx]);
+  }, [play, settled, activeIdx]);
 
   const sample = CALENDAR_SAMPLES[activeIdx];
 
@@ -807,13 +952,22 @@ function CalendarDemo() {
 
 const FEATURES = [
   {
-    icon: Camera,
-    eyebrow: 'Identify',
-    title: 'Add a piece, in',
-    titleEm: 'seconds.',
+    icon: Home,
+    eyebrow: 'Every morning',
+    title: 'The day, decided',
+    titleEm: 'before you ask.',
     description:
-      'A single photograph tells Atelier the brand, category, materials, and colour. Six routes from the wardrobe shelf to the digital one.',
-    demo: <IdentifyDemo />,
+      'Atelier reads the forecast and — if you connect it — your diary, then has a look waiting when you open the app. One decision, made, with the reasoning attached.',
+    demo: <TodayDemo />,
+  },
+  {
+    icon: Camera,
+    eyebrow: 'Compose',
+    title: 'Style it yourself,',
+    titleEm: 'or ask.',
+    description:
+      'Build a look slot by slot from your own pieces, or name the occasion and let the Concierge compose it. Keep what works to the Lookbook.',
+    demo: <StylingDemo />,
   },
   {
     icon: MapPin,
@@ -843,15 +997,6 @@ const FEATURES = [
     demo: <ManifestoDemo />,
   },
   {
-    icon: BookOpen,
-    eyebrow: 'Shared, never given',
-    title: 'A lookbook,',
-    titleEm: 'read-only.',
-    description:
-      'Compose a saved look. Send a private link. The recipient sees the curation; your wardrobe stays yours. No login required.',
-    demo: <LookbookDemo />,
-  },
-  {
     icon: CalendarDays,
     eyebrow: 'Plan your week',
     title: 'A wardrobe with a',
@@ -866,10 +1011,10 @@ const FEATURES = [
 // Section
 // ─────────────────────────────────────────────────────────────────────────
 
-export function Features() {
+export function Toolkit() {
   return (
     <section
-      id="features"
+      id="toolkit"
       style={{
         paddingBlock: 'clamp(4rem, 7vw, 7rem)',
         paddingInline: 'var(--atelier-page-padding)',
@@ -913,8 +1058,8 @@ export function Features() {
             maxWidth: '54ch',
           }}
         >
-          Beyond the Concierge, the studio brings together six considered tools for the everyday
-          work of stewardship.
+          You have just had the run of the studio. These are the six it is built around — the
+          everyday work of stewardship, each one drawing on the same wardrobe.
         </p>
       </div>
 

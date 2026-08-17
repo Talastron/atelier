@@ -61,10 +61,15 @@ const BrassRule = ({ width = 24 }) => (
 // once, directly beneath an iframe running the whole studio, is exactly the
 // case that browser setting exists for.
 //
-// The observer disconnects on first intersection instead of tracking
-// visibility both ways. The demos self-cycle once started, so a later
-// callback has nothing left to decide, and six live observers would mean
-// six callbacks on every scroll frame past this section.
+// `play` deliberately tracks visibility in BOTH directions and the observer
+// stays connected. Each demo's effect depends on it, so when a card leaves
+// the viewport the effect tears down and its cleanup clears that card's
+// timer chain — six self-cycling demos stop doing work the moment you
+// scroll past them, which is the whole reason this is cheap enough to sit
+// under an embedded copy of the app. Disconnecting after the first
+// intersection would strand six timer chains running for the life of the
+// page. (An IntersectionObserver costs almost nothing to leave connected:
+// it fires when the ratio crosses a threshold, not once per scroll frame.)
 function useInView(ref, threshold = 0.3) {
   const [play, setPlay] = useState(false);
   const [settled, setSettled] = useState(false);
@@ -75,11 +80,10 @@ function useInView(ref, threshold = 0.3) {
       setSettled(true);
       return undefined;
     }
-    const obs = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      setPlay(true);
-      obs.disconnect();
-    }, { threshold });
+    const obs = new IntersectionObserver(
+      ([entry]) => setPlay(entry.isIntersecting),
+      { threshold }
+    );
     obs.observe(ref.current);
     return () => obs.disconnect();
   }, [ref, threshold]);

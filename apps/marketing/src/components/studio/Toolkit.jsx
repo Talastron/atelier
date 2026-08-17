@@ -184,27 +184,30 @@ function TravelDemo() {
     setTypedName('');
     setRevealed(0);
 
+    // PACING. An earlier revision tightened all of this — 70ms a character,
+    // items 180ms apart, a 1500ms hold — on the theory that visitors would
+    // scroll past before seeing the destination change. The result raced,
+    // and racing is the one thing this brand cannot do. Every interval below
+    // is now roughly double, and the hold at the end is long enough to read
+    // the capsule rather than merely notice it.
     dest.name.split('').forEach((_, i) => {
       const t = setTimeout(() => {
         if (!cancelled) setTypedName(dest.name.slice(0, i + 1));
-      }, 400 + i * 70);
+      }, 700 + i * 135);
       timerRef.current.push(t);
     });
 
-    // Tightened the cycle: faster typing (70ms/char), faster item reveals
-    // (180ms apart), shorter hold (1500ms) so destinations visibly cycle
-    // and visitors notice the change before scrolling past.
-    const typingDuration = 400 + dest.name.length * 70;
+    const typingDuration = 700 + dest.name.length * 135;
     dest.items.forEach((_, i) => {
       const t = setTimeout(() => {
         if (!cancelled) setRevealed(i + 1);
-      }, typingDuration + 400 + i * 180);
+      }, typingDuration + 700 + i * 430);
       timerRef.current.push(t);
     });
 
     const cycleTimer = setTimeout(() => {
       if (!cancelled) setActiveIdx((i) => (i + 1) % DESTINATIONS.length);
-    }, typingDuration + 400 + dest.items.length * 180 + 1500);
+    }, typingDuration + 700 + dest.items.length * 430 + 4600);
     timerRef.current.push(cycleTimer);
 
     return () => {
@@ -219,18 +222,19 @@ function TravelDemo() {
   return (
     <div ref={ref}>
       <div
-        className="flex items-center gap-2 mb-2.5"
+        className="flex items-center gap-2.5"
         style={{
-          padding: '0.5rem 0.75rem',
+          padding: '0.7rem 1rem',
+          marginBottom: '0.875rem',
           background: 'var(--atelier-cream)',
           border: '1px solid var(--atelier-stone-200)',
           borderRadius: 999,
         }}
       >
-        <MapPin size={11} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-text)' }} />
+        <MapPin size={15} strokeWidth={1.6} style={{ color: 'var(--atelier-brass-text)' }} />
         <span
           style={{
-            fontSize: 11,
+            fontSize: 15,
             fontFamily: 'var(--atelier-font-display)',
             color: 'var(--atelier-stone-700)',
             fontStyle: typedName ? 'normal' : 'italic',
@@ -244,18 +248,18 @@ function TravelDemo() {
               style={{
                 display: 'inline-block',
                 width: 1,
-                height: 11,
+                height: 15,
                 background: 'var(--atelier-stone-800)',
                 verticalAlign: 'middle',
-                marginLeft: 1,
-                animation: 'toolkit-blink 1s steps(2, start) infinite',
+                marginLeft: 2,
+                animation: 'toolkit-blink 1.4s steps(2, start) infinite',
               }}
             />
           )}
         </span>
       </div>
 
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="grid grid-cols-5" style={{ gap: '0.5rem' }}>
         {dest.items.map((src, i) => {
           const isRevealed = i < revealed;
           return (
@@ -269,7 +273,7 @@ function TravelDemo() {
                 border: isRevealed ? 'none' : '1px dashed var(--atelier-stone-200)',
                 opacity: isRevealed ? 1 : 0.4,
                 transform: isRevealed ? 'translateY(0)' : 'translateY(0.25rem)',
-                transition: 'all 400ms ease',
+                transition: 'all 700ms cubic-bezier(0.22, 1, 0.36, 1)',
               }}
             >
               {isRevealed && (
@@ -317,13 +321,17 @@ function CPWDemo() {
     for (let n = 2; n <= sample.maxWears; n += 1) {
       const t = setTimeout(() => {
         if (!cancelled) setWears(n);
-      }, 600 + (n - 2) * 50);
+      }, 900 + (n - 2) * 105);
       timerRef.current.push(t);
     }
 
+    // 105ms a wear, not 50. The falling figure is the whole argument of this
+    // card, and at the old speed it blurred past as a slot machine — a piece
+    // going from £90 to £1.70 should be watched, not clocked. Fifty-odd
+    // wears now take about five and a half seconds, then rest for four.
     const cycleTimer = setTimeout(() => {
       if (!cancelled) setActiveIdx((i) => (i + 1) % CPW_SAMPLES.length);
-    }, 600 + sample.maxWears * 50 + 2500);
+    }, 900 + sample.maxWears * 105 + 4200);
     timerRef.current.push(cycleTimer);
 
     return () => {
@@ -337,41 +345,53 @@ function CPWDemo() {
   const cpw = (sample.price / wears).toFixed(2);
 
   return (
-    <div ref={ref} className="flex items-center gap-3">
-      <Pic
-        key={activeIdx}
-        src={sample.src}
-        alt=""
-        loading="lazy"
-        style={{
-          width: 48,
-          height: 60,
-          objectFit: 'cover',
-          borderRadius: 6,
-          background: 'var(--atelier-stone-100)',
-          flexShrink: 0,
-          animation: 'cpw-img-in 500ms ease',
-        }}
-      />
+    /* Sizes here are for a 517px stage. They were originally set for a
+       ~250px card in a three-across grid and simply carried over when the
+       grid became full-width spreads, which left a 48x60 thumbnail and 9px
+       type marooned in a panel twice the width. */
+    <div ref={ref} className="flex items-center" style={{ gap: '1.25rem' }}>
+      {/* The frame, not the image, is the flex item.
+          Pic renders <picture><img/></picture>, so the <picture> is what
+          flex lays out — and a flex-shrink on the inner <img> governs
+          nothing. Left to itself the picture shrinks (flex-shrink defaults
+          to 1), and on a 390px phone the price column squeezed this
+          thumbnail from its declared 108px down to 86px. Wrapping it in a
+          fixed frame that carries the shrink rule keeps the piece the size
+          it was drawn at. */}
+      <div className="cpw-thumb">
+        <Pic
+          key={activeIdx}
+          src={sample.src}
+          alt=""
+          loading="lazy"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            animation: 'cpw-img-in 900ms ease',
+          }}
+        />
+      </div>
       <div className="flex-1 min-w-0">
         <p
           style={{
             fontFamily: 'var(--atelier-font-display)',
-            fontSize: 13,
+            fontSize: 19,
             color: 'var(--atelier-stone-800)',
-            lineHeight: 1.2,
+            lineHeight: 1.25,
           }}
         >
           {sample.name}
         </p>
         <p
           style={{
-            fontSize: 9,
-            letterSpacing: '0.16em',
+            fontSize: 11,
+            letterSpacing: '0.18em',
             textTransform: 'uppercase',
             fontWeight: 500,
             color: 'var(--atelier-stone-500)',
-            marginTop: 2,
+            marginTop: 6,
           }}
         >
           {/* The counter starts at one, so this needs the singular or the
@@ -379,18 +399,7 @@ function CPWDemo() {
           {sample.brand} · {wears} {wears === 1 ? 'wear' : 'wears'}
         </p>
       </div>
-      <p
-        style={{
-          fontFamily: 'var(--atelier-font-display)',
-          fontSize: 22,
-          color: 'var(--atelier-brass-text)',
-          fontFeatureSettings: '"onum" on',
-          letterSpacing: '-0.01em',
-          flexShrink: 0,
-        }}
-      >
-        £{cpw}
-      </p>
+      <p className="cpw-price">£{cpw}</p>
     </div>
   );
 }
@@ -422,23 +431,28 @@ function ManifestoDemo() {
 
     setDisplayText('');
 
+    // One character every 48ms, not three every 30ms. The old rate ran at
+    // about a hundred characters a second — the cadence of a machine
+    // printing, when the fiction here is a stylist writing a line about you.
+    // This lands nearer twenty a second, slow enough to read along with, and
+    // the finished line then rests for six seconds before the next.
     let chars = 0;
     const stream = () => {
       if (cancelled) return;
-      chars += 3;
+      chars += 1;
       if (chars >= snippet.length) {
         setDisplayText(snippet);
         const t = setTimeout(() => {
           if (!cancelled) setActiveIdx((i) => (i + 1) % MANIFESTO_SNIPPETS.length);
-        }, 4000);
+        }, 6000);
         timerRef.current.push(t);
       } else {
         setDisplayText(snippet.slice(0, chars));
-        const t = setTimeout(stream, 30);
+        const t = setTimeout(stream, 48);
         timerRef.current.push(t);
       }
     };
-    const start = setTimeout(stream, 400);
+    const start = setTimeout(stream, 700);
     timerRef.current.push(start);
 
     return () => {
@@ -454,19 +468,19 @@ function ManifestoDemo() {
     <div ref={ref}>
       <div
         style={{
-          padding: '0.75rem 0.875rem',
+          padding: '1.25rem 1.5rem',
           background: 'var(--atelier-cream)',
-          borderLeft: '2px solid var(--atelier-brass-300)',
-          borderRadius: '0 6px 6px 0',
-          minHeight: 86,
+          borderLeft: '3px solid var(--atelier-brass-300)',
+          borderRadius: '0 8px 8px 0',
+          minHeight: 140,
         }}
       >
         <p
           style={{
             fontFamily: 'var(--atelier-font-display)',
             fontStyle: 'italic',
-            fontSize: 13,
-            lineHeight: 1.6,
+            fontSize: 18,
+            lineHeight: 1.65,
             color: 'var(--atelier-stone-800)',
           }}
         >
@@ -479,7 +493,7 @@ function ManifestoDemo() {
                 width: '0.45ch',
                 marginLeft: 1,
                 color: 'var(--atelier-brass-text)',
-                animation: 'toolkit-blink 1s steps(2, start) infinite',
+                animation: 'toolkit-blink 1.4s steps(2, start) infinite',
                 fontStyle: 'normal',
               }}
             >
@@ -682,6 +696,27 @@ export function Toolkit() {
           background: rgba(212, 179, 120, 0.08);
         }
 
+        /* Cost-per-wear: the piece and its figure. Both step down on small
+           stages so a 294px panel is not two thirds price. */
+        .cpw-thumb {
+          flex: 0 0 auto;
+          width: 108px;
+          aspect-ratio: 3 / 4;
+          border-radius: 10px;
+          overflow: hidden;
+          background: var(--atelier-stone-100);
+        }
+
+        .cpw-price {
+          font-family: var(--atelier-font-display);
+          font-size: 38px;
+          line-height: 1;
+          color: var(--atelier-brass-text);
+          font-feature-settings: "onum" on;
+          letter-spacing: -0.01em;
+          flex: 0 0 auto;
+        }
+
         .method-stage { min-width: 0; }
 
         .method-stage-inner {
@@ -714,6 +749,8 @@ export function Toolkit() {
           .method-row:nth-child(even) .method-copy { order: 0; }
           .method-icon { margin-top: 1.25rem; }
           .method-stage-inner { min-height: 232px; }
+          .cpw-thumb { width: 84px; }
+          .cpw-price { font-size: 27px; }
         }
       `}</style>
     </section>

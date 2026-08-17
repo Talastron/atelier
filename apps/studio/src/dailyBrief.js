@@ -35,7 +35,7 @@ export function readDailyBrief(uid) {
 }
 
 export function writeDailyBrief(uid, brief) {
-  // brief shape: { itemIds: [...], reasoning, confidence, intent, slotIndex }
+  // brief shape: { itemIds: [...], reasoning, intent, slotIndex }
   try {
     const payload = {
       ...brief,

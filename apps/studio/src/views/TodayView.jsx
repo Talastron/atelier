@@ -434,7 +434,6 @@ function DailyBriefCard({
   const mainTiles = briefItems.filter((it) => it.category !== 'Jewellery').slice(0, 8);
   const jewelleryPieces = briefItems.filter((it) => it.category === 'Jewellery').slice(0, 10);
 
-  const conf = brief.confidence;
 
   // A short, honest lead line from data we already hold — the dense rationale
   // moves behind "Why this".
@@ -527,7 +526,6 @@ function DailyBriefCard({
       createdAt: new Date().toISOString(),
       reasoning: brief.reasoning || '',
       intent: brief.intent || 'today',
-      confidence: brief.confidence,
     };
     try {
       if (onSaveOutfit) await onSaveOutfit(outfit);
@@ -604,7 +602,7 @@ function DailyBriefCard({
       {/* Stylist's note — a warm, gently recessed panel (deeper than the ivory
           ground, no shadow) so it reads as a calm secondary reading block below
           the floating product tiles. Narrative on
-          the left, the confidence figure on the right. */}
+          the left. */}
       <div className="mt-7 flex flex-col gap-4 rounded-2xl bg-[#efe8db] p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
         <Sparkles size={20} strokeWidth={1.4} className="hidden shrink-0 text-brass-500 sm:block" aria-hidden="true" />
         <div className="min-w-0 flex-1">
@@ -634,14 +632,6 @@ function DailyBriefCard({
             </div>
           )}
         </div>
-        {conf != null && (
-          <div className="shrink-0 border-stone-200 sm:border-l sm:pl-6 sm:text-right">
-            <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">Confidence</p>
-            <p className="mt-0.5 font-display text-3xl leading-none text-stone-900" style={{ fontFeatureSettings: '"onum" on' }}>
-              {conf}<span className="text-base text-stone-400">%</span>
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Actions */}

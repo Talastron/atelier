@@ -106,6 +106,57 @@ export function summariseStyleProfile(measurements) {
   return `Style profile: ${bits.join('; ')}.`;
 }
 
+// Longest a piece may be named where space is constrained — a tile caption,
+// a list row, a sentence. Chosen so two names fit a mobile row without either
+// being clipped.
+const DISPLAY_NAME_MAX = 34;
+
+/**
+ * Reduce a retailer listing to a name a person would use.
+ *
+ * Items arrive named as product pages — "Molten Snow Triple Small Hoop
+ * Earrings | 18ct Gold Plated/Cubic Zirconia" — which is correct on the
+ * product's own screen and unusable anywhere else. Every surface that shows a
+ * name in limited space was independently clipping this with CSS truncation,
+ * which produces "Straight-Leg Dark W…" and tells the reader nothing.
+ *
+ * Everything after a pipe is retailer metadata (brand, material, finish) and
+ * goes first. What remains is cut at a word boundary, never mid-word, and
+ * without an ellipsis — a trailing "…" reads as damage rather than concision.
+ *
+ * @param {string} name  The item's stored name.
+ * @returns {string}     A name safe to show in a constrained space.
+ */
+export function deriveShortName(name) {
+  const full = String(name ?? '').trim();
+  if (!full) return '';
+
+  const base = full.split('|')[0].trim() || full;
+  if (base.length <= DISPLAY_NAME_MAX) return base;
+
+  const cutAt = base.lastIndexOf(' ', DISPLAY_NAME_MAX);
+  // A single word longer than the limit has no boundary to cut on; leave it
+  // whole rather than mangling it.
+  if (cutAt <= 0) return base;
+  return base.slice(0, cutAt).replace(/[\s,;:.\-–—]+$/, '');
+}
+
+/**
+ * What this piece should be called on screen.
+ *
+ * An explicit `shortName` set by the wearer always wins — they know what they
+ * call the thing better than a parser does. Otherwise the name is derived, so
+ * every existing item improves without anyone editing anything.
+ *
+ * @param {object} item
+ * @returns {string}
+ */
+export function itemDisplayName(item) {
+  const chosen = String(item?.shortName ?? '').trim();
+  if (chosen) return chosen;
+  return deriveShortName(item?.name);
+}
+
 export function itemColors(item) {
   return Array.isArray(item?.colors) ? item.colors : [];
 }

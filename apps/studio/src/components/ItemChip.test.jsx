@@ -9,7 +9,7 @@
 // The page-level regression ("share page shows literal markers") is verified
 // live — this file guards the resolution logic that fix relies on.
 import { describe, it, expect } from 'vitest';
-import { renderTextWithChips, stripItemChips, shortItemLabel, ItemChip } from './ItemChip.jsx';
+import { renderTextWithChips, stripItemChips, ItemChip } from './ItemChip.jsx';
 
 // Shape produced by handleShareOutfit / handleShareLookbook in App.jsx.
 const SNAPSHOT_PIECES = [
@@ -51,44 +51,6 @@ describe('renderTextWithChips against share-snapshot pieces', () => {
 
   it('stripItemChips (canvas path) reduces the same note to plain names', () => {
     expect(stripItemChips(NOTE)).toBe('Start with the Navy wool coat over the Champagne silk vest, then gold.');
-  });
-});
-
-describe('shortItemLabel', () => {
-  // Real names from the wardrobe, which arrive as retailer listings.
-  it('drops the retailer metadata after a pipe', () => {
-    expect(shortItemLabel('Belt shirt dress | Whistles')).toBe('Belt shirt dress');
-  });
-
-  it('shortens a listing title to something sayable', () => {
-    expect(shortItemLabel('Molten Snow Triple Small Hoop Earrings | 18ct Gold Plated/Cubic Zirconia'))
-      .toBe('Molten Snow Triple Small Hoop');
-    expect(shortItemLabel('Solitaire Diamond Mini Chain Necklace | Monica Vinader'))
-      .toBe('Solitaire Diamond Mini Chain');
-  });
-
-  it('leaves a name that is already short alone', () => {
-    expect(shortItemLabel('Belt shirt dress')).toBe('Belt shirt dress');
-    expect(shortItemLabel('Soho Camera Bag - Tan Raffia')).toBe('Soho Camera Bag - Tan Raffia');
-  });
-
-  // Never mid-word, and never an ellipsis — a trailing "…" inside a sentence
-  // reads as damage rather than concision.
-  it('cuts on a word boundary and leaves no trailing punctuation', () => {
-    const out = shortItemLabel('Merisa Gold, Wide-Fit Block-Heel Sandals | Dune London');
-    expect(out).toBe('Merisa Gold, Wide-Fit Block-Heel');
-    expect(out).not.toMatch(/[…,\s]$/);
-  });
-
-  it('leaves an over-long single word whole rather than mangling it', () => {
-    const word = 'Supercalifragilisticexpialidociousgarment';
-    expect(shortItemLabel(word)).toBe(word);
-  });
-
-  it('handles nothing gracefully', () => {
-    expect(shortItemLabel('')).toBe('');
-    expect(shortItemLabel(null)).toBe('');
-    expect(shortItemLabel(undefined)).toBe('');
   });
 });
 

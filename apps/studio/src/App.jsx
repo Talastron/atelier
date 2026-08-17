@@ -45,6 +45,7 @@ import {
   itemWearNotes, itemWearOccasions, itemWearCount, itemLastWornISO,
   daysSinceLastWorn, itemCostPerWear, formatLastWorn, formatPrice,
   classifyBodyShape, computeFitAgainstChart, summariseStyleProfile,
+  deriveShortName,
 } from './lib/items.js';
 import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExportImage, shareOrDownloadImage, autoEnhanceCanvas, removeImageBackground, compressImageToDataUrl, rehostExternalImage, parseSourceUrl, resizeImageToDataUrl } from './lib/canvas.js';
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
@@ -2604,6 +2605,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState(existingItem ? {
     name: existingItem.name || '',
+    shortName: existingItem.shortName || '',
     brand: existingItem.brand || '',
     price: existingItem.price?.toString() || '',
     category: existingItem.category || 'Tops',
@@ -2627,7 +2629,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     colors: Array.isArray(existingItem.colors) ? existingItem.colors : [],
     materials: Array.isArray(existingItem.materials) ? existingItem.materials : [],
   } : {
-    name: '', brand: '', price: '', category: 'Tops', subCategory: '',
+    name: '', shortName: '', brand: '', price: '', category: 'Tops', subCategory: '',
     seasons: [], styles: [], status: 'owned', images: [], imageMeta: [],
     description: '', sourceUrl: '', purchasedDate: '', purchasedFrom: '', size: '', care: [], colors: [], materials: [], lentTo: '', lentReturnBy: '', wishlistReason: '',
   });
@@ -2658,7 +2660,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     try {
       const fit = await generateItemFitWithGemini({
         item: {
-          name: formData.name, brand: formData.brand, category: formData.category,
+          name: formData.name, shortName: formData.shortName.trim(), brand: formData.brand, category: formData.category,
           subCategory: formData.subCategory, colors: formData.colors, styles: formData.styles,
         },
         manifesto: measurements?.styleManifesto || '',
@@ -3475,6 +3477,18 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <Input label="Product Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} type="text" required />
+                {/* Optional. Product names arrive as retailer listings, which
+                    are unusable in a tile caption or a sentence — one is
+                    derived automatically, and this overrides it when the
+                    derived version reads badly. The placeholder shows what
+                    would be used if this is left empty. */}
+                <Input
+                  label="Short name (optional)"
+                  value={formData.shortName}
+                  onChange={e => setFormData({...formData, shortName: e.target.value})}
+                  type="text"
+                  placeholder={deriveShortName(formData.name) || 'What you actually call it'}
+                />
                 <Input label="Brand Designer" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value})} type="text" required />
               </div>
 

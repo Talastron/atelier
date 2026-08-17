@@ -2,9 +2,21 @@
 // apps/marketing/src/pages/studio.astro
 //
 // Interactive app preview — the strongest "this is software" page on the
-// site. Visitors can click through a faithful React reproduction of the
-// actual studio (sidebar, views, demos), driving it themselves rather
-// than watching auto-play.
+// site. It embeds THE ACTUAL STUDIO, not a reproduction of it.
+//
+// This page used to render StudioFrame.jsx: 1,497 hand-written lines that
+// re-implemented the app's shell inside the marketing site. It drifted, as
+// a hand-maintained copy always will — it lost Today and Calendar, kept a
+// Profile tab the app had retired, and went on advertising a "confidence"
+// figure the studio deliberately removed for being invented. A replica has
+// to be remembered; an embed cannot be forgotten.
+//
+// So we point an iframe at the app's own demo mode instead. `?demo=1`
+// (apps/studio/src/App.jsx) boots the real React app with the SEED_WARDROBE
+// capsule in local state — no auth, no Firestore writes, no reachable user
+// data — and the app itself paints a "Demo · nothing saves" banner over the
+// top. Whatever ships to edit.myatelier.style is what this page shows, on
+// the same deploy, with no second copy to update.
 //
 // Reached from: the hero's "See the studio" secondary CTA, the main nav
 // "Studio" link, and the home page Studio section.
@@ -15,11 +27,13 @@ import Footer from '../components/Footer.astro';
 import ClosingMasthead from '../components/ClosingMasthead.astro';
 import { BrassRule } from '@atelier/ui';
 import { DeviceFrame } from '../components/preview/DeviceFrame.jsx';
-import { StudioFrame } from '../components/preview/StudioFrame.jsx';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ArrowUpRight } from 'lucide-react';
+import { EDIT_URL } from '../config.ts';
+
+const DEMO_URL = `${EDIT_URL}/?demo=1`;
 ---
 
-<Base title="The Studio — Atelier" description="Step inside the Atelier studio. The same interface you'll sign in to, running in your browser with sample data.">
+<Base title="The Studio — Atelier" description="Step inside the Atelier studio. The real app, running live with a sample wardrobe — no account needed.">
   <Nav />
   <main style="padding-top: 9rem; padding-block-end: clamp(5rem, 8vw, 7rem); padding-inline: var(--atelier-page-padding);">
 
@@ -28,7 +42,7 @@ import { ChevronRight } from 'lucide-react';
       <div class="flex items-center justify-center gap-3 mb-5">
         <BrassRule client:load />
         <p class="text-[10px] uppercase font-medium" style="letter-spacing: 0.32em; color: var(--atelier-brass-text);">
-          The Studio · By preview
+          The Studio · Live
         </p>
         <BrassRule client:load />
       </div>
@@ -41,18 +55,37 @@ import { ChevronRight } from 'lucide-react';
       <p
         style="font-size: clamp(0.95rem, 1.1vw, 1.0625rem); color: var(--atelier-stone-500); line-height: 1.65; max-width: 54ch; margin-inline: auto;"
       >
-        A faithful preview of the Atelier studio, running in your browser with
-        sample data. Click anywhere in the sidebar to switch views. Click inside
-        a view to drive the demo. Everything below the browser bar is real, just
-        not yours yet.
+        Not a picture of the studio — the studio itself, running below with a
+        sample wardrobe of twenty pieces. Every view opens, the Concierge
+        answers, and you need no account. Nothing you do here is saved.
       </p>
     </div>
 
-    {/* The device frame containing the live, interactive app */}
+    {/* The device frame containing the live app.
+
+        The iframe loads the studio's own demo mode, so this page can never
+        show a version of the app that no longer exists. `title` names the
+        frame for screen readers; `loading="lazy"` keeps the app's bundle off
+        the critical path so the page's own paint isn't waiting on it. */}
     <div style="max-width: 1280px; margin-inline: auto;">
       <DeviceFrame url="edit.myatelier.style" client:load>
-        <StudioFrame client:load />
+        <iframe
+          src={DEMO_URL}
+          title="The Atelier studio, running live with a sample wardrobe"
+          loading="lazy"
+          class="studio-embed"
+        ></iframe>
       </DeviceFrame>
+    </div>
+
+    {/* Escape hatch. The embed is a small window onto an app built for a full
+        viewport, and on a phone it is a screen inside a screen. Anyone who
+        wants room gets the same demo at full size, in its own tab. */}
+    <div class="text-center" style="margin-top: 1.75rem;">
+      <a href={DEMO_URL} target="_blank" rel="noopener" class="studio-fullscreen-link">
+        Open the demo full screen
+        <ArrowUpRight size={14} strokeWidth={1.75} client:load />
+      </a>
     </div>
 
     {/* Closing CTA — visitors who've just played with the preview are in
@@ -93,3 +126,63 @@ import { ChevronRight } from 'lucide-react';
   </main>
   <Footer />
 </Base>
+
+<style>
+  /* The embedded studio.
+
+     Height is viewport-relative because the app lays itself out against
+     100dvh, which inside a frame resolves to the frame's own height — too
+     short and the app compresses into its mobile arrangement on a desktop
+     screen. The min() ceiling stops it growing taller than the page can
+     comfortably show, and the min-height floor keeps it usable on short
+     laptop screens. */
+  .studio-embed {
+    display: block;
+    width: 100%;
+    height: min(78vh, 820px);
+    min-height: 560px;
+    border: 0;
+    background: var(--atelier-cream);
+  }
+
+  /* On phones the app renders its own mobile layout in here, which needs
+     more vertical room proportionally than the desktop arrangement. */
+  @media (max-width: 640px) {
+    .studio-embed {
+      height: min(86vh, 720px);
+      min-height: 520px;
+    }
+  }
+
+  /* Full-screen escape hatch — quiet by default, brass hairline on hover,
+     the same vocabulary as the nav links and the footer's return-to-top. */
+  .studio-fullscreen-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding-bottom: 0.35rem;
+    font-size: 0.875rem;
+    color: var(--atelier-stone-500);
+    transition: color 200ms ease;
+  }
+  .studio-fullscreen-link:hover,
+  .studio-fullscreen-link:focus-visible {
+    color: var(--atelier-stone-900);
+  }
+  .studio-fullscreen-link::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 0;
+    height: 1.5px;
+    background: var(--atelier-brass-600);
+    transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .studio-fullscreen-link:hover::after,
+  .studio-fullscreen-link:focus-visible::after {
+    width: 100%;
+  }
+</style>

@@ -35,7 +35,6 @@ const OUTFITS = [
     label: 'A morning meeting',
     weather: '15–27°C · Partly cloudy',
     note: 'Soft volume on top, sharp tailoring below. One decision, not four.',
-    confidence: 94,
     items: [
       { name: 'Champagne silk vest', src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
       { name: 'Wool-blend trousers', src: '/wardrobe/gael-wool-blend-trousers.jpg' },
@@ -47,7 +46,6 @@ const OUTFITS = [
     label: 'Drinks tonight',
     weather: '12–18°C · Clear',
     note: 'Champagne silk against the charcoal coat. Quiet glamour, no shouting.',
-    confidence: 89,
     items: [
       { name: 'Pleat-detail dress', src: '/wardrobe/claire-pleat-detail-dress.jpg' },
       { name: 'Navy wool coat', src: '/wardrobe/jasmin-coat.jpg' },
@@ -59,7 +57,6 @@ const OUTFITS = [
     label: 'A Saturday in town',
     weather: '18–22°C · Bright',
     note: 'Colour-blocked silk and denim, lifted by a fine gold necklace.',
-    confidence: 91,
     items: [
       { name: 'Silk colourblock vest', src: '/wardrobe/pippa-silk-front-colourblock-vest.jpg' },
       { name: 'High-rise denim shorts', src: '/wardrobe/high-rise-denim-shorts.jpg' },
@@ -127,7 +124,7 @@ const STAGE = {
   BUTTON_GLOW: 'button-glow',     // Button glows, about to press
   COMPOSING: 'composing',         // Spinning wand, "Composing"
   REVEALING: 'revealing',         // Items appear one by one
-  COMPLETE: 'complete',           // All items + note + confidence
+  COMPLETE: 'complete',           // All items + the stylist's note
   TRANSITION: 'transition',       // Cross-fade to next outfit
 };
 
@@ -135,7 +132,6 @@ function StudioFrame() {
   const [outfitIdx, setOutfitIdx] = useState(0);
   const [stage, setStage] = useState(STAGE.IDLE);
   const [revealedSlots, setRevealedSlots] = useState(0);
-  const [confidence, setConfidence] = useState(0);
   const containerRef = useRef(null);
   const [inView, setInView] = useState(true);
   // Two reasons to suspend the perpetual demo loop: the visitor prefers
@@ -147,7 +143,6 @@ function StudioFrame() {
   const [docHidden, setDocHidden] = useState(false);
 
   const timersRef = useRef([]);
-  const rafRef = useRef(null);
   const addTimer = (fn, ms) => {
     const id = setTimeout(fn, ms);
     timersRef.current.push(id);
@@ -156,10 +151,6 @@ function StudioFrame() {
   const clearAllTimers = () => {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
-  };
-  const cancelRaf = () => {
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
   };
 
   // Eagerly preload the small variant actually shown (matches the grid's
@@ -208,16 +199,14 @@ function StudioFrame() {
 
   // Reduced-motion: don't animate at all. Cancel any scheduled work and pin
   // the frame to one finished proposal (a fully-composed outfit with the
-  // stylist's note and confidence), so the hero still shows what the product
-  // produces without the reveal choreography.
+  // stylist's note), so the hero still shows what the product produces
+  // without the reveal choreography.
   useEffect(() => {
     if (!reduced) return;
     clearAllTimers();
-    cancelRaf();
     setOutfitIdx(0);
     setStage(STAGE.COMPLETE);
     setRevealedSlots(4);
-    setConfidence(OUTFITS[0].confidence);
   }, [reduced]);
 
   // Main animation loop. Slow, considered timing throughout. Suspended when out
@@ -225,37 +214,10 @@ function StudioFrame() {
   useEffect(() => {
     if (!inView || docHidden || reduced) {
       clearAllTimers();
-      cancelRaf();
       return;
     }
     let cancelled = false;
     let localIdx = outfitIdx;
-
-    // Drive the confidence count-up with a single requestAnimationFrame
-    // loop instead of N separate setTimeouts. The old code scheduled ~48
-    // setTimeouts per cycle (one per even percent from 0 to target), each
-    // subject to setTimeout's 4ms minimum + main-thread jitter — that was
-    // the source of the visible "jumpy" count. rAF is V-synced to the
-    // display, so the count progresses one frame at a time (16.67ms on
-    // 60Hz, 8.33ms on 120Hz) for a continuously smooth ramp. We keep the
-    // original even-percent quantization so the displayed value reads
-    // identical to the previous behaviour. Functional setState bails out
-    // of re-renders on frames where the integer hasn't advanced.
-    const startConfidenceCount = () => {
-      if (cancelled) return;
-      const target = OUTFITS[localIdx].confidence;
-      const startMs = performance.now();
-      const DURATION_MS = 940; // matches old: pct goes 0→target at pct·10ms
-      const tick = (now) => {
-        if (cancelled) { rafRef.current = null; return; }
-        const t = Math.min(1, (now - startMs) / DURATION_MS);
-        const next = Math.min(target, Math.floor((t * target) / 2) * 2);
-        setConfidence((prev) => (prev === next ? prev : next));
-        if (t < 1) rafRef.current = requestAnimationFrame(tick);
-        else rafRef.current = null;
-      };
-      rafRef.current = requestAnimationFrame(tick);
-    };
 
     // The full button-press story (idle → glow → press → composing) plays ONCE,
     // when the frame first comes into view. Cycling outfits skip the press and
@@ -269,7 +231,6 @@ function StudioFrame() {
       timersRef.current = [];
 
       setRevealedSlots(0);
-      setConfidence(0);
 
       let revealAt;
       if (firstRun) {
@@ -292,13 +253,11 @@ function StudioFrame() {
       for (let i = 1; i <= 4; i += 1) {
         addTimer(() => !cancelled && setRevealedSlots(i), revealAt + i * 460);
       }
-      // 4. Confidence count-up — kicks off the rAF loop
-      addTimer(startConfidenceCount, revealAt + 1500);
-      // 5. Complete state
+      // 4. Complete state — the stylist's note fades in beneath the grid
       addTimer(() => !cancelled && setStage(STAGE.COMPLETE), revealAt + 2100);
-      // 6. Hold ~5.9s so visitors can read the stylist's note
+      // 5. Hold ~5.9s so visitors can read the stylist's note
       addTimer(() => !cancelled && setStage(STAGE.TRANSITION), revealAt + 8000);
-      // 7. Cross-fade to the next outfit (which skips the button-press)
+      // 6. Cross-fade to the next outfit (which skips the button-press)
       addTimer(() => {
         if (cancelled) return;
         localIdx = (localIdx + 1) % OUTFITS.length;
@@ -311,7 +270,6 @@ function StudioFrame() {
     return () => {
       cancelled = true;
       clearAllTimers();
-      cancelRaf();
     };
     // Depend only on the three suspend/resume gates; outfit index is managed
     // internally via localIdx so the effect doesn't restart every time we
@@ -653,7 +611,13 @@ function StudioFrame() {
                 })}
               </div>
 
-              {/* Stylist's note + confidence — fades in at COMPLETE */}
+              {/* The stylist's note — fades in at COMPLETE.
+
+                  A brass "94% confidence" chip used to sit at the end of this
+                  row. The studio removed that figure (d4d9bf8): the model was
+                  scoring its own certainty, nothing computed or checked it,
+                  and it clustered on high round numbers whatever the outfit.
+                  The note is the honest artefact, so the note gets the row. */}
               <div
                 style={{
                   marginTop: 12,
@@ -686,19 +650,6 @@ function StudioFrame() {
                   }}
                 >
                   {current.note}
-                </p>
-                <p
-                  style={{
-                    fontSize: 9,
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    color: 'var(--atelier-brass-text)',
-                    fontWeight: 700,
-                    flexShrink: 0,
-                    fontFeatureSettings: '"onum" on',
-                  }}
-                >
-                  {confidence}%
                 </p>
               </div>
             </div>
@@ -999,7 +950,9 @@ function StudioFrame() {
           })}
         </div>
 
-        {/* Stylist's note + confidence — appears at COMPLETE */}
+        {/* The stylist's note — appears at COMPLETE. See the note on the
+            mobile copy of this row: the "% confidence" chip that used to
+            close it was removed from the product in d4d9bf8. */}
         <div
           style={{
             marginTop: 'auto',
@@ -1032,19 +985,6 @@ function StudioFrame() {
             }}
           >
             {current.note}
-          </p>
-          <p
-            style={{
-              fontSize: 10,
-              letterSpacing: '0.2em',
-              textTransform: 'uppercase',
-              color: 'var(--atelier-brass-text)',
-              fontWeight: 600,
-              flexShrink: 0,
-              fontFeatureSettings: '"onum" on',
-            }}
-          >
-            {confidence}% confidence
           </p>
         </div>
       </div>

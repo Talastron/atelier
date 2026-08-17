@@ -20,7 +20,17 @@ export function stripItemChips(raw) {
   return raw.replace(/<<item:[^|>]+\|([^>]+)>>/g, '$1');
 }
 
-export function renderTextWithChips(raw, { items = [], onOpenItem = null } = {}) {
+// `variant` controls how a referenced piece interrupts the prose around it.
+//
+//   'chip'   — pill with a thumbnail. Right where the text is a list of
+//              pieces and the images are the point.
+//   'inline' — the name set as running text with a fine brass underline.
+//              Right where the text is *prose*: a pill carrying a 20px
+//              round image and a truncated name mid-sentence breaks the
+//              baseline, boxes a fragment of the line, and reads as a
+//              mail-merge rather than a stylist's note. The name stays
+//              tappable; it simply stops shouting.
+export function renderTextWithChips(raw, { items = [], onOpenItem = null, variant = 'chip' } = {}) {
   if (!raw) return null;
   const re = /<<item:([^|>]+)\|([^>]+)>>/g;
   const out = [];
@@ -38,6 +48,7 @@ export function renderTextWithChips(raw, { items = [], onOpenItem = null } = {})
         fallbackName={match[2]}
         items={items}
         onOpenItem={onOpenItem}
+        variant={variant}
       />
     );
     lastIdx = re.lastIndex;
@@ -48,12 +59,29 @@ export function renderTextWithChips(raw, { items = [], onOpenItem = null } = {})
   return out;
 }
 
-export function ItemChip({ itemId, fallbackName, items, onOpenItem }) {
+export function ItemChip({ itemId, fallbackName, items, onOpenItem, variant = 'chip' }) {
   const item = items.find((i) => i.id === itemId);
   if (!item) {
     return <span>{fallbackName}</span>;
   }
   const thumb = item.images?.[0] || item.imageUrl || '';
+
+  if (variant === 'inline') {
+    // No box, no thumbnail, no truncation — the name sits in the sentence and
+    // inherits the surrounding type, including italics. Only the underline
+    // marks it as reachable.
+    return (
+      <button
+        type="button"
+        onClick={() => onOpenItem?.(item.id)}
+        className="underline decoration-brass-400/70 decoration-1 underline-offset-[3px] hover:decoration-current transition-colors"
+        title={item.name || fallbackName}
+      >
+        {item.name || fallbackName}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

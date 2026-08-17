@@ -711,7 +711,13 @@ export async function generateStyleFitWithGemini({ outfit, picked, manifesto = '
 Items in this look:
 - ${itemList}
 ${profileBlock}
-Write 2-3 sentences (max 60 words). Voice: warm, considered, like a couturier captioning the look in a private dossier. Reference one or two specific pieces from the list and tie them to the manifesto's themes (or to the look's own atmosphere if no manifesto). Avoid clichés ("This look is perfect for..."), avoid the words "stylish" or "trendy". No bullets, no headings, just prose.
+Write 2-3 sentences (max 60 words). Voice: warm, considered, like a couturier captioning the look in a private dossier. Reference one or two specific pieces from the list and tie them to the manifesto's themes (or to the look's own atmosphere if no manifesto). No bullets, no headings, just prose.
+
+Write about the CLOTHES, not about the client. Do not compliment them, and do not tell them what they want: no "your yearning for", "your love of", "your emerging interest in", "your eye for". You are describing what the garments do together — how they sit, what they borrow from each other, what the combination is for.
+
+Do not flatter the look either. Ban the praise adverbs — "perfectly", "beautifully", "effortlessly", "elegantly" — and the words "stylish", "trendy", "chic", "elevated". Avoid clichés ("This look is perfect for...").
+
+You are permitted to be candid, and a note that never is reads as sales copy. Where something is genuinely worth remarking on — a piece carrying more weight than the rest, a colour doing something unexpected, a combination that only works for a particular occasion — say so plainly. Observation before approval.
 
 Reply with the narrative only — no preamble, no quotes.`;
   const result = await geminiText(prompt, { temperature: 0.75 }, 'style-fit');

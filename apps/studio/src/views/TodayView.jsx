@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Share2, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
-import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
+import { itemDisplayName, summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief, readRecentBases, appendRecentBase, readRemoteRecentBases, writeRemoteRecentBases, mergeRecent } from "../dailyBrief";
@@ -474,7 +474,9 @@ function DailyBriefCard({
         </div>
         <div>
           <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
-          <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800">{t.name}</p>
+          {/* Display name, not the raw listing: a caption this narrow used to
+              clip "Straight-Leg Dark Wash Jeans" to "Straight-Leg Dark W…". */}
+          <p className="mt-0.5 truncate font-display text-[13px] leading-snug text-stone-800" title={t.name}>{itemDisplayName(t)}</p>
         </div>
       </button>
     );

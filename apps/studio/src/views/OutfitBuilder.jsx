@@ -7,7 +7,7 @@ import { Bookmark, Camera, Check, CheckCircle2, ChevronRight, GripVertical, Save
 import { OUTFIT_SLOTS, emptyOutfit, isMultiSlot, itemFitsSlot, slotForItem, slotItems } from "../lib/outfit.js";
 import { MOOD_PRESETS, STYLES } from "../lib/taxonomy.js";
 import { colorsHarmonize, hexFromColorName } from "../lib/color.js";
-import { daysSinceLastWorn, itemColors, itemImages, itemSeasons, itemStyles, live, newId, resolveOutfitItems } from "../lib/items.js";
+import { itemDisplayName, daysSinceLastWorn, itemColors, itemImages, itemSeasons, itemStyles, live, newId, resolveOutfitItems } from "../lib/items.js";
 import { itemImageDisplay } from "../lib/polish.js";
 import { generateOutfitWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini } from "../lib/ai.js";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
@@ -946,7 +946,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             </span>
           )}
         </div>
-        <p className="text-xs font-medium text-stone-900 truncate px-1">{item.name}</p>
+        <p className="text-xs font-medium text-stone-900 truncate px-1" title={item.name}>{itemDisplayName(item)}</p>
         <p className="text-[10px] text-stone-500 uppercase tracking-wider px-1 mt-0.5">{item.brand}</p>
       </div>
     );

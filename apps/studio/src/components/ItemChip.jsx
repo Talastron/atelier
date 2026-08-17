@@ -1,4 +1,5 @@
 import React from 'react';
+import { itemDisplayName } from '../lib/items.js';
 
 // Parse <<item:id|name>> markers in text and render each as an ItemChip,
 // preserving the surrounding prose as plain text. Returns an array of
@@ -20,50 +21,6 @@ export function stripItemChips(raw) {
   return raw.replace(/<<item:[^|>]+\|([^>]+)>>/g, '$1');
 }
 
-// Longest a piece may be named inside running prose.
-const INLINE_LABEL_MAX = 34;
-
-/**
- * Reduce a wardrobe item's name to something a stylist would actually say.
- *
- * Item names arrive as retailer listings — "Molten Snow Triple Small Hoop
- * Earrings | 18ct Gold Plated/Cubic Zirconia" — which is fine on a product
- * tile and unreadable mid-sentence. The chip variant hid this behind a
- * max-width and `truncate`; prose has nowhere to hide it, so it has to be
- * shortened rather than clipped.
- *
- * Everything after a pipe is retailer metadata (brand, material, finish) and
- * goes first. What remains is cut at a word boundary, never mid-word, and
- * without an ellipsis — a trailing "…" inside a sentence reads as damage.
- *
- * @param {string} name  The item's stored name.
- * @returns {string}     A label safe to set in running text.
- */
-export function shortItemLabel(name) {
-  const full = String(name ?? '').trim();
-  if (!full) return '';
-
-  const beforePipe = full.split('|')[0].trim();
-  const base = beforePipe || full;
-  if (base.length <= INLINE_LABEL_MAX) return base;
-
-  const cutAt = base.lastIndexOf(' ', INLINE_LABEL_MAX);
-  // A single word longer than the limit has no boundary to cut on; leave it
-  // whole rather than mangling it.
-  if (cutAt <= 0) return base;
-  return base.slice(0, cutAt).replace(/[\s,;:.\-–—]+$/, '');
-}
-
-// `variant` controls how a referenced piece interrupts the prose around it.
-//
-//   'chip'   — pill with a thumbnail. Right where the text is a list of
-//              pieces and the images are the point.
-//   'inline' — the name set as running text with a fine brass underline.
-//              Right where the text is *prose*: a pill carrying a 20px
-//              round image and a truncated name mid-sentence breaks the
-//              baseline, boxes a fragment of the line, and reads as a
-//              mail-merge rather than a stylist's note. The name stays
-//              tappable; it simply stops shouting.
 export function renderTextWithChips(raw, { items = [], onOpenItem = null, variant = 'chip' } = {}) {
   if (!raw) return null;
   const re = /<<item:([^|>]+)\|([^>]+)>>/g;
@@ -121,7 +78,7 @@ export function ItemChip({ itemId, fallbackName, items, onOpenItem, variant = 'c
         className="cursor-pointer underline decoration-brass-400/70 decoration-1 underline-offset-[3px] hover:decoration-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-400 transition-colors"
         title={full}
       >
-        {shortItemLabel(full)}
+        {itemDisplayName(item)}
       </span>
     );
   }

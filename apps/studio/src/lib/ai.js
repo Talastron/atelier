@@ -9,6 +9,12 @@ import { ensureClothingBase, hasClothingBase, isClothingBase, trimToOnePerSlot }
 import { ALL_MATERIALS, CARE_TAGS, COLOR_FAMILIES, MATERIALS, STYLES } from "./taxonomy.js";
 import { normalizeInspirationGarments } from "./inspiration.js";
 
+// How many wardrobe pieces the Concierge is shown per reply. A cap is needed
+// to keep the prompt bounded, but it is a real blind spot on larger wardrobes,
+// so the list is ranked by relevance before truncating and the model is told
+// when pieces have been withheld.
+export const CONCIERGE_ITEM_INDEX_CAP = 80;
+
 // Locks the shape of a composed-outfit reply: all four fields required, with
 // the right types. Stops malformed/partial JSON at the source (fix A); the
 // deterministic clothing-base backstop (ensureClothingBase) handles the
@@ -908,7 +914,7 @@ Respond ONLY as JSON matching the schema.`;
 //
 // Returns the assistant's reply text. Throws on AI failure so the
 // caller can surface a graceful error in the chat thread.
-export async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '', calendarEvents = [], onChunk = null }) {
+export async function generateConciergeReply({ messages, items = [], outfits = [], styleProfile = '', ownerFirstName = '', calendarEvents = [], measurements = null, onChunk = null }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
 
   const owned = items.filter((i) => i.status === 'owned' && !i.deletedAt);
@@ -1015,12 +1021,28 @@ ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.o
   // Indexed item list — the model uses these IDs to anchor specific
   // mentions. Wrapped in <<item:id|name>> markers so the renderer can
   // swap each marker for an inline thumbnail chip without fuzzy name-
-  // matching. We cap at 80 items to keep the prompt small; that's enough
-  // coverage for the typical wardrobe size where this matters.
-  const itemIndex = items
-    .filter((i) => i && !i.deletedAt && (i.status === 'owned' || !i.status))
-    .slice(0, 80)
+  // matching.
+  //
+  // The cap keeps the prompt small, but it used to slice an unsorted list,
+  // so on a wardrobe larger than the cap the stylist saw an arbitrary
+  // subset in insertion order — silently blind to the rest, and quite
+  // possibly to the very piece being asked about. Ordering by relevance
+  // first means the cap now truncates the least useful tail rather than
+  // whatever happened to be added last: pieces in season, then those
+  // actually worn, then the remainder.
+  const seasonNow = currentSeasonLabel();
+  const indexable = items.filter((i) => i && !i.deletedAt && (i.status === 'owned' || !i.status));
+  const rankedIndexable = indexable
     .map((i) => {
+      const seasons = itemSeasons(i);
+      const inSeason = seasons.length === 0 || seasons.includes(seasonNow);
+      return { item: i, inSeason, wears: itemWearCount(i) };
+    })
+    .sort((a, b) => (b.inSeason - a.inSeason) || (b.wears - a.wears))
+    .slice(0, CONCIERGE_ITEM_INDEX_CAP);
+  const omittedCount = Math.max(0, indexable.length - rankedIndexable.length);
+  const itemIndex = rankedIndexable
+    .map(({ item: i }) => {
       const display = [i.brand, i.name, i.subCategory || i.category]
         .filter(Boolean)
         .join(' · ')
@@ -1029,21 +1051,48 @@ ${recentWearsWithOccasions.map((w) => `  - ${w.dateISO}: ${w.itemName} → ${w.o
     })
     .join('\n');
 
+  // When the cap bites, say so. Claiming a "complete view" of a wardrobe you
+  // are only partly seeing is how a stylist ends up confidently asserting the
+  // client owns nothing suitable — better to know the limit and admit it.
+  const truncationNote = omittedCount > 0
+    ? `\nNOTE: ${omittedCount} further owned piece${omittedCount === 1 ? '' : 's'} are not listed below (the list shows the ${rankedIndexable.length} most relevant — in season first, then most worn). You are NOT seeing the whole wardrobe. Never state or imply that the client lacks a garment simply because it is absent here; if a question turns on something you cannot see, say plainly that you may not have it in view.\n`
+    : '';
+
   const chipRule = itemIndex
-    ? `\nTHE WARDROBE (live inventory — only suggest from this). When you reference a SPECIFIC piece, wrap it in this exact marker form: <<item:ID|display name>> — picking the id from the indexed list below. Wrap only the piece itself, not the surrounding sentence. Examples:
+    ? `\nTHE WARDROBE (${omittedCount > 0 ? 'partial view — see NOTE' : 'live inventory'} — only suggest from this). When you reference a SPECIFIC piece, wrap it in this exact marker form: <<item:ID|display name>> — picking the id from the indexed list below. Wrap only the piece itself, not the surrounding sentence. Examples:
 - Right: "Pair the <<item:i_xyz|ivory silk shirt>> with the <<item:i_abc|charcoal wool trouser>>."
 - Wrong: "<<item:i_xyz|Pair the ivory silk shirt>>"
 - Wrong: a marker for a piece you can't find in the indexed list — invent neither id nor item.
-
+${truncationNote}
 Indexed wardrobe items (id | display):
 ${itemIndex}
 `
     : '';
 
-  const systemBlock = `You are the personal stylist of ${ownerFirstName || 'the user'}, working from a complete view of their wardrobe. Your voice is warm, considered, decisive. You speak like a trusted couturier — never sycophantic, never corporate. Brief and confident; one short paragraph plus a tidy bullet list when proposing pieces. Avoid filler ("Great question!"), avoid generic style advice. Reference specific pieces by exact name from the inventory below.
+  // The app collects measurements and uses them for fit estimates elsewhere,
+  // but the Concierge was never given them — so the one question a stylist is
+  // most often asked ("will this suit me?") had no body to reason about.
+  // Only non-empty fields are sent; a half-filled profile is still useful.
+  const measurementsBlock = (() => {
+    if (!measurements) return '';
+    const LABELS = {
+      height: 'height', weight: 'weight', chest: 'chest',
+      waist: 'waist', hips: 'hips', shoeSize: 'shoe size',
+    };
+    const parts = Object.entries(LABELS)
+      .map(([key, label]) => {
+        const value = String(measurements[key] ?? '').trim();
+        return value ? `${label} ${value}` : null;
+      })
+      .filter(Boolean);
+    if (parts.length === 0) return '';
+    return `\nThe client's measurements: ${parts.join(', ')}. Use these when proportion or fit is the point of the question — never volunteer them, never comment on the client's body, and do not infer a size for a garment you have no sizing data for.\n`;
+  })();
+
+  const systemBlock = `You are the personal stylist of ${ownerFirstName || 'the user'}, working from ${omittedCount > 0 ? 'a broad but incomplete view of' : 'a complete view of'} their wardrobe. Your voice is warm, considered, decisive. You speak like a trusted couturier — never sycophantic, never corporate. Brief and confident; one short paragraph plus a tidy bullet list when proposing pieces. Avoid filler ("Great question!"), avoid generic style advice. Reference specific pieces by exact name from the inventory below.
 
 Today is ${todayLabel}.
-${styleProfile ? `\nThe client's style profile: ${styleProfile}\n` : ''}
+${styleProfile ? `\nThe client's style profile: ${styleProfile}\n` : ''}${measurementsBlock}
 ${mostWorn ? `\nMOST WORN PIECES: ${mostWorn}` : ''}
 ${leastWorn ? `\nLEAST WORN (in season, owned 90+ days): ${leastWorn}\nWhen asked what's been worn least, cite ONLY pieces from this exact list — you have no wear-count data for anything else, so never guess or imply that some other item is neglected. Mention 2-4 standout pieces, not the whole list, in the same brief-prose style as any other question — no bulleted enumeration of everything.` : ''}
 ${savedLooks ? `\nSAVED LOOKS (suggest by name when fitting): ${savedLooks}` : ''}

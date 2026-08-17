@@ -6897,6 +6897,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         styleProfile,
         ownerFirstName,
         calendarEvents,
+        measurements,
         onChunk: (chunk) => {
           if (cancelledRef.current) return;
           lastChunkAt = performance.now(); // reset idle timer
@@ -6985,6 +6986,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
         styleProfile,
         ownerFirstName,
         calendarEvents,
+        measurements,
         onChunk: (chunk) => {
           if (cancelledRef.current) return;
           lastChunkAt = performance.now(); // reset idle timer

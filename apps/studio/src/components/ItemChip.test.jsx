@@ -53,3 +53,27 @@ describe('renderTextWithChips against share-snapshot pieces', () => {
     expect(stripItemChips(NOTE)).toBe('Start with the Navy wool coat over the Champagne silk vest, then gold.');
   });
 });
+
+describe('variant', () => {
+  it('defaults to the thumbnail chip, so existing surfaces are unchanged', () => {
+    const out = renderTextWithChips(NOTE, { items: SNAPSHOT_PIECES });
+    const chips = out.filter((n) => n && n.type === ItemChip);
+    expect(chips[0].props.variant).toBe('chip');
+  });
+
+  // The Daily Brief's stylist note passes 'inline' so the prose keeps its
+  // line rhythm; the pieces are already shown as tiles directly above it.
+  it('passes the requested variant down to every chip', () => {
+    const out = renderTextWithChips(NOTE, { items: SNAPSHOT_PIECES, variant: 'inline' });
+    const chips = out.filter((n) => n && n.type === ItemChip);
+    expect(chips).toHaveLength(2);
+    for (const chip of chips) expect(chip.props.variant).toBe('inline');
+  });
+
+  it('parses identically whichever variant is asked for', () => {
+    const asChips = renderTextWithChips(NOTE, { items: SNAPSHOT_PIECES });
+    const asInline = renderTextWithChips(NOTE, { items: SNAPSHOT_PIECES, variant: 'inline' });
+    const textOf = (out) => out.filter((n) => typeof n === 'string').join('');
+    expect(textOf(asInline)).toBe(textOf(asChips));
+  });
+});

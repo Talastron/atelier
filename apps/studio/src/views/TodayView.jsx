@@ -609,7 +609,11 @@ function DailyBriefCard({
         <Sparkles size={20} strokeWidth={1.4} className="hidden shrink-0 text-brass-500 sm:block" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">Stylist's note</p>
-          <p className="mt-1.5 text-sm italic leading-relaxed text-stone-700">{renderTextWithChips(brief.reasoning, { items, onOpenItem })}</p>
+          {/* variant="inline": this is the stylist's prose, and the pieces it
+              names are already shown as tiles directly above it. Repeating
+              them as thumbnail pills mid-sentence added no information and
+              broke the line rhythm of the one passage carrying the voice. */}
+          <p className="mt-1.5 text-sm italic leading-relaxed text-stone-700">{renderTextWithChips(brief.reasoning, { items, onOpenItem, variant: 'inline' })}</p>
           <button
             onClick={() => setWhyOpen(o => !o)}
             className="mt-4 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-stone-500 underline-offset-4 hover:text-stone-800"

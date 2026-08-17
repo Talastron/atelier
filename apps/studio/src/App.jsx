@@ -1564,8 +1564,15 @@ function DigitalWardrobe() {
                     >
                       Reset
                     </button>
+                    {/* target="_top" because the marketing site embeds this
+                        demo in an iframe on /studio. Without it, "Sign up"
+                        would load the sign-in screen *inside* that small
+                        frame, which reads as a dead end. Outside a frame
+                        _top is identical to a normal link, so this is safe
+                        for anyone visiting the demo directly. */}
                     <a
                       href="/"
+                      target="_top"
                       className="bg-stone-900 text-white px-3 sm:px-3.5 py-1.5 rounded-full uppercase tracking-[0.18em] hover:bg-stone-700 transition-colors whitespace-nowrap"
                     >
                       Sign up

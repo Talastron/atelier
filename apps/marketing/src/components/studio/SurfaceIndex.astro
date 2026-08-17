@@ -1,0 +1,193 @@
+---
+// apps/marketing/src/components/studio/SurfaceIndex.astro
+//
+// A printed contents page for the studio: every surface a member can open,
+// named exactly as the app names it, one line each.
+//
+// This exists because the Toolkit above goes deep on six methods and the
+// site had no place that simply said what the studio contains. Four
+// destinations — Wardrobe, Lookbook, Inspiration, Directory — were sold
+// nowhere at all before this.
+//
+// Deliberately a .astro component and not React: it is static text, it
+// sits directly beneath an iframe running the whole studio plus six
+// animating cards, and it has no business shipping a byte of JavaScript.
+//
+// ─────────────────────────────────────────────────────────────────────
+// SOURCE OF TRUTH: apps/studio/src/nav/Sidebar.jsx
+//
+// The order and the labels below mirror that file's <DesktopNavItem>s,
+// with the Concierge first because the sidebar puts it above the primary
+// pillars. When a surface is added, renamed or retired in the app, this
+// array is what has to follow — the previous version of this page was a
+// hand-built replica that silently lost Today and Calendar and kept a
+// Profile tab the app had already moved into the avatar menu.
+//
+// The shape here (ordered array of {label, line}) is intentionally what a
+// shared packages/product-facts module would export, so lifting it out
+// later is a move rather than a rewrite.
+// ─────────────────────────────────────────────────────────────────────
+
+import { BrassRule, RomanNumeral } from '@atelier/ui';
+
+const SURFACES = [
+  {
+    label: 'Concierge',
+    line: 'The stylist. Ask it anything about your wardrobe and it answers from what you actually own.',
+  },
+  {
+    label: 'Today',
+    line: 'The daily brief: a look composed for the weather and the day ahead, waiting when you open the app.',
+  },
+  {
+    label: 'Wardrobe',
+    line: 'Every piece accounted for: brand, colour, material, what it cost, and every day you wore it.',
+  },
+  {
+    label: 'Styling Studio',
+    line: 'Compose looks slot by slot, or name an occasion and have them composed for you.',
+  },
+  {
+    // The Google Calendar connection is named here because it is named
+    // nowhere else a visitor will read — privacy.mdx documents it properly,
+    // but a policy page is not where anyone discovers a feature. It used to
+    // sit on a Toolkit card; that card was cut, so the line carries it,
+    // read-only assurance included.
+    label: 'Calendar',
+    line: 'Plan the week, log what you wore, and turn a trip into a packing list you can print. Connect Google Calendar and the Concierge dresses you for what is actually on. Atelier only reads it, and never changes a thing.',
+  },
+  {
+    label: 'Lookbook',
+    line: 'The looks you kept. Share one, or a whole book, as a private link that needs no account.',
+  },
+  {
+    label: 'Inspiration',
+    line: 'Save a photograph that caught your eye and Atelier finds what in your closet already answers it.',
+  },
+  {
+    label: 'Insights',
+    line: 'True cost per wear, where the collection is thin, and a private brief of your aesthetic.',
+  },
+  {
+    label: 'Directory',
+    line: 'The houses you return to, kept as an address book rather than a browser full of tabs.',
+  },
+];
+---
+
+<section
+  id="inside-the-studio"
+  style="padding-block: clamp(3.5rem, 6vw, 5.5rem); padding-inline: var(--atelier-page-padding);"
+>
+  <div class="mx-auto" style="max-width: 860px;">
+    {/* Header — centred, matching the Toolkit masthead above */}
+    <div class="text-center" style="margin-bottom: clamp(2.25rem, 4vw, 3.25rem);">
+      {/* No client:* directive on these, deliberately. Astro renders a React
+          component to static HTML at build time unless you ask it to
+          hydrate, and neither of these has behaviour to hydrate. That keeps
+          this whole section at zero JavaScript, which is the reason it is
+          an .astro file in the first place. */}
+      <div class="flex items-center justify-center gap-3 mb-5">
+        <BrassRule />
+        <p
+          class="text-[10px] uppercase font-medium"
+          style="letter-spacing: 0.28em; color: var(--atelier-brass-text);"
+        >
+          Inside the Studio
+        </p>
+        <BrassRule />
+      </div>
+      <h2
+        class="mx-auto mb-4"
+        style="font-family: var(--atelier-font-display); font-size: clamp(1.75rem, 3vw, 2.5rem); line-height: 1.08; color: var(--atelier-stone-900); letter-spacing: -0.01em; max-width: 22ch;"
+      >
+        Nine rooms, <em style="font-weight: 400;">one wardrobe</em>.
+      </h2>
+      <p
+        class="mx-auto"
+        style="color: var(--atelier-stone-500); font-size: clamp(0.9375rem, 1.1vw, 1.0625rem); line-height: 1.6; max-width: 50ch;"
+      >
+        Everything a membership opens, named as the studio names it.
+      </p>
+    </div>
+
+    {/* The contents page. A <dl> because that is what this is: a list of
+        terms and their descriptions. Screen readers announce it as such. */}
+    <dl class="surface-index">
+      {SURFACES.map((surface, i) => (
+        <div class="surface-row">
+          <dt class="surface-term">
+            <span class="surface-numeral" aria-hidden="true">
+              <RomanNumeral n={i + 1} />
+            </span>
+            <span class="surface-label">{surface.label}</span>
+          </dt>
+          <dd class="surface-line">{surface.line}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>
+
+<style>
+  /* Hairline-ruled rows, the way a contents page is set: the numeral and
+     name hold a fixed column on the left, the description runs beside it.
+     Below 640px the description drops under the name — at that width a
+     two-column row leaves ~18 characters for the line, which sets badly. */
+  .surface-index {
+    border-top: 1px solid var(--atelier-stone-200);
+  }
+
+  .surface-row {
+    display: grid;
+    grid-template-columns: minmax(0, 15rem) 1fr;
+    gap: 0.5rem 2rem;
+    align-items: baseline;
+    padding-block: 1.1rem;
+    border-bottom: 1px solid var(--atelier-stone-200);
+  }
+
+  .surface-term {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .surface-numeral {
+    flex-shrink: 0;
+    min-width: 2.25rem;
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    color: var(--atelier-brass-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .surface-label {
+    font-family: var(--atelier-font-display);
+    font-size: clamp(1.0625rem, 1.5vw, 1.25rem);
+    line-height: 1.2;
+    color: var(--atelier-stone-900);
+    letter-spacing: -0.005em;
+  }
+
+  .surface-line {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--atelier-stone-500);
+    margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    .surface-row {
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+      padding-block: 1rem;
+    }
+    /* Align the description with the label rather than the numeral, so the
+       numerals form a clean rail down the left edge. */
+    .surface-line {
+      padding-left: 3rem;
+    }
+  }
+</style>

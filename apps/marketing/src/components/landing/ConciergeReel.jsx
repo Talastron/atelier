@@ -32,7 +32,12 @@ const SLIDES = [
       ['fine-chain-necklace-24-monica-vinader', 'Fine chain necklace'],
     ],
     note: 'Champagne silk over sharp tailoring, warmed by gold.',
-    stat: '94% confidence',
+    // Every other slide's stat is a quantity the studio actually computes.
+    // This one used to read "94% confidence" — a figure the app asked the
+    // model to invent about itself, and which was removed from the product
+    // in d4d9bf8 precisely because nothing computed it and nothing could
+    // check it. The piece count is simply the number of tiles above.
+    stat: '4 pieces · head to toe',
   },
   {
     ask: 'Pack me for Tokyo, 5 days',

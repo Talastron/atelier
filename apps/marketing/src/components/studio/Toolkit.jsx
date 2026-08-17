@@ -410,7 +410,7 @@ function CPWDemo() {
 
 const MANIFESTO_SNIPPETS = [
   'You dress in the colours of considered absence: stone, ink, cream.',
-  'Your wardrobe runs on quiet conviction — every piece earns its keep.',
+  'Your wardrobe runs on quiet conviction. Every piece earns its keep.',
   'The champagne silk vest has been worn seventy times this year. Some pieces, barely at all.',
 ];
 
@@ -527,7 +527,7 @@ const METHODS = [
     title: 'Know what it',
     titleEm: 'costs.',
     description:
-      'Every garment carries its updating cost-per-wear. The expensive piece worn a hundred times is cheaper than the bargain worn twice — and the studio keeps the tally so you can stop guessing which is which.',
+      'Every garment carries its updating cost-per-wear. The expensive piece worn a hundred times is cheaper than the bargain worn twice, and the studio keeps the tally so you can stop guessing which is which.',
     demo: <CPWDemo />,
   },
   {
@@ -536,7 +536,7 @@ const METHODS = [
     title: 'Your taste,',
     titleEm: 'written back.',
     description:
-      'The Concierge reads every piece you own and every wear you log, and writes a brief of your aesthetic — the palette you actually buy, the shapes you actually reach for, refreshed as the year turns.',
+      'The Concierge reads every piece you own and every wear you log, then writes a brief of your aesthetic: the palette you actually buy, the shapes you actually reach for, refreshed as the year turns.',
     demo: <ManifestoDemo />,
   },
   {
@@ -545,7 +545,7 @@ const METHODS = [
     title: 'A capsule for',
     titleEm: 'every trip.',
     description:
-      'Name a destination. The Concierge reads the forecast, the length of the stay and the kind of trip you take, then packs it from the wardrobe you already own — and prints the list.',
+      'Name a destination. The Concierge reads the forecast, the length of the stay and the kind of trip you take, then packs it from the wardrobe you already own and prints the list.',
     demo: <TravelDemo />,
   },
 ];
@@ -602,8 +602,8 @@ export function Toolkit() {
           }}
         >
           You have just had the run of every room. These three are the work the studio does on
-          its own, from everything you have logged — the parts that take a season to appear, and
-          so cannot be found by clicking about above.
+          its own, from everything you have logged. They are the parts that take a season to
+          appear, and so cannot be found by clicking about above.
         </p>
       </div>
 

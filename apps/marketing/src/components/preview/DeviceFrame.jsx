@@ -125,7 +125,7 @@ export function DeviceFrame({ url = 'edit.myatelier.style', caption, children })
               color: 'var(--atelier-stone-500)',
             }}
           >
-            {caption || 'The Studio — live'}
+            {caption || 'The Studio, live'}
           </p>
           <span
             aria-hidden="true"

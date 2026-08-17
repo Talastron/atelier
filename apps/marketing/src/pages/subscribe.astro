@@ -9,7 +9,7 @@ import NewsletterSignup from '../components/NewsletterSignup.astro';
 // so those users aren't left with a silently re-rendered empty form.
 const hasError = Astro.url.searchParams.get('error') === '1';
 ---
-<Base title="Subscribe — Atelier" description="Occasional essays on dressing well from what you already own.">
+<Base title="Subscribe · Atelier" description="Occasional essays on dressing well from what you already own.">
   <Nav />
   <main style="max-width: 42rem; margin: 0 auto; padding: 6rem 1.5rem;">
     {hasError && (

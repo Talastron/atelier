@@ -15,15 +15,21 @@ import { normalizeInspirationGarments } from "./inspiration.js";
 // when pieces have been withheld.
 export const CONCIERGE_ITEM_INDEX_CAP = 80;
 
-// Locks the shape of a composed-outfit reply: all four fields required, with
+// Locks the shape of a composed-outfit reply: all three fields required, with
 // the right types. Stops malformed/partial JSON at the source (fix A); the
 // deterministic clothing-base backstop (ensureClothingBase) handles the
 // semantic guarantee a schema can't express ("at least one garment").
+//
+// No `confidence` field. It used to ask the model to score its own certainty
+// 0-100, which nothing computed and nothing could check — self-reported
+// confidence clusters on round high numbers regardless of how well the look
+// actually matches, so a barely-workable outfit and a perfect one both came
+// back at 95. A precise-looking figure that measures nothing is worse than
+// no figure at all, particularly sitting under prose we ask to be honest.
 const OUTFIT_RESPONSE_SCHEMA = Schema.object({
   properties: {
     itemIds: Schema.array({ items: Schema.string() }),
     reasoning: Schema.string(),
-    confidence: Schema.number(),
     tags: Schema.array({ items: Schema.string() }),
   },
 });
@@ -172,7 +178,7 @@ COMPLEMENTARY PIECES — shoes, bags, outerwear, belts, accessories and jeweller
 ${otherItems.map(summarize).join('\n')}
 
 Respond ONLY with valid JSON in this exact shape:
-{"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "confidence": 0-100, "tags": ["3-5 short descriptive labels"]}
+{"itemIds": ["id1", "id2", ...], "reasoning": "one elegant sentence explaining why this combination works", "tags": ["3-5 short descriptive labels"]}
 
 Marker rule for the reasoning field — STRICT. The pictured look (your itemIds) and the written look (this reasoning) MUST be identical:
 - EVERY garment or accessory you name in the reasoning MUST be one of the items in your itemIds array, and MUST be wrapped as <<item:ID|display name>> using that exact item's id.
@@ -189,7 +195,6 @@ Tags guidance:
 - Avoid restating the items themselves; tags describe the LOOK, not its parts
 - No duplicates, no marketing fluff
 
-Confidence reflects how strongly the available wardrobe matches the intent (100 = perfect fit, 50 = workable but not ideal, low = thin matches).
 
 FINAL SELF-CHECK before you respond — all three must be true, or fix itemIds and retry yourself:
 1. itemIds contains a real clothing base: a Dress, OR a Top AND a Bottom. (A look of only shoes/bag/jewellery is invalid.)

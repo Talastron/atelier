@@ -645,7 +645,6 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
   const [aiStage, setAiStage] = useState('');
   const [aiNote, setAiNote] = useState(null);
   const [aiTags, setAiTags] = useState([]);
-  const [aiConfidence, setAiConfidence] = useState(null);
 
   // The note is prose about a specific set of garments. Swapping a piece leaves
   // it describing something that is no longer in the look — and because the
@@ -657,7 +656,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
     .map((p) => p.id);
   const aiNoteStale = noteIsStale(aiNote, currentItemIds);
   const [abComparing, setAbComparing] = useState(false);
-  const [abPair, setAbPair] = useState(null); // { a: { outfit, reasoning, confidence }, b: {...} }
+  const [abPair, setAbPair] = useState(null); // { a: { outfit, reasoning, tags }, b: {...} }
 
   const AI_STAGES = [
     'Reading your wardrobe…',
@@ -717,8 +716,8 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
       };
       setAbPair({
         intent,
-        a: { outfit: buildOutfit(resultA), reasoning: resultA.reasoning, confidence: resultA.confidence, tags: Array.isArray(resultA.tags) ? resultA.tags : [] },
-        b: { outfit: buildOutfit(resultB), reasoning: resultB.reasoning, confidence: resultB.confidence, tags: Array.isArray(resultB.tags) ? resultB.tags : [] },
+        a: { outfit: buildOutfit(resultA), reasoning: resultA.reasoning, tags: Array.isArray(resultA.tags) ? resultA.tags : [] },
+        b: { outfit: buildOutfit(resultB), reasoning: resultB.reasoning, tags: Array.isArray(resultB.tags) ? resultB.tags : [] },
       });
     } catch (err) {
       toast.show(err?.message || 'AB compare failed', { kind: 'error', duration: 4000 });
@@ -769,7 +768,6 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
       setCurrentOutfit(next);
       setAiNote(result.reasoning || 'AI-styled look ready');
       setAiTags(Array.isArray(result.tags) ? result.tags : []);
-      setAiConfidence(typeof result.confidence === 'number' ? result.confidence : null);
       toast.show(refine ? 'Refined' : 'Styled by the Concierge', { kind: 'success' });
       // Save to AI prompt history
       if (saveAIHistory) {
@@ -779,7 +777,6 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             intent,
             itemIds: Object.values(next).flatMap(slotItems).map((i) => i.id),
             reasoning: result.reasoning || '',
-            confidence: typeof result.confidence === 'number' ? result.confidence : null,
             refined: refine,
             createdAt: new Date().toISOString(),
           });
@@ -1134,16 +1131,6 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                   You&rsquo;ve changed this look since the Concierge described it
                 </p>
               )}
-              {typeof aiConfidence === 'number' && (
-                <div className="mt-3 ml-7 flex items-center gap-2 text-[10px] tracking-widest uppercase">
-                  <span className="text-stone-400">Confidence</span>
-                  <div className="flex-1 max-w-[120px] h-1 bg-stone-800 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${aiConfidence >= 75 ? 'bg-emerald-400' : aiConfidence >= 50 ? 'bg-amber-300' : 'bg-orange-400'}`}
-                      style={{ width: `${Math.max(5, Math.min(100, aiConfidence))}%` }} />
-                  </div>
-                  <span className="text-stone-300 font-medium">{aiConfidence}%</span>
-                </div>
-              )}
               <div className="mt-4 ml-7 space-y-2">
                 <p className="text-[10px] tracking-widest uppercase text-stone-400 font-semibold">Refine</p>
                 <div className="flex flex-wrap gap-1.5">
@@ -1206,14 +1193,12 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             setCurrentOutfit(choice.outfit);
             setAiNote(choice.reasoning);
             setAiTags(choice.tags || []);
-            setAiConfidence(typeof choice.confidence === 'number' ? choice.confidence : null);
             if (saveAIHistory) {
               saveAIHistory({
                 id: newId(),
                 intent: abPair.intent,
                 itemIds: Object.values(choice.outfit).flatMap(slotItems).map((i) => i.id),
                 reasoning: choice.reasoning || '',
-                confidence: choice.confidence ?? null,
                 createdAt: new Date().toISOString(),
               }).catch(() => {});
             }
@@ -1974,11 +1959,6 @@ function ABCompareModal({ pair, onClose, onPick }) {
       <div className="flex flex-col bg-white border border-stone-200/60 rounded-2xl p-4 sm:p-5 smooth-shadow">
         <div className="flex items-baseline justify-between mb-3">
           <span className="font-display text-2xl text-stone-900">{label}</span>
-          {typeof side.confidence === 'number' && (
-            <span className={`text-[10px] tracking-widest uppercase font-medium px-2 py-1 rounded-full ${
-              side.confidence >= 75 ? 'bg-emerald-100 text-emerald-800' : side.confidence >= 50 ? 'bg-brass-100 text-brass-700' : 'bg-orange-100 text-orange-800'
-            }`}>{side.confidence}%</span>
-          )}
         </div>
         <div className="grid grid-cols-3 gap-2 mb-3 flex-1">
           {pieces.slice(0, 9).map((p) => (

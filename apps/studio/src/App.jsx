@@ -353,6 +353,10 @@ function DigitalWardrobe() {
   // panel; reachable from the sidebar (desktop) and a hero card on the
   // Wardrobe landing page (mobile + desktop).
   const [isConciergeOpen, setIsConciergeOpen] = useState(false);
+  // A question the Concierge should ask itself on open, handed up by the
+  // prompt card on Today. Null for every other entry point, which opens the
+  // stylist with an empty thread as before.
+  const [conciergeQuestion, setConciergeQuestion] = useState(null);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -1144,7 +1148,6 @@ function DigitalWardrobe() {
         name: providedName || `Styled with ${styleSourceItem.name}`,
         itemIds: styleSuggestion.itemIds,
         reasoning: styleSuggestion.reasoning || '',
-        ...(typeof styleSuggestion.confidence === 'number' ? { confidence: styleSuggestion.confidence } : {}),
         createdAt: new Date().toISOString(),
       };
       await handleSaveOutfit(outfit);
@@ -1221,7 +1224,6 @@ function DigitalWardrobe() {
         name: `${baseName} · variation`,
         itemIds: varySuggestion.itemIds,
         reasoning: varySuggestion.reasoning || '',
-        ...(typeof varySuggestion.confidence === 'number' ? { confidence: varySuggestion.confidence } : {}),
         createdAt: new Date().toISOString(),
       };
       await handleSaveOutfit(newOutfit);
@@ -1620,7 +1622,12 @@ function DigitalWardrobe() {
                       onOpenSavedLook={setOpenOutfitId}
                       onItemClick={setSelectedItemId}
                       onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
-                      onOpenConcierge={() => setIsConciergeOpen(true)}
+                      onOpenConcierge={(question) => {
+                        // Guarded on type: most callers are onClick handlers
+                        // that would otherwise hand us a click event.
+                        setConciergeQuestion(typeof question === 'string' ? question : null);
+                        setIsConciergeOpen(true);
+                      }}
                       onOpenInspiration={setSelectedInspirationId}
                       onOpenInspirationTab={() => { setInspirationDefaultFilter('unanalysed'); setActiveTab('inspiration'); }}
                       onSelectCalendarDay={jumpToCalendarDay}
@@ -1994,7 +2001,8 @@ function DigitalWardrobe() {
 
           {isConciergeOpen && (
             <AtelierConcierge
-              onClose={() => setIsConciergeOpen(false)}
+              initialQuestion={conciergeQuestion}
+              onClose={() => { setIsConciergeOpen(false); setConciergeQuestion(null); }}
               items={ownedItems}
               outfits={outfits}
               styleProfile={summariseStyleProfile(measurements)}
@@ -6509,7 +6517,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
           <div className="flex items-start justify-between gap-3 mb-5">
             <div className="min-w-0">
               <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
-                {busy ? 'Composing' : error ? 'Couldn’t style this' : `Styled with · ${suggestion?.confidence ?? '–'}/100 confidence`}
+                {busy ? 'Composing' : error ? 'Couldn’t style this' : 'Styled with'}
               </p>
               <h2 className="font-display text-2xl sm:text-3xl mt-1 truncate">
                 {busy ? 'Building a look around it…' : sourceItem.name}
@@ -6636,7 +6644,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
           <div className="flex items-start justify-between gap-3 mb-5">
             <div className="min-w-0">
               <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
-                {busy ? 'Composing' : error ? 'Couldn’t spin a variation' : `Variation of · ${suggestion?.confidence ?? '–'}/100 confidence`}
+                {busy ? 'Composing' : error ? 'Couldn’t spin a variation' : 'Variation of'}
               </p>
               <h2 className="font-display text-2xl sm:text-3xl mt-1 truncate">
                 {busy ? `Reimagining "${sourceOutfit.name}"…` : sourceOutfit.name}
@@ -6745,7 +6753,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
 //   • error flag if a reply fails (offers retry of last user message)
 //   • input controlled with submit-on-enter (shift+enter = new line)
 //   • auto-scrolls to bottom on new messages
-function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences, onOpenItem = null, onSaveLook = null, onSchedule = null, onAddToPacking = null }) {
+function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences, onOpenItem = null, onSaveLook = null, onSchedule = null, onAddToPacking = null, initialQuestion = null }) {
   useEscapeKey(onClose);
 
   // Time-of-day greeting — sets the tone before the user even types.
@@ -6939,6 +6947,17 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
       setBusy(false);
     }
   };
+
+  // Ask the question the prompt card was showing. Fires once per mount: the
+  // ref guard matters because StrictMode double-invokes effects in dev, and a
+  // second run here would send the same question twice and bill two calls.
+  const askedInitialRef = useRef(false);
+  useEffect(() => {
+    if (!initialQuestion || askedInitialRef.current) return;
+    askedInitialRef.current = true;
+    send(initialQuestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion]);
 
   const retry = async () => {
     if (busy) return;

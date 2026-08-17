@@ -19,15 +19,21 @@ function suggestQuestion(events = []) {
   return { text: 'What should I wear today?', hint: 'Your stylist is one tap away' };
 }
 
-// A slim concierge command bar — this only opens the stylist sidebar, so it's a
-// single elegant line, not a full panel. The one deliberate dark accent on the
-// page; its brevity is the point (no ballooned whitespace).
+// A slim concierge command bar — a single elegant line, not a full panel. The
+// one deliberate dark accent on the page; its brevity is the point (no
+// ballooned whitespace).
+//
+// The question shown is composed from the client's own calendar, so tapping it
+// asks it: the text is handed to onOpen and sent on arrival. It used to be
+// display-only — the card worked out the right question from the week ahead
+// and then opened an empty chat box, which is a promise the button didn't
+// keep.
 export default function ConciergePrompt({ events = [], onOpen }) {
   const { text, hint } = suggestQuestion(events);
   return (
     <button
       type="button"
-      onClick={() => onOpen?.()}
+      onClick={() => onOpen?.(text)}
       className="group flex w-full items-center gap-4 rounded-2xl bg-stone-900 px-5 py-4 text-left transition-colors hover:bg-stone-800 sm:px-6"
     >
       <Sparkles size={18} strokeWidth={1.4} className="shrink-0 text-brass-300" aria-hidden="true" />

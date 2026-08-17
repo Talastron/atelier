@@ -1,35 +1,35 @@
 // apps/marketing/src/components/studio/Toolkit.jsx
 //
-// The Toolkit — editorial spread of six methods. ALL six cards have
-// scroll-triggered micro-demos so the grid weight is equal: the bottom
-// row no longer reads as supporting features. Brass palette throughout
-// (no emerald). Hover lift on every card.
+// The Toolkit — three full-width editorial spreads, each with a
+// scroll-triggered demo, alternating down the page beneath the live embed
+// on /studio. SurfaceIndex below is the actual feature list; this is the
+// argument.
 //
-// Lives on /studio, beneath the embedded live app and above SurfaceIndex.
-// This was components/Features.jsx and sat on the home page, where it was
-// cut for reading SaaS-by-default in a column of editorial sections. That
-// judgement held there; it does not hold here, where the visitor has just
-// driven the real studio and is asking what else is in it. The six cards
-// go deep on the methods that persuade, and SurfaceIndex below names all
-// nine surfaces so nothing goes unmentioned.
+// This began as components/Features.jsx: six cards, three across, every
+// one animating. It was cut from the home page for reading
+// SaaS-by-default, revived here, and failed again for two reasons worth
+// recording so it is not revived a third time in the same shape.
 //
-// Two cards changed when it moved. "Add a piece, in seconds" and "A
-// lookbook, read-only" each duplicated a home-page section that already
-// does the job better at full width (WaysIn and ShareLooks). They gave
-// their places to Today and the Styling Studio, which nothing on the
-// site sold at all.
+// Six demos were visible at once on desktop, each running its own timing
+// chain with no shared clock, and the result read as chaotic rather than
+// restrained. And equal-width cards forced unlike objects — a five-image
+// capsule, a streaming paragraph, a price row — into one column, so
+// descriptions of different lengths pushed each demo to a different
+// height and the rows never lined up.
+//
+// The deeper fault was the selection. Three of the six re-enacted
+// surfaces — Today, the Styling Studio, the Calendar — that the visitor
+// can simply click on in the real app immediately above. That is the
+// StudioFrame mistake in a smaller frame: a cartoon of the product next
+// to the product. What survives is only what the embed cannot show,
+// because it takes a season to happen: a cost-per-wear falling across
+// fifty wears, a written brief composed from everything logged, a trip
+// becoming a packed capsule. Today, the Styling Studio and the Calendar
+// are named in SurfaceIndex instead, where naming is all they need.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Pic } from '@atelier/ui';
-import {
-  Home,
-  Camera,
-  MapPin,
-  TrendingUp,
-  Sparkles,
-  CalendarDays,
-  Wand2,
-} from 'lucide-react';
+import { MapPin, TrendingUp, Sparkles } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Shared bits
@@ -92,259 +92,64 @@ function useInView(ref, threshold = 0.3) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Card chrome — hover-lift on every card so the section responds to cursor
+// Method row — a full-width editorial spread, copy on one side and the
+// demo on the other, alternating down the page.
+//
+// This replaced a three-across card grid, which failed on two counts. Six
+// demos sat visible at once, each on its own timing chain with no shared
+// clock, and the effect was closer to a trading terminal than to anything
+// this brand would print. And equal-width cards forced genuinely unlike
+// objects — a five-image capsule, a streaming paragraph, a price row —
+// into one column width, so descriptions of different lengths pushed each
+// demo to a different height and the row never lined up.
+//
+// Rows fix both. Only one demo is near the centre of the viewport at a
+// time, which is what makes the motion feel deliberate rather than
+// competing, and the demo panel below has one fixed minimum height for
+// all three, so the spreads share a rhythm without pretending their
+// contents are the same shape.
 // ─────────────────────────────────────────────────────────────────────────
 
-function ToolkitCard({ icon: Icon, eyebrow, title, titleEm, description, demo }) {
-  const [hovered, setHovered] = useState(false);
+function MethodRow({ index, icon: Icon, eyebrow, title, titleEm, description, demo }) {
   return (
-    <article
-      className="flex flex-col cursor-default"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: '#ffffff',
-        border: '1px solid var(--atelier-stone-200)',
-        borderRadius: 18,
-        padding: 'clamp(1.25rem, 2vw, 1.75rem)',
-        boxShadow: hovered
-          ? '0 8px 24px -6px rgba(28, 25, 23, 0.10), 0 2px 4px rgba(28, 25, 23, 0.04)'
-          : '0 4px 14px -4px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.03)',
-        transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
-        transition: 'transform 320ms ease, box-shadow 320ms ease',
-        height: '100%',
-      }}
-    >
-      <div className="flex items-center gap-2.5 mb-4">
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: 'var(--atelier-stone-50)',
-            border: '1px solid var(--atelier-stone-200)',
-          }}
-        >
-          <Icon size={15} strokeWidth={1.5} style={{ color: 'var(--atelier-brass-text)' }} />
+    <article className="method-row">
+      <div className="method-copy">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="method-numeral" aria-hidden="true">
+            {['I', 'II', 'III'][index]}
+          </span>
+          <BrassRule />
+          <p
+            className="text-[9.5px] uppercase font-semibold"
+            style={{ letterSpacing: '0.28em', color: 'var(--atelier-brass-text)' }}
+          >
+            {eyebrow}
+          </p>
+        </div>
+
+        <h3 className="method-title">
+          {title}
+          {titleEm && (
+            <>
+              {' '}
+              <em style={{ fontWeight: 400 }}>{titleEm}</em>
+            </>
+          )}
+        </h3>
+
+        <p className="method-description">{description}</p>
+
+        <span className="method-icon" aria-hidden="true">
+          <Icon size={16} strokeWidth={1.4} style={{ color: 'var(--atelier-brass-text)' }} />
         </span>
-        <p
-          className="text-[9.5px] uppercase font-semibold"
-          style={{
-            letterSpacing: '0.28em',
-            color: 'var(--atelier-brass-text)',
-          }}
-        >
-          {eyebrow}
-        </p>
       </div>
 
-      <h3
-        className="mb-3"
-        style={{
-          fontFamily: 'var(--atelier-font-display)',
-          fontSize: 'clamp(1.25rem, 1.8vw, 1.5rem)',
-          lineHeight: 1.15,
-          color: 'var(--atelier-stone-900)',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {title}
-        {titleEm && (
-          <>
-            {' '}
-            <em style={{ fontWeight: 400 }}>{titleEm}</em>
-          </>
-        )}
-      </h3>
-
-      <p
-        style={{
-          fontSize: '0.875rem',
-          lineHeight: 1.6,
-          color: 'var(--atelier-stone-500)',
-          flex: 1,
-        }}
-      >
-        {description}
-      </p>
-
-      {demo && <div style={{ marginTop: '1rem' }}>{demo}</div>}
+      {/* The stage. One minimum height across all three so the spreads keep
+          a shared rhythm; the demo centres inside whatever room it needs. */}
+      <div className="method-stage">
+        <div className="method-stage-inner">{demo}</div>
+      </div>
     </article>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Card 1: Today — the weather line resolves, then the day's look fills in
-// four slots and the stylist's note lands underneath. Same choreography the
-// hero uses at full size (compose → reveal → note), compressed to a card.
-// No confidence figure: the studio removed that in d4d9bf8 and the note is
-// what the daily brief actually shows.
-// ─────────────────────────────────────────────────────────────────────────
-
-const TODAY_SAMPLES = [
-  {
-    weather: '18–24°C · Bright',
-    items: [
-      '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg',
-      '/wardrobe/gael-wool-blend-trousers.jpg',
-      '/wardrobe/suedette-2-part-block-heel-sandals.jpg',
-      '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
-    ],
-    note: 'Champagne silk over sharp tailoring, warmed by gold.',
-  },
-  {
-    weather: '9–14°C · Rain later',
-    items: [
-      '/wardrobe/reg-classic-button-down-blouse.jpg',
-      '/wardrobe/gael-wool-blend-trousers.jpg',
-      '/wardrobe/jasmin-coat.jpg',
-      '/wardrobe/england-elektra-ladies-leather-gloves.jpg',
-    ],
-    note: 'Wool and a proper coat. Dressed for the walk, not the office.',
-  },
-];
-
-function TodayDemo() {
-  const ref = useRef(null);
-  const { play, settled } = useInView(ref);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [revealed, setRevealed] = useState(0);
-  const timerRef = useRef([]);
-
-  useEffect(() => {
-    const sample = TODAY_SAMPLES[activeIdx];
-    // Reduced motion: skip the reveal, show the composed look.
-    if (settled) { setRevealed(sample.items.length); return undefined; }
-    if (!play) return undefined;
-
-    let cancelled = false;
-    setRevealed(0);
-
-    sample.items.forEach((_, i) => {
-      const t = setTimeout(() => {
-        if (!cancelled) setRevealed(i + 1);
-      }, 600 + i * 320);
-      timerRef.current.push(t);
-    });
-
-    const cycleTimer = setTimeout(() => {
-      if (!cancelled) setActiveIdx((i) => (i + 1) % TODAY_SAMPLES.length);
-    }, 600 + sample.items.length * 320 + 4200);
-    timerRef.current.push(cycleTimer);
-
-    return () => {
-      cancelled = true;
-      timerRef.current.forEach(clearTimeout);
-      timerRef.current = [];
-    };
-  }, [play, settled, activeIdx]);
-
-  const sample = TODAY_SAMPLES[activeIdx];
-  const complete = revealed >= sample.items.length;
-
-  return (
-    <div ref={ref}>
-      {/* Weather strip — the studio's Today header in miniature */}
-      <div
-        className="flex items-center gap-2 mb-2.5"
-        style={{
-          padding: '0.4rem 0.75rem',
-          background: 'var(--atelier-cream)',
-          border: '1px solid var(--atelier-stone-200)',
-          borderRadius: 8,
-        }}
-      >
-        <span
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: 'var(--atelier-brass-600)',
-            flexShrink: 0,
-          }}
-        />
-        <span
-          key={activeIdx}
-          style={{
-            fontSize: 8.5,
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            fontWeight: 600,
-            color: 'var(--atelier-stone-500)',
-            animation: 'toolkit-fade 400ms ease',
-          }}
-        >
-          Today · {sample.weather}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-4 gap-1.5">
-        {sample.items.map((src, i) => {
-          const isRevealed = i < revealed;
-          return (
-            <div
-              key={`${activeIdx}-${i}`}
-              style={{
-                aspectRatio: '3/4',
-                borderRadius: 6,
-                overflow: 'hidden',
-                background: isRevealed ? 'var(--atelier-stone-100)' : 'transparent',
-                border: isRevealed ? 'none' : '1px dashed var(--atelier-stone-200)',
-                opacity: isRevealed ? 1 : 0.4,
-                transform: isRevealed ? 'translateY(0)' : 'translateY(0.25rem)',
-                transition: 'all 400ms ease',
-              }}
-            >
-              {isRevealed && (
-                <Pic
-                  src={src}
-                  alt=""
-                  loading="lazy"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    animation: 'toolkit-drop-in 500ms cubic-bezier(0.22, 1, 0.36, 1)',
-                  }}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* The stylist's note, once the look is composed */}
-      <div
-        className="flex items-start gap-2"
-        style={{
-          marginTop: 10,
-          minHeight: '2.4em',
-          opacity: complete ? 1 : 0,
-          transform: complete ? 'translateY(0)' : 'translateY(0.25rem)',
-          transition: 'opacity 450ms ease, transform 450ms ease',
-        }}
-      >
-        <Wand2
-          size={11}
-          strokeWidth={1.4}
-          style={{ color: 'var(--atelier-brass-text)', flexShrink: 0, marginTop: 3 }}
-        />
-        <p
-          style={{
-            fontFamily: 'var(--atelier-font-display)',
-            fontStyle: 'italic',
-            fontSize: 11.5,
-            lineHeight: 1.45,
-            color: 'var(--atelier-stone-700)',
-          }}
-        >
-          {sample.note}
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -688,307 +493,27 @@ function ManifestoDemo() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Card 5: Lookbook — share URL + 3 thumbnails reveal
+// THE THREE METHODS
+//
+// Not a feature list — SurfaceIndex below is the feature list. These are
+// the three things the studio COMPOSES rather than displays, and they are
+// the three chosen precisely because the live embed above cannot show
+// them. A visitor can click every surface in the app in thirty seconds;
+// they cannot watch a coat's cost-per-wear fall across fifty wears, see a
+// season of logged wears condensed into a written brief, or watch a trip
+// become a packed capsule. Everything that IS visible by clicking around
+// up there was cut, because re-enacting it in miniature directly beneath
+// the real thing is the StudioFrame mistake in a smaller frame.
 // ─────────────────────────────────────────────────────────────────────────
 
-// Occasion pills over a four-slot grid — the Styling Studio's own
-// arrangement, borrowed from the (now unused) preview/OutfitPreview.jsx.
-// The pill for the active occasion lights in brass and the slots refill
-// beneath it, which is the point of the card: the same four slots, a
-// different answer per occasion, all of it from one wardrobe.
-const OCCASIONS = [
-  {
-    label: 'A morning meeting',
-    items: [
-      '/wardrobe/mirabel-satin-blouse.jpg',
-      '/wardrobe/gael-wool-blend-trousers.jpg',
-      '/wardrobe/marina-single-breasted-blazer.jpg',
-      '/wardrobe/y-sparks-stick-gold-necklace.jpg',
-    ],
-  },
-  {
-    label: 'Drinks tonight',
-    items: [
-      '/wardrobe/claire-pleat-detail-dress.jpg',
-      '/wardrobe/jasmin-coat.jpg',
-      '/wardrobe/merisa-gold-wide-fit-block-heel-sandals-.jpg',
-      '/wardrobe/gold-vermeil-baroque-pearl-pendant-pearl.jpg',
-    ],
-  },
-  {
-    label: 'A Saturday in town',
-    items: [
-      '/wardrobe/pippa-silk-front-colourblock-vest.jpg',
-      '/wardrobe/high-rise-denim-shorts.jpg',
-      '/wardrobe/suedette-2-part-block-heel-sandals.jpg',
-      '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg',
-    ],
-  },
-];
-
-function StylingDemo() {
-  const ref = useRef(null);
-  const { play, settled } = useInView(ref);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [revealed, setRevealed] = useState(0);
-  const timerRef = useRef([]);
-
-  useEffect(() => {
-    const sample = OCCASIONS[activeIdx];
-    if (settled) { setRevealed(sample.items.length); return undefined; }
-    if (!play) return undefined;
-
-    let cancelled = false;
-    setRevealed(0);
-
-    sample.items.forEach((_, i) => {
-      const t = setTimeout(() => {
-        if (!cancelled) setRevealed(i + 1);
-      }, 420 + i * 240);
-      timerRef.current.push(t);
-    });
-
-    const cycleTimer = setTimeout(() => {
-      if (!cancelled) setActiveIdx((i) => (i + 1) % OCCASIONS.length);
-    }, 420 + sample.items.length * 240 + 3200);
-    timerRef.current.push(cycleTimer);
-
-    return () => {
-      cancelled = true;
-      timerRef.current.forEach(clearTimeout);
-      timerRef.current = [];
-    };
-  }, [play, settled, activeIdx]);
-
-  const sample = OCCASIONS[activeIdx];
-
-  return (
-    <div ref={ref}>
-      {/* Occasion pills. Presentational only — the real thing is a click
-          away in the embed above, so these are not buttons and carry no
-          keyboard affordance they could not honour. */}
-      <div className="flex flex-wrap gap-1.5 mb-2.5" aria-hidden="true">
-        {OCCASIONS.map((o, i) => {
-          const isActive = i === activeIdx;
-          return (
-            <span
-              key={o.label}
-              style={{
-                fontSize: 8.5,
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                padding: '0.25rem 0.6rem',
-                borderRadius: 999,
-                color: isActive ? 'var(--atelier-stone-900)' : 'var(--atelier-stone-400)',
-                background: isActive ? 'rgba(212, 179, 120, 0.16)' : 'transparent',
-                border: isActive
-                  ? '1px solid var(--atelier-brass-300)'
-                  : '1px solid var(--atelier-stone-200)',
-                transition: 'all 320ms ease',
-              }}
-            >
-              {o.label}
-            </span>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-4 gap-1.5">
-        {sample.items.map((src, i) => {
-          const isRevealed = i < revealed;
-          return (
-            <div
-              key={`${activeIdx}-${i}`}
-              style={{
-                aspectRatio: '3/4',
-                borderRadius: 6,
-                overflow: 'hidden',
-                background: isRevealed ? 'var(--atelier-stone-100)' : 'transparent',
-                border: isRevealed ? 'none' : '1px dashed var(--atelier-stone-200)',
-                opacity: isRevealed ? 1 : 0.4,
-                transform: isRevealed ? 'translateY(0)' : 'translateY(0.25rem)',
-                transition: 'all 400ms ease',
-              }}
-            >
-              {isRevealed && (
-                <Pic
-                  src={src}
-                  alt=""
-                  loading="lazy"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    animation: 'toolkit-drop-in 450ms cubic-bezier(0.22, 1, 0.36, 1)',
-                  }}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Card 6: Calendar — mini week view, items drop into days
-// ─────────────────────────────────────────────────────────────────────────
-
-const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const CALENDAR_SAMPLES = [
-  {
-    plan: [
-      { day: 0, src: '/wardrobe/gene-silk-front-vest-top-in-champagne-si.jpg' },
-      { day: 2, src: '/wardrobe/claire-pleat-detail-dress.jpg' },
-      { day: 4, src: '/wardrobe/gael-wool-blend-trousers.jpg' },
-      { day: 6, src: '/wardrobe/pippa-silk-front-colourblock-vest.jpg' },
-    ],
-    today: 2, // Wed highlighted
-  },
-  {
-    plan: [
-      { day: 1, src: '/wardrobe/reg-classic-button-down-blouse.jpg' },
-      { day: 3, src: '/wardrobe/jasmin-coat.jpg' },
-      { day: 5, src: '/wardrobe/fine-chain-necklace-24-monica-vinader.jpg' },
-    ],
-    today: 3, // Thu
-  },
-];
-
-function CalendarDemo() {
-  const ref = useRef(null);
-  const { play, settled } = useInView(ref);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [revealed, setRevealed] = useState(0);
-  const timerRef = useRef([]);
-
-  useEffect(() => {
-    const sample = CALENDAR_SAMPLES[activeIdx];
-    // Reduced motion: the week is already planned.
-    if (settled) { setRevealed(sample.plan.length); return undefined; }
-    if (!play) return undefined;
-    let cancelled = false;
-
-    setRevealed(0);
-
-    sample.plan.forEach((_, i) => {
-      const t = setTimeout(() => {
-        if (!cancelled) setRevealed(i + 1);
-      }, 500 + i * 320);
-      timerRef.current.push(t);
-    });
-
-    const cycleTimer = setTimeout(() => {
-      if (!cancelled) setActiveIdx((i) => (i + 1) % CALENDAR_SAMPLES.length);
-    }, 500 + sample.plan.length * 320 + 3500);
-    timerRef.current.push(cycleTimer);
-
-    return () => {
-      cancelled = true;
-      timerRef.current.forEach(clearTimeout);
-      timerRef.current = [];
-    };
-  }, [play, settled, activeIdx]);
-
-  const sample = CALENDAR_SAMPLES[activeIdx];
-
-  return (
-    <div ref={ref} className="grid grid-cols-7 gap-1">
-      {WEEK_DAYS.map((d, i) => {
-        const plannedItem = sample.plan.find((p) => p.day === i);
-        const itemIdx = sample.plan.indexOf(plannedItem);
-        const isRevealed = plannedItem && itemIdx < revealed;
-        const isToday = i === sample.today;
-        return (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <span
-              style={{
-                fontSize: 8.5,
-                letterSpacing: '0.16em',
-                fontWeight: isToday ? 700 : 500,
-                color: isToday ? 'var(--atelier-brass-600)' : 'var(--atelier-stone-400)',
-              }}
-            >
-              {d}
-            </span>
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: '3/4',
-                borderRadius: 5,
-                overflow: 'hidden',
-                background: isRevealed ? 'var(--atelier-stone-100)' : 'transparent',
-                border: isRevealed
-                  ? 'none'
-                  : isToday
-                  ? '1px solid var(--atelier-brass-300)'
-                  : '1px dashed var(--atelier-stone-200)',
-                opacity: isRevealed ? 1 : 0.6,
-                transition: 'all 400ms ease',
-              }}
-            >
-              {isRevealed && (
-                <Pic
-                  src={plannedItem.src}
-                  alt=""
-                  loading="lazy"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    animation: 'toolkit-drop-in 500ms cubic-bezier(0.22, 1, 0.36, 1)',
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// FEATURE DATA — six methods, varied title rhythm
-// ─────────────────────────────────────────────────────────────────────────
-
-const FEATURES = [
-  {
-    icon: Home,
-    eyebrow: 'Every morning',
-    title: 'The day, decided',
-    titleEm: 'before you ask.',
-    description:
-      'Atelier reads the forecast and — if you connect it — your diary, then has a look waiting when you open the app. One decision, made, with the reasoning attached.',
-    demo: <TodayDemo />,
-  },
-  {
-    icon: Camera,
-    eyebrow: 'Compose',
-    title: 'Style it yourself,',
-    titleEm: 'or ask.',
-    description:
-      'Build a look slot by slot from your own pieces, or name the occasion and let the Concierge compose it. Keep what works to the Lookbook.',
-    demo: <StylingDemo />,
-  },
-  {
-    icon: MapPin,
-    eyebrow: 'Pack with care',
-    title: 'A capsule for',
-    titleEm: 'every trip.',
-    description:
-      'Type a destination. The Concierge reads the forecast, the length, the kind of trip you take, and packs from your existing wardrobe.',
-    demo: <TravelDemo />,
-  },
+const METHODS = [
   {
     icon: TrendingUp,
     eyebrow: 'The honest reckoning',
     title: 'Know what it',
     titleEm: 'costs.',
     description:
-      'Every garment carries its updating cost-per-wear. The expensive piece worn a hundred times is cheaper than the bargain worn twice.',
+      'Every garment carries its updating cost-per-wear. The expensive piece worn a hundred times is cheaper than the bargain worn twice — and the studio keeps the tally so you can stop guessing which is which.',
     demo: <CPWDemo />,
   },
   {
@@ -997,17 +522,17 @@ const FEATURES = [
     title: 'Your taste,',
     titleEm: 'written back.',
     description:
-      'The Concierge reads every piece you own and every wear you log, and writes a three-paragraph brief of your aesthetic.',
+      'The Concierge reads every piece you own and every wear you log, and writes a brief of your aesthetic — the palette you actually buy, the shapes you actually reach for, refreshed as the year turns.',
     demo: <ManifestoDemo />,
   },
   {
-    icon: CalendarDays,
-    eyebrow: 'Plan your week',
-    title: 'A wardrobe with a',
-    titleEm: 'calendar.',
+    icon: MapPin,
+    eyebrow: 'Pack with care',
+    title: 'A capsule for',
+    titleEm: 'every trip.',
     description:
-      'Schedule outfits to days, and — if you choose — connect your Google Calendar so Atelier reads your upcoming events to suggest outfits suited to your day: a board meeting, a long lunch, a quiet day in. Read-only: we never edit, delete, or share anything on your calendar.',
-    demo: <CalendarDemo />,
+      'Name a destination. The Concierge reads the forecast, the length of the stay and the kind of trip you take, then packs it from the wardrobe you already own — and prints the list.',
+    demo: <TravelDemo />,
   },
 ];
 
@@ -1051,7 +576,7 @@ export function Toolkit() {
             maxWidth: '20ch',
           }}
         >
-          Six methods, <em style={{ fontWeight: 400 }}>one wardrobe</em>.
+          Three things it <em style={{ fontWeight: 400 }}>composes</em>.
         </h2>
         <p
           className="mx-auto"
@@ -1062,14 +587,15 @@ export function Toolkit() {
             maxWidth: '54ch',
           }}
         >
-          You have just had the run of the studio. These are the six it is built around — the
-          everyday work of stewardship, each one drawing on the same wardrobe.
+          You have just had the run of every room. These three are the work the studio does on
+          its own, from everything you have logged — the parts that take a season to appear, and
+          so cannot be found by clicking about above.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-        {FEATURES.map((f, i) => (
-          <ToolkitCard key={i} {...f} />
+      <div className="method-list">
+        {METHODS.map((m, i) => (
+          <MethodRow key={m.eyebrow} index={i} {...m} />
         ))}
       </div>
 
@@ -1083,6 +609,111 @@ export function Toolkit() {
         @keyframes cpw-img-in {
           from { opacity: 0; transform: scale(1.04); }
           to { opacity: 1; transform: scale(1); }
+        }
+
+        .method-list {
+          display: flex;
+          flex-direction: column;
+          gap: clamp(3.5rem, 7vw, 6rem);
+        }
+
+        .method-row {
+          display: grid;
+          grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+          gap: clamp(2rem, 5vw, 4.5rem);
+          align-items: center;
+        }
+
+        /* Alternate the spread. The stage leads on even-numbered rows, which
+           is what stops three identical spreads reading as a template.
+
+           The template is mirrored alongside the order swap, and it has to
+           be: order changes where an item is painted but not which track it
+           occupies, so swapping order alone dropped the stage into the
+           narrower 0.95fr column on reversed rows and the three stages came
+           out 517 / 492 / 517px wide. Mirroring the tracks keeps the stage
+           on the 1fr side whichever way round the row is set.
+
+           (No backticks anywhere in this block: the whole stylesheet is a
+           JS template literal, so one would end the string mid-comment.) */
+        .method-row:nth-child(even) {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+        }
+        .method-row:nth-child(even) .method-copy { order: 2; }
+
+        .method-copy { min-width: 0; }
+
+        .method-numeral {
+          font-family: var(--atelier-font-display);
+          font-style: italic;
+          font-size: 0.9375rem;
+          color: var(--atelier-brass-600);
+          letter-spacing: 0.04em;
+        }
+
+        .method-title {
+          font-family: var(--atelier-font-display);
+          font-size: clamp(1.75rem, 3vw, 2.5rem);
+          line-height: 1.08;
+          color: var(--atelier-stone-900);
+          letter-spacing: -0.012em;
+          margin-bottom: 1rem;
+        }
+
+        .method-description {
+          font-size: clamp(0.9375rem, 1.1vw, 1.0625rem);
+          line-height: 1.65;
+          color: var(--atelier-stone-500);
+          max-width: 46ch;
+        }
+
+        /* A quiet brass mark closing the copy column — the same role the
+           icon played in the old card header, without reintroducing a
+           badge at the top of every block. */
+        .method-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          margin-top: 1.75rem;
+          border-radius: 50%;
+          border: 1px solid var(--atelier-brass-300);
+          background: rgba(212, 179, 120, 0.08);
+        }
+
+        .method-stage { min-width: 0; }
+
+        .method-stage-inner {
+          background: #ffffff;
+          border: 1px solid var(--atelier-stone-200);
+          border-radius: 18px;
+          padding: clamp(1.5rem, 2.5vw, 2.25rem);
+          box-shadow:
+            0 18px 44px -22px rgba(28, 25, 23, 0.16),
+            0 2px 6px rgba(28, 25, 23, 0.03);
+          min-height: 268px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        @media (max-width: 900px) {
+          /* The :nth-child(even) selector must be repeated here, not just
+             .method-row. A media query adds no specificity, so the two-column
+             even-row rule above (0,2,0) outranks a bare .method-row (0,1,0)
+             inside this block — which left the middle row still split in two
+             on a phone, with its stage crushed to 122px. */
+          .method-row,
+          .method-row:nth-child(even) {
+            grid-template-columns: 1fr;
+            gap: 1.75rem;
+          }
+          /* Copy always leads when stacked — an unexplained animation
+             arriving before its heading is just decoration. */
+          .method-row:nth-child(even) .method-copy { order: 0; }
+          .method-icon { margin-top: 1.25rem; }
+          .method-stage-inner { min-height: 232px; }
         }
       `}</style>
     </section>

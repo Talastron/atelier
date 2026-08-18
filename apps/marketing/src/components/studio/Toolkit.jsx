@@ -825,6 +825,13 @@ export function Toolkit() {
           .method-stage-inner { min-height: 232px; }
           .cpw-thumb { width: 84px; }
           .cpw-price { font-size: 27px; }
+
+          /* The brief's column narrows to ~229px on a phone, where the
+             longest of the three lines wraps to 122px against a floor set
+             for the 346px desktop column. Measured, not guessed: without
+             this the colophon dots hopped 30px each time that line came
+             round. */
+          .brief-text { min-height: 6.9em; }
         }
       `}</style>
     </section>

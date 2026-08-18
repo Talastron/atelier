@@ -11,13 +11,21 @@
 // the journal index, Colophon on articles) above this; the masthead is
 // the site-wide imprint that bookends every long page.
 //
-// Visually mirrors the bookend ornament on the /about hero — the page
-// opens and closes with the same brass-rule + lozenge composition.
+// Visually mirrors the bookend ornament on the /about hero: the page
+// opens and closes with the same brass-rule and lozenge composition.
+//
+// The top padding is the masthead's own and is load-bearing. Without it
+// the imprint had no space of its own and inherited whatever the section
+// above happened to leave, which was 30px on the home page, 51px on
+// /pricing, and on /studio a measured MINUS one: the brass lozenge sat a
+// pixel above the "Find the keys" button, inside the 32px drop shadow it
+// casts. A closing imprint should not be able to collide with the last
+// thing on the page, whatever that thing turns out to be.
 ---
 
 <div
   class="mx-auto text-center"
-  style="max-width: 600px; padding-inline: var(--atelier-page-padding); padding-bottom: clamp(4rem, 6vw, 5rem);"
+  style="max-width: 600px; padding-inline: var(--atelier-page-padding); padding-top: clamp(3.5rem, 5vw, 4.5rem); padding-bottom: clamp(4rem, 6vw, 5rem);"
 >
   <div class="flex items-center justify-center gap-4 mb-3">
     <span

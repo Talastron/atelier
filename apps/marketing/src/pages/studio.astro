@@ -198,4 +198,19 @@ const DEMO_URL = `${EDIT_URL}/?demo=1`;
   .studio-fullscreen-link:focus-visible::after {
     width: 100%;
   }
+
+  /* On a phone this link was 29px tall, under the 44px minimum tap target
+     in the iOS HIG, and it is the escape hatch for anyone who finds the
+     embed too small to use. The padding grows the hit area to ~49px; the
+     hairline is lifted off the box bottom by the same amount it gained, so
+     the rule still sits directly beneath the words. */
+  @media (max-width: 640px) {
+    .studio-fullscreen-link {
+      padding-top: 0.75rem;
+      padding-bottom: 0.9rem;
+    }
+    .studio-fullscreen-link::after {
+      bottom: 0.55rem;
+    }
+  }
 </style>

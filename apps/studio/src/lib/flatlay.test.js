@@ -51,6 +51,34 @@ describe('composeFlatlay', () => {
     expect(out.every((p) => p.rotation === 0)).toBe(true);
   });
 
+  // The property that lets a look composed of opaque images be legible: no
+  // piece may sit on top of another. Garments are allowed to overlap at the
+  // edges — a coat and a trouser share a corner by design, and closing every
+  // gap would spread the composition back out into the grid we are escaping.
+  // What must never happen is one piece essentially covering another, which is
+  // what Accessories and Jewellery did at 71% before this test existed.
+  it('does not stack one piece on top of another when overlap is off', () => {
+    const worn = [
+      piece('o1', 'Outerwear'), piece('t1', 'Tops'), piece('b1', 'Bottoms'),
+      piece('s1', 'Shoes'), piece('g1', 'Bags'), piece('a1', 'Accessories'),
+      piece('j1', 'Jewellery'),
+    ];
+    const out = composeFlatlay(worn, { overlap: false });
+    for (let i = 0; i < out.length; i += 1) {
+      for (let j = i + 1; j < out.length; j += 1) {
+        const a = out[i];
+        const b = out[j];
+        const ox = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+        const oy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+        const share = (ox * oy) / Math.min(a.w * a.h, b.w * b.h);
+        expect(
+          share,
+          `${a.item.category} covers ${(share * 100).toFixed(0)}% of ${b.item.category}`
+        ).toBeLessThan(0.25);
+      }
+    }
+  });
+
   it('tilts pieces within three degrees when overlap is on', () => {
     const out = composeFlatlay(LOOK, { overlap: true });
     expect(out.some((p) => p.rotation !== 0)).toBe(true);

@@ -26,8 +26,13 @@ const ZONES = {
   Bottoms:     { x: 0.26, y: 0.44, w: 0.40, h: 0.46, z: 2 },
   Shoes:       { x: 0.60, y: 0.50, w: 0.36, h: 0.24, z: 4 },
   Bags:        { x: 0.64, y: 0.70, w: 0.31, h: 0.26, z: 4 },
-  Accessories: { x: 0.06, y: 0.64, w: 0.17, h: 0.17, z: 5 },
-  Jewellery:   { x: 0.10, y: 0.68, w: 0.15, h: 0.15, z: 5 },
+  // Stacked, not nested. These two sat almost on top of each other (71% of the
+  // jewellery box was inside the accessories box) because the zone numbers were
+  // tuned on a five-piece look, and a five-piece look has no accessories AND
+  // jewellery. They stay in the left margin: Bottoms starts at x 0.26, so the
+  // strip below Outerwear is the only clear space in the frame.
+  Accessories: { x: 0.04, y: 0.60, w: 0.17, h: 0.17, z: 5 },
+  Jewellery:   { x: 0.04, y: 0.79, w: 0.15, h: 0.15, z: 5 },
 };
 
 // Anything uncategorised is treated as finishing rather than silhouette — it
@@ -82,8 +87,9 @@ export function rotationFor(id) {
  * @param {boolean}  [options.overlap] Allow pieces to overlap and tilt.
  *   True needs cut-outs with transparency: overlapping opaque images means a
  *   white rectangle covering the garment beneath, which is worse than a grid.
- *   False keeps every piece separate and upright — the honest arrangement for
- *   the images stored today.
+ *   False keeps every piece upright and stops any piece sitting on top of
+ *   another — the honest arrangement for the images stored today. Garments may
+ *   still share an edge; see the no-stacking test for the exact bound.
  * @param {number}   [options.max]     Cap on pieces placed. Silhouette wins.
  * @returns {Array<{item: object, x: number, y: number, w: number, h: number, rotation: number, z: number}>}
  */

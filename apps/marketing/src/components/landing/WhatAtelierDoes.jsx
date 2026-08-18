@@ -38,8 +38,8 @@ const CAPABILITIES = [
   {
     numeral: 'IV',
     title: 'Track',
-    claim: 'See the cost-per-wear of every piece — and where your wardrobe has gaps.',
-    caption: 'Your wardrobe, read as an investment — not a guess.',
+    claim: 'See the cost-per-wear of every piece, and where your wardrobe has gaps.',
+    caption: 'Your wardrobe, read as an investment, not a guess.',
   },
 ];
 
@@ -188,7 +188,7 @@ function LogVignette() {
           ✓
         </span>
         <p className="text-[11px]" style={{ color: 'var(--atelier-stone-600)' }}>
-          Worn today · <em style={{ fontFamily: 'var(--atelier-font-display)' }}>Champagne silk vest</em> — 23rd wear this year
+          Worn today · <em style={{ fontFamily: 'var(--atelier-font-display)' }}>Champagne silk vest</em> · 23rd wear this year
         </p>
       </div>
 
@@ -260,7 +260,7 @@ function StyleVignette() {
         ))}
       </div>
       <p className="text-[11px] italic" style={{ fontFamily: 'var(--atelier-font-display)', color: 'var(--atelier-stone-500)', lineHeight: 1.55 }}>
-        "Champagne silk over pleated tailoring — one tonal family, warmed by gold at the ankle and the collarbone."
+        "Champagne silk over pleated tailoring. One tonal family, warmed by gold at the ankle and the collarbone."
       </p>
     </Chrome>
   );
@@ -317,7 +317,7 @@ function TrackVignette() {
         </div>
       </div>
       <p className="text-[10.5px]" style={{ color: 'var(--atelier-stone-500)' }}>
-        The dress wants three more evenings — or a resale listing. Atelier will say which.
+        The dress wants three more evenings, or a resale listing. Atelier will say which.
       </p>
     </Chrome>
   );

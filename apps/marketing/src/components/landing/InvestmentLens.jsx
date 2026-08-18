@@ -44,7 +44,7 @@ const FIGURES = [
     suffix: '',
     label: 'Cost per wear',
     body:
-      "Lena's camel cashmere rollneck. Worn forty-seven times since she bought it in October — a piece that has, by the numbers, paid for itself nine times over. The studio flagged it as her highest-returning garment at the end of the first quarter.",
+      "Lena's camel cashmere rollneck. Worn forty-seven times since she bought it in October. By the numbers, it has paid for itself nine times over. The studio flagged it as her highest-returning garment at the end of the first quarter.",
   },
   {
     numeral: 'N°. II',
@@ -314,7 +314,7 @@ export function InvestmentLens() {
                   color: 'var(--atelier-stone-500)',
                 }}
               >
-                composed for L — , Volume I, MMXXVI
+                composed for L., Volume I, MMXXVI
               </p>
             </header>
 
@@ -386,7 +386,7 @@ export function InvestmentLens() {
                   fontWeight: 500,
                 }}
               >
-                Atelier &mdash; The Long Barn, Surrey
+                Atelier &middot; The Long Barn, Surrey
               </p>
             </div>
           </div>

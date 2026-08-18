@@ -532,7 +532,7 @@ export function InsideAtelier() {
             A studio, <em style={{ fontWeight: 400 }}>not a spreadsheet.</em>
           </h2>
           <p style={{ fontSize: 'clamp(0.95rem, 1.1vw, 1.0625rem)', lineHeight: 1.6, color: 'var(--atelier-stone-500)', maxWidth: '52ch', margin: '0 auto' }}>
-            The same surfaces you'll live in — your wardrobe, the styling studio, your lookbook — exactly as they appear when you sign in.
+            The same surfaces you'll live in: your wardrobe, the styling studio, your lookbook, exactly as they appear when you sign in.
           </p>
         </div>
 

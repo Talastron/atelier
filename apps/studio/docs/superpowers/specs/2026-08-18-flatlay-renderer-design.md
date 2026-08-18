@@ -105,7 +105,57 @@ affordable. Near 3× and it is off for the inline path, and a judgement call for
 the Storage path. Independently: if the cream renders show ragged edges on real
 garments, phase two is off regardless of what the numbers say.
 
-## 2. The white ground
+## 2. The zone collision — a defect found while mocking this up
+
+Rendering the engine's real output revealed that `composeFlatlay(…, { overlap:
+false })` does not do what its docstring says. It promises pieces that are
+"separate and upright". They are upright. They are not separate.
+
+Six of the twenty-one zone pairs intersect on a seven-piece look:
+
+| Zones | Intersection, as a share of the smaller box |
+|---|---|
+| Accessories ↔ Jewellery | **71%** |
+| Outerwear ↔ Bottoms | 16% |
+| Outerwear ↔ Tops | 12% |
+| Bottoms ↔ Shoes | 11% |
+| Shoes ↔ Bags | 7% |
+| Tops ↔ Bottoms | 5% |
+
+The `inset` of 0.012 shrinks each box by 2.4% per axis — nowhere near enough to
+separate zones that were authored overlapping in the first place.
+
+**Why it was never seen.** The engine's own comment says the numbers "were
+arrived at by composing a real five-piece look". A five-piece look does not
+contain accessories *and* jewellery, so that pair never met.
+
+**Why the tests do not catch it.** The `overlap: false` test asserts only that
+`rotation === 0`. Nothing in the suite asserts that placements do not intersect,
+so the flag's headline promise is the one property never tested — the test was
+written against what the code does rather than against what the docstring claims.
+
+**The fix.** Two parts, both in `flatlay.js`:
+
+1. Move `Accessories` and `Jewellery` apart so finishing pieces sit side by side
+   rather than stacked. The five smaller intersections are left alone: they are
+   between *garments*, where boxes overlapping while contain-fitted images do not
+   touch is the normal case, and closing them would spread the composition back
+   out into the grid we are trying to escape.
+2. Add a test asserting that no two placements intersect by more than a small
+   tolerance when `overlap: false`, so the promise is enforced rather than merely
+   documented.
+
+The alternative considered was a general separation pass that nudges any
+intersecting boxes apart at compose time. Rejected: more code, less predictable
+placement, and it would fight the deliberate garment overlaps kept in part 1.
+Fixing the numbers and testing the invariant is the smaller change.
+
+**On severity.** On the white ground of §3 the overlapping *boxes* are invisible
+— white on white. Accessories/Jewellery is different: at 71% the garments
+themselves collide, so the pendant renders on top of the sunglasses. That is
+visible on any ground, which is why it must be fixed before either surface ships.
+
+## 3. The white ground
 
 `ItemTileImage` paints `#FFFFFF` behind every cut-out, because every stored
 cut-out is an opaque white JPEG. Composing onto the current cream backdrop with
@@ -122,7 +172,7 @@ Phase two then changes one thing: the ground goes cream, and the transparency
 starts earning its keep. That is the whole reason the ground is a named constant
 rather than a literal.
 
-## 3. Degradation, built at the start
+## 4. Degradation, built at the start
 
 Not every piece has a cut-out. A raw photograph carries its own background and
 cannot float on anything. So each piece gets one of two treatments:
@@ -141,7 +191,7 @@ item 4 of the handoff's remaining work, satisfied one release early.
 `'bare'` or `'plate'`, exported from `src/lib/flatlay.js` beside the geometry.
 It is the one piece of this work with branching logic worth testing directly.
 
-## 4. `<Flatlay>`
+## 5. `<Flatlay>`
 
 **File:** `src/components/Flatlay.jsx`. Presentational; no data fetching, no
 state beyond what React needs for hover.
@@ -184,7 +234,7 @@ One prop, two behaviours, no second component.
 Empty `pieces` renders the existing `Shirt` placeholder, matching both surfaces
 today.
 
-## 5. Lookbook card
+## 6. Lookbook card
 
 **File:** `src/views/OutfitBuilder.jsx`, `LookbookSortableCard`.
 
@@ -205,7 +255,7 @@ Untouched: worn-photo covers (they bypass the grid entirely and still should),
 the N° chrome, the piece count, the favourite chip, the drag handle, the caption
 strip, and the hero card's larger proportions.
 
-## 6. Look detail
+## 7. Look detail
 
 **File:** `src/App.jsx`, `OutfitFlatLay` and its call site.
 
@@ -226,7 +276,7 @@ clean list to keep the canvas itself uncluttered").
 The Grid toggle is untouched. Anyone who prefers the catalogue view still has it,
 which also gives us a fallback if the composition disappoints on a real wardrobe.
 
-## 7. Testing
+## 8. Testing
 
 The repository has vitest but neither jsdom nor testing-library. The established
 convention is unit tests over pure functions in `src/lib/`, with rendering
@@ -236,12 +286,15 @@ component-testing stack for one feature.
 - `flatlayTreatment` gets unit tests in the existing `flatlay.test.js`: cut-out,
   framed, `cutout: true` with no URL, raw photo, no images at all, malformed
   item.
+- A new test asserts the §2 invariant: with `overlap: false`, no two placements
+  intersect beyond a small tolerance. This is the test whose absence let the
+  collision ship.
 - The 12 existing geometry tests continue to cover the placements.
 - The components are verified by running the app against a real wardrobe.
 - The harness is verified by its own output — if its WebP detection or its
   encoders were broken, the table would show it.
 
-## 8. Risks
+## 9. Risks
 
 **The composition may be worse than the grid at card size.** Eight garments
 anatomically arranged in a 200px box could read as clutter where four plates read
@@ -257,14 +310,17 @@ implementing rather than by guessing now.
 image. That is acceptable for a dozen images run once, but it means the harness
 is not something to run casually.
 
-## 9. Order of work
+## 10. Order of work
 
 1. Harness, then run it and record the verdict in the handoff document.
-2. `flatlayTreatment` plus its tests.
-3. `<Flatlay>`.
-4. Lookbook card.
-5. Look detail.
+2. Zone collision: separate the Accessories/Jewellery zones, add the
+   no-intersection test.
+3. `flatlayTreatment` plus its tests.
+4. `<Flatlay>`.
+5. Lookbook card.
+6. Look detail.
 
-Steps 2–5 do not depend on the harness's verdict — they ship with
+Steps 2–6 do not depend on the harness's verdict — they ship with
 `overlap: false` whatever it says. The harness goes first because it is cheap
-and because a negative result changes what we build afterwards.
+and because a negative result changes what we build afterwards. Step 2 precedes
+the renderers because both surfaces would otherwise ship the collision.

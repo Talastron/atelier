@@ -8549,11 +8549,14 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   );
 }
 
-// Styled flat-lay: items get deterministic-by-id transforms (rotation, scale,
-// vertical offset) so the same outfit always renders identically but each
-// look feels uniquely composed. Names render below in a clean list to keep the
-// canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
-// jewellery smaller — mimicking a real flat-lay arrangement.
+// The look, composed as a flat-lay, with its credits beneath.
+//
+// The composition itself belongs to <Flatlay>, which places pieces anatomically
+// from the shared geometry engine — so a look is arranged identically here and
+// on the Lookbook card. This component's remaining job is the credits: grouping
+// the pieces by category and keeping both halves in step with the palette
+// filter, so clicking a colour dims the same garments in the composition and in
+// the list.
 function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
   // Helper: does this piece have a colour matching the active palette filter?
   const pieceMatchesFilter = (piece) => {

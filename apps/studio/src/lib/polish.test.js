@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { itemImageDisplay, revertFramePrimary } from './polish.js';
+import { itemImageDisplay, revertFramePrimary, flatlayTreatment } from './polish.js';
 
 const mk = (images, imageMeta) => ({ images, imageMeta });
 
@@ -44,5 +44,36 @@ describe('revertFramePrimary', () => {
   });
   it('is a no-op-safe copy when there is no imageMeta', () => {
     expect(revertFramePrimary({ images: ['a'] })).toEqual([]);
+  });
+});
+
+describe('flatlayTreatment', () => {
+  // A cut-out is white-backed and sits on a white ground invisibly, so it can
+  // float. A raw photograph brings its own background and cannot — it gets a
+  // plate, and reads as a photograph rather than a garment. Honest either way.
+  it('floats a stored cut-out', () => {
+    expect(flatlayTreatment({ images: ['a.jpg'], imageMeta: [{ cutoutUrl: 'c.jpg' }] })).toBe('bare');
+  });
+
+  it('floats a framed crop', () => {
+    expect(flatlayTreatment({ images: ['a.jpg'], imageMeta: [{ framedUrl: 'f.jpg' }] })).toBe('bare');
+  });
+
+  it('floats an inline cut-out that has no separate URL', () => {
+    expect(flatlayTreatment({ images: ['a.jpg'], imageMeta: [{ cutout: true }] })).toBe('bare');
+  });
+
+  it('plates a raw photograph', () => {
+    expect(flatlayTreatment({ images: ['a.jpg'], imageMeta: [{}] })).toBe('plate');
+  });
+
+  it('plates an item with no imageMeta at all', () => {
+    expect(flatlayTreatment({ images: ['a.jpg'] })).toBe('plate');
+  });
+
+  it('plates rather than throwing on a malformed item', () => {
+    expect(flatlayTreatment(null)).toBe('plate');
+    expect(flatlayTreatment({})).toBe('plate');
+    expect(flatlayTreatment({ imageMeta: 'nonsense' })).toBe('plate');
   });
 });

@@ -21,6 +21,7 @@ import { renderTextWithChips } from "../components/ItemChip.jsx";
 import { noteIsStale } from "../lib/lookNote.js";
 import AIProgressModal from "../components/AIProgressModal.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
+import Flatlay from "../components/Flatlay.jsx";
 import DiaryView from "./Calendar.jsx";
 
 function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, indexLabel, onClick, onContextMenu }) {
@@ -35,17 +36,12 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   const wornPhoto = Array.isArray(outfit.wornPhotos) && outfit.wornPhotos.length > 0
     ? outfit.wornPhotos[outfit.wornPhotos.length - 1]?.image
     : null;
-  // Silhouette first, finishing last. A look of twelve pieces is not twelve
-  // equal things: the jacket, shirt, trouser and shoe are what it *is*, and
-  // the cuff, watch and sunglasses are how it is finished. The preview has
-  // room for four, so it spends them on the garments that define the look.
-  const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
-  const orderedPieces = [...resolvedItems].sort((a, b) => {
-    const ai = SLOT_PRIORITY.indexOf(a.category);
-    const bi = SLOT_PRIORITY.indexOf(b.category);
-    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-  });
-  const gridPieces = orderedPieces.slice(0, isHero ? 6 : 4);
+  // Silhouette first, finishing last — but composeFlatlay already orders and
+  // caps by exactly that rule, so the card passes the whole look and a limit
+  // rather than keeping a second copy of the priority list that could drift.
+  // Six on a secondary card (up from four) and eight on the hero, which is
+  // physically larger on both breakpoints.
+  const maxPieces = isHero ? 8 : 6;
   // Hero gets landscape 16:10 (magazine-cover proportions) on desktop
   // where it spans 2 cols. On mobile (single col) it'd render SHORTER
   // than secondary portrait cards — defeating the "featured" treatment.
@@ -54,7 +50,6 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   // shape with the container: 2x3 portrait on mobile, 3x2 landscape on
   // desktop.
   const aspect = isHero ? 'aspect-[3/4] md:aspect-[16/10]' : 'aspect-[4/5]';
-  const gridCols = isHero ? 'grid-cols-2 grid-rows-3 md:grid-cols-3 md:grid-rows-2' : 'grid-cols-2 grid-rows-2';
   return (
     <div ref={setNodeRef} style={style}
          className={isHero ? 'md:col-span-2' : ''}>
@@ -82,7 +77,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
           isSelected
             ? 'ring-4 ring-stone-900'
             : 'border border-stone-200/60 lg:group-hover:border-brass-300/70'
-        } ${wornPhoto ? 'bg-stone-900' : 'bg-stone-100/70'}`}>
+        } ${wornPhoto ? 'bg-stone-900' : 'bg-white'}`}>
 
           {/* IMAGE AREA — flex-1 takes the available height above the caption. */}
           <div className="flex-1 min-h-0 relative">
@@ -94,28 +89,8 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
               </>
             )}
 
-            {!wornPhoto && gridPieces.length > 0 && (
-              <div className={`absolute inset-0 ${isHero ? 'px-9 pt-12 pb-3 md:px-12 md:pt-14 md:pb-4' : 'px-7 pt-10 pb-3 sm:px-9 sm:pt-12 sm:pb-4'} grid ${gridCols} gap-4 sm:gap-5`}>
-                {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
-                  const piece = gridPieces[slotIdx];
-                  if (!piece) return <div key={slotIdx} aria-hidden="true" />;
-                  return (
-                    <div key={piece.id} className="relative bg-white rounded-lg overflow-hidden shadow-sm ring-1 ring-black/5">
-                      {itemImages(piece)[0] ? (
-                        <ItemTileImage item={piece} alt={piece.name} />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={24} strokeWidth={1} /></div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {!wornPhoto && gridPieces.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center text-stone-300">
-                <Shirt size={56} strokeWidth={0.8} />
-              </div>
+            {!wornPhoto && (
+              <Flatlay pieces={resolvedItems} max={maxPieces} />
             )}
 
             {/* Editorial chrome lives over the image area: N° series label

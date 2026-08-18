@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, DragOverlay, closestCenter } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS as DndCSS } from "@dnd-kit/utilities";
-import { Bookmark, Camera, Check, CheckCircle2, ChevronRight, GripVertical, Save, Shirt, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
+import { Bookmark, Camera, Check, CheckCircle2, ChevronRight, GripVertical, Save, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
 import { OUTFIT_SLOTS, emptyOutfit, isMultiSlot, itemFitsSlot, slotForItem, slotItems } from "../lib/outfit.js";
 import { MOOD_PRESETS, STYLES } from "../lib/taxonomy.js";
 import { colorsHarmonize, hexFromColorName } from "../lib/color.js";

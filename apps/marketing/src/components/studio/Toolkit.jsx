@@ -462,45 +462,39 @@ function ManifestoDemo() {
     };
   }, [play, settled, activeIdx]);
 
-  const isStreaming = displayText !== MANIFESTO_SNIPPETS[activeIdx];
+  // The brief is set as a page, not a chat bubble. It used to sit in a
+  // cream box behind a brass vertical rule, with a blinking block caret at
+  // the end of the text: the blockquote-plus-cursor arrangement every AI
+  // product uses, and nothing this house would ever print.
+  //
+  // What replaces it is the vocabulary the site already uses for a
+  // manifesto in components/ManifestoArtefact.astro — a centred masthead
+  // over a horizontal brass hairline, the prose in display italic, and a
+  // brass initial set as a drop cap. The caret is gone entirely: a stylist
+  // writing you a line does not leave a terminal cursor behind, and the
+  // characters arriving is signal enough that it is being composed.
+  const full = MANIFESTO_SNIPPETS[activeIdx];
+  const complete = displayText === full;
+  const initial = displayText.charAt(0);
+  const rest = displayText.slice(1);
 
   return (
-    <div ref={ref}>
-      <div
-        style={{
-          padding: '1.25rem 1.5rem',
-          background: 'var(--atelier-cream)',
-          borderLeft: '3px solid var(--atelier-brass-300)',
-          borderRadius: '0 8px 8px 0',
-          minHeight: 140,
-        }}
-      >
-        <p
-          style={{
-            fontFamily: 'var(--atelier-font-display)',
-            fontStyle: 'italic',
-            fontSize: 18,
-            lineHeight: 1.65,
-            color: 'var(--atelier-stone-800)',
-          }}
-        >
-          {displayText}
-          {isStreaming && (
-            <span
-              aria-hidden="true"
-              style={{
-                display: 'inline-block',
-                width: '0.45ch',
-                marginLeft: 1,
-                color: 'var(--atelier-brass-text)',
-                animation: 'toolkit-blink 1.4s steps(2, start) infinite',
-                fontStyle: 'normal',
-              }}
-            >
-              ▍
-            </span>
-          )}
-        </p>
+    <div ref={ref} className="brief">
+      <div className="brief-mast">
+        <span className="brief-rule" aria-hidden="true" />
+        <p className="brief-volume">Volume I &middot; MMXXVI</p>
+        <span className="brief-rule" aria-hidden="true" />
+      </div>
+
+      <p className="brief-text">
+        {initial && <span className="brief-initial">{initial}</span>}
+        {rest}
+      </p>
+
+      {/* The colophon dots close the page once the line is written, the
+          same three brass marks the nav and footer sign off with. */}
+      <div className={complete ? 'brief-close is-in' : 'brief-close'} aria-hidden="true">
+        <span /><span /><span />
       </div>
     </div>
   );
@@ -695,6 +689,86 @@ export function Toolkit() {
           border: 1px solid var(--atelier-brass-300);
           background: rgba(212, 179, 120, 0.08);
         }
+
+        /* THE PRIVATE BRIEF, set as a page.
+
+           No panel, no rule down the left edge, no caret. The masthead is
+           a horizontal brass hairline either side of the volume line, and
+           the prose carries a brass drop cap, which is exactly how
+           ManifestoArtefact.astro sets the same artefact on /about and
+           /manifesto. Nothing here is borrowed from a chat interface. */
+        .brief {
+          width: 100%;
+          text-align: center;
+        }
+
+        .brief-mast {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.875rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .brief-rule {
+          display: block;
+          width: 34px;
+          height: 1px;
+          background: var(--atelier-brass-300);
+        }
+
+        .brief-volume {
+          font-size: 9px;
+          letter-spacing: 0.34em;
+          text-transform: uppercase;
+          font-weight: 600;
+          color: var(--atelier-brass-text);
+          white-space: nowrap;
+        }
+
+        /* Left-aligned prose under a centred masthead, the way a page is
+           set. min-height holds the longest of the three lines so the
+           colophon below does not hop as they cycle. */
+        .brief-text {
+          font-family: var(--atelier-font-display);
+          font-style: italic;
+          font-size: 18px;
+          line-height: 1.7;
+          color: var(--atelier-stone-800);
+          text-align: left;
+          min-height: 5.1em;
+          margin: 0 auto;
+          max-width: 34ch;
+        }
+
+        .brief-initial {
+          float: left;
+          font-family: var(--atelier-font-display);
+          font-style: normal;
+          font-weight: 600;
+          font-size: 2.6em;
+          line-height: 0.82;
+          margin-right: 0.1em;
+          margin-top: 0.04em;
+          color: var(--atelier-brass-text);
+        }
+
+        .brief-close {
+          display: flex;
+          justify-content: center;
+          gap: 0.5rem;
+          margin-top: 1.25rem;
+          opacity: 0;
+          transition: opacity 900ms ease;
+        }
+        .brief-close.is-in { opacity: 1; }
+        .brief-close span {
+          width: 3px;
+          height: 3px;
+          border-radius: 50%;
+          background: var(--atelier-brass-300);
+        }
+        .brief-close span:nth-child(2) { background: var(--atelier-brass-600); }
 
         /* Cost-per-wear: the piece and its figure. Both step down on small
            stages so a 294px panel is not two thirds price. */

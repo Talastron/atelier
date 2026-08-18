@@ -21,7 +21,7 @@ const W = (f) => `/wardrobe/${f}.jpg`;
 const SLIDES = [
   {
     ask: 'What should I wear today?',
-    reply: 'Here’s today — quiet glamour, one decision not four.',
+    reply: 'Here’s today. Quiet glamour, one decision not four.',
     meta: 'Today’s proposal · 18–24°C',
     kind: 'grid',
     cols: 2,
@@ -41,7 +41,7 @@ const SLIDES = [
   },
   {
     ask: 'Pack me for Tokyo, 5 days',
-    reply: 'Packed. Nine pieces, fourteen outfits — half for evening.',
+    reply: 'Packed. Nine pieces, fourteen outfits, half of them for evening.',
     meta: 'Tokyo · April · cherry blossom',
     kind: 'grid',
     cols: 3,
@@ -66,7 +66,7 @@ const SLIDES = [
       ['sequin-embellished-vest', 'Sequin vest', 'A gift', '1×'],
       ['marina-single-breasted-blazer', 'Single-breasted blazer', 'Inherited', '3×'],
     ],
-    note: 'Wear them, or release them — your call, noted with reasons.',
+    note: 'Wear them, or release them. Your call, noted with reasons.',
     stat: '3 flagged',
   },
   {
@@ -90,7 +90,7 @@ const SLIDES = [
     meta: 'Your style manifesto',
     kind: 'dna',
     reading:
-      'You dress in a tight tonal palette — champagne, stone and ink, warmed by gold. Tailored, never fussy. You buy rarely and keep what lasts.',
+      'You dress in a tight tonal palette: champagne, stone and ink, warmed by gold. Tailored, never fussy. You buy rarely and keep what lasts.',
     traits: ['Tonal', 'Tailored', 'Quiet luxury', 'Gold-warmed'],
     palette: ['#e7d9be', '#c9b38a', '#a8a29e', '#A8884C', '#1c1917'],
     note: 'A private brief, composed from your wardrobe and refreshed each season.',

@@ -53,7 +53,13 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   // prominent than the 4:5 secondary cards. Inner thumbnail grid flips
   // shape with the container: 2x3 portrait on mobile, 3x2 landscape on
   // desktop.
-  const aspect = isHero ? 'aspect-[3/4] md:aspect-[16/10]' : 'aspect-[4/5]';
+  // The hero was 16:10 on desktop — magazine-cover proportions, chosen when the
+  // cover was a grid of plates that tiles happily into any rectangle. A
+  // composition does not: it is drawn for a square, so a 1.6-wide frame left it
+  // stranded in the middle with a wide margin either side. 4:3 spans the same
+  // two columns and stays visibly the featured look, while giving the
+  // composition a frame close enough to its own shape to nearly fill.
+  const aspect = isHero ? 'aspect-[3/4] md:aspect-[4/3]' : 'aspect-[4/5]';
   return (
     <div ref={setNodeRef} style={style}
          className={isHero ? 'md:col-span-2' : ''}>

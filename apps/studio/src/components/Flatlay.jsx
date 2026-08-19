@@ -5,6 +5,11 @@ import { flatlayTreatment, itemImageDisplay } from '../lib/polish.js';
 import { itemColors, itemImages } from '../lib/items.js';
 import ItemTileImage from './ItemTileImage.jsx';
 
+// How much wider than tall the composition may go before it stops stretching
+// and centres instead. The zones are drawn for a square; a fifth of widening is
+// imperceptible, and past that the columns visibly drift apart.
+const MAX_STAGE_ASPECT = 1.2;
+
 // A look composed as a flat-lay: pieces sit roughly where they are worn, rather
 // than in a grid of equal plates that reads as an inventory. The arrangement
 // comes from composeFlatlay, so a look composes identically wherever it appears.
@@ -44,16 +49,21 @@ export default function Flatlay({
   // image shrinks to its box height, surrounded by air. Secondary cards hid this
   // because their image area is near enough square to make it invisible.
   //
-  // So the composition never stretches. It takes the largest square its
-  // container allows and centres itself in it; a wide card gets margins rather
-  // than a pulled-apart arrangement. `100cqh` is the container's own height, so
-  // `min(100%, 100cqh)` is exactly the shorter side.
+  // So the composition is allowed to widen only a little before it stops and
+  // centres itself, leaving margins rather than a pulled-apart arrangement.
+  // MAX_STAGE_ASPECT is the judgement: a fifth wider than tall passes unnoticed,
+  // while the hero's old 1.6 pulled the columns apart. `100cqh` is the
+  // container's own height, so this is "the shorter side, plus a fifth".
   const outer = aspect
     ? { position: 'relative', aspectRatio: aspect, background: ground }
     : { position: 'absolute', inset: 0, background: ground, containerType: 'size' };
   const stage = aspect
     ? { position: 'absolute', inset: 0 }
-    : { position: 'relative', width: 'min(100%, 100cqh)', aspectRatio: '1 / 1' };
+    : {
+        position: 'relative',
+        width: `min(100%, calc(100cqh * ${MAX_STAGE_ASPECT}))`,
+        aspectRatio: `${MAX_STAGE_ASPECT} / 1`,
+      };
 
   if (placements.length === 0) {
     return (

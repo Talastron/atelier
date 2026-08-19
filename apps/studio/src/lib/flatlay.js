@@ -17,27 +17,34 @@
 
 // Zones are expressed as fractions of the container, so the layout is
 // resolution- and aspect-independent. `z` orders the stack: higher sits in
-// front. The numbers are deliberate rather than derived — they were arrived at
-// by composing a real five-piece look and adjusting until it read as worn.
+// front.
+//
+// While `overlap` is false these zones DO NOT INTERSECT, and that is a hard
+// requirement rather than a nicety. Every cut-out stored today is an opaque
+// white rectangle, so a pale garment placed over a coloured one paints a white
+// box across it — visible on any ground, and the single ugliest thing the
+// composition can do. The earlier numbers let Outerwear and Bottoms share 16%,
+// on the theory that contain-fitted images would not actually touch. They did:
+// white shorts sat in a white box over a tan blazer.
+//
+// Column structure, left to right: outerwear down the left, the top-and-bottom
+// (or a dress) up the centre, shoes and bag stacked in the right margin, and
+// the finishing pieces below the coat.
 const ZONES = {
-  Outerwear:   { x: 0.02, y: 0.13, w: 0.46, h: 0.47, z: 1 },
-  Dresses:     { x: 0.18, y: 0.12, w: 0.46, h: 0.60, z: 2 },
-  Tops:        { x: 0.41, y: 0.11, w: 0.38, h: 0.38, z: 3 },
-  Bottoms:     { x: 0.26, y: 0.44, w: 0.40, h: 0.46, z: 2 },
-  Shoes:       { x: 0.60, y: 0.50, w: 0.36, h: 0.24, z: 4 },
-  Bags:        { x: 0.64, y: 0.70, w: 0.31, h: 0.26, z: 4 },
-  // Stacked, not nested. These two sat almost on top of each other (71% of the
-  // jewellery box was inside the accessories box) because the zone numbers were
-  // tuned on a five-piece look, and a five-piece look has no accessories AND
-  // jewellery. They stay in the left margin: Bottoms starts at x 0.26, so the
-  // strip below Outerwear is the only clear space in the frame.
-  Accessories: { x: 0.04, y: 0.60, w: 0.17, h: 0.17, z: 5 },
-  Jewellery:   { x: 0.04, y: 0.79, w: 0.15, h: 0.15, z: 5 },
+  Outerwear:   { x: 0.010, y: 0.090, w: 0.400, h: 0.530, z: 1 },
+  Dresses:     { x: 0.430, y: 0.070, w: 0.360, h: 0.730, z: 2 },
+  Tops:        { x: 0.430, y: 0.070, w: 0.345, h: 0.360, z: 3 },
+  Bottoms:     { x: 0.430, y: 0.450, w: 0.345, h: 0.440, z: 2 },
+  Shoes:       { x: 0.800, y: 0.580, w: 0.190, h: 0.180, z: 4 },
+  Bags:        { x: 0.800, y: 0.785, w: 0.190, h: 0.185, z: 4 },
+  Accessories: { x: 0.020, y: 0.650, w: 0.175, h: 0.150, z: 5 },
+  Jewellery:   { x: 0.020, y: 0.825, w: 0.150, h: 0.140, z: 5 },
 };
 
 // Anything uncategorised is treated as finishing rather than silhouette — it
-// gets a small place at the edge instead of competing with the garments.
-const FALLBACK_ZONE = { x: 0.04, y: 0.46, w: 0.16, h: 0.16, z: 5 };
+// gets a small place at the edge instead of competing with the garments. Sits
+// in the gap between the finishing column and the centre, clear of every zone.
+const FALLBACK_ZONE = { x: 0.210, y: 0.660, w: 0.160, h: 0.160, z: 5 };
 
 // Silhouette before finishing. Matches the ordering used by the Lookbook card
 // so the two agree about what a look "is".
@@ -47,10 +54,8 @@ const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags
 // not so much that a garment reads as fallen over.
 const MAX_ROTATION = 3;
 
-// How far each additional piece in an occupied zone steps away from the first,
-// as a fraction of the container, and how much it shrinks.
-const STACK_STEP = 0.055;
-const STACK_SHRINK = 0.86;
+// Space between pieces sharing a zone, as a fraction of the container.
+const ZONE_GUTTER = 0.008;
 
 /**
  * A small deterministic hash, used only to vary rotation per piece.
@@ -80,6 +85,28 @@ export function rotationFor(id) {
 }
 
 /**
+ * The pieces of a look, silhouette first, capped.
+ *
+ * Exported because the Lookbook card offers a grid alternative to the
+ * composition, and both readings must agree about what a look *is* — the
+ * jacket, shirt, trouser and shoe define it; the cuff and sunglasses finish it.
+ * Sharing this is what stops a second copy of the priority order drifting.
+ *
+ * @param {object[]} pieces  Resolved wardrobe items, any order.
+ * @param {number}   [max]   Cap. Finishing pieces drop first.
+ * @returns {object[]}
+ */
+export function orderForFlatlay(pieces, max = 8) {
+  const list = Array.isArray(pieces) ? pieces.filter(Boolean) : [];
+  if (list.length === 0) return [];
+  return [...list].sort((a, b) => {
+    const ai = SLOT_PRIORITY.indexOf(a?.category);
+    const bi = SLOT_PRIORITY.indexOf(b?.category);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+  }).slice(0, max);
+}
+
+/**
  * Compose a look into placements.
  *
  * @param {object[]} pieces            Resolved wardrobe items, any order.
@@ -94,38 +121,49 @@ export function rotationFor(id) {
  * @returns {Array<{item: object, x: number, y: number, w: number, h: number, rotation: number, z: number}>}
  */
 export function composeFlatlay(pieces, { overlap = false, max = 8 } = {}) {
-  const list = Array.isArray(pieces) ? pieces.filter(Boolean) : [];
-  if (list.length === 0) return [];
+  const ordered = orderForFlatlay(pieces, max);
+  if (ordered.length === 0) return [];
 
-  const ordered = [...list].sort((a, b) => {
-    const ai = SLOT_PRIORITY.indexOf(a?.category);
-    const bi = SLOT_PRIORITY.indexOf(b?.category);
-    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-  }).slice(0, max);
+  // Pieces sharing a zone TILE it. Counting them up front is what makes that
+  // possible — a placement needs to know how many siblings it has, not just how
+  // many came before it. The previous approach stepped each duplicate 0.055
+  // aside, which is a twentieth of the frame: a second top covered 96% of the
+  // first, and a five-piece jewellery stack rendered as one blob.
+  const totals = new Map();
+  for (const item of ordered) {
+    const key = item?.category;
+    totals.set(key, (totals.get(key) ?? 0) + 1);
+  }
 
-  // How many pieces have already claimed each zone, so a second necklace
-  // steps away from the first rather than sitting exactly on top of it.
   const taken = new Map();
 
   return ordered.map((item) => {
     const zone = ZONES[item?.category] || FALLBACK_ZONE;
+    const total = totals.get(item?.category) ?? 1;
     const index = taken.get(item?.category) ?? 0;
     taken.set(item?.category, index + 1);
 
-    const shrink = STACK_SHRINK ** index;
-    const step = STACK_STEP * index;
+    // Squarest grid that holds them: 2 pieces side by side, 3–4 in a 2×2, and
+    // so on. Tiling cannot overlap by construction and cannot leave the zone,
+    // so the no-intersection guarantee between zones keeps holding however many
+    // necklaces a look carries.
+    const cols = Math.ceil(Math.sqrt(total));
+    const rows = Math.ceil(total / cols);
+    const cellW = zone.w / cols;
+    const cellH = zone.h / rows;
+    const gutter = total > 1 ? ZONE_GUTTER : 0;
 
     // Without overlap the whole composition is inset slightly, which opens a
-    // gap between neighbouring zones that would otherwise touch. It is the
-    // one geometric difference between the two modes.
+    // little air between neighbouring zones. It is the one geometric difference
+    // between the two modes.
     const inset = overlap ? 0 : 0.012;
 
     return {
       item,
-      x: clamp01(zone.x + step + inset),
-      y: clamp01(zone.y + step + inset),
-      w: clamp01(zone.w * shrink - inset * 2),
-      h: clamp01(zone.h * shrink - inset * 2),
+      x: clamp01(zone.x + (index % cols) * cellW + gutter + inset),
+      y: clamp01(zone.y + Math.floor(index / cols) * cellH + gutter + inset),
+      w: clamp01(cellW - gutter * 2 - inset * 2),
+      h: clamp01(cellH - gutter * 2 - inset * 2),
       rotation: overlap ? rotationFor(item?.id) : 0,
       z: zone.z + index,
     };

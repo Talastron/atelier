@@ -3,6 +3,7 @@ import { Shirt } from 'lucide-react';
 import { composeFlatlay } from '../lib/flatlay.js';
 import { flatlayTreatment, itemImageDisplay } from '../lib/polish.js';
 import { itemColors, itemImages } from '../lib/items.js';
+import ItemTileImage from './ItemTileImage.jsx';
 
 // A look composed as a flat-lay: pieces sit roughly where they are worn, rather
 // than in a grid of equal plates that reads as an inventory. The arrangement
@@ -64,7 +65,11 @@ export default function Flatlay({
               : {})}
             className={[
               'absolute transition-opacity duration-300',
-              plated ? 'bg-white rounded-lg shadow-sm ring-1 ring-black/5 p-1' : '',
+              // A plated piece gets no ring and no shadow. Those were what made
+              // it read as a box: on a white ground a hairline ring is the only
+              // thing you see. Rounding plus the photo's own sampled background
+              // (see below) lets it settle rather than announce itself.
+              plated ? 'rounded-xl overflow-hidden' : '',
               matchesFilter(item) ? 'opacity-100' : 'opacity-30',
               openable
                 ? 'cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500'
@@ -79,7 +84,14 @@ export default function Flatlay({
               transform: placement.rotation ? `rotate(${placement.rotation}deg)` : undefined,
             }}
           >
-            {src ? (
+            {src && plated ? (
+              // A raw photograph carries its own background and cannot float.
+              // ItemTileImage samples that background's colour and paints it
+              // behind the photo, so the plate matches the picture instead of
+              // being a white card behind it — the difference between a
+              // photograph resting on the surface and a cut-out that failed.
+              <ItemTileImage item={item} alt={item?.name || ''} />
+            ) : src ? (
               <img
                 src={src}
                 alt={item?.name || ''}

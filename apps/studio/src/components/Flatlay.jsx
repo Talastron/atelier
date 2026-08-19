@@ -37,20 +37,35 @@ export default function Flatlay({
     return colours.includes(paletteFilter);
   };
 
-  const frame = aspect
+  // The engine returns fractions, which are aspect-independent as NUMBERS but
+  // not as a composition: the zones were tuned against a square frame, so
+  // stretching them into a 16:10 hero widens every horizontal gap by 60% while
+  // leaving vertical ones alone. The columns drift apart and each contained
+  // image shrinks to its box height, surrounded by air. Secondary cards hid this
+  // because their image area is near enough square to make it invisible.
+  //
+  // So the composition never stretches. It takes the largest square its
+  // container allows and centres itself in it; a wide card gets margins rather
+  // than a pulled-apart arrangement. `100cqh` is the container's own height, so
+  // `min(100%, 100cqh)` is exactly the shorter side.
+  const outer = aspect
     ? { position: 'relative', aspectRatio: aspect, background: ground }
-    : { position: 'absolute', inset: 0, background: ground };
+    : { position: 'absolute', inset: 0, background: ground, containerType: 'size' };
+  const stage = aspect
+    ? { position: 'absolute', inset: 0 }
+    : { position: 'relative', width: 'min(100%, 100cqh)', aspectRatio: '1 / 1' };
 
   if (placements.length === 0) {
     return (
-      <div style={frame} className="flex items-center justify-center text-stone-300">
+      <div style={outer} className="flex items-center justify-center text-stone-300">
         <Shirt size={56} strokeWidth={0.8} />
       </div>
     );
   }
 
   return (
-    <div style={frame} className="overflow-hidden">
+    <div style={outer} className="flex items-center justify-center overflow-hidden">
+      <div style={stage} className="overflow-hidden">
       {placements.map((placement) => {
         const item = placement.item;
         const plated = flatlayTreatment(item) === 'plate';
@@ -107,6 +122,7 @@ export default function Flatlay({
           </Tag>
         );
       })}
+      </div>
     </div>
   );
 }

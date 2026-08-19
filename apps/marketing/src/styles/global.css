@@ -54,6 +54,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Print-grade line-breaking, site-wide. `balance` stops multi-line headings
+   from breaking long-line-then-orphan (the luxury-magazine cut); `pretty`
+   keeps body copy free of single-word last lines. Progressive enhancement —
+   browsers without support simply ignore it, so there's no downside. */
+h1, h2, h3 { text-wrap: balance; }
+p, li, figcaption, blockquote { text-wrap: pretty; }
+
 ::selection {
   background-color: var(--atelier-brass-200);
   color: var(--atelier-stone-900);

@@ -105,16 +105,23 @@ describe('composeFlatlay', () => {
     for (const p of out) expect(Math.abs(p.rotation)).toBeLessThanOrEqual(3);
   });
 
-  // Two pieces in one zone tile it side by side rather than stepping diagonally
-  // across each other. Stepping was the old behaviour and it barely moved them:
-  // a second top covered 96% of the first.
-  it('tiles a second piece in the same zone beside the first, not on top of it', () => {
+  // Two pieces in one zone tile it rather than stepping diagonally across each
+  // other. Stepping was the old behaviour and it barely moved them: a second top
+  // covered 96% of the first.
+  //
+  // Deliberately does NOT assert which axis they split along. The split follows
+  // the zone's shape — a tall jewellery column stacks, a wide one sits side by
+  // side — and an earlier version of this test hard-coded "side by side", so it
+  // failed the moment the zone was retuned even though the behaviour was right.
+  // The property that matters is that they are clear of each other.
+  it('tiles a second piece in the same zone clear of the first, not on top of it', () => {
     const [first, second] = composeFlatlay(
       [piece('j1', 'Jewellery'), piece('j2', 'Jewellery')],
       { overlap: true }
     );
-    expect(second.x).toBeGreaterThan(first.x);
-    expect(second.x).toBeGreaterThanOrEqual(first.x + first.w);
+    const apartInX = second.x >= first.x + first.w || first.x >= second.x + second.w;
+    const apartInY = second.y >= first.y + first.h || first.y >= second.y + second.h;
+    expect(apartInX || apartInY, 'the two cells must not intersect').toBe(true);
     expect(second.z).toBeGreaterThan(first.z);
   });
 

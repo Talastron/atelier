@@ -28,23 +28,30 @@
 // white shorts sat in a white box over a tan blazer.
 //
 // Column structure, left to right: outerwear down the left, the top-and-bottom
-// (or a dress) up the centre, shoes and bag stacked in the right margin, and
-// the finishing pieces below the coat.
+// (or a dress) up the centre, shoes and bag in the right margin, and the
+// finishing pieces side by side below the coat.
+//
+// Finishing is smaller than silhouette, but only about three times smaller by
+// area. An earlier arrangement squeezed shoes and bags into a right margin only
+// 0.19 wide to buy the no-overlap guarantee, which made them a third the size of
+// the originals and left jewellery a speck once two pieces had to share a zone.
+// The guarantee was worth keeping; paying for it out of the finishing pieces
+// was not. The centre column gave up the width instead.
 const ZONES = {
-  Outerwear:   { x: 0.010, y: 0.090, w: 0.400, h: 0.530, z: 1 },
-  Dresses:     { x: 0.430, y: 0.070, w: 0.360, h: 0.730, z: 2 },
-  Tops:        { x: 0.430, y: 0.070, w: 0.345, h: 0.360, z: 3 },
-  Bottoms:     { x: 0.430, y: 0.450, w: 0.345, h: 0.440, z: 2 },
-  Shoes:       { x: 0.800, y: 0.580, w: 0.190, h: 0.180, z: 4 },
-  Bags:        { x: 0.800, y: 0.785, w: 0.190, h: 0.185, z: 4 },
-  Accessories: { x: 0.020, y: 0.650, w: 0.175, h: 0.150, z: 5 },
-  Jewellery:   { x: 0.020, y: 0.825, w: 0.150, h: 0.140, z: 5 },
+  Outerwear:   { x: 0.010, y: 0.080, w: 0.350, h: 0.500, z: 1 },
+  Dresses:     { x: 0.390, y: 0.060, w: 0.300, h: 0.760, z: 2 },
+  Tops:        { x: 0.390, y: 0.060, w: 0.300, h: 0.370, z: 3 },
+  Bottoms:     { x: 0.390, y: 0.450, w: 0.300, h: 0.440, z: 2 },
+  Shoes:       { x: 0.710, y: 0.460, w: 0.280, h: 0.230, z: 4 },
+  Bags:        { x: 0.710, y: 0.710, w: 0.280, h: 0.260, z: 4 },
+  Accessories: { x: 0.020, y: 0.610, w: 0.165, h: 0.330, z: 5 },
+  Jewellery:   { x: 0.200, y: 0.610, w: 0.165, h: 0.330, z: 5 },
 };
 
 // Anything uncategorised is treated as finishing rather than silhouette — it
 // gets a small place at the edge instead of competing with the garments. Sits
-// in the gap between the finishing column and the centre, clear of every zone.
-const FALLBACK_ZONE = { x: 0.210, y: 0.660, w: 0.160, h: 0.160, z: 5 };
+// above the shoes, the one pocket of the frame no zone claims.
+const FALLBACK_ZONE = { x: 0.720, y: 0.100, w: 0.170, h: 0.170, z: 5 };
 
 // Silhouette before finishing. Matches the ordering used by the Lookbook card
 // so the two agree about what a look "is".
@@ -54,8 +61,9 @@ const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags
 // not so much that a garment reads as fallen over.
 const MAX_ROTATION = 3;
 
-// Space between pieces sharing a zone, as a fraction of the container.
-const ZONE_GUTTER = 0.008;
+// Half the space between pieces sharing a zone, as a fraction of the container
+// — taken off each side of a cell, so neighbours end up twice this apart.
+const ZONE_GUTTER = 0.003;
 
 /**
  * A small deterministic hash, used only to vary rotation per piece.
@@ -143,27 +151,31 @@ export function composeFlatlay(pieces, { overlap = false, max = 8 } = {}) {
     const index = taken.get(item?.category) ?? 0;
     taken.set(item?.category, index + 1);
 
-    // Squarest grid that holds them: 2 pieces side by side, 3–4 in a 2×2, and
-    // so on. Tiling cannot overlap by construction and cannot leave the zone,
-    // so the no-intersection guarantee between zones keeps holding however many
-    // necklaces a look carries.
-    const cols = Math.ceil(Math.sqrt(total));
+    // The grid that makes each cell as square as it can be, given the zone's own
+    // shape. A plain ceil(sqrt(n)) always splits by column, which halves the
+    // WIDTH of two necklaces sharing a tall zone — the worst axis to lose, since
+    // a contained image is already width-limited there.
+    const cols = Math.max(1, Math.min(total, Math.round(Math.sqrt(total * (zone.w / zone.h)))));
     const rows = Math.ceil(total / cols);
-    const cellW = zone.w / cols;
-    const cellH = zone.h / rows;
-    const gutter = total > 1 ? ZONE_GUTTER : 0;
 
     // Without overlap the whole composition is inset slightly, which opens a
     // little air between neighbouring zones. It is the one geometric difference
     // between the two modes.
+    //
+    // The inset applies to the ZONE, once — not to every cell. Taking it per
+    // cell cost a fixed 0.024 of width however small the cell was, which is 29%
+    // of a cell holding one of five necklaces.
     const inset = overlap ? 0 : 0.012;
+    const cellW = (zone.w - inset * 2) / cols;
+    const cellH = (zone.h - inset * 2) / rows;
+    const gutter = total > 1 ? ZONE_GUTTER : 0;
 
     return {
       item,
-      x: clamp01(zone.x + (index % cols) * cellW + gutter + inset),
-      y: clamp01(zone.y + Math.floor(index / cols) * cellH + gutter + inset),
-      w: clamp01(cellW - gutter * 2 - inset * 2),
-      h: clamp01(cellH - gutter * 2 - inset * 2),
+      x: clamp01(zone.x + inset + (index % cols) * cellW + gutter),
+      y: clamp01(zone.y + inset + Math.floor(index / cols) * cellH + gutter),
+      w: clamp01(cellW - gutter * 2),
+      h: clamp01(cellH - gutter * 2),
       rotation: overlap ? rotationFor(item?.id) : 0,
       z: zone.z + index,
     };

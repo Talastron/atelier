@@ -100,7 +100,13 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
             )}
 
             {!wornPhoto && coverView === 'flatlay' && (
-              <Flatlay pieces={resolvedItems} max={maxPieces} />
+              // Top padding clears the N° label and piece count; the sides and
+              // bottom just stop a garment touching the card's rounded edge.
+              <Flatlay
+                pieces={resolvedItems}
+                max={maxPieces}
+                padding={isHero ? '3rem 1.25rem 1rem' : '2.6rem 0.9rem 0.8rem'}
+              />
             )}
 
             {/* The grid remains on offer. It shows fewer pieces and says less

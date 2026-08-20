@@ -25,6 +25,14 @@ import Flatlay from "../components/Flatlay.jsx";
 import { orderForFlatlay } from "../lib/flatlay.js";
 import DiaryView from "./Calendar.jsx";
 
+// Shown on the sort pill. The <select> beneath it holds the same values; this
+// is what the eye reads, so the two must not drift apart.
+const SORT_LABELS = {
+  recent: 'Recent',
+  'most-worn': 'Most worn',
+  'a-z': 'A–Z',
+};
+
 function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, indexLabel, coverView = 'flatlay', onClick, onContextMenu }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: outfit.id });
   const style = {
@@ -1854,27 +1862,32 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         </button>
                       ))}
                     </div>
-                    <div className="shrink-0 self-end sm:self-auto relative">
-                      {/* 16px only where it is needed. iOS Safari zooms the page when a
-                          form control under 16px takes focus, so the size was pinned with
-                          an inline style — but an inline style outranks the class, which
-                          left this the one control in the row rendering at 16px while
-                          every pill beside it sat at 11px. Scoped to coarse pointers, the
-                          phone keeps its fix and the desktop row lines up. Padding, border
-                          and tracking now match the tag pills too. */}
+                    {/* A real <select> laid invisibly over a styled pill.
+                        iOS Safari zooms the page whenever a form control under
+                        16px takes focus, so the control itself must stay at
+                        16px — there is no way round that. Sizing it down breaks
+                        the phone; leaving it up made this the one oversized
+                        control in the row. Separating the two solves both: the
+                        select keeps its 16px and its native picker, keyboard
+                        and screen-reader behaviour, and is simply transparent;
+                        what you see is the span beneath it at the same 11px as
+                        every pill in the row. */}
+                    <div className="shrink-0 self-end sm:self-auto relative inline-flex">
+                      <span aria-hidden="true"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-white border border-stone-200 text-stone-700 transition-colors">
+                        {SORT_LABELS[sortMode] || SORT_LABELS.recent}
+                        <ChevronDown size={12} strokeWidth={1.5} className="text-stone-400" />
+                      </span>
                       <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value)}
                         aria-label="Sort looks"
-                        className="appearance-none px-3 py-1.5 pr-7 rounded-full text-[11px] tracking-wide uppercase bg-white border border-stone-200 text-stone-700 hover:border-stone-900 outline-none cursor-pointer transition-colors [@media(pointer:coarse)]:text-[16px]"
+                        className="absolute inset-0 w-full h-full text-[16px] opacity-0 cursor-pointer"
                       >
                         <option value="recent">Recent</option>
                         <option value="most-worn">Most worn</option>
                         <option value="a-z">A–Z</option>
                       </select>
-                      {/* appearance-none removes the native arrow, so supply one. */}
-                      <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true"
-                        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
                     </div>
                   </div>
                 )}

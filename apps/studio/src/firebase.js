@@ -481,6 +481,55 @@ function recordUserCall() {
   if (_userMonthlyCount !== null) _userMonthlyCount += 1;
 }
 
+// ─── Retrying a rate limit instead of surrendering to it ─────────────────
+// Google answers a burst of requests with a 429 and states, in the error, how
+// long to wait. Until now that delay was parsed only to put a number in the
+// toast — the call itself failed and the user performed the retry by hand,
+// which is work the client had everything it needed to do itself. Analysing
+// several looks in a row reliably tripped this.
+//
+// Only transient limits are retried. A daily quota is not something to sit and
+// wait for, so it falls straight through to the message.
+const RATE_LIMIT_RETRIES = 2;
+const MAX_RETRY_WAIT_MS = 20_000;
+const DEFAULT_RETRY_WAIT_MS = 4_000;
+
+function rateLimitWaitMs(err) {
+  const msg = String(err?.message || err || '');
+  const lower = msg.toLowerCase();
+  const transient = lower.includes('429')
+    || lower.includes('rate_limit')
+    || lower.includes('resource_exhausted')
+    || lower.includes('rate limit');
+  if (!transient) return null;
+  if (lower.includes('per day') || lower.includes('perday')) return null; // hard cap
+  const match = msg.match(/retry in ([\d.]+)\s*s/i)
+    || msg.match(/retryDelay["\s:]+["']?([\d.]+)\s*s/i);
+  const suggested = match ? Math.ceil(parseFloat(match[1]) * 1000) : DEFAULT_RETRY_WAIT_MS;
+  // Don't clamp a long delay down and retry early — that just spends another
+  // request on a limit that has not lifted yet. Past the ceiling, decline to
+  // retry and let mapGeminiError show Google's own figure, which is honest and
+  // lets the user decide whether to wait.
+  if (suggested > MAX_RETRY_WAIT_MS) return null;
+  return Math.max(suggested, 1_000);
+}
+
+// Wraps ONLY the API call, not the surrounding bookkeeping: a retried attempt
+// must not record a second call against the budget, and a final failure must
+// reach the existing handler exactly once.
+async function withRateLimitRetry(attempt) {
+  for (let tries = 0; ; tries += 1) {
+    try {
+      return await attempt();
+    } catch (err) {
+      const wait = tries < RATE_LIMIT_RETRIES ? rateLimitWaitMs(err) : null;
+      if (wait === null) throw err;
+      console.info(`[gemini] rate limited — retrying in ${Math.round(wait / 1000)}s`);
+      await new Promise((resolve) => { setTimeout(resolve, wait); });
+    }
+  }
+}
+
 // ─── Friendly error mapping ──────────────────────────────────────────────
 // Gemini SDK errors are dumped as raw HTTP/JSON strings — not what we want
 // to put in a toast. This maps the common failure modes to one-sentence
@@ -683,7 +732,7 @@ export async function geminiText(prompt, opts = {}, feature = 'unlabeled') {
         },
       },
     });
-    const result = await model.generateContent(prompt);
+    const result = await withRateLimitRetry(() => model.generateContent(prompt));
     recordCall();        // record only on successful API reach — config
                          // errors throw before this and don't burn budget
     recordUserCall();    // increment the per-user in-memory counter
@@ -775,7 +824,12 @@ export async function geminiTextStream(prompt, opts = {}, feature = 'unlabeled',
 
     const t0 = performance.now();
     let tFirstChunk = 0;
-    const result = await raceStall(model.generateContentStream(prompt), 'open');
+    // Safe to retry: a rate limit fails at stream OPEN, before any chunk has
+    // been handed to onChunk, so nothing has been shown that a second attempt
+    // would duplicate. A stall is not a rate limit, so it falls through.
+    const result = await withRateLimitRetry(
+      () => raceStall(model.generateContentStream(prompt), 'open')
+    );
     let accumulated = '';
     const iterator = result.stream[Symbol.asyncIterator]();
     while (true) {
@@ -851,10 +905,10 @@ export async function geminiTextVision(prompt, imageDataUrl, opts = {}, feature 
         },
       },
     });
-    const result = await model.generateContent([
+    const result = await withRateLimitRetry(() => model.generateContent([
       prompt,
       { inlineData: { mimeType, data } },
-    ]);
+    ]));
     recordCall();        // record only on successful API reach
     recordUserCall();    // increment per-user in-memory counter
     const text = result.response.text();
@@ -940,7 +994,7 @@ Rules:
 - Do NOT invent brand names without visible evidence — better to set brand null and confidence low than to hallucinate
 - searchQuery should be 3–8 words, brand-first when known`;
 
-    const result = await model.generateContent({
+    const result = await withRateLimitRetry(() => model.generateContent({
       contents: [{
         role: 'user',
         parts: [
@@ -948,7 +1002,7 @@ Rules:
           { inlineData: { mimeType, data } },
         ],
       }],
-    });
+    }));
 
     const text = result.response.text();
     recordCall();

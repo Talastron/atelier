@@ -76,7 +76,7 @@ import { PinterestGlyph, InstagramGlyph } from './components/BrandGlyphs.jsx';
 import { haptic } from './lib/haptic.js';
 import { buildPinterestUrl, uploadShareCardImage, newShareId } from './lib/publicShare.js';
 const OutfitBuilder = lazy(() => import('./views/OutfitBuilder.jsx'));
-import { itemImageDisplay, revertItemPrimary, frameItemPrimary, revertFramePrimary } from './lib/polish.js';
+import { itemImageDisplay, revertItemPrimary, frameItemPrimary, revertFramePrimary, promoteImageToMain } from './lib/polish.js';
 
 // Owners can invite/revoke other users. Must match the rules file exactly.
 // (The rules are the real security boundary — this is just so the UI knows
@@ -2974,17 +2974,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     }));
   };
 
+  // Delegates to a pure helper so the images/imageMeta pairing can be tested.
+  // Keeping the two arrays in step is subtler than it looks — see
+  // promoteImageToMain for what goes wrong when imageMeta is the shorter one.
   const promoteToMain = (index) => {
-    if (index === 0) return;
-    setFormData((prev) => {
-      const next = [...prev.images];
-      const [moved] = next.splice(index, 1);
-      next.unshift(moved);
-      const meta = [...(prev.imageMeta || [])];
-      const [movedMeta] = meta.splice(index, 1);
-      if (movedMeta !== undefined) meta.unshift(movedMeta);
-      return { ...prev, images: next, imageMeta: meta };
-    });
+    setFormData((prev) => promoteImageToMain(prev, index));
   };
 
   const toggleSeason = (s) => {

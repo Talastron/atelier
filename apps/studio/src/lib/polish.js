@@ -26,6 +26,40 @@ export function flatlayTreatment(item) {
   return itemImageDisplay(item, 0).forceContain ? 'bare' : 'plate';
 }
 
+// Move a photo to the front, so it becomes the one the wardrobe shows.
+//
+// `images` and `imageMeta` are parallel arrays, and keeping them in step is
+// the whole job. imageMeta is written lazily — polishing pads it only to
+// length 1, and an item imported before it existed may have none at all — so
+// it is routinely SHORTER than images. An earlier version spliced imageMeta
+// without padding first and guarded the result with `if (movedMeta !==
+// undefined)`, which meant an out-of-range index silently left imageMeta
+// describing the OLD order while images had moved. itemImageDisplay reads
+// imageMeta[0] in preference to images[0], so the wardrobe and the detail page
+// went on showing the previous photo while the editor — which renders
+// images[i] raw — showed the new one. It looked like the change had failed to
+// save.
+//
+// Returns the item unchanged (same reference) when there is nothing to do, so
+// a caller can skip a re-render.
+export function promoteImageToMain(item, index) {
+  const images = Array.isArray(item?.images) ? item.images : [];
+  if (!Number.isInteger(index) || index <= 0 || index >= images.length) return item;
+
+  const nextImages = [...images];
+  const nextMeta = Array.isArray(item?.imageMeta) ? [...item.imageMeta] : [];
+  // Pad first: only then does a splice at `index` refer to the same photo in
+  // both arrays.
+  while (nextMeta.length < nextImages.length) nextMeta.push({});
+
+  const [movedImage] = nextImages.splice(index, 1);
+  const [movedMeta] = nextMeta.splice(index, 1);
+  nextImages.unshift(movedImage);
+  nextMeta.unshift(movedMeta ?? {});
+
+  return { ...item, images: nextImages, imageMeta: nextMeta };
+}
+
 // URL-safe id for the Storage object.
 function safeId(s) { return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60) || 'x'; }
 

@@ -30,6 +30,7 @@ export default function Flatlay({
   max = 8,
   overlap = false,
   aspect,
+  padding,
   ground = '#FFFFFF',
   onOpenItem,
   paletteFilter = null,
@@ -54,9 +55,18 @@ export default function Flatlay({
   // MAX_STAGE_ASPECT is the judgement: a fifth wider than tall passes unnoticed,
   // while the hero's old 1.6 pulled the columns apart. `100cqh` is the
   // container's own height, so this is "the shorter side, plus a fifth".
+  // `padding` keeps the composition clear of chrome drawn over the same box —
+  // the Lookbook card's N° label and piece count sit top-left, and a garment
+  // reaching the top edge would sit under the text. The old grid reserved this
+  // space with pt-10; filling the box edge to edge quietly took it back.
+  //
+  // Padding works here because the stage is a flex CHILD, not an absolutely
+  // positioned one: an abs-pos child resolves `inset: 0` against the padding
+  // box and would ignore it entirely. Container query units follow the content
+  // box too, so the square shrinks to match rather than overflowing.
   const outer = aspect
-    ? { position: 'relative', aspectRatio: aspect, background: ground }
-    : { position: 'absolute', inset: 0, background: ground, containerType: 'size' };
+    ? { position: 'relative', aspectRatio: aspect, background: ground, padding }
+    : { position: 'absolute', inset: 0, background: ground, containerType: 'size', padding };
   const stage = aspect
     ? { position: 'absolute', inset: 0 }
     : {

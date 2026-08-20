@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, DragOverlay, closestCenter } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS as DndCSS } from "@dnd-kit/utilities";
-import { Bookmark, Camera, Check, CheckCircle2, ChevronRight, GripVertical, LayoutGrid, Save, Shapes, Shirt, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
+import { Bookmark, Camera, Check, CheckCircle2, ChevronDown, ChevronRight, GripVertical, LayoutGrid, Save, Shapes, Shirt, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
 import { OUTFIT_SLOTS, emptyOutfit, isMultiSlot, itemFitsSlot, slotForItem, slotItems } from "../lib/outfit.js";
 import { MOOD_PRESETS, STYLES } from "../lib/taxonomy.js";
 import { colorsHarmonize, hexFromColorName } from "../lib/color.js";
@@ -100,7 +100,13 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
             )}
 
             {!wornPhoto && coverView === 'flatlay' && (
-              <Flatlay pieces={resolvedItems} max={maxPieces} />
+              // Top padding clears the N° label and piece count; the sides and
+              // bottom just stop a garment touching the card's rounded edge.
+              <Flatlay
+                pieces={resolvedItems}
+                max={maxPieces}
+                padding={isHero ? '3rem 1.25rem 1rem' : '2.6rem 0.9rem 0.8rem'}
+              />
             )}
 
             {/* The grid remains on offer. It shows fewer pieces and says less
@@ -1848,17 +1854,27 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         </button>
                       ))}
                     </div>
-                    <div className="shrink-0 self-end sm:self-auto">
+                    <div className="shrink-0 self-end sm:self-auto relative">
+                      {/* 16px only where it is needed. iOS Safari zooms the page when a
+                          form control under 16px takes focus, so the size was pinned with
+                          an inline style — but an inline style outranks the class, which
+                          left this the one control in the row rendering at 16px while
+                          every pill beside it sat at 11px. Scoped to coarse pointers, the
+                          phone keeps its fix and the desktop row lines up. Padding, border
+                          and tracking now match the tag pills too. */}
                       <select
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value)}
-                        className="text-[10px] tracking-widest uppercase bg-white border border-stone-300 px-3 py-2 rounded-full text-stone-700 hover:border-stone-900 outline-none cursor-pointer transition-colors"
-                        style={{ fontSize: '16px' }}
+                        aria-label="Sort looks"
+                        className="appearance-none px-3 py-1.5 pr-7 rounded-full text-[11px] tracking-wide uppercase bg-white border border-stone-200 text-stone-700 hover:border-stone-900 outline-none cursor-pointer transition-colors [@media(pointer:coarse)]:text-[16px]"
                       >
                         <option value="recent">Recent</option>
                         <option value="most-worn">Most worn</option>
                         <option value="a-z">A–Z</option>
                       </select>
+                      {/* appearance-none removes the native arrow, so supply one. */}
+                      <ChevronDown size={12} strokeWidth={1.5} aria-hidden="true"
+                        className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
                     </div>
                   </div>
                 )}

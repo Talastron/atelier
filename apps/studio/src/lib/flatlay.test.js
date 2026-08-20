@@ -137,6 +137,120 @@ describe('composeFlatlay', () => {
     expect(corners.size).toBe(5);
   });
 
+  // Typical width/height of the real wardrobe photography, per category. This
+  // lives in the test rather than in flatlay.js because it is a property of the
+  // photographs, not of the geometry — the engine must not know about images.
+  const ASPECT = {
+    Outerwear: 0.62, Dresses: 0.55, Tops: 0.78, Bottoms: 0.50,
+    Shoes: 1.25, Bags: 0.95, Accessories: 1.80, Jewellery: 1.00,
+  };
+
+  // The share of the frame that ends up as actual garment.
+  //
+  // Box area flatters badly and must not be used as the measure: a three-piece
+  // look can cover 98% of the frame in boxes while painting 46% garment,
+  // because object-contain fits a landscape shoe into a tall box and leaves the
+  // rest as air. Ink is what the eye reads as full or sparse.
+  const inkCoverage = (placements) => placements.reduce((total, p) => {
+    const aspect = ASPECT[p.item.category] ?? 1;
+    const boxAspect = p.w / p.h;
+    const w = boxAspect > aspect ? p.h * aspect : p.w;
+    const h = boxAspect > aspect ? p.h : p.w / aspect;
+    return total + w * h;
+  }, 0);
+
+  const COVERAGE_SHAPES = {
+    'separates': ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'],
+    'a dress look': ['Dresses', 'Shoes', 'Bags', 'Accessories', 'Jewellery'],
+    'dress and shoes': ['Dresses', 'Shoes', 'Jewellery'],
+    'no coat': ['Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories'],
+    'minimal': ['Tops', 'Bottoms', 'Shoes'],
+    'layered jewellery': ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Jewellery', 'Jewellery', 'Jewellery'],
+  };
+
+  const inkFor = (categories) =>
+    inkCoverage(composeFlatlay(categories.map((c, i) => piece(`p${i}`, c)), { overlap: false }));
+
+  // A look must fill its card whatever it is made of. The fixed-zone engine
+  // reserved space for garments a look did not contain, so a dress look sat at
+  // 27% and a three-piece look at 21-23%.
+  it('never leaves a look sparser than 30% ink', () => {
+    for (const [shape, categories] of Object.entries(COVERAGE_SHAPES)) {
+      expect(inkFor(categories), `${shape} is too sparse`).toBeGreaterThan(0.30);
+    }
+  });
+
+  it('averages at least 45% ink across look shapes', () => {
+    const shapes = Object.values(COVERAGE_SHAPES);
+    const mean = shapes.reduce((t, c) => t + inkFor(c), 0) / shapes.length;
+    expect(mean).toBeGreaterThan(0.45);
+  });
+
+  // The composition's founding rule: the garments are what a look IS, the
+  // shoe and the cuff are how it is finished. Pruning frees space, and without
+  // a ceiling a necklace would expand into it and render coat-sized.
+  it('never lets a finishing piece grow to garment size', () => {
+    const out = composeFlatlay([
+      piece('t1', 'Tops'),
+      piece('j1', 'Jewellery'), piece('j2', 'Jewellery'),
+      piece('j3', 'Jewellery'), piece('j4', 'Jewellery'),
+    ], { overlap: false });
+    const top = out.find((p) => p.item.category === 'Tops');
+    for (const jewel of out.filter((p) => p.item.category === 'Jewellery')) {
+      expect(jewel.w).toBeLessThanOrEqual(0.20);
+      expect(jewel.h).toBeLessThanOrEqual(0.20);
+      expect(jewel.w * jewel.h).toBeLessThan(top.w * top.h);
+    }
+  });
+
+  // Anatomy is the reason this is a weighted tree and not a packing algorithm.
+  // A treemap would fill the frame better and put shoes wherever they fitted.
+  it('keeps the anatomical order left to right', () => {
+    const out = composeFlatlay(
+      ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags'].map((c, i) => piece(`p${i}`, c)),
+      { overlap: false },
+    );
+    const mid = (category) => {
+      const p = out.find((q) => q.item.category === category);
+      return p.x + p.w / 2;
+    };
+    expect(mid('Outerwear')).toBeLessThan(mid('Tops'));
+    expect(mid('Tops')).toBeLessThan(mid('Shoes'));
+    expect(mid('Bottoms')).toBeLessThan(mid('Bags'));
+  });
+
+  // Top to bottom as well as left to right. Shoes belong at the foot: the old
+  // fixed zones had a shoe sitting above a handbag, and the ordering survived
+  // into the tree unexamined because the left-to-right test above could not
+  // see it. Anything asserted only on one axis can drift on the other.
+  it('keeps the anatomical order top to bottom', () => {
+    const out = composeFlatlay(
+      ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories'].map((c, i) => piece(`p${i}`, c)),
+      { overlap: false },
+    );
+    const mid = (category) => {
+      const p = out.find((q) => q.item.category === category);
+      return p.y + p.h / 2;
+    };
+    expect(mid('Tops'), 'a top sits above the trousers').toBeLessThan(mid('Bottoms'));
+    expect(mid('Bags'), 'a bag hangs above the shoes').toBeLessThan(mid('Shoes'));
+    expect(mid('Outerwear'), 'the coat sits above the finishing pieces').toBeLessThan(mid('Accessories'));
+  });
+
+  // The point of the whole exercise: a look with no coat must not reserve the
+  // coat's third of the frame.
+  it('leaves no gap where an absent garment would have been', () => {
+    const out = composeFlatlay(
+      ['Tops', 'Bottoms', 'Shoes'].map((c, i) => piece(`p${i}`, c)),
+      { overlap: false },
+    );
+    // Nothing should start beyond a third of the way in — with the left column
+    // pruned, the remaining columns begin at the frame's edge.
+    expect(Math.min(...out.map((p) => p.x))).toBeLessThan(0.02);
+    // And the composition should reach the far edge.
+    expect(Math.max(...out.map((p) => p.x + p.w))).toBeGreaterThan(0.98);
+  });
+
   it('gives an unknown category a place rather than dropping it', () => {
     const out = composeFlatlay([piece('x1', 'Fragrance')]);
     expect(out).toHaveLength(1);

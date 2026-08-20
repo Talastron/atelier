@@ -27,6 +27,7 @@ import WeekStrip from './components/WeekStrip.jsx';
 import ConciergePrompt from './components/ConciergePrompt.jsx';
 import ImageFramer from './components/ImageFramer.jsx';
 import ItemTileImage from './components/ItemTileImage.jsx';
+import Flatlay from './components/Flatlay.jsx';
 import {
   SEASONS, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES,
   DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES,
@@ -8548,11 +8549,14 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   );
 }
 
-// Styled flat-lay: items get deterministic-by-id transforms (rotation, scale,
-// vertical offset) so the same outfit always renders identically but each
-// look feels uniquely composed. Names render below in a clean list to keep the
-// canvas itself uncluttered. Uses category-aware sizing — outerwear larger,
-// jewellery smaller — mimicking a real flat-lay arrangement.
+// The look, composed as a flat-lay, with its credits beneath.
+//
+// The composition itself belongs to <Flatlay>, which places pieces anatomically
+// from the shared geometry engine — so a look is arranged identically here and
+// on the Lookbook card. This component's remaining job is the credits: grouping
+// the pieces by category and keeping both halves in step with the palette
+// filter, so clicking a colour dims the same garments in the composition and in
+// the list.
 function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
   // Helper: does this piece have a colour matching the active palette filter?
   const pieceMatchesFilter = (piece) => {
@@ -8560,148 +8564,27 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
     const colours = (itemColors(piece) || []).map((c) => (c || '').toLowerCase().trim());
     return colours.includes(paletteFilter);
   };
-  // MAGAZINE SPREAD — the Net-a-Porter "Complete the Look" / Mr Porter
-  // "The Edit" / Vogue "What to Wear" convention. Asymmetric editorial
-  // grid with three regions:
-  //
-  //   HERO        — one signature piece (Outerwear / Dress / Top), large,
-  //                 left column on desktop. The editor's pick.
-  //   GARMENTS    — supporting garments (top, bottom, shoes, bag) in a
-  //                 tight 2-column grid to the right of the hero.
-  //   ACCESSORIES — sunglasses, jewellery, watches in a 4-6 column strip
-  //                 at the bottom, smaller cells.
-  //
-  // Every cell carries TYPOGRAPHIC EDITORIAL CREDITS: a numbered tag
-  // (N°01, N°02 in italic serif), the brand in small-caps, and the
-  // item name below the photo. Typography is a co-equal design element,
-  // not an afterthought — that's what separates a stylist's edit from
-  // a product grid.
-  //
-  // The container snug-wraps the content (no max-width sprawl), uses
-  // an atmospheric warm-radial backdrop (raked styling light), and each
-  // cell is a polaroid-rounded white frame with a layered shadow so
-  // pieces cast presence on the styled surface.
-
-  const HERO_PRIORITY = ['Outerwear', 'Dresses', 'Swimwear', 'Tops'];
-  const ACCESSORY_CATEGORIES = new Set(['Accessories', 'Jewellery']);
   const ORDER = ['Outerwear', 'Dresses', 'Tops', 'Swimwear', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
   const sortByOrder = (a, b) => {
     const ai = ORDER.indexOf(a.category); const bi = ORDER.indexOf(b.category);
     return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
   };
 
-  // Pick hero: first piece by HERO_PRIORITY that exists in the outfit.
-  // Fallback: first piece period.
-  let hero = null;
-  for (const cat of HERO_PRIORITY) {
-    const found = pieces.find((p) => p.category === cat);
-    if (found) { hero = found; break; }
-  }
-  if (!hero && pieces.length > 0) hero = pieces[0];
-
-  const rest = pieces.filter((p) => p !== hero).sort(sortByOrder);
-  const garments = rest.filter((p) => !ACCESSORY_CATEGORIES.has(p.category));
-  const accessories = rest.filter((p) => ACCESSORY_CATEGORIES.has(p.category));
-
-  // Number every piece in display order for the editorial N°XX badges.
-  const orderedAll = [hero, ...garments, ...accessories].filter(Boolean);
-  const numberOf = new Map(orderedAll.map((p, i) => [p, i + 1]));
-
-  // Single editorial cell. Photograph above, credit caption below.
-  // The credit block carries the editorial signature — N° tag in italic
-  // serif, brand in small-caps, item name in display serif. Reads like
-  // a magazine page no matter the photography quality.
-  const Cell = ({ item, isHero = false }) => {
-    if (!item) return null;
-    const openable = !!(onOpenItem && item.id);
-    const Tag = openable ? 'button' : 'div';
-    const n = numberOf.get(item) || 0;
-    const dimmed = !pieceMatchesFilter(item);
-    return (
-      <div className={`transition-opacity duration-300 ${dimmed ? 'opacity-30' : 'opacity-100'}`}>
-        <Tag
-          {...(openable ? { type: 'button', onClick: () => onOpenItem(item.id), 'aria-label': `Open ${item.name}` } : {})}
-          className={`group block w-full text-left ${openable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brass-500 focus-visible:ring-offset-4 rounded-2xl' : ''}`}
-        >
-          {/* Polaroid frame: rounded white card, hairline ring, layered
-              shadow so the piece sits on the surface. Hero gets a slightly
-              larger radius to feel weightier. */}
-          <div className={`relative ${isHero ? 'aspect-[3/4]' : 'aspect-[3/4]'} ${isHero ? 'rounded-[1.5rem]' : 'rounded-[1.125rem]'} bg-white overflow-hidden ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.18)] transition-shadow duration-300 group-hover:shadow-[0_2px_4px_rgba(28,25,23,0.06),0_16px_36px_-12px_rgba(28,25,23,0.22)]`}>
-            {/* N°XX tag — italic serif, the editorial signature */}
-            <span className={`absolute ${isHero ? 'top-3 left-4 text-xs' : 'top-2 left-3 text-[10px]'} tracking-[0.15em] text-stone-400 font-display italic z-10`}>
-              N°{String(n).padStart(2, '0')}
-            </span>
-            {itemImages(item)[0] ? (
-              // Feed the cut-out/framed image when the item has one (already
-              // white-backed) so it sits seamlessly on the flat-lay card; falls
-              // back to the original. The card is object-contain by design.
-              <img src={itemImageDisplay(item, 0).src || itemImages(item)[0]} alt={item.name} loading="lazy" decoding="async"
-                className={`w-full h-full object-contain ${isHero ? 'p-2' : 'p-1.5'}`} />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={isHero ? 64 : 28} strokeWidth={1} /></div>
-            )}
-          </div>
-          {/* CREDIT CAPTION — brand in small-caps, item name in display
-              serif. The typography pair magazines use universally. */}
-          <div className={`${isHero ? 'mt-3 px-1' : 'mt-2 px-0.5'}`}>
-            <p className={`${isHero ? 'text-[10px]' : 'text-[9px]'} tracking-[0.2em] uppercase text-stone-500 truncate`}>{item.brand || item.category}</p>
-            <p className={`font-display ${isHero ? 'text-base sm:text-lg' : 'text-xs sm:text-sm'} text-stone-900 leading-tight truncate ${openable ? 'group-hover:text-brass-700 transition-colors' : ''}`}>{item.name}</p>
-          </div>
-        </Tag>
-      </div>
-    );
-  };
+  // Ordering for the credits list below the composition. (The composition
+  // itself is ordered by composeFlatlay, which applies the same
+  // silhouette-before-finishing rule.)
+  const orderedAll = [...pieces].sort(sortByOrder);
 
   return (
     <div>
-      {/* Atmospheric backdrop — warm radial highlight from upper-left
-          like soft window light raking across a styled surface. */}
-      <div
-        className="relative rounded-[2rem] border border-stone-200/60 px-3 sm:px-5 md:px-7 lg:px-8 py-5 sm:py-7 md:py-8 overflow-hidden"
-        style={{
-          background: 'radial-gradient(ellipse 90% 70% at 20% 0%, #FBFAF7 0%, #F4F0E8 55%, #ECE6D8 100%)',
-        }}
-      >
-        {pieces.length === 0 ? (
-          <div className="h-64 flex items-center justify-center text-stone-300">
-            <Shirt size={64} strokeWidth={1} />
-          </div>
-        ) : (
-          // 12-col editorial grid. Hero spans 5 cols on desktop (left),
-          // garments occupy the remaining 7 in a 2-col sub-grid (top
-          // right), accessories full-width strip below. On mobile,
-          // everything stacks single-column for legibility.
-          <div className="grid grid-cols-12 gap-x-4 gap-y-6 sm:gap-x-5 sm:gap-y-7 md:gap-x-6 md:gap-y-8 max-w-5xl mx-auto">
-            {/* HERO */}
-            {hero && (
-              <div className="col-span-12 sm:col-span-6 md:col-span-5">
-                <Cell item={hero} isHero />
-              </div>
-            )}
-            {/* SUPPORTING GARMENTS — 2-col sub-grid right of hero on
-                desktop, full-width 2-col on mobile. self-start so the
-                grid hugs the top of the hero, not stretching to match
-                hero's height. */}
-            {garments.length > 0 && (
-              <div className={`${hero ? 'col-span-12 sm:col-span-6 md:col-span-7' : 'col-span-12'} grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-5 self-start`}>
-                {garments.map((p, i) => (
-                  <Cell key={p.id || `g${i}`} item={p} />
-                ))}
-              </div>
-            )}
-            {/* ACCESSORIES STRIP — runs full width below the hero+garments
-                block. Smaller cells (4-6 cols) so jewellery doesn't dwarf
-                the garments. Always at the bottom of the spread, like
-                the accessory credits at the end of a magazine page. */}
-            {accessories.length > 0 && (
-              <div className="col-span-12 grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                {accessories.map((p, i) => (
-                  <Cell key={p.id || `a${i}`} item={p} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+      <div className="relative rounded-[2rem] border border-stone-200/60 overflow-hidden">
+        <Flatlay
+          pieces={pieces}
+          max={8}
+          aspect="1 / 1"
+          onOpenItem={onOpenItem}
+          paletteFilter={paletteFilter}
+        />
       </div>
 
       {/* Credits list — items grouped by category, each group a self-contained

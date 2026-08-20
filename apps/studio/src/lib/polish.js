@@ -16,6 +16,16 @@ export function itemImageDisplay(item, index = 0) {
   return { src: images[index] ?? null, forceContain: false };
 }
 
+// How a piece is drawn in a flat-lay composition. A cut-out or a framed crop is
+// white-backed, so on the composition's white ground it is indistinguishable
+// from a transparent one and can float. A raw photograph carries its own
+// background and cannot — it gets a plate behind it, exactly as the grid gives
+// it today. This is what lets a part-migrated wardrobe compose without ever
+// showing a photograph's background floating loose on the ground.
+export function flatlayTreatment(item) {
+  return itemImageDisplay(item, 0).forceContain ? 'bare' : 'plate';
+}
+
 // URL-safe id for the Storage object.
 function safeId(s) { return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60) || 'x'; }
 

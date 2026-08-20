@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, DragOverlay, closestCenter } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS as DndCSS } from "@dnd-kit/utilities";
-import { Bookmark, Camera, Check, CheckCircle2, ChevronRight, GripVertical, Save, Shirt, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
+import { Bookmark, Camera, Check, CheckCircle2, ChevronRight, GripVertical, LayoutGrid, Save, Shapes, Shirt, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
 import { OUTFIT_SLOTS, emptyOutfit, isMultiSlot, itemFitsSlot, slotForItem, slotItems } from "../lib/outfit.js";
 import { MOOD_PRESETS, STYLES } from "../lib/taxonomy.js";
 import { colorsHarmonize, hexFromColorName } from "../lib/color.js";
@@ -21,9 +21,11 @@ import { renderTextWithChips } from "../components/ItemChip.jsx";
 import { noteIsStale } from "../lib/lookNote.js";
 import AIProgressModal from "../components/AIProgressModal.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
+import Flatlay from "../components/Flatlay.jsx";
+import { orderForFlatlay } from "../lib/flatlay.js";
 import DiaryView from "./Calendar.jsx";
 
-function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, indexLabel, onClick, onContextMenu }) {
+function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, indexLabel, coverView = 'flatlay', onClick, onContextMenu }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: outfit.id });
   const style = {
     transform: DndCSS.Transform.toString(transform),
@@ -35,17 +37,15 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   const wornPhoto = Array.isArray(outfit.wornPhotos) && outfit.wornPhotos.length > 0
     ? outfit.wornPhotos[outfit.wornPhotos.length - 1]?.image
     : null;
-  // Silhouette first, finishing last. A look of twelve pieces is not twelve
-  // equal things: the jacket, shirt, trouser and shoe are what it *is*, and
-  // the cuff, watch and sunglasses are how it is finished. The preview has
-  // room for four, so it spends them on the garments that define the look.
-  const SLOT_PRIORITY = ['Dresses', 'Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
-  const orderedPieces = [...resolvedItems].sort((a, b) => {
-    const ai = SLOT_PRIORITY.indexOf(a.category);
-    const bi = SLOT_PRIORITY.indexOf(b.category);
-    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-  });
-  const gridPieces = orderedPieces.slice(0, isHero ? 6 : 4);
+  // Silhouette first, finishing last — orderForFlatlay applies that rule, and
+  // Flatlay applies it again internally, so the two readings of a look always
+  // agree about which pieces make the cut. Six on a secondary card (up from
+  // four) and eight on the hero, which is physically larger on both breakpoints.
+  const maxPieces = isHero ? 8 : 6;
+  const gridPieces = coverView === 'grid' ? orderForFlatlay(resolvedItems, maxPieces) : [];
+  const gridCols = isHero
+    ? 'grid-cols-2 grid-rows-3 md:grid-cols-3 md:grid-rows-2'
+    : 'grid-cols-2 grid-rows-2';
   // Hero gets landscape 16:10 (magazine-cover proportions) on desktop
   // where it spans 2 cols. On mobile (single col) it'd render SHORTER
   // than secondary portrait cards — defeating the "featured" treatment.
@@ -53,8 +53,13 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   // prominent than the 4:5 secondary cards. Inner thumbnail grid flips
   // shape with the container: 2x3 portrait on mobile, 3x2 landscape on
   // desktop.
-  const aspect = isHero ? 'aspect-[3/4] md:aspect-[16/10]' : 'aspect-[4/5]';
-  const gridCols = isHero ? 'grid-cols-2 grid-rows-3 md:grid-cols-3 md:grid-rows-2' : 'grid-cols-2 grid-rows-2';
+  // The hero was 16:10 on desktop — magazine-cover proportions, chosen when the
+  // cover was a grid of plates that tiles happily into any rectangle. A
+  // composition does not: it is drawn for a square, so a 1.6-wide frame left it
+  // stranded in the middle with a wide margin either side. 4:3 spans the same
+  // two columns and stays visibly the featured look, while giving the
+  // composition a frame close enough to its own shape to nearly fill.
+  const aspect = isHero ? 'aspect-[3/4] md:aspect-[4/3]' : 'aspect-[4/5]';
   return (
     <div ref={setNodeRef} style={style}
          className={isHero ? 'md:col-span-2' : ''}>
@@ -82,7 +87,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
           isSelected
             ? 'ring-4 ring-stone-900'
             : 'border border-stone-200/60 lg:group-hover:border-brass-300/70'
-        } ${wornPhoto ? 'bg-stone-900' : 'bg-stone-100/70'}`}>
+        } ${wornPhoto ? 'bg-stone-900' : coverView === 'grid' ? 'bg-stone-100/70' : 'bg-white'}`}>
 
           {/* IMAGE AREA — flex-1 takes the available height above the caption. */}
           <div className="flex-1 min-h-0 relative">
@@ -94,7 +99,15 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
               </>
             )}
 
-            {!wornPhoto && gridPieces.length > 0 && (
+            {!wornPhoto && coverView === 'flatlay' && (
+              <Flatlay pieces={resolvedItems} max={maxPieces} />
+            )}
+
+            {/* The grid remains on offer. It shows fewer pieces and says less
+                about how a look is worn, but it is the denser, more scannable
+                reading of a wardrobe — and which of those you want depends on
+                whether you are browsing or deciding. */}
+            {!wornPhoto && coverView === 'grid' && gridPieces.length > 0 && (
               <div className={`absolute inset-0 ${isHero ? 'px-9 pt-12 pb-3 md:px-12 md:pt-14 md:pb-4' : 'px-7 pt-10 pb-3 sm:px-9 sm:pt-12 sm:pb-4'} grid ${gridCols} gap-4 sm:gap-5`}>
                 {Array.from({ length: isHero ? 6 : 4 }).map((_, slotIdx) => {
                   const piece = gridPieces[slotIdx];
@@ -112,7 +125,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
               </div>
             )}
 
-            {!wornPhoto && gridPieces.length === 0 && (
+            {!wornPhoto && coverView === 'grid' && gridPieces.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center text-stone-300">
                 <Shirt size={56} strokeWidth={0.8} />
               </div>
@@ -295,6 +308,20 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seedOutfit?.id]);
   const [capsuleOpen, setCapsuleOpen] = useState(false);
+  // How the Lookbook draws its covers. A preference rather than a filter, so it
+  // is remembered: someone who reads their wardrobe better one way reads it
+  // that way every time, and having to re-pick on every visit would be a tax.
+  const [coverView, setCoverView] = useState(() => {
+    try {
+      return localStorage.getItem('atelier-lookbook-cover') === 'grid' ? 'grid' : 'flatlay';
+    } catch {
+      return 'flatlay'; // private browsing, or storage disabled
+    }
+  });
+  const chooseCoverView = (next) => {
+    setCoverView(next);
+    try { localStorage.setItem('atelier-lookbook-cover', next); } catch { /* not worth surfacing */ }
+  };
   const [activeDragItem, setActiveDragItem] = useState(null);
   const [styleIntent, setStyleIntent] = useState('Any');
   const [suggestingName, setSuggestingName] = useState(false);
@@ -1551,9 +1578,32 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                 <span className="text-xs text-stone-500 ml-2">{collectionFilteredOutfits.length} {collectionFilteredOutfits.length === 1 ? 'look' : 'looks'}</span>
               </div>
               {!selectMode ? (
-                <button onClick={() => setSelectMode(true)} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors">
-                  Select
-                </button>
+                <div className="flex items-center gap-4">
+                  {/* Cover treatment. Mirrors the pill on the look detail so the
+                      same choice looks like the same choice in both places. */}
+                  <div className="flex bg-stone-200/50 p-1 rounded-full" role="group" aria-label="Cover style">
+                    {[['flatlay', 'Flat-lay', Shapes], ['grid', 'Grid', LayoutGrid]].map(([value, label, Icon]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => chooseCoverView(value)}
+                        aria-pressed={coverView === value}
+                        title={`Show looks as ${label.toLowerCase()}`}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-wider uppercase transition-colors duration-200 ${
+                          coverView === value
+                            ? 'bg-white text-stone-900 font-medium'
+                            : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
+                        }`}
+                      >
+                        <Icon size={12} strokeWidth={1.5} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setSelectMode(true)} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors">
+                    Select
+                  </button>
+                </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-stone-500">{selectedOutfits.size} selected</span>
@@ -1883,6 +1933,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       selectMode={selectMode}
                       isHero={idx === 0}
                       indexLabel={indexLabel}
+                      coverView={coverView}
                       onClick={handleCardClick}
                       onContextMenu={(e) => { e.preventDefault(); if (!selectMode) { setSelectMode(true); setSelectedOutfits(new Set([outfit.id])); } }}
                     />

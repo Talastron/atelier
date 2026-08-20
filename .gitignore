@@ -19,6 +19,11 @@ dist/
 npm-debug.log*
 pnpm-debug.log*
 
+# isolated worktrees, created inside the repo by the agent harness. Registered
+# worktrees stay out of `git status` on their own, but nothing stops a stray
+# `git add -A` from committing one whole checkout into another.
+.claude/worktrees/
+
 # editor
 .vscode/
 .idea/

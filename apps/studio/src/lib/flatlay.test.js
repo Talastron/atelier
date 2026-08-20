@@ -51,21 +51,90 @@ describe('composeFlatlay', () => {
     expect(out.every((p) => p.rotation === 0)).toBe(true);
   });
 
+  // The property that lets a look of opaque images be legible: NO piece may
+  // overlap another, at all. Every stored cut-out is an opaque white rectangle,
+  // so any overlap paints a white box across the garment underneath — visible
+  // on any ground. An earlier version of this test allowed 25%, reasoning that
+  // contain-fitted images would not really touch. They did: white shorts sat in
+  // a white box over a tan blazer. The bound is zero.
+  //
+  // Runs over several look SHAPES, because the shapes are what expose this:
+  // a five-piece look never puts accessories and jewellery in the frame
+  // together, which is how the original 71% collision survived.
+  const SHAPES = {
+    'separates': ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'],
+    'a dress': ['Outerwear', 'Dresses', 'Shoes', 'Bags', 'Accessories', 'Jewellery'],
+    'no coat': ['Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories', 'Jewellery'],
+    'layered jewellery': ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Jewellery', 'Jewellery', 'Jewellery'],
+    'two tops and two bags': ['Outerwear', 'Tops', 'Tops', 'Bottoms', 'Bags', 'Bags', 'Accessories'],
+    'an uncategorised piece': ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Fragrance', 'Jewellery'],
+  };
+
+  for (const [shape, categories] of Object.entries(SHAPES)) {
+    it(`never overlaps two pieces when overlap is off — ${shape}`, () => {
+      const out = composeFlatlay(categories.map((c, i) => piece(`p${i}`, c)), { overlap: false });
+      expect(out).toHaveLength(categories.length);
+      for (let i = 0; i < out.length; i += 1) {
+        for (let j = i + 1; j < out.length; j += 1) {
+          const a = out[i];
+          const b = out[j];
+          const ox = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+          const oy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+          const share = (ox * oy) / Math.min(a.w * a.h, b.w * b.h);
+          expect(
+            share,
+            `${a.item.category} covers ${(share * 100).toFixed(1)}% of ${b.item.category}`
+          ).toBeLessThan(0.0001);
+        }
+      }
+    });
+
+    it(`keeps every piece inside the frame — ${shape}`, () => {
+      for (const p of composeFlatlay(categories.map((c, i) => piece(`p${i}`, c)), { overlap: false })) {
+        expect(p.x, `${p.item.category} left`).toBeGreaterThanOrEqual(0);
+        expect(p.y, `${p.item.category} top`).toBeGreaterThanOrEqual(0);
+        expect(p.x + p.w, `${p.item.category} right edge`).toBeLessThanOrEqual(1.0001);
+        expect(p.y + p.h, `${p.item.category} bottom edge`).toBeLessThanOrEqual(1.0001);
+      }
+    });
+  }
+
   it('tilts pieces within three degrees when overlap is on', () => {
     const out = composeFlatlay(LOOK, { overlap: true });
     expect(out.some((p) => p.rotation !== 0)).toBe(true);
     for (const p of out) expect(Math.abs(p.rotation)).toBeLessThanOrEqual(3);
   });
 
-  it('steps a second piece in the same zone away from the first, and shrinks it', () => {
+  // Two pieces in one zone tile it rather than stepping diagonally across each
+  // other. Stepping was the old behaviour and it barely moved them: a second top
+  // covered 96% of the first.
+  //
+  // Deliberately does NOT assert which axis they split along. The split follows
+  // the zone's shape — a tall jewellery column stacks, a wide one sits side by
+  // side — and an earlier version of this test hard-coded "side by side", so it
+  // failed the moment the zone was retuned even though the behaviour was right.
+  // The property that matters is that they are clear of each other.
+  it('tiles a second piece in the same zone clear of the first, not on top of it', () => {
     const [first, second] = composeFlatlay(
       [piece('j1', 'Jewellery'), piece('j2', 'Jewellery')],
       { overlap: true }
     );
-    expect(second.x).toBeGreaterThan(first.x);
-    expect(second.y).toBeGreaterThan(first.y);
-    expect(second.w).toBeLessThan(first.w);
+    const apartInX = second.x >= first.x + first.w || first.x >= second.x + second.w;
+    const apartInY = second.y >= first.y + first.h || first.y >= second.y + second.h;
+    expect(apartInX || apartInY, 'the two cells must not intersect').toBe(true);
     expect(second.z).toBeGreaterThan(first.z);
+  });
+
+  // Five necklaces is a real look, not a pathological one, and they must not
+  // render as a single blob.
+  it('gives five pieces in one zone five distinct places', () => {
+    const out = composeFlatlay(
+      Array.from({ length: 5 }, (_, i) => piece(`j${i}`, 'Jewellery')),
+      { overlap: false, max: 8 }
+    );
+    expect(out).toHaveLength(5);
+    const corners = new Set(out.map((p) => `${p.x.toFixed(4)},${p.y.toFixed(4)}`));
+    expect(corners.size).toBe(5);
   });
 
   it('gives an unknown category a place rather than dropping it', () => {

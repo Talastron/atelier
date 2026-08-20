@@ -49,10 +49,15 @@ const LAYOUT = {
       { slot: 'Tops',    weight: 38, z: 3 },
       { slot: 'Bottoms', weight: 46, z: 2 },
     ] },
+    // Bag above, shoes at the foot. The old fixed zones had this the other way
+    // round and the ordering was carried over unexamined; a shoe sitting above
+    // a handbag reads wrong for the same reason the whole layout is anatomical.
+    // The uncategorised slot goes between them rather than last, so shoes stay
+    // the lowest thing in the frame whatever else the look contains.
     { weight: 36, dir: 'col', children: [
-      { slot: 'Shoes',        weight: 40, z: 4 },
       { slot: 'Bags',         weight: 60, z: 4 },
       { slot: FALLBACK_SLOT,  weight: 30, z: 5, cap: 0.20 },
+      { slot: 'Shoes',        weight: 40, z: 4 },
     ] },
   ],
 };

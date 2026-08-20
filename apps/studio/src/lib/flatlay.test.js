@@ -219,6 +219,24 @@ describe('composeFlatlay', () => {
     expect(mid('Bottoms')).toBeLessThan(mid('Bags'));
   });
 
+  // Top to bottom as well as left to right. Shoes belong at the foot: the old
+  // fixed zones had a shoe sitting above a handbag, and the ordering survived
+  // into the tree unexamined because the left-to-right test above could not
+  // see it. Anything asserted only on one axis can drift on the other.
+  it('keeps the anatomical order top to bottom', () => {
+    const out = composeFlatlay(
+      ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags', 'Accessories'].map((c, i) => piece(`p${i}`, c)),
+      { overlap: false },
+    );
+    const mid = (category) => {
+      const p = out.find((q) => q.item.category === category);
+      return p.y + p.h / 2;
+    };
+    expect(mid('Tops'), 'a top sits above the trousers').toBeLessThan(mid('Bottoms'));
+    expect(mid('Bags'), 'a bag hangs above the shoes').toBeLessThan(mid('Shoes'));
+    expect(mid('Outerwear'), 'the coat sits above the finishing pieces').toBeLessThan(mid('Accessories'));
+  });
+
   // The point of the whole exercise: a look with no coat must not reserve the
   // coat's third of the frame.
   it('leaves no gap where an absent garment would have been', () => {

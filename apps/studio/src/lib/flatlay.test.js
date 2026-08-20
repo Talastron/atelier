@@ -186,6 +186,53 @@ describe('composeFlatlay', () => {
     expect(mean).toBeGreaterThan(0.45);
   });
 
+  // The composition's founding rule: the garments are what a look IS, the
+  // shoe and the cuff are how it is finished. Pruning frees space, and without
+  // a ceiling a necklace would expand into it and render coat-sized.
+  it('never lets a finishing piece grow to garment size', () => {
+    const out = composeFlatlay([
+      piece('t1', 'Tops'),
+      piece('j1', 'Jewellery'), piece('j2', 'Jewellery'),
+      piece('j3', 'Jewellery'), piece('j4', 'Jewellery'),
+    ], { overlap: false });
+    const top = out.find((p) => p.item.category === 'Tops');
+    for (const jewel of out.filter((p) => p.item.category === 'Jewellery')) {
+      expect(jewel.w).toBeLessThanOrEqual(0.20);
+      expect(jewel.h).toBeLessThanOrEqual(0.20);
+      expect(jewel.w * jewel.h).toBeLessThan(top.w * top.h);
+    }
+  });
+
+  // Anatomy is the reason this is a weighted tree and not a packing algorithm.
+  // A treemap would fill the frame better and put shoes wherever they fitted.
+  it('keeps the anatomical order left to right', () => {
+    const out = composeFlatlay(
+      ['Outerwear', 'Tops', 'Bottoms', 'Shoes', 'Bags'].map((c, i) => piece(`p${i}`, c)),
+      { overlap: false },
+    );
+    const mid = (category) => {
+      const p = out.find((q) => q.item.category === category);
+      return p.x + p.w / 2;
+    };
+    expect(mid('Outerwear')).toBeLessThan(mid('Tops'));
+    expect(mid('Tops')).toBeLessThan(mid('Shoes'));
+    expect(mid('Bottoms')).toBeLessThan(mid('Bags'));
+  });
+
+  // The point of the whole exercise: a look with no coat must not reserve the
+  // coat's third of the frame.
+  it('leaves no gap where an absent garment would have been', () => {
+    const out = composeFlatlay(
+      ['Tops', 'Bottoms', 'Shoes'].map((c, i) => piece(`p${i}`, c)),
+      { overlap: false },
+    );
+    // Nothing should start beyond a third of the way in — with the left column
+    // pruned, the remaining columns begin at the frame's edge.
+    expect(Math.min(...out.map((p) => p.x))).toBeLessThan(0.02);
+    // And the composition should reach the far edge.
+    expect(Math.max(...out.map((p) => p.x + p.w))).toBeGreaterThan(0.98);
+  });
+
   it('gives an unknown category a place rather than dropping it', () => {
     const out = composeFlatlay([piece('x1', 'Fragrance')]);
     expect(out).toHaveLength(1);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { itemImageDisplay, revertFramePrimary, flatlayTreatment } from './polish.js';
+import { itemImageDisplay, revertFramePrimary, flatlayTreatment, promoteImageToMain } from './polish.js';
 
 const mk = (images, imageMeta) => ({ images, imageMeta });
 
@@ -75,5 +75,71 @@ describe('flatlayTreatment', () => {
     expect(flatlayTreatment(null)).toBe('plate');
     expect(flatlayTreatment({})).toBe('plate');
     expect(flatlayTreatment({ imageMeta: 'nonsense' })).toBe('plate');
+  });
+});
+
+describe('promoteImageToMain', () => {
+  // The bug this exists to prevent: `images` and `imageMeta` are parallel
+  // arrays, but imageMeta is written lazily — polishing pads it only to length
+  // 1 — so on a three-photo item it is routinely SHORTER than images. Reorder
+  // one without the other and imageMeta[0] describes a photo that is no longer
+  // first, which is exactly what itemImageDisplay reads. The editor shows the
+  // new main (it renders images[i] raw); the wardrobe and the detail page show
+  // the old one, and the change looks like it silently failed to save.
+  it('keeps imageMeta aligned when it is shorter than images', () => {
+    const item = {
+      images: ['photoA', 'photoB', 'photoC'],
+      imageMeta: [{ cutoutUrl: 'cutout-of-A' }],
+    };
+    const next = promoteImageToMain(item, 2);
+    expect(next.images).toEqual(['photoC', 'photoA', 'photoB']);
+    // photoC had no metadata, so the promoted slot must be empty rather than
+    // still carrying photoA's cut-out.
+    expect(next.imageMeta[0]).toEqual({});
+    expect(next.imageMeta[1]).toEqual({ cutoutUrl: 'cutout-of-A' });
+  });
+
+  // The property the user actually sees. Ties the two functions together:
+  // whatever is promoted must be what the wardrobe renders.
+  it('makes the promoted photo the one the wardrobe displays', () => {
+    const item = {
+      images: ['photoA', 'photoB', 'photoC'],
+      imageMeta: [{ cutoutUrl: 'cutout-of-A' }],
+    };
+    expect(itemImageDisplay(item, 0).src).toBe('cutout-of-A');
+    const next = promoteImageToMain(item, 2);
+    expect(itemImageDisplay(next, 0).src).toBe('photoC');
+  });
+
+  it('carries a promoted photo’s own cut-out with it', () => {
+    const item = {
+      images: ['photoA', 'photoB', 'photoC'],
+      imageMeta: [{ cutoutUrl: 'cutout-of-A' }, {}, { cutoutUrl: 'cutout-of-C' }],
+    };
+    const next = promoteImageToMain(item, 2);
+    expect(itemImageDisplay(next, 0).src).toBe('cutout-of-C');
+    expect(next.imageMeta).toEqual([
+      { cutoutUrl: 'cutout-of-C' }, { cutoutUrl: 'cutout-of-A' }, {},
+    ]);
+  });
+
+  it('handles an item with no imageMeta at all', () => {
+    const next = promoteImageToMain({ images: ['a', 'b'] }, 1);
+    expect(next.images).toEqual(['b', 'a']);
+    expect(next.imageMeta).toEqual([{}, {}]);
+  });
+
+  it('does nothing for the first photo, a negative index, or one past the end', () => {
+    const item = { images: ['a', 'b'], imageMeta: [{ cutout: true }, {}] };
+    expect(promoteImageToMain(item, 0)).toBe(item);
+    expect(promoteImageToMain(item, -1)).toBe(item);
+    expect(promoteImageToMain(item, 5)).toBe(item);
+  });
+
+  it('does not mutate the item it is given', () => {
+    const item = { images: ['a', 'b'], imageMeta: [{ cutout: true }, {}] };
+    promoteImageToMain(item, 1);
+    expect(item.images).toEqual(['a', 'b']);
+    expect(item.imageMeta).toEqual([{ cutout: true }, {}]);
   });
 });

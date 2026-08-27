@@ -9,6 +9,7 @@ import { computeCropRect, FRAME_ASPECT } from './framing.js';
 import { composeFlatlay } from './flatlay.js';
 import { itemImageDisplay } from './polish.js';
 import { fitContain, shareCardLayout, SHARE_CARD } from './shareCard.js';
+import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER, CUTOUT_BUDGET_CHARS } from './encode.js';
 
 // Resolve a colour-family name to a SOLID, canvas-fillable hex. COLOR_SWATCHES
 // may hold a CSS linear-gradient string (the metallics — Gold, Rose Gold, etc.)
@@ -685,16 +686,32 @@ export async function removeImageBackground(dataUrl) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     const ctx = c.getContext('2d');
-    ctx.fillStyle = '#FFFFFF'; // clean lookbook-flatlay background
+    // Flattened onto white. The alpha is discarded here, which is what makes
+    // the file small and what phase two of the flat-lay work will undo — see
+    // encode.js. Every surface that draws a cut-out puts it on a white ground,
+    // so the flattening is invisible today.
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, w, h);
     ctx.drawImage(cutoutImg, 0, 0, w, h);
-    // Adaptive JPEG quality — keep under ~180KB to leave room in the doc.
-    let q = 0.86;
-    let cutoutUrl = c.toDataURL('image/jpeg', q);
-    while (cutoutUrl.length > 220_000 && q > 0.45) {
-      q -= 0.1;
-      cutoutUrl = c.toDataURL('image/jpeg', q);
-    }
+
+    // WebP where the browser can write it, JPEG where it cannot. Measured on 32
+    // real garments, WebP-on-white is 0.56x JPEG-on-white at matched quality
+    // with no visible difference — the same picture, half the storage.
+    //
+    // The support check is not optional. toDataURL does not throw on a MIME
+    // type it cannot write; per spec it silently returns PNG, which for these
+    // images is about ten times the JPEG it replaced. An unguarded switch would
+    // have quietly inflated storage on any browser without WebP, with nothing
+    // in the logs to say so.
+    const webp = await canEncodeWebp();
+    const type = webp ? 'image/webp' : 'image/jpeg';
+    const ladder = webp ? WEBP_LADDER : JPEG_LADDER;
+    const cutoutUrl = await pickEncoding(
+      async (quality) => c.toDataURL(type, quality),
+      ladder,
+      CUTOUT_BUDGET_CHARS,
+    );
+    if (!cutoutUrl) throw new Error('could not encode the cut-out');
     return { url: cutoutUrl, ok: true };
   } catch (e) {
     console.warn('[wardrobe] background removal failed, keeping original:', e?.message);

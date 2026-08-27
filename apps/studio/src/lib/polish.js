@@ -81,6 +81,13 @@ export async function polishItemPrimary(item, uid) {
     const rehosted = await imageUrlToCompressedDataUrl(original);
     if (rehosted && rehosted.startsWith('data:')) original = rehosted;
   }
+  // Note on the `.jpg` in the Storage paths below: it is now a lie for most
+  // items, since cut-outs are encoded WebP where the browser can write it. The
+  // names are deliberately left alone — uploadString reads the MIME from the
+  // data URL, so each object is stored and served with the correct contentType,
+  // and nothing anywhere reads the extension. Renaming would orphan every
+  // existing object and risk putting polishItemPrimary and retrimItemPrimary on
+  // different paths, for a cosmetic gain no user ever sees.
   const out = await removeImageBackground(original); // { url, ok }
   if (!out.ok) return { ok: false, error: out.error };
   // Trim to the subject so it fills its tile (a delicate piece shouldn't float

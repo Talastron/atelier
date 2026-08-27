@@ -65,6 +65,21 @@ describe('shareCardLayout', () => {
     expect(SHARE_CARD.TITLE_BASELINE).toBeGreaterThan(SHARE_CARD.EYEBROW_BASELINE);
   });
 
+  // The palette row grows DOWNWARD when its radius grows: the swatch is drawn
+  // with its centre at PALETTE_Y + R, so the row occupies PALETTE_Y to
+  // PALETTE_Y + 2R. Enlarging the swatches while treating PALETTE_Y as a centre
+  // put the circles 2px inside the panel — a collision no test could see,
+  // because every assertion here was about the panel and none about what sits
+  // above it.
+  it('leaves the palette row clear of the panel below it', () => {
+    const S = SHARE_CARD;
+    const rowBottom = S.PALETTE_Y + S.PALETTE_SWATCH_R * 2;
+    const { panel } = shareCardLayout({ titleLines: 1, hasNote: true });
+    expect(rowBottom, 'the swatches must not touch the panel').toBeLessThan(panel.y);
+    // and the row must clear the title's descenders above it
+    expect(S.PALETTE_Y).toBeGreaterThan(S.TITLE_BASELINE + 20);
+  });
+
   // The card is composed at 1080px wide and read at roughly 400 on a phone — a
   // 2.7x downscale. Small caps at 18px arrived at 6.7px, below reading size on
   // the very device the card is made for. Nothing that carries words may be set

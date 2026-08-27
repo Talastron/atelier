@@ -54,8 +54,13 @@ export const SHARE_CARD = {
   EYEBROW_TAGS: 3,      // more than three reads as a keyword list, not a caption
   TITLE_BASELINE: 236,
   TITLE_LINE_HEIGHT: 88,
-  PALETTE_Y: 282,       // swatch row; no label above it
-  PANEL_TOP: 330,
+  // PALETTE_Y is the row's TOP edge, not its centre — the swatch is drawn with
+  // its centre at PALETTE_Y + R, so the row occupies PALETTE_Y to PALETTE_Y +
+  // 2R. Enlarging the radius therefore grows the row DOWNWARD, into whatever
+  // sits beneath it. Raising R from 22 to 25 while treating this as a centre is
+  // what put the circles 2px inside the panel.
+  PALETTE_Y: 282,
+  PANEL_TOP: 350,
   PANEL_BOTTOM_WITH_NOTE: 1440,
   PANEL_BOTTOM_NO_NOTE: 1700,
   PANEL_RADIUS: 32,

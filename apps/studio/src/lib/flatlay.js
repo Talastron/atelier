@@ -141,18 +141,68 @@ function hasContent(node, counts) {
 }
 
 /**
+ * How several pieces divide one slot.
+ *
+ * Orientation-aware: splitting purely by column would halve the WIDTH of two
+ * necklaces in a tall slot, and width is what a contained image is already
+ * limited by there. Factoring in the slot's own shape keeps each cell as square
+ * as it can be.
+ *
+ * Computed once per slot and shared by the cap and the tiling, so the two can
+ * never disagree about how many cells there are.
+ */
+function gridFor(total, aspect) {
+  const cols = Math.max(1, Math.min(total, Math.round(Math.sqrt(total * aspect))));
+  return { cols, rows: Math.ceil(total / cols) };
+}
+
+/**
  * Shrink a box to its slot's ceiling, centred in the space it was given.
  *
- * The slack stays empty rather than passing to a neighbour. That is deliberate:
- * a necklace given a whole freed column would render coat-sized, which inverts
- * silhouette-large-finishing-small.
+ * The ceiling is per PIECE, not per category — so the slot may be as large as
+ * `cap` multiplied by the grid it will be divided into. Capping the slot itself
+ * made the limit a budget the category shared out: one necklace reached 4% of
+ * the frame, two managed 1.8% each and three 0.9%, which is not what a rule
+ * about a necklace not rendering coat-sized was ever meant to say.
+ *
+ * The slack stays empty rather than passing to a neighbour within the slot;
+ * `allocate` is what hands unused width back to the siblings outside it.
  */
-function applyCap(node, box) {
+function applyCap(node, box, grid) {
   if (!node.cap) return box;
+  const maxW = node.cap * grid.cols;
+  const maxH = node.cap * grid.rows;
   let { x, y, w, h } = box;
-  if (w > node.cap) { x += (w - node.cap) / 2; w = node.cap; }
-  if (h > node.cap) { y += (h - node.cap) / 2; h = node.cap; }
+  if (w > maxW) { x += (w - maxW) / 2; w = maxW; }
+  if (h > maxH) { y += (h - maxH) / 2; h = maxH; }
   return { x, y, w, h };
+}
+
+/**
+ * The widest a branch can usefully be, or Infinity when nothing limits it.
+ *
+ * This is what stops a column being sized for a coat and filled by a pair of
+ * earrings. Column widths are decided from weights, and caps used to be applied
+ * only afterwards — so a look with no outerwear gave its left column a third of
+ * the frame, put two capped jewellery pieces in it, and left 88% of that column
+ * empty. Asking the branch what it can use BEFORE dividing the space is the
+ * difference.
+ */
+function usableWidth(node, counts, aspectHint) {
+  if (node.slot) {
+    const total = counts.get(node.slot) ?? 0;
+    if (total === 0) return 0;
+    if (!node.cap) return Infinity;
+    return node.cap * gridFor(total, aspectHint).cols;
+  }
+  const live = node.children.filter((child) => hasContent(child, counts));
+  if (live.length === 0) return 0;
+  const widths = live.map((child) => usableWidth(child, counts, aspectHint));
+  // Stacked children each span the full width, so the branch needs the widest
+  // of them; children laid side by side need the sum.
+  return node.dir === 'col'
+    ? Math.max(...widths)
+    : widths.reduce((total, w) => total + w, 0);
 }
 
 /**
@@ -164,7 +214,9 @@ function applyCap(node, box) {
  */
 function allocate(node, counts, box, gutter, out) {
   if (node.slot) {
-    out.set(node.slot, { box: applyCap(node, box), z: node.z });
+    const total = counts.get(node.slot) ?? 0;
+    const grid = gridFor(total, box.w / box.h);
+    out.set(node.slot, { box: applyCap(node, box, grid), z: node.z, grid });
     return;
   }
   const live = node.children.filter((child) => hasContent(child, counts));
@@ -173,15 +225,39 @@ function allocate(node, counts, box, gutter, out) {
   const totalWeight = live.reduce((total, child) => total + child.weight, 0);
   const along = node.dir === 'row' ? box.w : box.h;
   const available = along - gutter * (live.length - 1);
-  let cursor = node.dir === 'row' ? box.x : box.y;
 
-  for (const child of live) {
-    const size = (child.weight / totalWeight) * available;
+  let sizes = live.map((child) => (child.weight / totalWeight) * available);
+
+  // Hand back width a branch cannot use, and give it to the siblings that can.
+  //
+  // Only along the row axis: a column's height is filled by stacking, so an
+  // unused remainder there is just air inside the column, not width stolen from
+  // a neighbour. Two passes — the first releases the surplus, the second lets a
+  // second branch release what the redistribution pushed it past.
+  if (node.dir === 'row') {
+    const limits = live.map((child) => usableWidth(child, counts, box.w / box.h));
+    for (let pass = 0; pass < 2; pass += 1) {
+      let surplus = 0;
+      const growable = [];
+      sizes = sizes.map((size, i) => {
+        if (size > limits[i]) { surplus += size - limits[i]; return limits[i]; }
+        if (limits[i] > size) growable.push(i);
+        return size;
+      });
+      if (surplus <= 1e-9 || growable.length === 0) break;
+      const share = growable.reduce((t, i) => t + live[i].weight, 0);
+      for (const i of growable) sizes[i] += surplus * (live[i].weight / share);
+    }
+  }
+
+  let cursor = node.dir === 'row' ? box.x : box.y;
+  live.forEach((child, i) => {
+    const size = sizes[i];
     allocate(child, counts, node.dir === 'row'
       ? { x: cursor, y: box.y, w: size, h: box.h }
       : { x: box.x, y: cursor, w: box.w, h: size }, gutter, out);
     cursor += size + gutter;
-  }
+  });
 }
 
 /**
@@ -192,9 +268,8 @@ function allocate(node, counts, box, gutter, out) {
  * limited by there. Factoring in the slot's own shape keeps each cell as
  * square as it can be.
  */
-function tile(box, index, total, gutter) {
-  const cols = Math.max(1, Math.min(total, Math.round(Math.sqrt(total * (box.w / box.h)))));
-  const rows = Math.ceil(total / cols);
+function tile(box, index, total, gutter, grid) {
+  const { cols, rows } = grid;
   const cellW = box.w / cols;
   const cellH = box.h / rows;
   const g = total > 1 ? gutter / 2 : 0;
@@ -248,7 +323,7 @@ export function composeFlatlay(pieces, { overlap = false, max = 8 } = {}) {
     const index = taken.get(slot) ?? 0;
     taken.set(slot, index + 1);
 
-    const cell = tile(allocation.box, index, total, innerGutter);
+    const cell = tile(allocation.box, index, total, innerGutter, allocation.grid);
     return {
       item,
       x: clamp01(cell.x),

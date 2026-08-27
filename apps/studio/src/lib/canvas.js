@@ -157,7 +157,7 @@ export async function composeOutfitExportImage(outfit, items) {
   // === PALETTE STRIP ===
   // Computed across all outfit pieces, sorted by prevalence, capped at 6
   // so the row fits cleanly in one line at this resolution.
-  const paletteY = 320 + titleOffset;
+  const paletteY = layout.paletteY;
   const paletteCounts = new Map();
   for (const p of pieces) {
     for (const c of (itemColors(p) || [])) {
@@ -170,16 +170,10 @@ export async function composeOutfitExportImage(outfit, items) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
   if (palette.length > 0) {
-    // brass-rule + "PALETTE" eyebrow
-    ctx.fillStyle = BRASS;
-    ctx.fillRect(PAD, paletteY, 36, 2);
-    ctx.font = '500 18px Jost, sans-serif';
-    ctx.fillStyle = MUTED;
-    ctx.textBaseline = 'middle';
-    ctx.fillText('PALETTE', PAD + 52, paletteY + 1);
-
-    // Swatches
-    const swatchY = paletteY + 36;
+    // No "PALETTE" label. It named a row of coloured dots that already carry
+    // their names beside them, and it was the second of three identical
+    // rule-and-eyebrow devices stacked above the garments.
+    const swatchY = paletteY;
     const swatchR = 22; // circle radius
     const labelGap = 12;
     const itemGap = 28;

@@ -62,6 +62,24 @@ describe('shareCardLayout', () => {
     // and it begins below the palette row, whatever those numbers become
     expect(panel.y).toBeGreaterThan(SHARE_CARD.PALETTE_Y);
     expect(SHARE_CARD.PALETTE_Y).toBeGreaterThan(SHARE_CARD.TITLE_BASELINE);
+    expect(SHARE_CARD.TITLE_BASELINE).toBeGreaterThan(SHARE_CARD.EYEBROW_BASELINE);
+  });
+
+  // The card is composed at 1080px wide and read at roughly 400 on a phone — a
+  // 2.7x downscale. Small caps at 18px arrived at 6.7px, below reading size on
+  // the very device the card is made for. Nothing that carries words may be set
+  // small enough to disappear there.
+  it('sets no text too small to survive the downscale to a phone', () => {
+    const DOWNSCALE = 1080 / 400;
+    const FLOOR = 10; // px on screen, below which small caps stop being read
+    const sizes = {
+      eyebrow: SHARE_CARD.EYEBROW_SIZE,
+      paletteLabel: SHARE_CARD.PALETTE_LABEL_SIZE,
+    };
+    for (const [what, size] of Object.entries(sizes)) {
+      expect(size / DOWNSCALE, `${what} renders at ${(size / DOWNSCALE).toFixed(1)}px on a phone`)
+        .toBeGreaterThanOrEqual(FLOOR);
+    }
   });
 
   // A two-line title pushes everything under it down by one line height. The

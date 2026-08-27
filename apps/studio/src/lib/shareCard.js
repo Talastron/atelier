@@ -36,14 +36,26 @@ export const SHARE_CARD = {
   H: 1920,
   PAD: 56,              // was 88 — the composition is width-limited, so the
                         // side margin is the one lever that grows the garments
-  // No rule above the title. One sat here as a lead-in to an eyebrow; when the
-  // eyebrow went, the mark stayed and became a stray dash with nothing beside
-  // it and a band of empty page above. The footer keeps its rule, where it
-  // still introduces something.
-  TITLE_BASELINE: 170,
+  // Type sizes are the card's least obvious constraint. It is composed at
+  // 1080px wide and read at roughly 400 on a phone — a 2.7x downscale — so
+  // small caps at 18px arrive at about 6.7px, below reading size on the very
+  // device the card is made for. Nothing under ~28px here survives the trip.
+  EYEBROW_SIZE: 32,
+  PALETTE_LABEL_SIZE: 30,
+  PALETTE_SWATCH_R: 25,
+  PALETTE_MAX: 4,       // fewer, legible, beats six unreadable
+
+  // An eyebrow above the title, carrying the look's occasion and season. One
+  // sat here before reading "A LOOK · COMPOSED IN ATELIER" and was removed for
+  // saying what the wordmark says — the fault was its content, not the device.
+  // This one says something nothing else on the card does, and gives the title
+  // something to sit against instead of floating above an empty band.
+  EYEBROW_BASELINE: 150,
+  EYEBROW_TAGS: 3,      // more than three reads as a keyword list, not a caption
+  TITLE_BASELINE: 236,
   TITLE_LINE_HEIGHT: 88,
-  PALETTE_Y: 210,       // swatch row; no label above it
-  PANEL_TOP: 290,
+  PALETTE_Y: 282,       // swatch row; no label above it
+  PANEL_TOP: 330,
   PANEL_BOTTOM_WITH_NOTE: 1440,
   PANEL_BOTTOM_NO_NOTE: 1700,
   PANEL_RADIUS: 32,

@@ -168,12 +168,22 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.fillRect(0, 0, W, H);
 
   // === HEADER ===
-  // The name, and nothing else. An eyebrow reading "A LOOK · COMPOSED IN
-  // ATELIER" sat here, saying what myatelier.style says in the footer 1,600px
-  // below, introduced by a brass rule — and the same rule-and-eyebrow device
-  // appeared three times before a single garment. Removing the eyebrow first
-  // left the rule as a stray dash above an empty band, so it goes too. The
-  // footer keeps its rule, where it still introduces something.
+  // An eyebrow carrying what the look is FOR, then its name. The eyebrow that
+  // used to sit here read "A LOOK · COMPOSED IN ATELIER" — what the wordmark
+  // says — and was removed for that; the slot was never the problem, its
+  // content was. A look's own tags say something nothing else on the card does,
+  // and are what someone finding this on Pinterest actually wants to know.
+  const eyebrow = (outfit?.tags || [])
+    .filter((t) => typeof t === 'string' && t.trim())
+    .slice(0, SHARE_CARD.EYEBROW_TAGS)
+    .map((t) => t.trim().toUpperCase())
+    .join('  ·  ');
+  if (eyebrow) {
+    ctx.font = `500 ${SHARE_CARD.EYEBROW_SIZE}px Jost, sans-serif`;
+    ctx.fillStyle = MUTED;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(eyebrow, PAD, SHARE_CARD.EYEBROW_BASELINE);
+  }
   ctx.font = '500 76px "Playfair Display", Georgia, serif';
   ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
@@ -200,17 +210,20 @@ export async function composeOutfitExportImage(outfit, items) {
   }
   const palette = [...paletteCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+    .slice(0, SHARE_CARD.PALETTE_MAX);
   if (palette.length > 0) {
     // No "PALETTE" label. It named a row of coloured dots that already carry
     // their names beside them, and it was the second of three identical
     // rule-and-eyebrow devices stacked above the garments.
     const swatchY = paletteY;
-    const swatchR = 22; // circle radius
+    const swatchR = SHARE_CARD.PALETTE_SWATCH_R;
     const labelGap = 12;
     const itemGap = 28;
     let cursorX = PAD;
-    ctx.font = '500 18px Jost, sans-serif';
+    // 18px arrived at under 7px once the card was scaled to a phone. At a
+    // readable size only about four entries fit the width — which is the right
+    // trade: the dominant colours legible beat six no one can read.
+    ctx.font = `500 ${SHARE_CARD.PALETTE_LABEL_SIZE}px Jost, sans-serif`;
     ctx.textBaseline = 'middle';
     for (const [name, count] of palette) {
       const hex = hexFromColorName(name);
@@ -310,10 +323,11 @@ export async function composeOutfitExportImage(outfit, items) {
   // Wraps to 3 lines max; truncates with ellipsis if longer.
   if (outfit?.reasoning && outfit.reasoning.trim()) {
     const noteY = layout.noteY;
-    // brass-rule + "STYLIST'S NOTE" eyebrow
+    // brass-rule + "STYLIST'S NOTE" eyebrow. This rule earns its keep — it
+    // introduces the label beside it, which is what the device is for.
     ctx.fillStyle = BRASS;
     ctx.fillRect(PAD, noteY, 36, 2);
-    ctx.font = '500 18px Jost, sans-serif';
+    ctx.font = `500 ${SHARE_CARD.EYEBROW_SIZE}px Jost, sans-serif`;
     ctx.fillStyle = MUTED;
     ctx.textBaseline = 'middle';
     ctx.fillText("STYLIST'S NOTE", PAD + 52, noteY + 1);

@@ -1,5 +1,28 @@
 # Flat-lay composition — handoff
 
+**Status at 2026-08-20:** phase one is live, on all three surfaces — the Lookbook
+card, the look detail and the share image (#73, #74, #75, #77). The free half of
+the encoder work is live too (#78): cut-outs are WebP-on-white, 0.56× the JPEG,
+with no visible change and no migration.
+
+**The migration is deliberately NOT done yet, and not by the trim batch.** Two
+things were established while considering it:
+
+- The "Tighten cut-outs" runner in Profile is a trimmer, not a format migration.
+  `retrimItemPrimary` skips any item `trimCutoutDataUrl` declines — already-tight
+  cut-outs (coverage ≥ 92%), white-on-white, unreadable — and a skipped item is
+  never re-uploaded, so it stays JPEG. It would convert an unmeasured subset.
+- It re-encodes a JPEG as WebP, which is a second generation of loss on an
+  already-lossy image, written over the Storage object in place with no undo.
+
+The originals are retained (`imageMeta[i].original` on the add path, `images[0]`
+on the polish path), so the wardrobe can instead be re-processed **from source**:
+background removal re-run, WebP encoded once, no generational loss — and alpha
+produced in the same pass. Phase two needs that run regardless. Doing the lossy
+version first would mean paying twice and degrading the images in between.
+
+Decision, 2026-08-20: migrate once, from source, as part of phase two.
+
 **Status at 2026-08-18:** phase one built and open as a PR — the engine now
 renders on the Lookbook card and the look detail. The two questions gating phase
 two have both been answered, and both answers are favourable. See the measured
@@ -92,10 +115,20 @@ turn a 0.56× win into a 10× loss.
    Lookbook card and look detail. Works today with `overlap: false`.
 2. **Canvas renderer.** Same placements × pixel dimensions, for the share image.
    See `composeOutfitExportImage` in `canvas.js`.
-3. **Alpha encoding.** Change `removeImageBackground` to keep alpha and encode
-   WebP; add a flag on `imageMeta[i]` (e.g. `alpha: true`) so old and new coexist;
-   reprocess existing items with the batch re-trim runner already in Profile
-   (`retrimItemPrimary` in `polish.js`).
+3. **Alpha encoding.** ~~Change `removeImageBackground` to encode WebP~~ — done
+   in #78, on white. What remains is to stop flattening onto white and keep the
+   alpha, and to add a flag on `imageMeta[i]` (e.g. `alpha: true`) so old and new
+   coexist.
+
+   **Not via the re-trim runner**, despite what this document originally said.
+   That runner skips any item there is nothing safe to trim in, so it would
+   convert an unmeasured subset; and it re-encodes an already-lossy JPEG, over
+   the Storage object in place. Re-process from the retained originals instead —
+   one pass, no generational loss, alpha produced at the same time.
+
+   **Unmeasured, and worth measuring before committing:** re-processing runs the
+   ~5MB background-removal model once per item, several seconds each. Time a
+   single item before starting a wardrobe.
 4. **Graceful degradation.** Overlap only where alpha exists, so a part-migrated
    wardrobe never shows white boxes over garments.
 5. ~~**Cut-out quality check.**~~ **Done 2026-08-18. Edges pass; contrast is the

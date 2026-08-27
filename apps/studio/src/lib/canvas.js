@@ -6,6 +6,9 @@ import { hexFromColorName } from "./color.js";
 import { COLOR_SWATCHES } from "./taxonomy.js";
 import { stripItemChips } from "../components/ItemChip.jsx";
 import { computeCropRect, FRAME_ASPECT } from './framing.js';
+import { composeFlatlay } from './flatlay.js';
+import { itemImageDisplay } from './polish.js';
+import { fitContain, shareCardLayout, SHARE_CARD } from './shareCard.js';
 
 // Resolve a colour-family name to a SOLID, canvas-fillable hex. COLOR_SWATCHES
 // may hold a CSS linear-gradient string (the metallics — Gold, Rose Gold, etc.)
@@ -116,7 +119,7 @@ export async function composeOutfitExportImage(outfit, items) {
   }
 
   const W = 1080, H = 1920;
-  const PAD = 88;
+  const PAD = SHARE_CARD.PAD;
   const BRASS = '#C9A66B';
   const PAGE = '#F7F5F2';
   const INK = '#1c1917';
@@ -133,25 +136,23 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.fillRect(0, 0, W, H);
 
   // === HEADER ===
-  // brass-rule
+  // One brass rule, then the name. The eyebrow that sat here read
+  // "A LOOK · COMPOSED IN ATELIER", which is what myatelier.style says in the
+  // footer 1,600px below; and the same rule-and-eyebrow device appeared three
+  // times before a single garment. It works because it is rare.
   ctx.fillStyle = BRASS;
-  ctx.fillRect(PAD, 142, 56, 3);
-  // eyebrow
-  ctx.font = '500 22px Jost, sans-serif';
-  ctx.fillStyle = MUTED;
-  ctx.textBaseline = 'middle';
-  ctx.fillText('A LOOK · COMPOSED IN ATELIER', PAD + 76, 144);
-  // title
+  ctx.fillRect(PAD, SHARE_CARD.RULE_Y, 56, 3);
   ctx.font = '500 76px "Playfair Display", Georgia, serif';
   ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
-  // wrapCanvasText returns the number of lines it drew. A two-line title's
-  // second baseline reaches y≈336, which would collide with the palette and
-  // grid pinned below — so shift everything under the title down by one line
-  // height (88) when the title wraps. The stylist note and footer stay
-  // anchored to the bottom; the grid simply gets a little shorter.
-  const titleLines = wrapCanvasText(ctx, outfit?.name || 'A composed look', PAD, 248, W - PAD * 2, 88, 2);
-  const titleOffset = titleLines > 1 ? 88 : 0;
+  // wrapCanvasText returns the number of lines it drew; a wrapped title shifts
+  // the palette and panel down by one line, which shareCardLayout works out.
+  const titleLines = wrapCanvasText(
+    ctx, outfit?.name || 'A composed look',
+    PAD, SHARE_CARD.TITLE_BASELINE, W - PAD * 2, SHARE_CARD.TITLE_LINE_HEIGHT, 2,
+  );
+  const hasNote = !!(outfit?.reasoning && outfit.reasoning.trim());
+  const layout = shareCardLayout({ titleLines, hasNote });
 
   // === PALETTE STRIP ===
   // Computed across all outfit pieces, sorted by prevalence, capped at 6

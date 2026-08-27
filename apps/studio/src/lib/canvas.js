@@ -202,107 +202,82 @@ export async function composeOutfitExportImage(outfit, items) {
     }
   }
 
-  // === ITEMS GRID ===
-  const imgs = await Promise.all(pieces.map((p) => loadImageForCanvas(itemImages(p)[0])));
-  // Smart grid: 1=full, 2=stack, 3-4=2col, 5-6=2col, 7-9=3col
-  const cols = pieces.length === 1 ? 1
-             : pieces.length === 2 ? 2
-             : pieces.length <= 6 ? 2
-             : 3;
-  const rows = Math.ceil(pieces.length / cols);
-  const GRID_TOP = 420 + titleOffset;
-  const GRID_BOTTOM = H - 400;
-  const GUTTER = 36;
-  const cellW = (W - PAD * 2 - GUTTER * (cols - 1)) / cols;
-  const maxCellH = (GRID_BOTTOM - GRID_TOP - GUTTER * (rows - 1)) / rows;
-  // Prefer 3:4 portrait but cap at the available row height
-  const cellH = Math.min(cellW * (4 / 3), maxCellH);
-  const totalH = cellH * rows + GUTTER * (rows - 1);
-  const gridY0 = GRID_TOP + (GRID_BOTTOM - GRID_TOP - totalH) / 2;
+  // === THE COMPOSITION ===
+  // The same flat-lay engine that draws the Lookbook card and the look detail,
+  // so a look is arranged identically wherever it appears — and phase two's
+  // overlap reaches this card for free.
+  //
+  // Six pieces, not the eight used elsewhere: a share card is read at a glance,
+  // on a phone, among other people's posts. The engine drops finishing first,
+  // so what goes is a cuff rather than the coat.
+  const placements = composeFlatlay(pieces, { overlap: false, max: 6 });
 
-  pieces.forEach((p, i) => {
-    const c = i % cols, r = Math.floor(i / cols);
-    const x = PAD + c * (cellW + GUTTER);
-    const y = gridY0 + r * (cellH + GUTTER);
-    // Card surface
-    ctx.fillStyle = '#fff';
-    drawRoundedRect(ctx, x, y, cellW, cellH, 24);
-    ctx.fill();
+  // The polished cut-out, not the raw photo. Every background the user has had
+  // removed was previously absent from the one artefact that leaves the app —
+  // and a loosely-framed raw photo also loses more to fitting than a tight
+  // cut-out does. Falls back to the raw image when there is no cut-out, and
+  // loadImageForCanvas falls back again (weserv proxy) when a Storage URL is
+  // not canvas-safe, returning null rather than throwing.
+  const sources = placements.map((p) => itemImageDisplay(p.item, 0).src || itemImages(p.item)[0]);
+  const imgs = await Promise.all(sources.map((src) => loadImageForCanvas(src)));
+
+  // A white panel. Every stored cut-out is an opaque white JPEG, so floating
+  // them onto the cream page would paint white boxes across it — the fault
+  // fixed on the Lookbook card. Phase two recolours this one rectangle.
+  ctx.fillStyle = '#FFFFFF';
+  drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
+  ctx.lineWidth = 1.5;
+  drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
+  ctx.stroke();
+
+  const stage = layout.composition;
+  placements.forEach((placement, i) => {
+    const cellX = stage.x + placement.x * stage.w;
+    const cellY = stage.y + placement.y * stage.h;
+    const cellW = placement.w * stage.w;
+    const cellH = placement.h * stage.h;
     const img = imgs[i];
+
     if (img) {
-      ctx.save();
-      drawRoundedRect(ctx, x, y, cellW, cellH, 24);
-      ctx.clip();
-      // Cover-fit
-      const ar = img.width / img.height;
-      const ca = cellW / cellH;
-      let sw, sh, sx, sy;
-      if (ar > ca) { sh = img.height; sw = sh * ca; sx = (img.width - sw) / 2; sy = 0; }
-      else         { sw = img.width;  sh = sw / ca; sx = 0; sy = (img.height - sh) / 2; }
-      ctx.drawImage(img, sx, sy, sw, sh, x, y, cellW, cellH);
-      ctx.restore();
-    } else {
-      // Image failed to load (CORS-blocked, dead URL, or no image set).
-      // Render a typographic placeholder so the cell still credits the
-      // piece instead of going blank.
-      const cx = x + cellW / 2;
-      const cy = y + cellH / 2;
-      // Small geometric mark — a brass-stroked circle
-      ctx.beginPath();
-      ctx.arc(cx, cy - 36, 18, 0, Math.PI * 2);
-      ctx.strokeStyle = BRASS;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      // Brand line (small caps tracked)
-      if (p.brand) {
-        ctx.font = '500 18px Jost, sans-serif';
-        ctx.fillStyle = MUTED;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(p.brand.toUpperCase().slice(0, 22), cx, cy + 6);
-      }
-      // Item name (serif italic — editorial caption style)
-      if (p.name) {
-        ctx.font = 'italic 500 22px "Playfair Display", Georgia, serif';
-        ctx.fillStyle = INK;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // Wrap to 2 lines if needed; truncate if longer
-        const nameMaxWidth = cellW - 40;
-        const words = p.name.split(/\s+/);
-        let line1 = '', line2 = '';
-        for (const w of words) {
-          const test = line1 ? `${line1} ${w}` : w;
-          if (ctx.measureText(test).width <= nameMaxWidth) line1 = test;
-          else { line2 = words.slice(words.indexOf(w)).join(' '); break; }
-        }
-        if (line2) {
-          // Truncate line2 if too long
-          while (ctx.measureText(line2 + '…').width > nameMaxWidth && line2.length > 0) {
-            line2 = line2.slice(0, -1);
-          }
-          if (line2.length < words.slice(line1.split(' ').length).join(' ').length) line2 = line2 + '…';
-          ctx.fillText(line1, cx, cy + 36);
-          ctx.fillText(line2, cx, cy + 64);
-        } else {
-          ctx.fillText(line1, cx, cy + 36);
-        }
-      }
-      // Reset text alignment for downstream drawing
-      ctx.textAlign = 'left';
+      // Contain, not cover. Cover took a centred slice sized to fill the cell,
+      // which cost a dress 57% of itself.
+      const fit = fitContain(img.width, img.height, cellW, cellH);
+      ctx.drawImage(img, cellX + fit.x, cellY + fit.y, fit.w, fit.h);
+      return;
     }
-    // Hairline frame (unchanged)
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
-    ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, x, y, cellW, cellH, 24);
+
+    // The image failed to load (dead URL, or blocked even through the proxy).
+    // Credit the piece typographically rather than leaving a hole.
+    const p = placement.item;
+    const cx = cellX + cellW / 2;
+    const cy = cellY + cellH / 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 18, 14, 0, Math.PI * 2);
+    ctx.strokeStyle = BRASS;
+    ctx.lineWidth = 2;
     ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (p?.brand) {
+      ctx.font = '500 16px Jost, sans-serif';
+      ctx.fillStyle = MUTED;
+      ctx.fillText(String(p.brand).toUpperCase().slice(0, 22), cx, cy + 14);
+    }
+    if (p?.name) {
+      ctx.font = 'italic 500 20px "Playfair Display", Georgia, serif';
+      ctx.fillStyle = INK;
+      ctx.fillText(String(p.name).slice(0, 28), cx, cy + 40);
+    }
+    ctx.textAlign = 'left';
   });
 
   // === STYLIST'S NOTE ===
   // Reasoning rendered as italic pull-quote with brass-rule eyebrow.
   // Wraps to 3 lines max; truncates with ellipsis if longer.
   if (outfit?.reasoning && outfit.reasoning.trim()) {
-    const noteY = H - 340;
+    const noteY = layout.noteY;
     // brass-rule + "STYLIST'S NOTE" eyebrow
     ctx.fillStyle = BRASS;
     ctx.fillRect(PAD, noteY, 36, 2);

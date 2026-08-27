@@ -126,9 +126,29 @@ turn a 0.56× win into a 10× loss.
    the Storage object in place. Re-process from the retained originals instead —
    one pass, no generational loss, alpha produced at the same time.
 
-   **Unmeasured, and worth measuring before committing:** re-processing runs the
-   ~5MB background-removal model once per item, several seconds each. Time a
-   single item before starting a wardrobe.
+   **Measured, 2026-08-20** (`tools/reprocess-timing.html`, three real wardrobe
+   images): **8.8s per item** in steady state — 8.3s of it background removal,
+   50ms encoding. The first item costs 23.1s because it fetches and initialises
+   the ~5MB model, which is paid once per session, not once per item.
+
+   | Items | Compute | With Storage writes |
+   |---|---|---|
+   | 50 | ~7½ min | ~10 min |
+   | 150 | ~22 min | ~30 min |
+   | 300 | ~44 min | ~1 hour |
+
+   A coffee break, not an overnight job. The plan does not change.
+
+   Two consequences. **Encoding is 0.6% of the cost**, so the WebP work adds
+   nothing to a migration and optimising that side would be pointless. And nine
+   seconds an item, single-threaded in a tab, means a run needs that tab open
+   AND foregrounded for half an hour — browsers throttle background tabs — so
+   **the migration must be resumable**: record which items are done, so a closed
+   laptop costs progress rather than the whole run. That is a design requirement
+   for phase two, not a detail.
+
+   Caveats: measured on one machine, and removal is CPU-bound. Timed on
+   already-cut-out images at ~900px; a real original may be larger and slower.
 4. **Graceful degradation.** Overlap only where alpha exists, so a part-migrated
    wardrobe never shows white boxes over garments.
 5. ~~**Cut-out quality check.**~~ **Done 2026-08-18. Edges pass; contrast is the

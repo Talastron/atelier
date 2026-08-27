@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Reprocess timing</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 28px; background: #FAF9F7; color: #1c1917; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p.sub { color: #78716c; font-size: 13px; margin: 0 0 18px; max-width: 74ch; line-height: 1.55; }
+    textarea { width: 100%; max-width: 900px; height: 90px; font-family: ui-monospace, monospace; font-size: 11px;
+      padding: 10px; border: 1px solid #e7e5e4; border-radius: 8px; }
+    button { font: inherit; padding: 8px 18px; border-radius: 999px; border: 1px solid #1c1917;
+      background: #1c1917; color: #fff; cursor: pointer; margin-top: 10px; }
+    button:disabled { opacity: .5; cursor: default; }
+    #status { font-size: 13px; color: #78716c; margin-top: 14px; min-height: 20px; }
+    table { border-collapse: collapse; font-size: 13px; background: #fff; border: 1px solid #e7e5e4; margin-top: 18px; }
+    th, td { padding: 7px 14px; text-align: right; border-bottom: 1px solid #e7e5e4; white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: #78716c; font-weight: 500; }
+    tfoot td { font-weight: 700; background: #faf9f7; }
+    .verdict { background: #fff; border: 1px solid #e7e5e4; border-left: 3px solid #C9A66B;
+      border-radius: 0 12px 12px 0; padding: 14px 18px; font-size: 13px; line-height: 1.65; margin-top: 20px; max-width: 76ch; }
+    .verdict b { color: #1c1917; }
+  </style>
+</head>
+<body>
+  <h1>Reprocess timing</h1>
+  <p class="sub">
+    How long background removal takes per item — the one number that decides whether migrating a
+    wardrobe to alpha cut-outs is a coffee break or an overnight job. The model is fetched once
+    (~5MB) and then reused, so the first item is always far slower than the rest; the two are timed
+    separately because only the second matters when multiplied by a wardrobe.
+    Paste image URLs (one per line) or choose files. URLs are fetched through the app's own image
+    proxy, so Firebase Storage links work.
+  </p>
+
+  <textarea id="urls" placeholder="https://firebasestorage.googleapis.com/...&#10;https://..."></textarea>
+  <div>
+    <input type="file" id="files" multiple accept="image/*">
+    <button id="run">Run</button>
+  </div>
+
+  <div id="status"></div>
+
+  <table id="table" hidden>
+    <thead><tr><th>Item</th><th>Fetch</th><th>Removal</th><th>Encode</th><th>Total</th></tr></thead>
+    <tbody id="rows"></tbody>
+    <tfoot id="foot"></tfoot>
+  </table>
+
+  <div class="verdict" id="verdict" hidden></div>
+
+  <script type="module" src="./reprocess-timing.js"></script>
+</body>
+</html>

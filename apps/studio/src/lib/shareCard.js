@@ -55,6 +55,10 @@ export const SHARE_CARD = {
   NOTE_LINE_HEIGHT: 38,
   NOTE_LINES: 5,
   FOOTER_Y: 1760,
+  // The wordmark's baseline. It sat 78px below a rule-and-count line; with both
+  // gone it moves up to close the gap they left, while staying clear of the
+  // bottom of the frame, where an Instagram Story overlays its own controls.
+  WORDMARK_BASELINE: 1800,
   // The composition is drawn for a roughly square frame. Outside this band it
   // distorts: too wide and the columns drift apart, too tall and the pieces
   // stretch and thin.

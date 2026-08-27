@@ -335,17 +335,16 @@ export async function composeOutfitExportImage(outfit, items) {
   }
 
   // === FOOTER ===
-  const footerY = H - 160;
-  ctx.fillStyle = BRASS;
-  ctx.fillRect(PAD, footerY, 56, 3);
-  ctx.font = '500 22px Jost, sans-serif';
-  ctx.fillStyle = MUTED;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${pieces.length} PIECE${pieces.length === 1 ? '' : 'S'}`, PAD + 76, footerY + 2);
+  // The wordmark alone. A piece count sat here, and once the composition was
+  // capped at six it could only be wrong — a seven-piece look announcing seven
+  // above six visible garments — or, on a shorter look, a restatement of what
+  // anyone can see. Dropping it left the brass rule with nothing beside it,
+  // which is the stray dash the top of the card had just been rid of, so that
+  // went too. What remains is the strongest thing the footer can be.
   ctx.font = '500 44px "Playfair Display", Georgia, serif';
   ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('myatelier.style', PAD, footerY + 78);
+  ctx.fillText('myatelier.style', PAD, SHARE_CARD.WORDMARK_BASELINE);
 
   // Blob (PNG, ~95% quality)
   const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));

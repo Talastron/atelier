@@ -747,8 +747,21 @@ noteY}` in Task 2 and exactly those fields are read in Tasks 3, 4 and 5.
 and `cellY` to it, as its docstring requires. `SHARE_CARD` is imported once in
 Task 3 and used in Tasks 3 and 5.
 
-**A deliberately broken intermediate state.** Tasks 3 and 4 leave `canvas.js`
-referencing `titleOffset`, which Task 3 deletes and Task 5 removes the last use
-of. Each task still commits, and the build is only green again after Task 5. The
-alternative — one enormous task — would be worse to review, and the steps say
-plainly what failure to expect, so it cannot be mistaken for a real break.
+**A deliberately broken intermediate state — and the plan was wrong about how it
+would show.** Tasks 3 and 4 leave `canvas.js` referencing `titleOffset`, which
+Task 3 deletes and Task 5 removes the last use of. The steps above say to expect
+`pnpm build` to fail with `titleOffset is not defined`.
+
+**It does not.** In plain JavaScript that is a runtime `ReferenceError`, not a
+bundler error, and esbuild does not perform the check. Both intermediate commits
+build clean and pass all 217 tests while the share card would throw the moment
+anyone exported one — no test exercises the canvas.
+
+So those two commits are genuinely broken and nothing catches it. They are
+harmless here only because the branch is squash-merged, which collapses them.
+Anyone reworking this plan should either combine Tasks 3–5 into one commit, or
+verify the intermediate state by grep rather than by build.
+
+The lesson generalises: "the build will fail" is only a safety gate in a language
+whose compiler checks that. Here it was a fiction, and asserting it made the plan
+look safer than it was.

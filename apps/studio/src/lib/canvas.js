@@ -6,6 +6,9 @@ import { hexFromColorName } from "./color.js";
 import { COLOR_SWATCHES } from "./taxonomy.js";
 import { stripItemChips } from "../components/ItemChip.jsx";
 import { computeCropRect, FRAME_ASPECT } from './framing.js';
+import { composeFlatlay } from './flatlay.js';
+import { itemImageDisplay } from './polish.js';
+import { fitContain, shareCardLayout, SHARE_CARD } from './shareCard.js';
 
 // Resolve a colour-family name to a SOLID, canvas-fillable hex. COLOR_SWATCHES
 // may hold a CSS linear-gradient string (the metallics — Gold, Rose Gold, etc.)
@@ -47,25 +50,57 @@ export function loadImageForCanvas(src) {
     img.src = url;
   });
 
+  // Firebase Storage — where every polished cut-out lives — cannot be loaded by
+  // either route above it, so it skips straight to our own proxy:
+  //   • it sends no Access-Control-Allow-Origin, so crossOrigin='anonymous'
+  //     fails outright (verified: 200 with no ACAO header);
+  //   • and weserv cannot fetch it either. A Storage object path must stay
+  //     percent-encoded (%2F); proxies normalise it to a slash and Storage
+  //     answers 403 (verified).
+  // Trying both first would cost two dead round-trips per image, and a share
+  // card draws six.
+  const isStorage = !isData && src.includes('firebasestorage.googleapis.com');
+
   return new Promise(async (resolve) => {
-    // First try: direct load with CORS attr — works for Firebase Storage,
-    // weserv-proxied URLs, and any CDN that sends ACAO headers.
-    const direct = await tryLoad(src, true);
-    if (direct) return resolve(direct);
+    if (!isStorage) {
+      // First try: direct load with CORS attr — works for any CDN that sends
+      // ACAO headers.
+      const direct = await tryLoad(src, true);
+      if (direct) return resolve(direct);
 
-    // For data URLs there's nothing else to try
-    if (isData) return resolve(null);
+      // For data URLs there's nothing else to try
+      if (isData) return resolve(null);
 
-    // Fallback: route through weserv.nl which re-emits the image with
-    // permissive CORS headers. This unblocks third-party CDNs that
-    // refuse to send ACAO themselves (Monica Vinader, etc).
+      // Fallback: route through weserv.nl which re-emits the image with
+      // permissive CORS headers. This unblocks third-party CDNs that
+      // refuse to send ACAO themselves (Monica Vinader, etc).
+      try {
+        const u = new URL(src);
+        const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(u.hostname + u.pathname + u.search)}`;
+        const viaProxy = await tryLoad(proxied, true);
+        if (viaProxy) return resolve(viaProxy);
+      } catch {
+        // bad URL — fall through
+      }
+    }
+
+    // Last resort, and the ONLY route that works for Storage: our own
+    // App Check-gated image proxy, fetched to a data URL. It encodes the whole
+    // URL, so the percent-encoding survives. This is the same path
+    // retrimItemPrimary uses on these URLs for exactly this reason.
+    //
+    // Lazy import: net.js imports compressImageToDataUrl from THIS module, so a
+    // static import back would form a canvas↔net cycle (undefined at load
+    // time). Same pattern as rehostExternalImage below.
     try {
-      const u = new URL(src);
-      const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(u.hostname + u.pathname + u.search)}`;
-      const viaProxy = await tryLoad(proxied, true);
-      if (viaProxy) return resolve(viaProxy);
+      const { imageUrlToCompressedDataUrl } = await import('./net.js');
+      const dataUrl = await imageUrlToCompressedDataUrl(src);
+      if (dataUrl) {
+        const viaOwnProxy = await tryLoad(dataUrl, false);
+        if (viaOwnProxy) return resolve(viaOwnProxy);
+      }
     } catch {
-      // bad URL — fall through to null
+      // proxy unavailable or blocked — fall through to null
     }
 
     resolve(null);
@@ -116,7 +151,7 @@ export async function composeOutfitExportImage(outfit, items) {
   }
 
   const W = 1080, H = 1920;
-  const PAD = 88;
+  const PAD = SHARE_CARD.PAD;
   const BRASS = '#C9A66B';
   const PAGE = '#F7F5F2';
   const INK = '#1c1917';
@@ -133,30 +168,38 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.fillRect(0, 0, W, H);
 
   // === HEADER ===
-  // brass-rule
-  ctx.fillStyle = BRASS;
-  ctx.fillRect(PAD, 142, 56, 3);
-  // eyebrow
-  ctx.font = '500 22px Jost, sans-serif';
-  ctx.fillStyle = MUTED;
-  ctx.textBaseline = 'middle';
-  ctx.fillText('A LOOK · COMPOSED IN ATELIER', PAD + 76, 144);
-  // title
+  // An eyebrow carrying what the look is FOR, then its name. The eyebrow that
+  // used to sit here read "A LOOK · COMPOSED IN ATELIER" — what the wordmark
+  // says — and was removed for that; the slot was never the problem, its
+  // content was. A look's own tags say something nothing else on the card does,
+  // and are what someone finding this on Pinterest actually wants to know.
+  const eyebrow = (outfit?.tags || [])
+    .filter((t) => typeof t === 'string' && t.trim())
+    .slice(0, SHARE_CARD.EYEBROW_TAGS)
+    .map((t) => t.trim().toUpperCase())
+    .join('  ·  ');
+  if (eyebrow) {
+    ctx.font = `500 ${SHARE_CARD.EYEBROW_SIZE}px Jost, sans-serif`;
+    ctx.fillStyle = MUTED;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(eyebrow, PAD, SHARE_CARD.EYEBROW_BASELINE);
+  }
   ctx.font = '500 76px "Playfair Display", Georgia, serif';
   ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
-  // wrapCanvasText returns the number of lines it drew. A two-line title's
-  // second baseline reaches y≈336, which would collide with the palette and
-  // grid pinned below — so shift everything under the title down by one line
-  // height (88) when the title wraps. The stylist note and footer stay
-  // anchored to the bottom; the grid simply gets a little shorter.
-  const titleLines = wrapCanvasText(ctx, outfit?.name || 'A composed look', PAD, 248, W - PAD * 2, 88, 2);
-  const titleOffset = titleLines > 1 ? 88 : 0;
+  // wrapCanvasText returns the number of lines it drew; a wrapped title shifts
+  // the palette and panel down by one line, which shareCardLayout works out.
+  const titleLines = wrapCanvasText(
+    ctx, outfit?.name || 'A composed look',
+    PAD, SHARE_CARD.TITLE_BASELINE, W - PAD * 2, SHARE_CARD.TITLE_LINE_HEIGHT, 2,
+  );
+  const hasNote = !!(outfit?.reasoning && outfit.reasoning.trim());
+  const layout = shareCardLayout({ titleLines, hasNote });
 
   // === PALETTE STRIP ===
   // Computed across all outfit pieces, sorted by prevalence, capped at 6
   // so the row fits cleanly in one line at this resolution.
-  const paletteY = 320 + titleOffset;
+  const paletteY = layout.paletteY;
   const paletteCounts = new Map();
   for (const p of pieces) {
     for (const c of (itemColors(p) || [])) {
@@ -167,23 +210,20 @@ export async function composeOutfitExportImage(outfit, items) {
   }
   const palette = [...paletteCounts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+    .slice(0, SHARE_CARD.PALETTE_MAX);
   if (palette.length > 0) {
-    // brass-rule + "PALETTE" eyebrow
-    ctx.fillStyle = BRASS;
-    ctx.fillRect(PAD, paletteY, 36, 2);
-    ctx.font = '500 18px Jost, sans-serif';
-    ctx.fillStyle = MUTED;
-    ctx.textBaseline = 'middle';
-    ctx.fillText('PALETTE', PAD + 52, paletteY + 1);
-
-    // Swatches
-    const swatchY = paletteY + 36;
-    const swatchR = 22; // circle radius
+    // No "PALETTE" label. It named a row of coloured dots that already carry
+    // their names beside them, and it was the second of three identical
+    // rule-and-eyebrow devices stacked above the garments.
+    const swatchY = paletteY;
+    const swatchR = SHARE_CARD.PALETTE_SWATCH_R;
     const labelGap = 12;
     const itemGap = 28;
     let cursorX = PAD;
-    ctx.font = '500 18px Jost, sans-serif';
+    // 18px arrived at under 7px once the card was scaled to a phone. At a
+    // readable size only about four entries fit the width — which is the right
+    // trade: the dominant colours legible beat six no one can read.
+    ctx.font = `500 ${SHARE_CARD.PALETTE_LABEL_SIZE}px Jost, sans-serif`;
     ctx.textBaseline = 'middle';
     for (const [name, count] of palette) {
       const hex = hexFromColorName(name);
@@ -207,111 +247,87 @@ export async function composeOutfitExportImage(outfit, items) {
     }
   }
 
-  // === ITEMS GRID ===
-  const imgs = await Promise.all(pieces.map((p) => loadImageForCanvas(itemImages(p)[0])));
-  // Smart grid: 1=full, 2=stack, 3-4=2col, 5-6=2col, 7-9=3col
-  const cols = pieces.length === 1 ? 1
-             : pieces.length === 2 ? 2
-             : pieces.length <= 6 ? 2
-             : 3;
-  const rows = Math.ceil(pieces.length / cols);
-  const GRID_TOP = 420 + titleOffset;
-  const GRID_BOTTOM = H - 400;
-  const GUTTER = 36;
-  const cellW = (W - PAD * 2 - GUTTER * (cols - 1)) / cols;
-  const maxCellH = (GRID_BOTTOM - GRID_TOP - GUTTER * (rows - 1)) / rows;
-  // Prefer 3:4 portrait but cap at the available row height
-  const cellH = Math.min(cellW * (4 / 3), maxCellH);
-  const totalH = cellH * rows + GUTTER * (rows - 1);
-  const gridY0 = GRID_TOP + (GRID_BOTTOM - GRID_TOP - totalH) / 2;
+  // === THE COMPOSITION ===
+  // The same flat-lay engine that draws the Lookbook card and the look detail,
+  // so a look is arranged identically wherever it appears — and phase two's
+  // overlap reaches this card for free.
+  //
+  // Six pieces, not the eight used elsewhere: a share card is read at a glance,
+  // on a phone, among other people's posts. The engine drops finishing first,
+  // so what goes is a cuff rather than the coat.
+  const placements = composeFlatlay(pieces, { overlap: false, max: 6 });
 
-  pieces.forEach((p, i) => {
-    const c = i % cols, r = Math.floor(i / cols);
-    const x = PAD + c * (cellW + GUTTER);
-    const y = gridY0 + r * (cellH + GUTTER);
-    // Card surface
-    ctx.fillStyle = '#fff';
-    drawRoundedRect(ctx, x, y, cellW, cellH, 24);
-    ctx.fill();
+  // The polished cut-out, not the raw photo. Every background the user has had
+  // removed was previously absent from the one artefact that leaves the app —
+  // and a loosely-framed raw photo also loses more to fitting than a tight
+  // cut-out does. Falls back to the raw image when there is no cut-out, and
+  // loadImageForCanvas falls back again (weserv proxy) when a Storage URL is
+  // not canvas-safe, returning null rather than throwing.
+  const sources = placements.map((p) => itemImageDisplay(p.item, 0).src || itemImages(p.item)[0]);
+  const imgs = await Promise.all(sources.map((src) => loadImageForCanvas(src)));
+
+  // A white panel. Every stored cut-out is an opaque white JPEG, so floating
+  // them onto the cream page would paint white boxes across it — the fault
+  // fixed on the Lookbook card. Phase two recolours this one rectangle.
+  ctx.fillStyle = '#FFFFFF';
+  drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
+  ctx.lineWidth = 1.5;
+  drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
+  ctx.stroke();
+
+  const stage = layout.composition;
+  placements.forEach((placement, i) => {
+    const cellX = stage.x + placement.x * stage.w;
+    const cellY = stage.y + placement.y * stage.h;
+    const cellW = placement.w * stage.w;
+    const cellH = placement.h * stage.h;
     const img = imgs[i];
+
     if (img) {
-      ctx.save();
-      drawRoundedRect(ctx, x, y, cellW, cellH, 24);
-      ctx.clip();
-      // Cover-fit
-      const ar = img.width / img.height;
-      const ca = cellW / cellH;
-      let sw, sh, sx, sy;
-      if (ar > ca) { sh = img.height; sw = sh * ca; sx = (img.width - sw) / 2; sy = 0; }
-      else         { sw = img.width;  sh = sw / ca; sx = 0; sy = (img.height - sh) / 2; }
-      ctx.drawImage(img, sx, sy, sw, sh, x, y, cellW, cellH);
-      ctx.restore();
-    } else {
-      // Image failed to load (CORS-blocked, dead URL, or no image set).
-      // Render a typographic placeholder so the cell still credits the
-      // piece instead of going blank.
-      const cx = x + cellW / 2;
-      const cy = y + cellH / 2;
-      // Small geometric mark — a brass-stroked circle
-      ctx.beginPath();
-      ctx.arc(cx, cy - 36, 18, 0, Math.PI * 2);
-      ctx.strokeStyle = BRASS;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      // Brand line (small caps tracked)
-      if (p.brand) {
-        ctx.font = '500 18px Jost, sans-serif';
-        ctx.fillStyle = MUTED;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(p.brand.toUpperCase().slice(0, 22), cx, cy + 6);
-      }
-      // Item name (serif italic — editorial caption style)
-      if (p.name) {
-        ctx.font = 'italic 500 22px "Playfair Display", Georgia, serif';
-        ctx.fillStyle = INK;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // Wrap to 2 lines if needed; truncate if longer
-        const nameMaxWidth = cellW - 40;
-        const words = p.name.split(/\s+/);
-        let line1 = '', line2 = '';
-        for (const w of words) {
-          const test = line1 ? `${line1} ${w}` : w;
-          if (ctx.measureText(test).width <= nameMaxWidth) line1 = test;
-          else { line2 = words.slice(words.indexOf(w)).join(' '); break; }
-        }
-        if (line2) {
-          // Truncate line2 if too long
-          while (ctx.measureText(line2 + '…').width > nameMaxWidth && line2.length > 0) {
-            line2 = line2.slice(0, -1);
-          }
-          if (line2.length < words.slice(line1.split(' ').length).join(' ').length) line2 = line2 + '…';
-          ctx.fillText(line1, cx, cy + 36);
-          ctx.fillText(line2, cx, cy + 64);
-        } else {
-          ctx.fillText(line1, cx, cy + 36);
-        }
-      }
-      // Reset text alignment for downstream drawing
-      ctx.textAlign = 'left';
+      // Contain, not cover. Cover took a centred slice sized to fill the cell,
+      // which cost a dress 57% of itself.
+      const fit = fitContain(img.width, img.height, cellW, cellH);
+      ctx.drawImage(img, cellX + fit.x, cellY + fit.y, fit.w, fit.h);
+      return;
     }
-    // Hairline frame (unchanged)
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.06)';
-    ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, x, y, cellW, cellH, 24);
+
+    // The image failed to load (dead URL, or blocked even through the proxy).
+    // Credit the piece typographically rather than leaving a hole.
+    const p = placement.item;
+    const cx = cellX + cellW / 2;
+    const cy = cellY + cellH / 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 18, 14, 0, Math.PI * 2);
+    ctx.strokeStyle = BRASS;
+    ctx.lineWidth = 2;
     ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (p?.brand) {
+      ctx.font = '500 16px Jost, sans-serif';
+      ctx.fillStyle = MUTED;
+      ctx.fillText(String(p.brand).toUpperCase().slice(0, 22), cx, cy + 14);
+    }
+    if (p?.name) {
+      ctx.font = 'italic 500 20px "Playfair Display", Georgia, serif';
+      ctx.fillStyle = INK;
+      ctx.fillText(String(p.name).slice(0, 28), cx, cy + 40);
+    }
+    ctx.textAlign = 'left';
   });
 
   // === STYLIST'S NOTE ===
   // Reasoning rendered as italic pull-quote with brass-rule eyebrow.
   // Wraps to 3 lines max; truncates with ellipsis if longer.
   if (outfit?.reasoning && outfit.reasoning.trim()) {
-    const noteY = H - 340;
-    // brass-rule + "STYLIST'S NOTE" eyebrow
+    const noteY = layout.noteY;
+    // brass-rule + "STYLIST'S NOTE" eyebrow. This rule earns its keep — it
+    // introduces the label beside it, which is what the device is for.
     ctx.fillStyle = BRASS;
     ctx.fillRect(PAD, noteY, 36, 2);
-    ctx.font = '500 18px Jost, sans-serif';
+    ctx.font = `500 ${SHARE_CARD.EYEBROW_SIZE}px Jost, sans-serif`;
     ctx.fillStyle = MUTED;
     ctx.textBaseline = 'middle';
     ctx.fillText("STYLIST'S NOTE", PAD + 52, noteY + 1);
@@ -321,21 +337,28 @@ export async function composeOutfitExportImage(outfit, items) {
     ctx.fillStyle = INK;
     ctx.textBaseline = 'alphabetic';
     const noteText = `"${stripItemChips(outfit.reasoning).trim()}"`;
-    wrapCanvasText(ctx, noteText, PAD, noteY + 70, W - PAD * 2, 38, 3);
+    // Five lines, not three. A real stylist's note runs to about 250 characters
+    // and was being cut mid-sentence — "while the Cartier…" — which reads as a
+    // fault rather than as brevity. The extra room comes from the top of the
+    // card, which had it spare. shareCardLayout guarantees these lines clear
+    // the footer.
+    wrapCanvasText(
+      ctx, noteText, PAD, noteY + SHARE_CARD.NOTE_TEXT_OFFSET,
+      W - PAD * 2, SHARE_CARD.NOTE_LINE_HEIGHT, SHARE_CARD.NOTE_LINES,
+    );
   }
 
   // === FOOTER ===
-  const footerY = H - 160;
-  ctx.fillStyle = BRASS;
-  ctx.fillRect(PAD, footerY, 56, 3);
-  ctx.font = '500 22px Jost, sans-serif';
-  ctx.fillStyle = MUTED;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${pieces.length} PIECE${pieces.length === 1 ? '' : 'S'}`, PAD + 76, footerY + 2);
+  // The wordmark alone. A piece count sat here, and once the composition was
+  // capped at six it could only be wrong — a seven-piece look announcing seven
+  // above six visible garments — or, on a shorter look, a restatement of what
+  // anyone can see. Dropping it left the brass rule with nothing beside it,
+  // which is the stray dash the top of the card had just been rid of, so that
+  // went too. What remains is the strongest thing the footer can be.
   ctx.font = '500 44px "Playfair Display", Georgia, serif';
   ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('myatelier.style', PAD, footerY + 78);
+  ctx.fillText('myatelier.style', PAD, SHARE_CARD.WORDMARK_BASELINE);
 
   // Blob (PNG, ~95% quality)
   const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));

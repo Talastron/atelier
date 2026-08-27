@@ -203,6 +203,44 @@ describe('composeFlatlay', () => {
     }
   });
 
+  // The cap is a ceiling on a PIECE, not a budget the category shares out.
+  // Applied to the slot, it meant one necklace reached 4% of the frame, two
+  // managed 1.8% each and three 0.9% — so a look was penalised for owning more
+  // jewellery, which is not what "a necklace must not render coat-sized" says.
+  it('gives each finishing piece the same room however many there are', () => {
+    const sizeWith = (n) => {
+      const look = [piece('t', 'Tops'), ...Array.from({ length: n }, (_, i) => piece(`j${i}`, 'Jewellery'))];
+      const jewel = composeFlatlay(look, { overlap: false, max: 6 })
+        .find((p) => p.item.category === 'Jewellery');
+      return jewel.w * jewel.h;
+    };
+    const one = sizeWith(1);
+    for (const n of [2, 3, 4]) {
+      // within a tenth of the single-piece size — gutters and grid shape cost a
+      // little, halving does not
+      expect(sizeWith(n), `${n} pieces should not shrink each other`).toBeGreaterThan(one * 0.9);
+    }
+  });
+
+  // A column sized for a coat and filled by a pair of earrings. Column widths
+  // are decided from weights; caps used to apply only afterwards, so a look
+  // with no outerwear gave its left column a third of the frame, put two capped
+  // jewellery pieces in it, and left 88% of that column empty.
+  it('does not reserve a column wider than its contents can use', () => {
+    const out = composeFlatlay(
+      ['Tops', 'Bottoms', 'Shoes', 'Bags', 'Jewellery', 'Jewellery'].map((c, i) => piece(`p${i}`, c)),
+      { overlap: false, max: 6 },
+    );
+    const jewels = out.filter((p) => p.item.category === 'Jewellery');
+    const jewelRight = Math.max(...jewels.map((p) => p.x + p.w));
+    const garmentLeft = Math.min(...out
+      .filter((p) => p.item.category === 'Tops' || p.item.category === 'Bottoms')
+      .map((p) => p.x));
+    // the garments must begin close to where the jewellery ends, not a third of
+    // the way across the frame
+    expect(garmentLeft - jewelRight).toBeLessThan(0.05);
+  });
+
   // Anatomy is the reason this is a weighted tree and not a packing algorithm.
   // A treemap would fill the frame better and put shoes wherever they fitted.
   it('keeps the anatomical order left to right', () => {

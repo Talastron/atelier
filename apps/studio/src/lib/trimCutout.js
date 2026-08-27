@@ -6,6 +6,7 @@
 // The subject is detected by COLOUR (non-white pixels), not the imgly alpha
 // mask (which lives in canvas.js). A safeguard leaves genuinely white-on-white
 // items — or already-tight cut-outs — untrimmed rather than guessing wrong.
+import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER } from './encode.js';
 
 // Pure: given raw RGBA pixels, return the bounding box of "content" (non-white)
 // pixels as { x, y, w, h }, or null if there is none. `threshold` is how far the
@@ -83,11 +84,19 @@ export async function trimCutoutDataUrl(dataUrl, {
   octx.fillRect(0, 0, cw, ch);
   octx.drawImage(src, x0, y0, cw, ch, 0, 0, cw, ch);
 
-  let q = 0.86;
-  let url = out.toDataURL('image/jpeg', q);
-  while (url.length > maxBytes && q > 0.45) {
-    q -= 0.1;
-    url = out.toDataURL('image/jpeg', q);
-  }
+  // Same encoding choice as removeImageBackground, and for a load-bearing
+  // reason: polishItemPrimary removes the background and then trims the result,
+  // so whatever format this writes is what actually gets stored. Left encoding
+  // JPEG, it would have converted every WebP cut-out straight back and undone
+  // the saving completely on the polish path — the one most items use.
+  const webp = await canEncodeWebp();
+  const url = await pickEncoding(
+    async (quality) => out.toDataURL(webp ? 'image/webp' : 'image/jpeg', quality),
+    webp ? WEBP_LADDER : JPEG_LADDER,
+    maxBytes,
+  );
+  // Match every other failure path here: hand the original back, so a caller
+  // doing `if (trimmed.ok) cutout = trimmed.url` still has something to keep.
+  if (!url) return { url: dataUrl, ok: false };
   return { url, ok: true };
 }

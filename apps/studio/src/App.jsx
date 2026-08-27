@@ -183,10 +183,10 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
         </div>
 
         {/* Body — image preview */}
-        <div className="px-6 pt-6 pb-4 overflow-y-auto flex-1">
-          <p className="text-[10px] tracking-widest uppercase text-stone-500 mb-5">
-            {(outfit?.itemIds || []).length} {(outfit?.itemIds || []).length === 1 ? 'piece' : 'pieces'} · Composed for sharing
-          </p>
+        {/* No subheading. The header above already says "Share this look" and
+            the card itself carries the piece count, so the line that sat here
+            pushed the preview down to repeat what was on either side of it. */}
+        <div className="px-6 pt-5 pb-4 overflow-y-auto flex-1">
 
           {/* Preview frame — 9:16 to mirror the actual output. White card
               + hairline border so the preview itself reads as a deliberate

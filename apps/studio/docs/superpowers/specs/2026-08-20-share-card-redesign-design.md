@@ -57,10 +57,17 @@ footer begins at 1760. When a look has no reasoning, 240px sits empty.
 
 ### 1. Composition from the shared engine
 
-`composeFlatlay(pieces, { overlap: false, max: 8 })` returns placements in 0–1;
+`composeFlatlay(pieces, { overlap: false, max: 6 })` returns placements in 0–1;
 multiply by the composition box and draw. A look then composes identically on the
 Lookbook card, the look detail and the share image — and phase two's `overlap`
 flip reaches the share card for free, with no further work here.
+
+**Six, not the eight used elsewhere.** A share card is read at a glance on a
+phone, at a fraction of the size it is composed at, and among other people's
+posts. Six pieces each get more of the frame than eight would, and the engine's
+own priority drops finishing pieces first, so what goes is a cuff rather than the
+coat. The look detail and the Lookbook card keep eight — they are read
+deliberately, by someone who already owns the wardrobe.
 
 ### 2. Contain, not cover
 
@@ -178,9 +185,11 @@ computation, and footer content, which are all good as they are.
 
 ## Risks
 
-**The piece cap.** Eight matches every other surface, but a share card is seen at
-a glance on a phone. Six may read better. Start at eight and look at it — this is
-a judgement no measurement settles.
+**The piece cap is now decided: six.** It differs from the eight used on the
+other two surfaces, which is a deliberate divergence rather than an oversight —
+recorded here so a later reader does not "correct" it into consistency. A look of
+twelve pieces will show half of itself on the share card; the credits are not
+part of this artefact, so those pieces are simply absent rather than listed.
 
 **Storage URLs on canvas.** Point 3's fallback is the guard, but if proxying
 proves unreliable for polished cut-outs the card would quietly revert to raw

@@ -50,25 +50,57 @@ export function loadImageForCanvas(src) {
     img.src = url;
   });
 
+  // Firebase Storage — where every polished cut-out lives — cannot be loaded by
+  // either route above it, so it skips straight to our own proxy:
+  //   • it sends no Access-Control-Allow-Origin, so crossOrigin='anonymous'
+  //     fails outright (verified: 200 with no ACAO header);
+  //   • and weserv cannot fetch it either. A Storage object path must stay
+  //     percent-encoded (%2F); proxies normalise it to a slash and Storage
+  //     answers 403 (verified).
+  // Trying both first would cost two dead round-trips per image, and a share
+  // card draws six.
+  const isStorage = !isData && src.includes('firebasestorage.googleapis.com');
+
   return new Promise(async (resolve) => {
-    // First try: direct load with CORS attr — works for Firebase Storage,
-    // weserv-proxied URLs, and any CDN that sends ACAO headers.
-    const direct = await tryLoad(src, true);
-    if (direct) return resolve(direct);
+    if (!isStorage) {
+      // First try: direct load with CORS attr — works for any CDN that sends
+      // ACAO headers.
+      const direct = await tryLoad(src, true);
+      if (direct) return resolve(direct);
 
-    // For data URLs there's nothing else to try
-    if (isData) return resolve(null);
+      // For data URLs there's nothing else to try
+      if (isData) return resolve(null);
 
-    // Fallback: route through weserv.nl which re-emits the image with
-    // permissive CORS headers. This unblocks third-party CDNs that
-    // refuse to send ACAO themselves (Monica Vinader, etc).
+      // Fallback: route through weserv.nl which re-emits the image with
+      // permissive CORS headers. This unblocks third-party CDNs that
+      // refuse to send ACAO themselves (Monica Vinader, etc).
+      try {
+        const u = new URL(src);
+        const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(u.hostname + u.pathname + u.search)}`;
+        const viaProxy = await tryLoad(proxied, true);
+        if (viaProxy) return resolve(viaProxy);
+      } catch {
+        // bad URL — fall through
+      }
+    }
+
+    // Last resort, and the ONLY route that works for Storage: our own
+    // App Check-gated image proxy, fetched to a data URL. It encodes the whole
+    // URL, so the percent-encoding survives. This is the same path
+    // retrimItemPrimary uses on these URLs for exactly this reason.
+    //
+    // Lazy import: net.js imports compressImageToDataUrl from THIS module, so a
+    // static import back would form a canvas↔net cycle (undefined at load
+    // time). Same pattern as rehostExternalImage below.
     try {
-      const u = new URL(src);
-      const proxied = `https://images.weserv.nl/?url=${encodeURIComponent(u.hostname + u.pathname + u.search)}`;
-      const viaProxy = await tryLoad(proxied, true);
-      if (viaProxy) return resolve(viaProxy);
+      const { imageUrlToCompressedDataUrl } = await import('./net.js');
+      const dataUrl = await imageUrlToCompressedDataUrl(src);
+      if (dataUrl) {
+        const viaOwnProxy = await tryLoad(dataUrl, false);
+        if (viaOwnProxy) return resolve(viaOwnProxy);
+      }
     } catch {
-      // bad URL — fall through to null
+      // proxy unavailable or blocked — fall through to null
     }
 
     resolve(null);

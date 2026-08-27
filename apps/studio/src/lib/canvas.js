@@ -168,12 +168,12 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.fillRect(0, 0, W, H);
 
   // === HEADER ===
-  // One brass rule, then the name. The eyebrow that sat here read
-  // "A LOOK · COMPOSED IN ATELIER", which is what myatelier.style says in the
-  // footer 1,600px below; and the same rule-and-eyebrow device appeared three
-  // times before a single garment. It works because it is rare.
-  ctx.fillStyle = BRASS;
-  ctx.fillRect(PAD, SHARE_CARD.RULE_Y, 56, 3);
+  // The name, and nothing else. An eyebrow reading "A LOOK · COMPOSED IN
+  // ATELIER" sat here, saying what myatelier.style says in the footer 1,600px
+  // below, introduced by a brass rule — and the same rule-and-eyebrow device
+  // appeared three times before a single garment. Removing the eyebrow first
+  // left the rule as a stray dash above an empty band, so it goes too. The
+  // footer keeps its rule, where it still introduces something.
   ctx.font = '500 76px "Playfair Display", Georgia, serif';
   ctx.fillStyle = INK;
   ctx.textBaseline = 'alphabetic';
@@ -323,7 +323,15 @@ export async function composeOutfitExportImage(outfit, items) {
     ctx.fillStyle = INK;
     ctx.textBaseline = 'alphabetic';
     const noteText = `"${stripItemChips(outfit.reasoning).trim()}"`;
-    wrapCanvasText(ctx, noteText, PAD, noteY + 70, W - PAD * 2, 38, 3);
+    // Five lines, not three. A real stylist's note runs to about 250 characters
+    // and was being cut mid-sentence — "while the Cartier…" — which reads as a
+    // fault rather than as brevity. The extra room comes from the top of the
+    // card, which had it spare. shareCardLayout guarantees these lines clear
+    // the footer.
+    wrapCanvasText(
+      ctx, noteText, PAD, noteY + SHARE_CARD.NOTE_TEXT_OFFSET,
+      W - PAD * 2, SHARE_CARD.NOTE_LINE_HEIGHT, SHARE_CARD.NOTE_LINES,
+    );
   }
 
   // === FOOTER ===

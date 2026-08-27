@@ -36,15 +36,24 @@ export const SHARE_CARD = {
   H: 1920,
   PAD: 56,              // was 88 — the composition is width-limited, so the
                         // side margin is the one lever that grows the garments
-  RULE_Y: 140,
-  TITLE_BASELINE: 210,
+  // No rule above the title. One sat here as a lead-in to an eyebrow; when the
+  // eyebrow went, the mark stayed and became a stray dash with nothing beside
+  // it and a band of empty page above. The footer keeps its rule, where it
+  // still introduces something.
+  TITLE_BASELINE: 170,
   TITLE_LINE_HEIGHT: 88,
-  PALETTE_Y: 250,       // swatch row; no label above it
-  PANEL_TOP: 330,
-  PANEL_BOTTOM_WITH_NOTE: 1520,
+  PALETTE_Y: 210,       // swatch row; no label above it
+  PANEL_TOP: 290,
+  PANEL_BOTTOM_WITH_NOTE: 1440,
   PANEL_BOTTOM_NO_NOTE: 1700,
   PANEL_RADIUS: 32,
-  NOTE_Y: 1580,
+  // The stylist's note. It was capped at three lines and truncated mid-sentence
+  // — "while the Cartier…" — because nothing checked whether it FIT; it simply
+  // cut. Five lines, and the space comes from the top, which had it spare.
+  NOTE_Y: 1480,
+  NOTE_TEXT_OFFSET: 70,   // first baseline, below the eyebrow
+  NOTE_LINE_HEIGHT: 38,
+  NOTE_LINES: 5,
   FOOTER_Y: 1760,
   // The composition is drawn for a roughly square frame. Outside this band it
   // distorts: too wide and the columns drift apart, too tall and the pieces

@@ -50,11 +50,18 @@ describe('fitContain', () => {
 });
 
 describe('shareCardLayout', () => {
+  // Asserted against the constants rather than against copies of their values.
+  // An earlier version hard-coded 330 and 1520, so retuning the card broke the
+  // tests without any behaviour being wrong — noise that trains you to edit
+  // assertions, which is how a real failure gets edited away too.
   it('starts the panel below the title and palette', () => {
     const { panel } = shareCardLayout({ titleLines: 1, hasNote: true });
-    expect(panel.y).toBe(330);
-    expect(panel.x).toBe(56);
-    expect(panel.w).toBe(968);   // 1080 - 56 * 2
+    expect(panel.y).toBe(SHARE_CARD.PANEL_TOP);
+    expect(panel.x).toBe(SHARE_CARD.PAD);
+    expect(panel.w).toBe(SHARE_CARD.W - SHARE_CARD.PAD * 2);
+    // and it begins below the palette row, whatever those numbers become
+    expect(panel.y).toBeGreaterThan(SHARE_CARD.PALETTE_Y);
+    expect(SHARE_CARD.PALETTE_Y).toBeGreaterThan(SHARE_CARD.TITLE_BASELINE);
   });
 
   // A two-line title pushes everything under it down by one line height. The
@@ -72,8 +79,29 @@ describe('shareCardLayout', () => {
   it('extends the panel into the space a stylist’s note would have used', () => {
     const withNote = shareCardLayout({ titleLines: 1, hasNote: true });
     const without = shareCardLayout({ titleLines: 1, hasNote: false });
-    expect(withNote.panel.y + withNote.panel.h).toBe(1520);
-    expect(without.panel.y + without.panel.h).toBe(1700);
+    expect(withNote.panel.y + withNote.panel.h).toBe(SHARE_CARD.PANEL_BOTTOM_WITH_NOTE);
+    expect(without.panel.y + without.panel.h).toBe(SHARE_CARD.PANEL_BOTTOM_NO_NOTE);
+    expect(without.panel.h).toBeGreaterThan(withNote.panel.h);
+  });
+
+  // The fault this exists to prevent: the note was capped at three lines and
+  // truncated mid-sentence — "while the Cartier…" — because nothing ever
+  // checked whether it FIT. It simply cut. A cap that is never measured against
+  // the space available is not a layout decision, it is a guess.
+  it('leaves the stylist’s note room to finish above the footer', () => {
+    const S = SHARE_CARD;
+    const lastBaseline = S.NOTE_Y + S.NOTE_TEXT_OFFSET + (S.NOTE_LINES - 1) * S.NOTE_LINE_HEIGHT;
+    const descender = 14; // Playfair italic at 28px, generously
+    expect(lastBaseline + descender).toBeLessThan(S.FOOTER_Y);
+    // and the note starts below the panel it sits under
+    const { panel } = shareCardLayout({ titleLines: 1, hasNote: true });
+    expect(S.NOTE_Y).toBeGreaterThan(panel.y + panel.h);
+  });
+
+  // A wrapped title shifts the panel down but must not push it into the note.
+  it('keeps a two-line title clear of the note', () => {
+    const { panel } = shareCardLayout({ titleLines: 2, hasNote: true });
+    expect(panel.y + panel.h).toBeLessThanOrEqual(SHARE_CARD.NOTE_Y);
   });
 
   // The composition is drawn for a roughly square frame. Too wide and the

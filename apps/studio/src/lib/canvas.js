@@ -7,7 +7,7 @@ import { COLOR_SWATCHES } from "./taxonomy.js";
 import { stripItemChips } from "../components/ItemChip.jsx";
 import { computeCropRect, FRAME_ASPECT } from './framing.js';
 import { composeFlatlay } from './flatlay.js';
-import { itemImageDisplay } from './polish.js';
+import { hasAlphaCutout, itemImageDisplay } from './polish.js';
 import { fitContain, shareCardLayout, SHARE_CARD } from './shareCard.js';
 import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER, CUTOUT_BUDGET_CHARS } from './encode.js';
 
@@ -138,6 +138,13 @@ export function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines =
   return lines.length;
 }
 
+// The CSS pixel width PIECE_SHADOW in Flatlay.jsx was tuned against — roughly a
+// Lookbook card's stage. The canvas stage is measured in export pixels (1080
+// wide overall), so the shadow's offset and blur are scaled by the ratio. Both
+// surfaces then cast the same shadow relative to the garment, rather than the
+// same number of pixels.
+const REFERENCE_STAGE_PX = 400;
+
 export async function composeOutfitExportImage(outfit, items) {
   const pieces = (outfit?.itemIds || [])
     .map((id) => items.find((i) => i.id === id))
@@ -256,7 +263,13 @@ export async function composeOutfitExportImage(outfit, items) {
   // Six pieces, not the eight used elsewhere: a share card is read at a glance,
   // on a phone, among other people's posts. The engine drops finishing first,
   // so what goes is a cuff rather than the coat.
-  const placements = composeFlatlay(pieces, { overlap: false, max: 6 });
+  // Sorted by z, which the DOM gets for free from zIndex and the canvas does
+  // not: composeFlatlay returns placements in SLOT order (Tops:z3 before
+  // Bottoms:z2), and ctx.drawImage paints in call order. Unsorted, the share
+  // card would layer the opposite way from the app the moment pieces overlap.
+  const placements = composeFlatlay(pieces, { overlap: true, max: 6, bleed: hasAlphaCutout })
+    .slice()
+    .sort((a, b) => a.z - b.z);
 
   // The polished cut-out, not the raw photo. Every background the user has had
   // removed was previously absent from the one artefact that leaves the app —
@@ -267,9 +280,13 @@ export async function composeOutfitExportImage(outfit, items) {
   const sources = placements.map((p) => itemImageDisplay(p.item, 0).src || itemImages(p.item)[0]);
   const imgs = await Promise.all(sources.map((src) => loadImageForCanvas(src)));
 
-  // A white panel. Every stored cut-out is an opaque white JPEG, so floating
-  // them onto the cream page would paint white boxes across it — the fault
-  // fixed on the Lookbook card. Phase two recolours this one rectangle.
+  // A white panel, and it stays white. Its original justification — that every
+  // stored cut-out is an opaque white JPEG — is retired by alpha, but the panel
+  // is also a design element: the page behind it is already #F7F5F2, so
+  // recolouring it to cream would make it the same colour as the page and erase
+  // it from the card. Nothing is lost by keeping it. A white garment has no
+  // useful contrast against cream either (1.088:1), so the shadow is carrying
+  // that separation on both surfaces regardless.
   ctx.fillStyle = '#FFFFFF';
   drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
   ctx.fill();
@@ -290,7 +307,33 @@ export async function composeOutfitExportImage(outfit, items) {
       // Contain, not cover. Cover took a centred slice sized to fill the cell,
       // which cost a dress 57% of itself.
       const fit = fitContain(img.width, img.height, cellW, cellH);
+      const bleeding = hasAlphaCutout(placement.item);
+
+      ctx.save();
+      if (placement.rotation) {
+        // Rotate about the cell's centre, as the DOM's transform does. Without
+        // this the share card renders every piece upright while the app tilts
+        // them.
+        ctx.translate(cellX + cellW / 2, cellY + cellH / 2);
+        ctx.rotate((placement.rotation * Math.PI) / 180);
+        ctx.translate(-(cellX + cellW / 2), -(cellY + cellH / 2));
+      }
+      if (bleeding) {
+        // Matches PIECE_SHADOW in Flatlay.jsx. Its 6px/14px are CSS pixels on a
+        // stage about REFERENCE_STAGE_PX wide, so they are scaled by this stage's
+        // actual width — otherwise a shadow tuned on a 400px card would be a
+        // hairline on a 1080px export. Canvas shadow state is sticky and would
+        // leak onto the next piece drawn, which is why it is cleared below.
+        const k = stage.w / REFERENCE_STAGE_PX;
+        ctx.shadowColor = 'rgba(28, 25, 23, 0.16)';
+        ctx.shadowBlur = 14 * k;
+        ctx.shadowOffsetY = 6 * k;
+      }
       ctx.drawImage(img, cellX + fit.x, cellY + fit.y, fit.w, fit.h);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.restore();
       return;
     }
 

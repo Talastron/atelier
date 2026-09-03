@@ -5,7 +5,7 @@ import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
 import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser, deleteMyAccount } from "../firebase.js";
-import { itemImageDisplay, polishItemPrimary, retrimItemPrimary } from "../lib/polish.js";
+import { hasAlphaCutout, itemImageDisplay, polishItemPrimary, retrimItemPrimary } from "../lib/polish.js";
 import ItemTileImage from "../components/ItemTileImage.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
@@ -445,6 +445,51 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, retrim: true } });
   };
 
+  // Re-cut every item to a cut-out that keeps its transparency, so its pieces
+  // can overlap in a flat-lay. Deliberately NOT the re-trim runner: that one
+  // skips any item it finds nothing safe to trim in, and a skipped item is never
+  // re-uploaded, so it would convert an unmeasured subset - and it re-encodes an
+  // already-lossy JPEG in place.
+  //
+  // Always writes to Storage as cutoutUrl and NEVER over images[0]. On the
+  // polish path images[0] is the untouched original; on the add path it IS the
+  // cut-out and is the only copy the account has. Writing to Storage either way
+  // makes add-path items into polish-path items - one shape in the database
+  // instead of two, the previous cut-out kept as a fallback, and undo is
+  // deleting one field.
+  //
+  // The alpha flag IS the resume state. "Done" means "has alpha: true", so there
+  // is no separate progress record that can drift out of step with what actually
+  // happened. At ~9s an item this run needs a foregrounded tab for around half an
+  // hour, and browsers throttle background tabs, so a closed laptop must cost the
+  // remaining items rather than the whole run.
+  const runAlphaMigration = async () => {
+    if (!user) return;
+    polishCancelRef.current = false;
+    try { const net = await import("../lib/net.js"); net.clearAllHostBlocks(); } catch { /* non-blocking */ }
+
+    const all = (polishItems || items) || [];
+    const targets = all.filter((it) => !hasAlphaCutout(it) && !!(it.images || [])[0]);
+    const already = all.filter((it) => hasAlphaCutout(it)).length;
+    const noSource = all.length - targets.length - already;
+
+    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noSource });
+    let done = 0, failed = 0;
+    const failedItems = [];
+    for (const it of targets) {
+      if (polishCancelRef.current) break;
+      try {
+        const res = await polishItemPrimary(it, user.uid, { alpha: true });
+        if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
+        else { failed += 1; failedItems.push(it); }
+      } catch { failed += 1; failedItems.push(it); }
+      done += 1;
+      setPolishState({ done, total: targets.length, failed, alpha: true, already, noSource });
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noSource } });
+  };
+
   // Google Calendar connection state. null = still checking, true/false = known.
   const profileToast = useToast();
   const [calConnected, setCalConnected] = useState(null);
@@ -831,6 +876,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               <button type="button" onClick={runRetrimWardrobe}
                 className="text-xs tracking-widest uppercase px-5 py-3 rounded-full border border-stone-300 text-stone-800 hover:bg-stone-50 transition-colors">
                 Tighten cut-outs
+              </button>
+              <button type="button" onClick={runAlphaMigration}
+                className="text-xs tracking-widest uppercase px-5 py-3 rounded-full border border-stone-300 text-stone-800 hover:bg-stone-50 transition-colors">
+                Re-cut for overlap
               </button>
             </div>
           )}

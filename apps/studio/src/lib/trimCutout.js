@@ -33,19 +33,43 @@ import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER } from './encode.
 // and therefore as subject — the box becomes the whole frame, coverage hits
 // 1.0, and the caller concludes the cut-out is already tight and leaves it
 // alone.
-export function contentBounds({ data, width, height }, threshold = 14) {
-  let hasAlpha = false;
+
+// What fraction of the frame must be translucent before we believe this image
+// has a transparent GROUND, rather than a few soft edge pixels.
+//
+// Deciding on "any pixel is translucent" was too brittle: one anti-aliased pixel
+// at alpha 254 in an otherwise opaque cut-out flipped the whole image into alpha
+// mode, where the opaque white ground scores as subject, the box becomes the
+// whole frame, and the trim silently declines as "already tight" — the exact
+// failure this function was fixed for, arriving by a different door.
+//
+// A real cut-out's ground is 40-70% of the frame and stray edge pixels are a
+// fraction of one per cent, so this separates them with two orders of magnitude
+// to spare. The 250 rather than 255 ignores near-opaque encoder noise.
+const TRANSLUCENT_FRACTION = 0.01;
+
+export function hasAlphaGround({ data }) {
+  const total = data.length / 4;
+  let translucent = 0;
   for (let i = 3; i < data.length; i += 4) {
-    if (data[i] < 255) { hasAlpha = true; break; }
+    if (data[i] < 250) translucent += 1;
   }
+  return translucent >= total * TRANSLUCENT_FRACTION;
+}
+
+export function contentBounds({ data, width, height }, threshold = 14) {
+  const hasAlpha = hasAlphaGround({ data });
 
   let minX = width, minY = height, maxX = -1, maxY = -1;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
+      // Alpha 8 of 255 discards the near-invisible matte fringe imgly leaves
+      // around a cut edge. Anything it excludes sits 1-2px outside the subject,
+      // far inside the 6% margin the crop adds back, so nothing visible is lost.
       const isContent = hasAlpha
         ? data[i + 3] > 8
-        : 255 - Math.min(data[i], data[i + 1], data[i + 2]) >= threshold;
+        : 255 - Math.min(data[i], data[i + 1], data[i + 2]) > threshold;
       if (!isContent) continue;
       if (x < minX) minX = x;
       if (y < minY) minY = y;
@@ -58,20 +82,14 @@ export function contentBounds({ data, width, height }, threshold = 14) {
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
 }
 
-// Whether any pixel is less than fully opaque. Exported so the trim and the
-// encode agree about which kind of image they are handling.
-export function hasAlphaPixels({ data }) {
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] < 255) return true;
-  }
-  return false;
-}
-
-// DOM: load a white-bg cut-out data URL, find its subject, and return a tightly
-// cropped data URL (subject + uniform margin, re-composited on white). Returns
-// { url, ok }. ok:false — and the original url — when there's nothing safe to
-// trim: no subject found, an already-tight cut-out (coverage >= maxCover), a
-// tainted canvas, or a load error. Callers keep the original in that case.
+// DOM: load a cut-out data URL — on either a white or a transparent ground —
+// find its subject, and return a tightly cropped data URL (subject + uniform
+// margin). The output keeps a transparent ground where the input had one, and
+// is re-composited on white where it did not. Returns { url, ok }. ok:false —
+// and the original url — when there's nothing safe to trim: no subject found,
+// an already-tight cut-out (coverage >= maxCover), a tainted canvas, a load
+// error, or an alpha cut-out on a browser that cannot encode WebP. Callers
+// keep the original in that case.
 export async function trimCutoutDataUrl(dataUrl, {
   threshold = 14,
   marginPct = 0.06,
@@ -123,7 +141,7 @@ export async function trimCutoutDataUrl(dataUrl, {
   // one line after removal produced it, and the migration would be a silent
   // no-op on the path most items use. (#78 caught the same shape of bug when
   // this function re-encoded WebP straight back to JPEG.)
-  const keepAlpha = hasAlphaPixels(pixels);
+  const keepAlpha = hasAlphaGround(pixels);
   if (!keepAlpha) {
     octx.fillStyle = '#FFFFFF';
     octx.fillRect(0, 0, cw, ch);

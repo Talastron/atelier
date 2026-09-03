@@ -378,21 +378,27 @@ describe('composeFlatlay', () => {
       }
     });
 
-    it('keeps a bled piece the same shape it grew into', () => {
-      const none = composeFlatlay(LOOK, { overlap: true, bleed: () => false });
-      const all = composeFlatlay(LOOK, { overlap: true, bleed: () => true });
-      for (let i = 0; i < none.length; i++) {
-        expect(all[i].w / all[i].h).toBeCloseTo(none[i].w / none[i].h, 10);
-        expect(all[i].w).toBeCloseTo(none[i].w * BLEED, 10);
+    it('scales a bled piece uniformly, never changing its shape', () => {
+      for (const [shape, categories] of Object.entries(SHAPES)) {
+        const pieces = categories.map((c, i) => piece(`p${i}`, c));
+        const none = composeFlatlay(pieces, { overlap: true, bleed: () => false });
+        const all = composeFlatlay(pieces, { overlap: true, bleed: () => true });
+        for (let i = 0; i < none.length; i++) {
+          expect(all[i].w / all[i].h, `${shape}: aspect must not change`).toBeCloseTo(none[i].w / none[i].h, 10);
+          const grew = all[i].w / none[i].w;
+          expect(grew, `${shape}: must not shrink`).toBeGreaterThanOrEqual(1 - 1e-9);
+          expect(grew, `${shape}: must not exceed BLEED`).toBeLessThanOrEqual(BLEED + 1e-9);
+          expect(all[i].h / none[i].h, `${shape}: both axes scale together`).toBeCloseTo(grew, 9);
+        }
       }
     });
 
-    it('keeps a piece grown wider than the frame flush to the left edge', () => {
-      const out = composeFlatlay([piece('o1', 'Outerwear')], { overlap: true, bleed: () => true });
-      for (const p of out) {
-        expect(p.x).toBeGreaterThanOrEqual(0);
-        expect(p.y).toBeGreaterThanOrEqual(0);
-      }
+    it('does not grow a piece that already spans the frame', () => {
+      const [only] = composeFlatlay([piece('o1', 'Outerwear')], { overlap: true, bleed: () => true });
+      const [ref] = composeFlatlay([piece('o1', 'Outerwear')], { overlap: true, bleed: () => false });
+      expect(only.w).toBeLessThanOrEqual(1 + 1e-9);
+      expect(only.h).toBeLessThanOrEqual(1 + 1e-9);
+      expect(only.w / only.h).toBeCloseTo(ref.w / ref.h, 10);
     });
 
     // Every look shape, not just LOOK: a five-piece look never puts accessories
@@ -410,13 +416,17 @@ describe('composeFlatlay', () => {
       });
     }
 
-    // The canvas draws in array order and has to sort by z to match the DOM.
-    // That sort is only well-defined if no two pieces share a z — a tie would
-    // let the share card and the app layer differently on the same look.
-    it('gives every piece a distinct z so the draw order is unambiguous', () => {
-      const out = composeFlatlay(LOOK, { overlap: true, bleed: (item) => item.category !== 'Bags' });
-      const zs = out.map((p) => p.z);
-      expect(new Set(zs).size).toBe(zs.length);
+    // Slot z values deliberately collide — Bags and Shoes are both 4, Dresses
+    // and Bottoms both 2 — so z is not a total order and must not be asserted
+    // as one. Ties are harmless: Array.prototype.sort is stable, and the canvas
+    // sorts the same array the DOM renders, so both break a tie the same way.
+    // What must hold is only the band separation.
+    it('separates the two bands even when slot z values collide', () => {
+      const look = [piece('s1', 'Shoes'), piece('g1', 'Bags'), piece('d1', 'Dresses'), piece('b1', 'Bottoms')];
+      const out = composeFlatlay(look, { overlap: true, bleed: (item) => item.category === 'Shoes' || item.category === 'Dresses' });
+      const accepted = out.filter((p) => ['Shoes', 'Dresses'].includes(p.item.category));
+      const rejected = out.filter((p) => !['Shoes', 'Dresses'].includes(p.item.category));
+      expect(Math.max(...rejected.map((p) => p.z))).toBeLessThan(Math.min(...accepted.map((p) => p.z)));
     });
 
     // An unmigrated wardrobe must look exactly as it does today. Turning overlap
@@ -430,6 +440,7 @@ describe('composeFlatlay', () => {
         expect(on[i].w).toBeCloseTo(off[i].w, 10);
         expect(on[i].h).toBeCloseTo(off[i].h, 10);
         expect(on[i].rotation).toBe(0);
+        expect(on[i].z).toBe(off[i].z);
       }
     });
 

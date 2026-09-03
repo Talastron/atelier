@@ -80,17 +80,25 @@ const GUTTER = 0.012;
 const INNER_GUTTER = 0.006;
 
 // How far a piece grows into its neighbours when it is allowed to bleed. Scaled
-// about the piece's own centre, so the anatomy, the caps and the aspect clamp
-// are all untouched. Measured on a six-piece look with the gutters retained:
+// about the piece's own centre, so the anatomy and the layout tree are
+// untouched. A per-piece cap is a ceiling on the ALLOCATION, not on the bled
+// result — a capped piece may end up a few per cent over it. Measured on a
+// six-piece look with the gutters retained:
 // 1.08 gives a 15.7% worst pairwise overlap across 8 overlapping pairs, with
 // nothing leaving the frame. This is the visual dial — 1.12 gives 24.1%.
 export const BLEED = 1.08;
 
-// Every accepted piece keeps its own z (a slot's 1-5 plus its within-slot
-// index). Subtracting this puts a rejected piece below all of them however the
-// slots are numbered, and leaves the accepted pieces' order among themselves
-// untouched.
-const Z_DEMOTE = 100;
+// Every accepted piece is lifted above every rejected one. Promoting rather
+// than demoting matters: when nothing bleeds — the whole wardrobe until the
+// migration runs — this term is zero for every piece, so z is exactly what it
+// was before phase two. Demoting instead pushed every z negative, and a
+// negative CSS z-index can paint a piece behind its own ground.
+//
+// The guarantee holds while a slot's within-slot index cannot reach this: an
+// accepted z is at least 1 + Z_PROMOTE and a rejected one at most 5 + (n - 1)
+// for n pieces in one slot, so any `max` below 96 is safe. Call sites use 6
+// and 8.
+const Z_PROMOTE = 100;
 
 /**
  * A small deterministic hash, used only to vary rotation per piece.
@@ -298,22 +306,22 @@ function tile(box, index, total, gutter, grid) {
 const slotFor = (item) => (SLOT_KEYS.has(item?.category) ? item.category : FALLBACK_SLOT);
 
 // Grow a cell about its own centre, then SLIDE it back inside the frame — never
-// resize it to fit. Resizing would squash the piece; leaving it hanging over the
-// edge would crop it, and both stages clip. On a six-piece look, five of six
-// pieces leave the frame at any growth above 1.0, so this clamp is not an edge
-// case: it is the common path.
+// resize it to fit. Resizing would change the piece's shape, and because both
+// renderers fit `contain`, a squashed box shows as a smaller image rather than a
+// distorted one: the growth would simply vanish, and vanish worst on the biggest
+// pieces, which are the ones most worth overlapping.
 //
-// The outer Math.max(0, ...) matters. A piece grown wider than the frame gives a
-// negative upper bound, and without it the piece would be pushed off the LEFT
-// edge — the exact fault being avoided.
+// So the scale is UNIFORM and capped to whatever still fits. A piece already
+// spanning an axis therefore bleeds less than one floating in the middle of the
+// frame, and a piece spanning both bleeds not at all. That is the honest
+// outcome: there is nowhere for it to grow into that is not off-screen.
 function bleedCell(cell, factor) {
-  const w = cell.w * factor;
-  const h = cell.h * factor;
-  const x = cell.x - cell.w * (factor - 1) / 2;
-  const y = cell.y - cell.h * (factor - 1) / 2;
+  const f = Math.max(1, Math.min(factor, 1 / cell.w, 1 / cell.h));
+  const w = cell.w * f;
+  const h = cell.h * f;
   return {
-    x: Math.min(Math.max(x, 0), Math.max(0, 1 - w)),
-    y: Math.min(Math.max(y, 0), Math.max(0, 1 - h)),
+    x: Math.min(Math.max(cell.x - cell.w * (f - 1) / 2, 0), 1 - w),
+    y: Math.min(Math.max(cell.y - cell.h * (f - 1) / 2, 0), 1 - h),
     w,
     h,
   };
@@ -334,7 +342,9 @@ function bleedCell(cell, factor) {
  * @param {(item: object) => boolean} [options.bleed] Which pieces may grow into
  *   their neighbours. Defaults to () => false, which is the safe answer: a piece
  *   without transparency that grew would paint a white box over the garment
- *   beneath. Only consulted when `overlap` is true.
+ *   beneath. Only consulted when `overlap` is true. Anything but a literal true
+ *   is treated as a rejection, so a predicate returning a truthy non-boolean
+ *   silently disables bleeding rather than half-enabling it.
  * @returns {Array<{item: object, x: number, y: number, w: number, h: number, rotation: number, z: number}>}
  */
 export function composeFlatlay(pieces, { overlap = false, max = 8, bleed = () => false } = {}) {
@@ -384,7 +394,7 @@ export function composeFlatlay(pieces, { overlap = false, max = 8, bleed = () =>
       // Tilt follows the same per-piece rule. A tilted opaque cut-out shows a
       // slanted white edge against the cream ground — worse than upright.
       rotation: mayBleed ? rotationFor(item?.id) : 0,
-      z: allocation.z + index - (overlap && !mayBleed ? Z_DEMOTE : 0),
+      z: allocation.z + index + (mayBleed ? Z_PROMOTE : 0),
     };
   });
 }

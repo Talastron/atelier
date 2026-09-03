@@ -90,12 +90,18 @@ export function loadImageForCanvas(src) {
     // URL, so the percent-encoding survives. This is the same path
     // retrimItemPrimary uses on these URLs for exactly this reason.
     //
+    // Raw, not compressed: the bytes must arrive unchanged because a cut-out
+    // may carry alpha, and imageUrlToCompressedDataUrl's route ends in
+    // toDataURL('image/jpeg') — JPEG has no alpha channel, so every
+    // transparent pixel would be composited onto black before it ever reaches
+    // this canvas.
+    //
     // Lazy import: net.js imports compressImageToDataUrl from THIS module, so a
     // static import back would form a canvas↔net cycle (undefined at load
     // time). Same pattern as rehostExternalImage below.
     try {
-      const { imageUrlToCompressedDataUrl } = await import('./net.js');
-      const dataUrl = await imageUrlToCompressedDataUrl(src);
+      const { imageUrlToRawDataUrl } = await import('./net.js');
+      const dataUrl = await imageUrlToRawDataUrl(src);
       if (dataUrl) {
         const viaOwnProxy = await tryLoad(dataUrl, false);
         if (viaOwnProxy) return resolve(viaOwnProxy);
@@ -296,6 +302,14 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.stroke();
 
   const stage = layout.composition;
+  // The DOM stage clips with overflow-hidden; the canvas has to be told. Pieces
+  // are tilted, and the frame clamp in bleedCell applies to the UNROTATED box,
+  // so a piece flush against an edge has a corner outside it — plus a shadow
+  // scaled to ~34px here. Without this they draw over the panel's rounded
+  // border and out onto the page.
+  ctx.save();
+  drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
+  ctx.clip();
   placements.forEach((placement, i) => {
     const cellX = stage.x + placement.x * stage.w;
     const cellY = stage.y + placement.y * stage.h;
@@ -322,17 +336,15 @@ export async function composeOutfitExportImage(outfit, items) {
         // Matches PIECE_SHADOW in Flatlay.jsx. Its 6px/14px are CSS pixels on a
         // stage about REFERENCE_STAGE_PX wide, so they are scaled by this stage's
         // actual width — otherwise a shadow tuned on a 400px card would be a
-        // hairline on a 1080px export. Canvas shadow state is sticky and would
-        // leak onto the next piece drawn, which is why it is cleared below.
+        // hairline on a 1080px export. The save/restore pair around this piece
+        // scopes both the rotation transform and this shadow to it alone, so
+        // neither leaks onto the next piece drawn.
         const k = stage.w / REFERENCE_STAGE_PX;
         ctx.shadowColor = 'rgba(28, 25, 23, 0.16)';
         ctx.shadowBlur = 14 * k;
         ctx.shadowOffsetY = 6 * k;
       }
       ctx.drawImage(img, cellX + fit.x, cellY + fit.y, fit.w, fit.h);
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetY = 0;
       ctx.restore();
       return;
     }
@@ -361,6 +373,7 @@ export async function composeOutfitExportImage(outfit, items) {
     }
     ctx.textAlign = 'left';
   });
+  ctx.restore();
 
   // === STYLIST'S NOTE ===
   // Reasoning rendered as italic pull-quote with brass-rule eyebrow.

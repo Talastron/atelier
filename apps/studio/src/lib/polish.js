@@ -183,8 +183,13 @@ export async function retrimItemPrimary(item, uid) {
   if (!uid || !cutoutUrl) return { ok: false };
   let dataUrl = cutoutUrl;
   if (!dataUrl.startsWith('data:')) {
-    const { imageUrlToCompressedDataUrl } = await import('./net.js');
-    dataUrl = await imageUrlToCompressedDataUrl(cutoutUrl);
+    // Raw, not compressed: the cut-out may carry alpha, and the compressed
+    // route ends in toDataURL('image/jpeg') — JPEG has no alpha channel, so a
+    // migrated item would come back with its transparent pixels composited
+    // onto black. trimCutoutDataUrl would then read that black ground as the
+    // subject and decline the trim on every migrated item.
+    const { imageUrlToRawDataUrl } = await import('./net.js');
+    dataUrl = await imageUrlToRawDataUrl(cutoutUrl);
   }
   if (!dataUrl || !dataUrl.startsWith('data:')) return { ok: false };
   const { trimCutoutDataUrl } = await import('./trimCutout.js');

@@ -163,6 +163,32 @@ export async function imageUrlToCompressedDataUrl(url) {
   }
 }
 
+// Fetch an image through the proxy and hand back its bytes unchanged, as a data
+// URL. No canvas, no re-encode — which is the whole point.
+//
+// imageUrlToCompressedDataUrl cannot be used where alpha matters. It ends in
+// toDataURL('image/jpeg'), and JPEG has no alpha channel, so every transparent
+// pixel is composited onto BLACK. Firebase Storage is the only route a polished
+// cut-out can be loaded by, so routing an alpha cut-out through that function
+// turns the garment into a black rectangle — which the flat-lay then tilts,
+// overlaps and draws a shadow around.
+export async function imageUrlToRawDataUrl(url) {
+  try {
+    const resp = await fetchImageViaProxy(url);
+    const blob = await resp.blob();
+    if (!blob.type.startsWith('image/')) throw new Error('not an image');
+    return await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = (e) => resolve(e.target.result);
+      fr.onerror = reject;
+      fr.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn('[wardrobe] raw image proxy fetch failed:', err);
+    return null;
+  }
+}
+
 // Parse Schema.org Product / Offer data out of a page's JSON-LD blocks.
 // This is the most reliable place to find price, brand, and full descriptions —
 // Open Graph rarely exposes price; Schema.org almost always does for e-commerce.

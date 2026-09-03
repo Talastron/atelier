@@ -97,10 +97,18 @@ export default function Flatlay({
   const outer = aspect
     ? { position: 'relative', aspectRatio: aspect, background: surface, padding }
     : { position: 'absolute', inset: 0, background: surface, containerType: 'size', padding };
+  // `isolation: isolate` makes the stage a stacking context, which confines every
+  // piece's z-index inside it. Without it those numbers are page-level: a piece
+  // that may bleed is promoted above every piece that may not, and the promotion
+  // clears the slot range by 100, so a migrated garment landed on z-index 101
+  // against a sticky header on z-50 and painted straight through it. The pieces
+  // were still clipped to their card — it was only the painting order that
+  // escaped. Composition ordering has no business competing with page chrome.
   const stage = aspect
-    ? { position: 'absolute', inset: 0 }
+    ? { position: 'absolute', inset: 0, isolation: 'isolate' }
     : {
         position: 'relative',
+        isolation: 'isolate',
         width: `min(100%, calc(100cqh * ${MAX_STAGE_ASPECT}))`,
         aspectRatio: `${MAX_STAGE_ASPECT} / 1`,
       };

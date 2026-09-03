@@ -692,12 +692,11 @@ export async function removeImageBackground(dataUrl, { alpha = false } = {}) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     const ctx = c.getContext('2d');
-    // Flattened onto white. The alpha is discarded here, which is what makes
-    // the file small and what phase two of the flat-lay work will undo — see
-    // encode.js. Every surface that draws a cut-out puts it on a white ground,
-    // so the flattening is invisible today.
     // Flattened onto white unless alpha was asked for. Discarding the alpha is
-    // what makes the file small, and what phase two undoes.
+    // what keeps the file small, and every surface that drew a cut-out used to
+    // put it on a white ground, so the flattening was invisible. Phase two is
+    // what changes that: a piece with transparency may overlap its neighbours,
+    // and one without may not.
     if (!alpha) {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, w, h);

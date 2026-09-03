@@ -1,11 +1,22 @@
-// Trim a white-background cut-out to its subject's bounding box (plus a uniform
-// margin), so object-contain scales the subject up to fill its tile. Fixes the
-// "delicate piece floats tiny in a big white tile" problem — after trimming, a
-// small earring and a chunky bracelet both fill their tiles consistently.
+// Trim a cut-out to its subject's bounding box (plus a uniform margin), so
+// object-contain scales the subject up to fill its tile. Fixes the "delicate
+// piece floats tiny in a big white tile" problem — after trimming, a small
+// earring and a chunky bracelet both fill their tiles consistently.
 //
-// The subject is detected by COLOUR (non-white pixels), not the imgly alpha
-// mask (which lives in canvas.js). A safeguard leaves genuinely white-on-white
-// items — or already-tight cut-outs — untrimmed rather than guessing wrong.
+// The subject is detected by ALPHA where the image has any, and by COLOUR
+// (non-white pixels) where it does not. This header used to say colour only,
+// and that was load-bearing until phase two: a transparent pixel reads from
+// getImageData as (0,0,0,0) — black — so a colour test counts the whole
+// transparent ground as subject, concludes the cut-out is already tight, and
+// silently declines to trim it.
+//
+// Order matters more than it looks. polishItemPrimary removes the background
+// and THEN trims, so whatever this function writes is what gets stored. #78
+// caught it re-encoding every WebP cut-out back to JPEG here; the same position
+// in the pipeline is why it could have flattened away every alpha cut-out too.
+//
+// A safeguard leaves genuinely white-on-white items — or already-tight cut-outs
+// — untrimmed rather than guessing wrong.
 import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER } from './encode.js';
 
 // Pure: given raw RGBA pixels, return the bounding box of "content" pixels as

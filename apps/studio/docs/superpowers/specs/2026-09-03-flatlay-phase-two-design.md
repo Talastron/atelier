@@ -164,6 +164,21 @@ card the composition sits on a white panel drawn over the cream page. That panel
 the canvas section. What must match across the two is the *composition* — geometry, layering,
 rotation — which is what the shared engine exists to guarantee. The ground never was part of that.
 
+**Correction, made during implementation: the cream ground is per composition, not a new default.**
+This section originally specified changing `Flatlay.jsx`'s default `ground` to `#F7F5F2` outright.
+That is wrong, and it would have reintroduced the #73 fault on every look in the wardrobe. Every
+cut-out stored before phase two is a JPEG flattened onto `#FFFFFF` and drawn `object-contain`, so it
+**is** an opaque white rectangle: on white it passes for a transparent one, and on cream it reads as
+a white box across the page.
+
+Gating bleed per piece does not cover this, and the reasoning that said it did conflated two
+different clashes. Not bleeding stops a piece covering its **neighbour**; it says nothing about that
+piece against the **ground**. So the ground is resolved per composition — `#FFFFFF` while any piece
+is a bare cut-out without alpha, `#F7F5F2` once none is. A part-migrated look therefore renders
+exactly as it does today and warms up only when it can carry it. A plated piece (a raw photograph)
+does not count against it: `ItemTileImage` paints that photo's own sampled background behind it, so
+it settles on either ground.
+
 ### Degrading: per piece, not per look
 
 The handoff states graceful degradation as a per-look rule — overlap only where every piece has
@@ -262,7 +277,9 @@ One place asks the question; the engine and both renderers pass it in. It sits b
 
 ### `components/Flatlay.jsx` — DOM renderer
 
-- `ground` default becomes `#F7F5F2`, the page cream `canvas.js` already calls `PAGE`.
+- `ground` becomes an unset prop resolved per composition: `#FFFFFF` while any piece is a bare
+  cut-out without alpha, `#F7F5F2` — the page cream `canvas.js` already calls `PAGE` — once none is.
+  See the correction under the ground decision above for why an unconditional default is wrong.
 - Passes `bleed: hasAlphaCutout` to `composeFlatlay`.
 - A bleeding piece gets `filter: drop-shadow(0 6px 14px rgba(28, 25, 23, 0.16))` — the ink already
   used for text, at a sixth opacity, offset down and blurred as if lit from above. These three numbers

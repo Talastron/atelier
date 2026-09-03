@@ -886,19 +886,33 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           {polishState && !polishState.summary && (
             <div className="max-w-sm">
               <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                <span>{polishState.retrim ? 'Tightening' : 'Polishing'}… {polishState.done} / {polishState.total}{polishState.failed ? ` · ${polishState.failed} kept original` : ''}</span>
+                <span>{polishState.alpha ? 'Re-cutting' : polishState.retrim ? 'Tightening' : 'Polishing'}… {polishState.done} / {polishState.total}{polishState.failed ? ` · ${polishState.failed} kept original` : ''}</span>
                 <button type="button" onClick={() => { polishCancelRef.current = true; }} className="underline hover:text-stone-900">Stop</button>
               </div>
               <div className="h-1.5 rounded-full bg-stone-100 overflow-hidden">
                 <div className="h-full bg-brass-400 transition-all" style={{ width: `${polishState.total ? Math.round((polishState.done / polishState.total) * 100) : 0}%` }} />
               </div>
+              {/* What the run is actually going to do, and what it is skipping.
+                  Re-cutting costs about nine seconds an item on this machine, so
+                  a full wardrobe is a coffee break — and browsers throttle
+                  background tabs, so it has to stay in front. Stopping is safe:
+                  each item records that it is done as it finishes, so a second
+                  run picks up where this one left off rather than starting over. */}
+              {polishState.alpha && (
+                <p className="mt-2 text-xs text-stone-400 leading-relaxed">
+                  {polishState.already > 0 && `${polishState.already} already done · `}
+                  {polishState.noSource > 0 && `${polishState.noSource} with no photo to re-cut from · `}
+                  keep this tab open and in front. Stopping loses no progress.
+                </p>
+              )}
             </div>
           )}
           {polishState?.summary && (
             <div className="text-sm text-stone-700">
               <p className="mb-2">
-                {polishState.summary.done - polishState.summary.failed} {polishState.summary.retrim ? 'tightened' : 'polished'}
+                {polishState.summary.done - polishState.summary.failed} {polishState.summary.alpha ? 're-cut' : polishState.summary.retrim ? 'tightened' : 'polished'}
                 {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original` : ''}
+                {polishState.summary.alpha && polishState.summary.noSource > 0 ? ` · ${polishState.summary.noSource} had no photo to re-cut from` : ''}
                 {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
               </p>
               {polishState.summary.failedItems?.length > 0 && (

@@ -79,6 +79,53 @@ const MAX_ROTATION = 3;
 const GUTTER = 0.012;
 const INNER_GUTTER = 0.006;
 
+// How far a piece grows into its neighbours when it is allowed to bleed. Scaled
+// about the piece's own centre, so the anatomy and the layout tree are
+// untouched. A per-piece cap is a ceiling on the ALLOCATION, not on the bled
+// result — a capped piece may end up a few per cent over it. Measured on a
+// six-piece look with the gutters retained:
+// 1.08 gives a 15.7% worst pairwise overlap across 8 overlapping pairs, with
+// nothing leaving the frame. This is the visual dial — 1.12 gives 24.1%.
+//
+// That 15.7% is a BETWEEN-slot figure. Pieces sharing one slot are separated
+// only by INNER_GUTTER, half of GUTTER, so they overlap roughly twice as hard:
+// three necklaces sharing the Jewellery slot ("layered jewellery" in the test
+// fixtures) reach about 32.8% at 1.08. A visual call, not a bug — but see the
+// 'keeps the worst same-slot overlap within a third of a piece' test, which
+// bounds it so it does not drift unnoticed.
+export const BLEED = 1.08;
+
+// Whether pieces overlap and tilt at all, across every surface. One constant so
+// the app and the share card cannot drift apart, and so this is a one-line
+// decision rather than three.
+//
+// OFF after visual review, 2026-09-03. The effect turned out subtle beside what
+// phase one's arrangement already achieved — a look read as an outfit rather
+// than an inventory before any of this — and the adjacency it created mostly
+// served to expose a larger problem: a piece is sized by its CATEGORY, not by
+// its silhouette, so `object-contain` scales a tall garment small and a wide one
+// large. Trousers came out narrow and shorts came out full-width from the same
+// box.
+//
+// The mechanism stays. It is tested, it costs nothing switched off, and it is
+// worth switching on once a piece's size reflects the garment rather than the
+// slot — at which point overlapping pieces will be comparing like with like.
+// Everything else phase two brought is independent of this flag: the alpha
+// cut-outs, the cream ground, and the shadow that traces the garment.
+export const FLATLAY_OVERLAP = false;
+
+// Every accepted piece is lifted above every rejected one. Promoting rather
+// than demoting matters: when nothing bleeds — the whole wardrobe until the
+// migration runs — this term is zero for every piece, so z is exactly what it
+// was before phase two. Demoting instead pushed every z negative, and a
+// negative CSS z-index can paint a piece behind its own ground.
+//
+// The guarantee holds while a slot's within-slot index cannot reach this: an
+// accepted z is at least 1 + Z_PROMOTE and a rejected one at most 5 + (n - 1)
+// for n pieces in one slot, so any `max` up to and including 96 is safe. Call
+// sites use 6 and 8.
+const Z_PROMOTE = 100;
+
 /**
  * A small deterministic hash, used only to vary rotation per piece.
  *
@@ -284,20 +331,49 @@ function tile(box, index, total, gutter, grid) {
 /** Which slot a piece belongs to. */
 const slotFor = (item) => (SLOT_KEYS.has(item?.category) ? item.category : FALLBACK_SLOT);
 
+// Grow a cell about its own centre, then SLIDE it back inside the frame — never
+// resize it to fit. Resizing would change the piece's shape, and because both
+// renderers fit `contain`, a squashed box shows as a smaller image rather than a
+// distorted one: the growth would simply vanish, and vanish worst on the biggest
+// pieces, which are the ones most worth overlapping.
+//
+// So the scale is UNIFORM and capped to whatever still fits. A piece already
+// spanning an axis therefore bleeds less than one floating in the middle of the
+// frame, and a piece spanning both bleeds not at all. That is the honest
+// outcome: there is nowhere for it to grow into that is not off-screen.
+function bleedCell(cell, factor) {
+  const f = Math.max(1, Math.min(factor, 1 / cell.w, 1 / cell.h));
+  const w = cell.w * f;
+  const h = cell.h * f;
+  return {
+    x: Math.min(Math.max(cell.x - cell.w * (f - 1) / 2, 0), 1 - w),
+    y: Math.min(Math.max(cell.y - cell.h * (f - 1) / 2, 0), 1 - h),
+    w,
+    h,
+  };
+}
+
 /**
  * Compose a look into placements.
  *
  * @param {object[]} pieces            Resolved wardrobe items, any order.
  * @param {object}   [options]
  * @param {boolean}  [options.overlap] Allow pieces to overlap and tilt.
- *   True needs cut-outs with transparency: overlapping opaque images means a
- *   white rectangle covering the garment beneath, which is worse than a grid.
+ *   True permits bleeding and tilting, but decides neither: `bleed` does, per
+ *   piece. With no piece accepted, true and false produce identical geometry,
+ *   which is what lets it be switched on before any image has been migrated.
  *   False keeps every piece upright and stops any piece touching another — the
  *   honest arrangement for the images stored today.
  * @param {number}   [options.max]     Cap on pieces placed. Silhouette wins.
+ * @param {(item: object) => boolean} [options.bleed] Which pieces may grow into
+ *   their neighbours. Defaults to () => false, which is the safe answer: a piece
+ *   without transparency that grew would paint a white box over the garment
+ *   beneath. Only consulted when `overlap` is true. Anything but a literal true
+ *   is treated as a rejection, so a predicate returning a truthy non-boolean
+ *   silently disables bleeding rather than half-enabling it.
  * @returns {Array<{item: object, x: number, y: number, w: number, h: number, rotation: number, z: number}>}
  */
-export function composeFlatlay(pieces, { overlap = false, max = 8 } = {}) {
+export function composeFlatlay(pieces, { overlap = false, max = 8, bleed = () => false } = {}) {
   const ordered = orderForFlatlay(pieces, max);
   if (ordered.length === 0) return [];
 
@@ -307,10 +383,14 @@ export function composeFlatlay(pieces, { overlap = false, max = 8 } = {}) {
     counts.set(slot, (counts.get(slot) ?? 0) + 1);
   }
 
-  // Overlap closes the gaps: the gutters are the one geometric difference
-  // between the two modes, alongside rotation.
-  const gutter = overlap ? 0 : GUTTER;
-  const innerGutter = overlap ? 0 : INNER_GUTTER;
+  // The gutters no longer depend on `overlap`. Closing them was how the old
+  // design made pieces touch; bleeding produces the overlap directly, so closing
+  // them as well is redundant — and harmful, because it would shift every piece
+  // in a look where nothing has alpha (measured: 6 of 6). Keeping them costs
+  // 15.7% worst pairwise overlap instead of 18.5%, which buys the far more
+  // valuable property that an unmigrated look renders exactly as it does today.
+  const gutter = GUTTER;
+  const innerGutter = INNER_GUTTER;
 
   const allocations = new Map();
   allocate(LAYOUT, counts, { x: 0, y: 0, w: 1, h: 1 }, gutter, allocations);
@@ -324,14 +404,27 @@ export function composeFlatlay(pieces, { overlap = false, max = 8 } = {}) {
     taken.set(slot, index + 1);
 
     const cell = tile(allocation.box, index, total, innerGutter, allocation.grid);
+    // Only a piece with real transparency may grow into its neighbours. An
+    // opaque one that grew would paint a white rectangle across the garment
+    // beneath — worse than the grid this replaced. A piece that cannot bleed
+    // keeps its exact box, and every piece that CAN bleed is lifted above it
+    // with Z_PROMOTE, so nothing which grew can ever be covered by one.
+    // Promoting the accepted pieces rather than demoting the rejected ones is
+    // what keeps this safe by default: with nothing bled, this term is zero
+    // for every piece and z is exactly what it was before phase two (see
+    // Z_PROMOTE above for why demoting instead would not have been).
+    const mayBleed = overlap && bleed(item) === true;
+    const box = mayBleed ? bleedCell(cell, BLEED) : cell;
     return {
       item,
-      x: clamp01(cell.x),
-      y: clamp01(cell.y),
-      w: clamp01(cell.w),
-      h: clamp01(cell.h),
-      rotation: overlap ? rotationFor(item?.id) : 0,
-      z: allocation.z + index,
+      x: clamp01(box.x),
+      y: clamp01(box.y),
+      w: clamp01(box.w),
+      h: clamp01(box.h),
+      // Tilt follows the same per-piece rule. A tilted opaque cut-out shows a
+      // slanted white edge against the cream ground — worse than upright.
+      rotation: mayBleed ? rotationFor(item?.id) : 0,
+      z: allocation.z + index + (mayBleed ? Z_PROMOTE : 0),
     };
   });
 }

@@ -15,11 +15,20 @@ things were established while considering it:
 - It re-encodes a JPEG as WebP, which is a second generation of loss on an
   already-lossy image, written over the Storage object in place with no undo.
 
-The originals are retained (`imageMeta[i].original` on the add path, `images[0]`
-on the polish path), so the wardrobe can instead be re-processed **from source**:
-background removal re-run, WebP encoded once, no generational loss — and alpha
-produced in the same pass. Phase two needs that run regardless. Doing the lossy
-version first would mean paying twice and degrading the images in between.
+The originals are retained **on the polish path only** — `images[0]`, untouched.
+This document originally said `imageMeta[i].original` retained them on the add
+path too; that is false, and was corrected 2026-09-03. That field is an
+in-memory undo snapshot for the edit session and is stripped before every save
+(`App.jsx:3067`, "risks 1MiB Firestore cap"), so an add-path item's `images[0]`
+**is** its cut-out and there is no original behind it.
+
+So the wardrobe can be re-processed **from source** on the polish path — removal
+re-run, WebP encoded once, no generational loss, alpha produced in the same pass.
+Add-path items are re-cut from the flattened cut-out itself, which the
+segmentation model handles well (a garment on flat white is the easiest input it
+will get) but which makes the run **not lossless for them**. Phase two needs that
+run regardless; doing the lossy version first would mean paying twice and
+degrading the images in between.
 
 Decision, 2026-08-20: migrate once, from source, as part of phase two.
 
@@ -55,10 +64,25 @@ Decisions taken (2026-08-17, with Sibylle):
 pieces of a look, returns `{ item, x, y, w, h, rotation, z }` per piece in
 normalised 0–1 coordinates. 12 tests in `flatlay.test.js`.
 
-The `overlap` option is the whole phasing in one flag:
+~~The `overlap` option is the whole phasing in one flag.~~ **It was, and stopped
+being so in #75 — corrected 2026-09-03.** That PR rebuilt the layout as a tree of
+columns and rows which *partition* the frame, and its design document celebrated
+the consequence: "non-overlap stops being a property we test for and becomes one
+the structure cannot violate." It does exactly that, including when violation is
+wanted. Measured on a six-piece look, `overlap: true` gave a worst pairwise
+overlap of **0.0%** — it closed the gutters and tilted the pieces, and could not
+make two of them intersect.
 
-- `false` — pieces separate and upright. Correct for the images stored today.
-- `true` — pieces tilt and overlap. **Requires transparency.**
+Nothing caught it for three PRs: the flag was used by no surface, its two tests
+assert only that rotation is non-zero and under 3°, and every other test in the
+suite asserts pieces do **not** overlap. The suite was guarding the thing phase
+two needed to undo.
+
+Overlap is now produced by a `bleed` predicate — per piece, not per look, and
+only for a cut-out that carries real transparency. `overlap` permits bleeding and
+tilting but decides neither; with no piece accepted it produces geometry
+identical to `overlap: false`, which is what let it be switched on before a
+single image had been migrated. See `specs/2026-09-03-flatlay-phase-two-design.md`.
 
 ## The blocker for phase two
 

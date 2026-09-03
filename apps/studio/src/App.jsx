@@ -2888,10 +2888,15 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         const originalDataUrl = await compressImageToDataUrl(file);
         let dataUrl = originalDataUrl;
         let cutoutOk = null;
+        let cutoutAlpha = null;
         if (removeBackground) {
           setCutoutBusy(true);
-          const out = await removeImageBackground(originalDataUrl);
-          dataUrl = out.url; cutoutOk = out.ok;
+          let out = await removeImageBackground(originalDataUrl, { alpha: true });
+          // A browser that cannot write WebP cannot keep the alpha, and JPEG has
+          // no alpha channel to fall back on. Rather than lose the cut-out
+          // entirely there, take the flattened one — it simply will not overlap.
+          if (!out.ok) out = await removeImageBackground(originalDataUrl);
+          dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
           setCutoutBusy(false);
           toast.show(out.ok ? 'Background removed ✓ · tap to revert' : 'Cutout failed — kept original photo', { kind: out.ok ? 'success' : 'default', duration: 3500 });
         }
@@ -2901,7 +2906,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
           return {
             ...prev,
             images: [...(prev.images || []), dataUrl],
-            imageMeta: [...meta, { cutout: cutoutOk === true, original: cutoutOk === true ? originalDataUrl : undefined }],
+            imageMeta: [...meta, {
+              cutout: cutoutOk === true,
+              original: cutoutOk === true ? originalDataUrl : undefined,
+              ...(cutoutAlpha === true ? { alpha: true } : {}),
+            }],
           };
         });
         setStep((s) => (s === 1 ? 2 : s));
@@ -2927,10 +2936,15 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         const originalDataUrl = await compressImageToDataUrl(file);
         let dataUrl = originalDataUrl;
         let cutoutOk = null;
+        let cutoutAlpha = null;
         if (removeBackground) {
           setCutoutBusy(true);
-          const out = await removeImageBackground(originalDataUrl);
-          dataUrl = out.url; cutoutOk = out.ok;
+          let out = await removeImageBackground(originalDataUrl, { alpha: true });
+          // A browser that cannot write WebP cannot keep the alpha, and JPEG has
+          // no alpha channel to fall back on. Rather than lose the cut-out
+          // entirely there, take the flattened one — it simply will not overlap.
+          if (!out.ok) out = await removeImageBackground(originalDataUrl);
+          dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
           if (out.ok) okCount++; else failCount++;
         }
         if (!firstNewDataUrl) firstNewDataUrl = dataUrl;
@@ -2939,7 +2953,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
           return {
             ...prev,
             images: [...(prev.images || []), dataUrl].slice(0, 6),
-            imageMeta: [...meta, { cutout: cutoutOk === true, original: cutoutOk === true ? originalDataUrl : undefined }].slice(0, 6),
+            imageMeta: [...meta, {
+              cutout: cutoutOk === true,
+              original: cutoutOk === true ? originalDataUrl : undefined,
+              ...(cutoutAlpha === true ? { alpha: true } : {}),
+            }].slice(0, 6),
           };
         });
       }
@@ -3067,11 +3085,22 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       // Strip the bulky in-memory `original` base64 snapshot from imageMeta
       // before save (risks 1MiB Firestore cap). Small Storage-URL fields
       // (cutoutUrl, framedUrl) and frame params are kept intentionally.
+      //
+      // This is an ALLOWLIST: any field this map doesn't name is dropped from
+      // the saved item, `original` included. A new imageMeta field must be
+      // added here explicitly or it will silently fail to survive a save.
       const slimMeta = Array.isArray(formData.imageMeta)
         ? formData.imageMeta.map((m) => m ? {
             cutout: !!m.cutout,
             ...(m.angle ? { angle: m.angle } : {}),
             ...(m.cutoutUrl ? { cutoutUrl: m.cutoutUrl } : {}),
+            // Tri-state, so truthiness will not do: true means the cut-out
+            // carries alpha, FALSE means it was tried and deliberately declined
+            // (a garment the segmentation cannot handle, left flattened), and
+            // absent means never tried. Collapsing false to absent would put a
+            // declined item back in the migration's target set and undo the
+            // choice on the next run.
+            ...(m.alpha === true ? { alpha: true } : m.alpha === false ? { alpha: false } : {}),
             ...(m.framedUrl ? { framedUrl: m.framedUrl } : {}),
             ...(m.frame ? { frame: m.frame } : {}),
           } : null)
@@ -3382,7 +3411,14 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                             setFormData((prev) => {
                               const nextImages = [...prev.images]; nextImages[i] = original;
                               const nextMeta = [...(prev.imageMeta || [])];
-                              nextMeta[i] = { ...nextMeta[i], cutout: false };
+                              // `alpha` describes the cut-out being removed here, not the
+                              // original photo that replaces it — clear it along with
+                              // `cutout`, matching revertItemPrimary in polish.js. `cutoutUrl`
+                              // must go too: itemImageDisplay prefers cutoutUrl over the inline
+                              // `cutout` flag, so a stale Storage cut-out left in place would
+                              // make this revert look like it did nothing — the old Storage
+                              // JPEG would keep winning the precedence.
+                              nextMeta[i] = { ...nextMeta[i], cutout: false, alpha: false, cutoutUrl: undefined };
                               return { ...prev, images: nextImages, imageMeta: nextMeta };
                             });
                             toast.show('Reverted to original photo', { kind: 'default', duration: 2500 });
@@ -3392,7 +3428,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                           Cutout · revert
                         </button>
                       )}
-                      {!formData.imageMeta?.[i]?.cutout && (
+                      {/* A Storage cut-out (cutoutUrl) is still a cut-out, even though this
+                          thumbnail — which always shows the raw images[i] — never displays
+                          it. Re-cutting one re-segments an already-segmented image and
+                          writes cutoutUrl: undefined, discarding the migrated Storage copy;
+                          on an add-path item images[0] is the only copy the account has. */}
+                      {!formData.imageMeta?.[i]?.cutout && !formData.imageMeta?.[i]?.cutoutUrl && (
                         <button type="button"
                           disabled={cutoutBusy}
                           onClick={async () => {
@@ -3402,13 +3443,38 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                             const src = formData.images[i];
                             setCutoutBusy(true);
                             try {
-                              const out = await removeImageBackground(src);
+                              // Same alpha-with-fallback shape as the add-item path: try to
+                              // keep transparency, and only fall back to a flattened cut-out
+                              // if that fails (e.g. no WebP support).
+                              let out = await removeImageBackground(src, { alpha: true });
+                              if (!out.ok) out = await removeImageBackground(src);
                               if (out.ok) {
                                 setFormData((prev) => {
                                   const nextImages = [...prev.images]; nextImages[i] = out.url;
                                   const nextMeta = [...(prev.imageMeta || [])];
                                   while (nextMeta.length <= i) nextMeta.push({});
-                                  nextMeta[i] = { ...nextMeta[i], cutout: true, original: src };
+                                  // Record the flag from the actual result — set it when the
+                                  // alpha attempt succeeded, and clear any pre-existing value
+                                  // otherwise, so a stale `alpha: true` never survives a
+                                  // flattened re-cut.
+                                  //
+                                  // This write replaces what is DISPLAYED with the new inline
+                                  // cut-out (images[i]), so it must clear cutoutUrl, framedUrl and
+                                  // frame — exactly as polishItemPrimary does when it writes a
+                                  // fresh cutoutUrl. itemImageDisplay prefers framedUrl, then
+                                  // cutoutUrl, over the inline cut-out; leaving any of them behind
+                                  // means the renderer keeps drawing that old image while this
+                                  // flag claims a cut-out (and, with alpha, claims transparency)
+                                  // that was never applied to what's shown.
+                                  nextMeta[i] = {
+                                    ...nextMeta[i],
+                                    cutout: true,
+                                    original: src,
+                                    alpha: out.alpha === true,
+                                    cutoutUrl: undefined,
+                                    framedUrl: undefined,
+                                    frame: undefined,
+                                  };
                                   return { ...prev, images: nextImages, imageMeta: nextMeta };
                                 });
                                 toast.show('Background removed ✓', { kind: 'success', duration: 2500 });

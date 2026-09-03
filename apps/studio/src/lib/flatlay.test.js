@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { composeFlatlay, rotationFor } from './flatlay.js';
+import { composeFlatlay, rotationFor, BLEED } from './flatlay.js';
 
 const piece = (id, category) => ({ id, category, name: `${category} ${id}` });
 
@@ -100,7 +100,7 @@ describe('composeFlatlay', () => {
   }
 
   it('tilts pieces within three degrees when overlap is on', () => {
-    const out = composeFlatlay(LOOK, { overlap: true });
+    const out = composeFlatlay(LOOK, { overlap: true, bleed: () => true });
     expect(out.some((p) => p.rotation !== 0)).toBe(true);
     for (const p of out) expect(Math.abs(p.rotation)).toBeLessThanOrEqual(3);
   });
@@ -299,6 +299,180 @@ describe('composeFlatlay', () => {
     expect(composeFlatlay([])).toEqual([]);
     expect(composeFlatlay(null)).toEqual([]);
     expect(composeFlatlay([null, undefined])).toEqual([]);
+  });
+
+  // Phase two. A piece may grow into its neighbours only if its cut-out has
+  // transparency; an opaque one that grew would paint a white box over the
+  // garment beneath. The engine takes a predicate rather than reading images,
+  // so it stays pure geometry.
+  describe('bleed', () => {
+    const overlapFrac = (a, b) => {
+      const ox = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+      const oy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+      return (ox * oy) / Math.min(a.w * a.h, b.w * b.h);
+    };
+    const worstOverlap = (out) => {
+      let worst = 0;
+      for (let i = 0; i < out.length; i++) {
+        for (let j = i + 1; j < out.length; j++) worst = Math.max(worst, overlapFrac(out[i], out[j]));
+      }
+      return worst;
+    };
+
+    it('overlaps nothing when no piece is allowed to bleed', () => {
+      const out = composeFlatlay(LOOK, { overlap: true, bleed: () => false });
+      expect(worstOverlap(out)).toBe(0);
+    });
+
+    it('defaults to no piece bleeding, so overlap alone cannot paint over a garment', () => {
+      const out = composeFlatlay(LOOK, { overlap: true });
+      expect(worstOverlap(out)).toBe(0);
+    });
+
+    it('overlaps pieces when every piece may bleed', () => {
+      const out = composeFlatlay(LOOK, { overlap: true, bleed: () => true });
+      expect(worstOverlap(out)).toBeGreaterThan(0.05);
+    });
+
+    it('does not bleed when overlap is off, whatever the predicate says', () => {
+      const off = composeFlatlay(LOOK, { overlap: false, bleed: () => true });
+      expect(worstOverlap(off)).toBe(0);
+    });
+
+    it('leaves a rejected piece exactly where it would otherwise sit', () => {
+      const none = composeFlatlay(LOOK, { overlap: true, bleed: () => false });
+      const some = composeFlatlay(LOOK, { overlap: true, bleed: (item) => item.category === 'Tops' });
+      for (let i = 0; i < none.length; i++) {
+        if (none[i].item.category === 'Tops') continue;
+        expect(some[i].x).toBeCloseTo(none[i].x, 10);
+        expect(some[i].y).toBeCloseTo(none[i].y, 10);
+        expect(some[i].w).toBeCloseTo(none[i].w, 10);
+        expect(some[i].h).toBeCloseTo(none[i].h, 10);
+      }
+    });
+
+    // The safety property. An opaque piece never grows, so it has nothing
+    // beneath it to spoil; sinking it below every bleeding piece means nothing
+    // that DID grow can be covered by one.
+    it('keeps every rejected piece below every accepted one', () => {
+      const out = composeFlatlay(LOOK, { overlap: true, bleed: (item) => item.category === 'Tops' });
+      const accepted = out.filter((p) => p.item.category === 'Tops');
+      const rejected = out.filter((p) => p.item.category !== 'Tops');
+      expect(accepted.length).toBeGreaterThan(0);
+      expect(rejected.length).toBeGreaterThan(0);
+      const lowestAccepted = Math.min(...accepted.map((p) => p.z));
+      const highestRejected = Math.max(...rejected.map((p) => p.z));
+      expect(highestRejected).toBeLessThan(lowestAccepted);
+    });
+
+    // A grown box is SLID back inside the frame, never resized to fit. Resizing
+    // would squash the piece; letting it hang over the edge would crop it, which
+    // is the "a dress and jacket appear completely cropped" fault.
+    it('keeps every bled piece inside the frame', () => {
+      const out = composeFlatlay(LOOK, { overlap: true, bleed: () => true });
+      for (const p of out) {
+        expect(p.x).toBeGreaterThanOrEqual(0);
+        expect(p.y).toBeGreaterThanOrEqual(0);
+        expect(p.x + p.w).toBeLessThanOrEqual(1 + 1e-9);
+        expect(p.y + p.h).toBeLessThanOrEqual(1 + 1e-9);
+      }
+    });
+
+    it('scales a bled piece uniformly, never changing its shape', () => {
+      for (const [shape, categories] of Object.entries(SHAPES)) {
+        const pieces = categories.map((c, i) => piece(`p${i}`, c));
+        const none = composeFlatlay(pieces, { overlap: true, bleed: () => false });
+        const all = composeFlatlay(pieces, { overlap: true, bleed: () => true });
+        for (let i = 0; i < none.length; i++) {
+          expect(all[i].w / all[i].h, `${shape}: aspect must not change`).toBeCloseTo(none[i].w / none[i].h, 10);
+          const grew = all[i].w / none[i].w;
+          expect(grew, `${shape}: must not shrink`).toBeGreaterThanOrEqual(1 - 1e-9);
+          expect(grew, `${shape}: must not exceed BLEED`).toBeLessThanOrEqual(BLEED + 1e-9);
+          expect(all[i].h / none[i].h, `${shape}: both axes scale together`).toBeCloseTo(grew, 9);
+        }
+      }
+    });
+
+    it('does not grow a piece that already spans the frame', () => {
+      const [only] = composeFlatlay([piece('o1', 'Outerwear')], { overlap: true, bleed: () => true });
+      const [ref] = composeFlatlay([piece('o1', 'Outerwear')], { overlap: true, bleed: () => false });
+      expect(only.w).toBeLessThanOrEqual(1 + 1e-9);
+      expect(only.h).toBeLessThanOrEqual(1 + 1e-9);
+      expect(only.w / only.h).toBeCloseTo(ref.w / ref.h, 10);
+    });
+
+    // Every look shape, not just LOOK: a five-piece look never puts accessories
+    // and jewellery in the frame together, which is how an earlier 71% collision
+    // survived review.
+    for (const [shape, categories] of Object.entries(SHAPES)) {
+      it(`keeps every bled piece inside the frame — ${shape}`, () => {
+        const out = composeFlatlay(categories.map((c, i) => piece(`p${i}`, c)), { overlap: true, bleed: () => true });
+        for (const p of out) {
+          expect(p.x).toBeGreaterThanOrEqual(0);
+          expect(p.y).toBeGreaterThanOrEqual(0);
+          expect(p.x + p.w).toBeLessThanOrEqual(1 + 1e-9);
+          expect(p.y + p.h).toBeLessThanOrEqual(1 + 1e-9);
+        }
+      });
+    }
+
+    // Slot z values deliberately collide — Bags and Shoes are both 4, Dresses
+    // and Bottoms both 2 — so z is not a total order and must not be asserted
+    // as one. Ties are harmless: Array.prototype.sort is stable, and the canvas
+    // sorts the same array the DOM renders, so both break a tie the same way.
+    // What must hold is only the band separation.
+    it('separates the two bands even when slot z values collide', () => {
+      const look = [piece('s1', 'Shoes'), piece('g1', 'Bags'), piece('d1', 'Dresses'), piece('b1', 'Bottoms')];
+      const out = composeFlatlay(look, { overlap: true, bleed: (item) => item.category === 'Shoes' || item.category === 'Dresses' });
+      const accepted = out.filter((p) => ['Shoes', 'Dresses'].includes(p.item.category));
+      const rejected = out.filter((p) => !['Shoes', 'Dresses'].includes(p.item.category));
+      expect(Math.max(...rejected.map((p) => p.z))).toBeLessThan(Math.min(...accepted.map((p) => p.z)));
+    });
+
+    // An unmigrated wardrobe must look exactly as it does today. Turning overlap
+    // on at the call sites is only safe because of this.
+    it('renders a look with no alpha identically whether overlap is on or off', () => {
+      const off = composeFlatlay(LOOK, { overlap: false });
+      const on = composeFlatlay(LOOK, { overlap: true, bleed: () => false });
+      for (let i = 0; i < off.length; i++) {
+        expect(on[i].x).toBeCloseTo(off[i].x, 10);
+        expect(on[i].y).toBeCloseTo(off[i].y, 10);
+        expect(on[i].w).toBeCloseTo(off[i].w, 10);
+        expect(on[i].h).toBeCloseTo(off[i].h, 10);
+        expect(on[i].rotation).toBe(0);
+        expect(on[i].z).toBe(off[i].z);
+      }
+    });
+
+    // The BLEED comment's 15.7% is a between-slot figure. Pieces sharing a slot
+    // are separated only by INNER_GUTTER, so they overlap roughly twice as hard
+    // — three necklaces in one slot reach about a third. That is a visual call,
+    // not a bug, but it should not drift without someone noticing.
+    it('keeps the worst same-slot overlap within a third of a piece', () => {
+      for (const [shape, categories] of Object.entries(SHAPES)) {
+        const out = composeFlatlay(categories.map((c, i) => piece(`p${i}`, c)), { overlap: true, bleed: () => true });
+        let worst = 0;
+        for (let i = 0; i < out.length; i++) {
+          for (let j = i + 1; j < out.length; j++) worst = Math.max(worst, overlapFrac(out[i], out[j]));
+        }
+        expect(worst, `${shape}: worst pairwise overlap`).toBeLessThan(0.35);
+      }
+    });
+
+    // A tilted opaque cut-out shows a slanted white edge against the cream
+    // ground. Only a piece that carries transparency may tilt.
+    it('tilts only the pieces that may bleed', () => {
+      const out = composeFlatlay(LOOK, { overlap: true, bleed: (item) => item.category === 'Tops' });
+      for (const p of out) {
+        // Not `> 0`: rotationFor returns exactly 0 for whichever id's hash lands
+        // on that one value, so an assertion of nonzero rotation only holds by
+        // accident of this fixture's ids. What the code actually guarantees is
+        // the ±3° bound; the property that matters here — that a non-bleeding
+        // piece is untilted — stays exact below.
+        if (p.item.category === 'Tops') expect(Math.abs(p.rotation)).toBeLessThanOrEqual(3);
+        else expect(p.rotation).toBe(0);
+      }
+    });
   });
 });
 

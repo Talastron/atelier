@@ -6,8 +6,8 @@ import { hexFromColorName } from "./color.js";
 import { COLOR_SWATCHES } from "./taxonomy.js";
 import { stripItemChips } from "../components/ItemChip.jsx";
 import { computeCropRect, FRAME_ASPECT } from './framing.js';
-import { composeFlatlay } from './flatlay.js';
-import { itemImageDisplay } from './polish.js';
+import { composeFlatlay, FLATLAY_OVERLAP } from './flatlay.js';
+import { hasAlphaCutout, itemImageDisplay } from './polish.js';
 import { fitContain, shareCardLayout, SHARE_CARD } from './shareCard.js';
 import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER, CUTOUT_BUDGET_CHARS } from './encode.js';
 
@@ -90,12 +90,18 @@ export function loadImageForCanvas(src) {
     // URL, so the percent-encoding survives. This is the same path
     // retrimItemPrimary uses on these URLs for exactly this reason.
     //
+    // Raw, not compressed: the bytes must arrive unchanged because a cut-out
+    // may carry alpha, and imageUrlToCompressedDataUrl's route ends in
+    // toDataURL('image/jpeg') — JPEG has no alpha channel, so every
+    // transparent pixel would be composited onto black before it ever reaches
+    // this canvas.
+    //
     // Lazy import: net.js imports compressImageToDataUrl from THIS module, so a
     // static import back would form a canvas↔net cycle (undefined at load
     // time). Same pattern as rehostExternalImage below.
     try {
-      const { imageUrlToCompressedDataUrl } = await import('./net.js');
-      const dataUrl = await imageUrlToCompressedDataUrl(src);
+      const { imageUrlToRawDataUrl } = await import('./net.js');
+      const dataUrl = await imageUrlToRawDataUrl(src);
       if (dataUrl) {
         const viaOwnProxy = await tryLoad(dataUrl, false);
         if (viaOwnProxy) return resolve(viaOwnProxy);
@@ -137,6 +143,13 @@ export function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines =
   lines.forEach((ln, i) => ctx.fillText(ln, x, y + i * lineHeight));
   return lines.length;
 }
+
+// The CSS pixel width PIECE_SHADOW in Flatlay.jsx was tuned against — roughly a
+// Lookbook card's stage. The canvas stage is measured in export pixels (1080
+// wide overall), so the shadow's offset and blur are scaled by the ratio. Both
+// surfaces then cast the same shadow relative to the garment, rather than the
+// same number of pixels.
+const REFERENCE_STAGE_PX = 400;
 
 export async function composeOutfitExportImage(outfit, items) {
   const pieces = (outfit?.itemIds || [])
@@ -256,20 +269,32 @@ export async function composeOutfitExportImage(outfit, items) {
   // Six pieces, not the eight used elsewhere: a share card is read at a glance,
   // on a phone, among other people's posts. The engine drops finishing first,
   // so what goes is a cuff rather than the coat.
-  const placements = composeFlatlay(pieces, { overlap: false, max: 6 });
+  // Sorted by z, which the DOM gets for free from zIndex and the canvas does
+  // not: composeFlatlay returns placements in SLOT order (Tops:z3 before
+  // Bottoms:z2), and ctx.drawImage paints in call order. Unsorted, the share
+  // card would layer the opposite way from the app the moment pieces overlap.
+  const placements = composeFlatlay(pieces, { overlap: FLATLAY_OVERLAP, max: 6, bleed: hasAlphaCutout })
+    .slice()
+    .sort((a, b) => a.z - b.z);
 
   // The polished cut-out, not the raw photo. Every background the user has had
   // removed was previously absent from the one artefact that leaves the app —
   // and a loosely-framed raw photo also loses more to fitting than a tight
-  // cut-out does. Falls back to the raw image when there is no cut-out, and
-  // loadImageForCanvas falls back again (weserv proxy) when a Storage URL is
-  // not canvas-safe, returning null rather than throwing.
+  // cut-out does. Falls back to the raw image when there is no cut-out.
+  // loadImageForCanvas itself has no further fallback for a Storage URL — it
+  // goes straight to the first-party proxy (weserv can't reach Storage either,
+  // see loadImageForCanvas above) — and returns null rather than throwing if
+  // that fails too.
   const sources = placements.map((p) => itemImageDisplay(p.item, 0).src || itemImages(p.item)[0]);
   const imgs = await Promise.all(sources.map((src) => loadImageForCanvas(src)));
 
-  // A white panel. Every stored cut-out is an opaque white JPEG, so floating
-  // them onto the cream page would paint white boxes across it — the fault
-  // fixed on the Lookbook card. Phase two recolours this one rectangle.
+  // A white panel, and it stays white. Its original justification — that every
+  // stored cut-out is an opaque white JPEG — is retired by alpha, but the panel
+  // is also a design element: the page behind it is already #F7F5F2, so
+  // recolouring it to cream would make it the same colour as the page and erase
+  // it from the card. Nothing is lost by keeping it. A white garment has no
+  // useful contrast against cream either (1.088:1), so the shadow is carrying
+  // that separation on both surfaces regardless.
   ctx.fillStyle = '#FFFFFF';
   drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
   ctx.fill();
@@ -279,6 +304,14 @@ export async function composeOutfitExportImage(outfit, items) {
   ctx.stroke();
 
   const stage = layout.composition;
+  // The DOM stage clips with overflow-hidden; the canvas has to be told. Pieces
+  // are tilted, and the frame clamp in bleedCell applies to the UNROTATED box,
+  // so a piece flush against an edge has a corner outside it — plus a shadow
+  // scaled to ~34px here. Without this they draw over the panel's rounded
+  // border and out onto the page.
+  ctx.save();
+  drawRoundedRect(ctx, layout.panel.x, layout.panel.y, layout.panel.w, layout.panel.h, SHARE_CARD.PANEL_RADIUS);
+  ctx.clip();
   placements.forEach((placement, i) => {
     const cellX = stage.x + placement.x * stage.w;
     const cellY = stage.y + placement.y * stage.h;
@@ -290,7 +323,31 @@ export async function composeOutfitExportImage(outfit, items) {
       // Contain, not cover. Cover took a centred slice sized to fill the cell,
       // which cost a dress 57% of itself.
       const fit = fitContain(img.width, img.height, cellW, cellH);
+      const bleeding = hasAlphaCutout(placement.item);
+
+      ctx.save();
+      if (placement.rotation) {
+        // Rotate about the cell's centre, as the DOM's transform does. Without
+        // this the share card renders every piece upright while the app tilts
+        // them.
+        ctx.translate(cellX + cellW / 2, cellY + cellH / 2);
+        ctx.rotate((placement.rotation * Math.PI) / 180);
+        ctx.translate(-(cellX + cellW / 2), -(cellY + cellH / 2));
+      }
+      if (bleeding) {
+        // Matches PIECE_SHADOW in Flatlay.jsx. Its 6px/14px are CSS pixels on a
+        // stage about REFERENCE_STAGE_PX wide, so they are scaled by this stage's
+        // actual width — otherwise a shadow tuned on a 400px card would be a
+        // hairline on a 1080px export. The save/restore pair around this piece
+        // scopes both the rotation transform and this shadow to it alone, so
+        // neither leaks onto the next piece drawn.
+        const k = stage.w / REFERENCE_STAGE_PX;
+        ctx.shadowColor = 'rgba(28, 25, 23, 0.16)';
+        ctx.shadowBlur = 14 * k;
+        ctx.shadowOffsetY = 6 * k;
+      }
       ctx.drawImage(img, cellX + fit.x, cellY + fit.y, fit.w, fit.h);
+      ctx.restore();
       return;
     }
 
@@ -318,6 +375,7 @@ export async function composeOutfitExportImage(outfit, items) {
     }
     ctx.textAlign = 'left';
   });
+  ctx.restore();
 
   // === STYLIST'S NOTE ===
   // Reasoning rendered as italic pull-quote with brass-rule eyebrow.
@@ -657,17 +715,31 @@ export function autoEnhanceCanvas(canvas) {
 // weights are ~5MB) so it only loads when the user has opted in AND added an
 // image. Wrapped in try/catch with a hard fallback to the original data URL —
 // the previous integration broke rendering, so failures must be silent.
-export async function removeImageBackground(dataUrl) {
+// `alpha: true` keeps the transparency @imgly produces instead of compositing
+// onto white. Measured across 32 real garments, WebP with alpha at q80 is 1.64x
+// JPEG-on-white by aggregate bytes, and the largest was 147K against a 161KB
+// cap — the reason phase two is affordable at all. PNG with alpha is 10.2x,
+// which is what made the original flatten-onto-white decision correct at the
+// time and wrong to generalise.
+export async function removeImageBackground(dataUrl, { alpha = false } = {}) {
   try {
+    // Checked before the model runs, not after. This is the one failure that is
+    // knowable in advance, and a caller that retries without alpha would
+    // otherwise pay for a full segmentation twice — about 18s an image instead
+    // of 9, and six times that in the multi-file add loop.
+    if (alpha && !(await canEncodeWebp())) {
+      throw new Error('this browser cannot write WebP, so alpha cannot be kept');
+    }
     const { removeBackground } = await import('@imgly/background-removal');
     const blob = await (await fetch(dataUrl)).blob();
     const outBlob = await removeBackground(blob);
 
     // The raw output is a PNG with alpha — often ~3-5x the size of the source
-    // JPEG. We composite onto a clean off-white background and re-encode as
-    // JPEG so the saved image stays under Firestore's 1MiB doc budget. The
-    // cream surface blends with the app's wardrobe cards (also cream) so the
-    // visual difference vs. true transparency is invisible in context.
+    // JPEG. Unless `alpha` was requested, we composite onto a plain white
+    // background and re-encode as WebP (or JPEG where WebP can't be written)
+    // so the saved image stays well under Firestore's 1MiB doc budget. When
+    // `alpha` is true, no fill happens below and the transparency is kept —
+    // see the WebP-support guard above, which is what makes that safe.
     const cutoutImg = await new Promise((resolve, reject) => {
       const fr = new FileReader();
       fr.onload = (e) => {
@@ -686,12 +758,15 @@ export async function removeImageBackground(dataUrl) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     const ctx = c.getContext('2d');
-    // Flattened onto white. The alpha is discarded here, which is what makes
-    // the file small and what phase two of the flat-lay work will undo — see
-    // encode.js. Every surface that draws a cut-out puts it on a white ground,
-    // so the flattening is invisible today.
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, w, h);
+    // Flattened onto white unless alpha was asked for. Discarding the alpha is
+    // what keeps the file small, and every surface that drew a cut-out used to
+    // put it on a white ground, so the flattening was invisible. Phase two is
+    // what changes that: a piece with transparency may overlap its neighbours,
+    // and one without may not.
+    if (!alpha) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, w, h);
+    }
     ctx.drawImage(cutoutImg, 0, 0, w, h);
 
     // WebP where the browser can write it, JPEG where it cannot. Measured on 32
@@ -703,6 +778,10 @@ export async function removeImageBackground(dataUrl) {
     // images is about ten times the JPEG it replaced. An unguarded switch would
     // have quietly inflated storage on any browser without WebP, with nothing
     // in the logs to say so.
+    // Already checked above when alpha was requested (and cached by
+    // canEncodeWebp, so calling it again here is free) — this call is only
+    // doing new work for the non-alpha path, to pick WebP over JPEG when
+    // available.
     const webp = await canEncodeWebp();
     const type = webp ? 'image/webp' : 'image/jpeg';
     const ladder = webp ? WEBP_LADDER : JPEG_LADDER;
@@ -712,7 +791,7 @@ export async function removeImageBackground(dataUrl) {
       CUTOUT_BUDGET_CHARS,
     );
     if (!cutoutUrl) throw new Error('could not encode the cut-out');
-    return { url: cutoutUrl, ok: true };
+    return { url: cutoutUrl, ok: true, alpha };
   } catch (e) {
     console.warn('[wardrobe] background removal failed, keeping original:', e?.message);
     return { url: dataUrl, ok: false, error: e?.message || 'unknown error' };
@@ -810,7 +889,10 @@ export async function renderFramedDataUrl(src, frame, { frameAspect = FRAME_ASPE
   c.width = outW;
   c.height = outH;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#FFFFFF'; // JPEG has no alpha; crop is full-bleed so this only guards rounding edges
+  // JPEG has no alpha. When `src` is an alpha cut-out this fill is doing real
+  // work, not just guarding rounding edges: it composites the whole garment
+  // onto white, which is exactly what makes a framed crop deliberately opaque.
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, outW, outH);
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
   let q = 0.86;

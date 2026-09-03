@@ -1,7 +1,7 @@
 import React from 'react';
 import { Shirt } from 'lucide-react';
-import { composeFlatlay } from '../lib/flatlay.js';
-import { flatlayTreatment, itemImageDisplay } from '../lib/polish.js';
+import { composeFlatlay, FLATLAY_OVERLAP } from '../lib/flatlay.js';
+import { flatlayTreatment, hasAlphaCutout, itemImageDisplay } from '../lib/polish.js';
 import { itemColors, itemImages } from '../lib/items.js';
 import ItemTileImage from './ItemTileImage.jsx';
 
@@ -10,14 +10,20 @@ import ItemTileImage from './ItemTileImage.jsx';
 // imperceptible, and past that the columns visibly drift apart.
 const MAX_STAGE_ASPECT = 1.2;
 
+// The shadow under a piece that carries transparency. It is drawn with
+// filter: drop-shadow, which follows the ALPHA CHANNEL rather than the element
+// box — so it traces the garment, not a rectangle. On an opaque cut-out the same
+// rule would outline a box, which is why only bleeding pieces get it.
+//
+// It is doing more work than it looks. A white garment has essentially no
+// contrast against any cream in the palette (1.088:1 against the page), so once
+// pieces overlap there is nothing separating a white shirt from the cream coat
+// beneath it. The shadow is the separation, not a flourish on top of one.
+const PIECE_SHADOW = 'drop-shadow(0 6px 14px rgba(28, 25, 23, 0.16))';
+
 // A look composed as a flat-lay: pieces sit roughly where they are worn, rather
 // than in a grid of equal plates that reads as an inventory. The arrangement
 // comes from composeFlatlay, so a look composes identically wherever it appears.
-//
-// The ground is WHITE, and that is load-bearing. Every cut-out stored today is
-// a JPEG flattened onto #FFFFFF, so on white it is indistinguishable from a
-// transparent one and the garments appear to float — with no image migration at
-// all. Phase two changes `ground` to cream and flips `overlap`; nothing else.
 //
 // Sizing has two modes because the two surfaces size differently. Pass `aspect`
 // and the composition declares its own height (the look detail, which places it
@@ -25,17 +31,53 @@ const MAX_STAGE_ASPECT = 1.2;
 // (the Lookbook card, whose image area is a flex-1 region sized by what the
 // caption strip leaves over, and which cannot declare an aspect without
 // fighting the card's own proportions).
+//
+// The ground is chosen per composition, and it is not a free choice. Every
+// cut-out stored before phase two is a JPEG flattened onto #FFFFFF and drawn
+// object-contain, so it IS an opaque white rectangle: on white it passes for a
+// transparent one and the garments appear to float, and on cream it is a white
+// box across the page — the fault fixed in #73.
+//
+// Gating bleed per piece does not help here. Not bleeding stops a piece
+// covering its NEIGHBOUR; it says nothing about that piece against the GROUND.
+// So the ground stays white while any piece would show as a box, and turns
+// cream once none would. A part-migrated look therefore looks exactly as it
+// does today, and gains the warm ground only when it can carry it.
+const GROUND_MIGRATED = '#F7F5F2';
+const GROUND_LEGACY = '#FFFFFF';
+
+// Which pieces bring their own rectangle, and so hold the whole look on the
+// legacy white ground.
+//
+// A bare cut-out without alpha is the obvious one — it IS an opaque white JPEG.
+// A PLATED piece counts too, and an earlier version of this wrongly exempted
+// them: the reasoning was that ItemTileImage samples the photograph's own
+// background and paints it behind, so the plate matches the picture. True, but
+// that only makes it settle against a ground of the SAME colour. Almost every
+// garment photograph is shot on white, so it samples to white and lands on cream
+// as exactly the rectangle this test exists to catch — visible on a white blouse
+// beside six clean cut-outs, which is how it was found.
+//
+// So cream arrives only when every piece in the look is a real cut-out with
+// alpha. That is conservative, and correctly so: a warm ground is not available
+// while one piece is still carrying its own white background.
+function showsWhiteBox(item) {
+  return flatlayTreatment(item) === 'plate' || !hasAlphaCutout(item);
+}
+
 export default function Flatlay({
   pieces = [],
   max = 8,
-  overlap = false,
+  overlap = FLATLAY_OVERLAP,
   aspect,
   padding,
-  ground = '#FFFFFF',
+  ground,
   onOpenItem,
   paletteFilter = null,
 }) {
-  const placements = composeFlatlay(pieces, { overlap, max });
+  const placements = composeFlatlay(pieces, { overlap, max, bleed: hasAlphaCutout });
+  const surface = ground
+    ?? (placements.some((p) => showsWhiteBox(p.item)) ? GROUND_LEGACY : GROUND_MIGRATED);
 
   const matchesFilter = (item) => {
     if (!paletteFilter) return true;
@@ -65,12 +107,20 @@ export default function Flatlay({
   // box and would ignore it entirely. Container query units follow the content
   // box too, so the square shrinks to match rather than overflowing.
   const outer = aspect
-    ? { position: 'relative', aspectRatio: aspect, background: ground, padding }
-    : { position: 'absolute', inset: 0, background: ground, containerType: 'size', padding };
+    ? { position: 'relative', aspectRatio: aspect, background: surface, padding }
+    : { position: 'absolute', inset: 0, background: surface, containerType: 'size', padding };
+  // `isolation: isolate` makes the stage a stacking context, which confines every
+  // piece's z-index inside it. Without it those numbers are page-level: a piece
+  // that may bleed is promoted above every piece that may not, and the promotion
+  // clears the slot range by 100, so a migrated garment landed on z-index 101
+  // against a sticky header on z-50 and painted straight through it. The pieces
+  // were still clipped to their card — it was only the painting order that
+  // escaped. Composition ordering has no business competing with page chrome.
   const stage = aspect
-    ? { position: 'absolute', inset: 0 }
+    ? { position: 'absolute', inset: 0, isolation: 'isolate' }
     : {
         position: 'relative',
+        isolation: 'isolate',
         width: `min(100%, calc(100cqh * ${MAX_STAGE_ASPECT}))`,
         aspectRatio: `${MAX_STAGE_ASPECT} / 1`,
       };
@@ -85,10 +135,23 @@ export default function Flatlay({
 
   return (
     <div style={outer} className="flex items-center justify-center overflow-hidden">
-      <div style={stage} className="overflow-hidden">
+      {/* No overflow-hidden here, deliberately. It used to clip at the stage box,
+          and pieces sit only GUTTER from that edge — about 5px on a card —
+          while PIECE_SHADOW reaches roughly 20px. Every edge piece had its
+          shadow sliced off dead straight, which reads as a broken cut-out
+          rather than a missing shadow. The clip is redundant anyway: the outer
+          card clips at its own boundary, and bleedCell keeps every placement
+          inside [0, 1], so nothing needs the stage to contain it. */}
+      <div style={stage}>
       {placements.map((placement) => {
         const item = placement.item;
         const plated = flatlayTreatment(item) === 'plate';
+        // Deliberately NOT gated on `overlap`. The shadow was introduced to
+        // separate a pale garment from the pale one it lies on, but it earns its
+        // place without any overlap at all: on cream a white garment has
+        // 1.088:1 contrast and no edge of its own, so the shadow is what makes
+        // it an object resting on a surface rather than a faint shape.
+        const shadowed = hasAlphaCutout(item);
         const src = itemImageDisplay(item, 0).src || itemImages(item)[0] || null;
         const openable = !!(onOpenItem && item?.id);
         const Tag = openable ? 'button' : 'div';
@@ -117,6 +180,7 @@ export default function Flatlay({
               height: `${(placement.h * 100).toFixed(2)}%`,
               zIndex: placement.z,
               transform: placement.rotation ? `rotate(${placement.rotation}deg)` : undefined,
+              filter: shadowed ? PIECE_SHADOW : undefined,
             }}
           >
             {src && plated ? (

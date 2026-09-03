@@ -13,12 +13,19 @@ const FH = Math.round(FW / FRAME_ASPECT); // 352
 // URL. Storage URLs display fine in a plain <img> but send no CORS headers, so
 // a crossOrigin canvas load taints and the bake fails; proxying to a data URL
 // sidesteps CORS entirely (the same path that made polish reliable).
+//
+// Raw, not compressed: `baseSrc` may be a migrated cut-out that carries alpha,
+// and imageUrlToCompressedDataUrl ends in toDataURL('image/jpeg') — JPEG has
+// no alpha channel, so a transparent cut-out would arrive here composited
+// onto BLACK, both in this preview and in what renderFramedDataUrl bakes.
+// imageUrlToRawDataUrl hands back the proxied bytes unchanged, which keeps
+// the transparency intact for the crop.
 async function resolveEditableSrc(src) {
   if (!src) return null;
   if (src.startsWith('data:')) return src;
   try {
-    const { imageUrlToCompressedDataUrl } = await import('../lib/net.js');
-    const rehosted = await imageUrlToCompressedDataUrl(src);
+    const { imageUrlToRawDataUrl } = await import('../lib/net.js');
+    const rehosted = await imageUrlToRawDataUrl(src);
     return rehosted && rehosted.startsWith('data:') ? rehosted : src;
   } catch {
     return src;

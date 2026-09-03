@@ -5,7 +5,7 @@ import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
 import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser, deleteMyAccount } from "../firebase.js";
-import { itemImageDisplay, polishItemPrimary, retrimItemPrimary } from "../lib/polish.js";
+import { itemImageDisplay, polishItemPrimary, retrimItemPrimary, surveyAlphaMigration } from "../lib/polish.js";
 import ItemTileImage from "../components/ItemTileImage.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
@@ -408,7 +408,11 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     for (const it of targets) {
       if (polishCancelRef.current) break;
       try {
-        const res = await polishItemPrimary(it, user.uid);
+        // Try to keep transparency, but this button's job is to produce a
+        // cut-out either way — unlike the alpha migration below, it must not
+        // fail an item outright just because this browser can't write WebP.
+        let res = await polishItemPrimary(it, user.uid, { alpha: true });
+        if (!res.ok) res = await polishItemPrimary(it, user.uid, { alpha: false });
         if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
         else { failed += 1; failedItems.push(it); }
       } catch { failed += 1; failedItems.push(it); }
@@ -443,6 +447,59 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       await new Promise((r) => setTimeout(r, 0));
     }
     setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, retrim: true } });
+  };
+
+  // Re-cut every item to a cut-out that keeps its transparency, so its pieces
+  // can overlap in a flat-lay. Deliberately NOT the re-trim runner: that one
+  // skips any item it finds nothing safe to trim in, and a skipped item is never
+  // re-uploaded, so it would convert an unmeasured subset - and it re-encodes an
+  // already-lossy JPEG in place.
+  //
+  // Always writes to Storage as cutoutUrl and NEVER over images[0]. On the
+  // polish path images[0] is the untouched original; on the add path it IS the
+  // cut-out and is the only copy the account has, so overwriting it here would
+  // destroy the only copy on a failed upload. A newly added item carries
+  // `alpha: true` inline already (see the add form) only when the alpha
+  // attempt succeeded, so hasAlphaCutout counts it done and this runner never
+  // touches it. On the WebP-unsupported fallback there, `alpha` is absent —
+  // that item still has `cutout: true` with no alpha flag, so this runner
+  // does reach it, alongside genuine pre-branch leftovers that predate the
+  // inline flag.
+  //
+  // The alpha flag IS the resume state. "Done" means "has alpha: true", so there
+  // is no separate progress record that can drift out of step with what actually
+  // happened. At ~9s an item this run needs a foregrounded tab for around half an
+  // hour, and browsers throttle background tabs, so a closed laptop must cost the
+  // remaining items rather than the whole run.
+  const runAlphaMigration = async () => {
+    if (!user) return;
+    polishCancelRef.current = false;
+    try { const net = await import("../lib/net.js"); net.clearAllHostBlocks(); } catch { /* non-blocking */ }
+
+    const all = (polishItems || items) || [];
+    // Only items that already HAVE a cut-out. An item without one has had none
+    // made or has had it deliberately reverted, and this button's job is to
+    // convert cut-outs to alpha, not to create them. Items with a manual crop
+    // are left alone too: polishItemPrimary drops framedUrl and frame, which is
+    // right for an explicit re-polish of one item and wrong for a bulk run that
+    // would silently discard every crop in the wardrobe.
+    const { targets, already, framed, noCutout, noSource, declined } = surveyAlphaMigration(all);
+
+    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noCutout, noSource, framed, declined });
+    let done = 0, failed = 0;
+    const failedItems = [];
+    for (const it of targets) {
+      if (polishCancelRef.current) break;
+      try {
+        const res = await polishItemPrimary(it, user.uid, { alpha: true });
+        if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
+        else { failed += 1; failedItems.push(it); }
+      } catch { failed += 1; failedItems.push(it); }
+      done += 1;
+      setPolishState({ done, total: targets.length, failed, alpha: true, already, noCutout, noSource, framed, declined });
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noCutout, noSource, framed, declined } });
   };
 
   // Google Calendar connection state. null = still checking, true/false = known.
@@ -832,24 +889,48 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 className="text-xs tracking-widest uppercase px-5 py-3 rounded-full border border-stone-300 text-stone-800 hover:bg-stone-50 transition-colors">
                 Tighten cut-outs
               </button>
+              <button type="button" onClick={runAlphaMigration}
+                className="text-xs tracking-widest uppercase px-5 py-3 rounded-full border border-stone-300 text-stone-800 hover:bg-stone-50 transition-colors">
+                Re-cut for overlap
+              </button>
             </div>
           )}
           {polishState && !polishState.summary && (
             <div className="max-w-sm">
               <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                <span>{polishState.retrim ? 'Tightening' : 'Polishing'}… {polishState.done} / {polishState.total}{polishState.failed ? ` · ${polishState.failed} kept original` : ''}</span>
+                <span>{polishState.alpha ? 'Re-cutting' : polishState.retrim ? 'Tightening' : 'Polishing'}… {polishState.done} / {polishState.total}{polishState.failed ? ` · ${polishState.failed} kept original` : ''}</span>
                 <button type="button" onClick={() => { polishCancelRef.current = true; }} className="underline hover:text-stone-900">Stop</button>
               </div>
               <div className="h-1.5 rounded-full bg-stone-100 overflow-hidden">
                 <div className="h-full bg-brass-400 transition-all" style={{ width: `${polishState.total ? Math.round((polishState.done / polishState.total) * 100) : 0}%` }} />
               </div>
+              {/* What the run is actually going to do, and what it is skipping.
+                  Re-cutting costs about nine seconds an item on this machine, so
+                  a full wardrobe is a coffee break — and browsers throttle
+                  background tabs, so it has to stay in front. Stopping is safe:
+                  each item records that it is done as it finishes, so a second
+                  run picks up where this one left off rather than starting over. */}
+              {polishState.alpha && (
+                <p className="mt-2 text-xs text-stone-400 leading-relaxed">
+                  {polishState.already > 0 && `${polishState.already} already done · `}
+                  {polishState.framed > 0 && `${polishState.framed} left framed · `}
+                  {polishState.noCutout > 0 && `${polishState.noCutout} with no cut-out to convert · `}
+                  {polishState.noSource > 0 && `${polishState.noSource} with no photo to re-cut from · `}
+                  {polishState.declined > 0 && `${polishState.declined} left flattened on purpose · `}
+                  keep this tab open and in front. Stopping loses no progress.
+                </p>
+              )}
             </div>
           )}
           {polishState?.summary && (
             <div className="text-sm text-stone-700">
               <p className="mb-2">
-                {polishState.summary.done - polishState.summary.failed} {polishState.summary.retrim ? 'tightened' : 'polished'}
+                {polishState.summary.done - polishState.summary.failed} {polishState.summary.alpha ? 're-cut' : polishState.summary.retrim ? 'tightened' : 'polished'}
                 {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original` : ''}
+                {polishState.summary.alpha && polishState.summary.framed > 0 ? ` · ${polishState.summary.framed} left framed` : ''}
+                {polishState.summary.alpha && polishState.summary.noCutout > 0 ? ` · ${polishState.summary.noCutout} had no cut-out to convert` : ''}
+                {polishState.summary.alpha && polishState.summary.noSource > 0 ? ` · ${polishState.summary.noSource} had no photo to re-cut from` : ''}
+                {polishState.summary.alpha && polishState.summary.declined > 0 ? ` · ${polishState.summary.declined} left flattened on purpose` : ''}
                 {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
               </p>
               {polishState.summary.failedItems?.length > 0 && (

@@ -368,7 +368,7 @@ Expected: PASS, all of them, including the existing 23.
 
 Run: `pnpm --dir apps/studio test`
 
-Expected: PASS. 231 before, 240 after.
+Expected: PASS. 231 before, 249 after — 18 new, because the `SHAPES` loop expands to one test per look shape.
 
 - [ ] **Step 8: Commit**
 

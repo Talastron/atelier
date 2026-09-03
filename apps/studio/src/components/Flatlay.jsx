@@ -135,7 +135,14 @@ export default function Flatlay({
 
   return (
     <div style={outer} className="flex items-center justify-center overflow-hidden">
-      <div style={stage} className="overflow-hidden">
+      {/* No overflow-hidden here, deliberately. It used to clip at the stage box,
+          and pieces sit only GUTTER from that edge — about 5px on a card —
+          while PIECE_SHADOW reaches roughly 20px. Every edge piece had its
+          shadow sliced off dead straight, which reads as a broken cut-out
+          rather than a missing shadow. The clip is redundant anyway: the outer
+          card clips at its own boundary, and bleedCell keeps every placement
+          inside [0, 1], so nothing needs the stage to contain it. */}
+      <div style={stage}>
       {placements.map((placement) => {
         const item = placement.item;
         const plated = flatlayTreatment(item) === 'plate';

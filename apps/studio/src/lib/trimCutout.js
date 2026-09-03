@@ -19,21 +19,6 @@
 // — untrimmed rather than guessing wrong.
 import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER } from './encode.js';
 
-// Pure: given raw RGBA pixels, return the bounding box of "content" pixels as
-// { x, y, w, h }, or null if there is none. Two detection modes, because the
-// input can be either kind of cut-out. When the image carries transparency,
-// ALPHA is the truth and colour is irrelevant — a white shirt on a
-// transparent ground is entirely subject. When it does not, the subject is
-// what is not white, and `threshold` is how far the darkest channel must fall
-// below 255 to count: high enough to ignore off-white JPEG noise, low enough
-// to catch cream and pale subjects.
-//
-// Getting this wrong is silent and total. getImageData returns a fully
-// transparent pixel as (0, 0, 0, 0), so a colour-only test reads it as BLACK
-// and therefore as subject — the box becomes the whole frame, coverage hits
-// 1.0, and the caller concludes the cut-out is already tight and leaves it
-// alone.
-
 // What fraction of the frame must be translucent before we believe this image
 // has a transparent GROUND, rather than a few soft edge pixels.
 //
@@ -57,6 +42,20 @@ export function hasAlphaGround({ data }) {
   return translucent >= total * TRANSLUCENT_FRACTION;
 }
 
+// Pure: given raw RGBA pixels, return the bounding box of "content" pixels as
+// { x, y, w, h }, or null if there is none. Two detection modes, because the
+// input can be either kind of cut-out. When the image has a transparent ground,
+// ALPHA is the truth and colour is irrelevant — a white shirt on a transparent
+// ground is entirely subject. When it does not, the subject is what is not
+// white, and `threshold` is how far the darkest channel must fall below 255 to
+// count: high enough to ignore off-white JPEG noise, low enough to catch cream
+// and pale subjects. The comparison is strict — a deviation of exactly the
+// threshold is background, which is how it was tuned.
+//
+// Getting the mode wrong is silent and total. getImageData returns a fully
+// transparent pixel as (0, 0, 0, 0), so a colour test reads it as BLACK and
+// therefore as subject — the box becomes the whole frame, coverage hits 1.0,
+// and the caller concludes the cut-out is already tight and leaves it alone.
 export function contentBounds({ data, width, height }, threshold = 14) {
   const hasAlpha = hasAlphaGround({ data });
 

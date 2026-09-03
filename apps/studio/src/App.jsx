@@ -3407,8 +3407,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                               const nextMeta = [...(prev.imageMeta || [])];
                               // `alpha` describes the cut-out being removed here, not the
                               // original photo that replaces it — clear it along with
-                              // `cutout`, matching revertItemPrimary in polish.js.
-                              nextMeta[i] = { ...nextMeta[i], cutout: false, alpha: false };
+                              // `cutout`, matching revertItemPrimary in polish.js. `cutoutUrl`
+                              // must go too: itemImageDisplay prefers cutoutUrl over the inline
+                              // `cutout` flag, so a stale Storage cut-out left in place would
+                              // make this revert look like it did nothing — the old Storage
+                              // JPEG would keep winning the precedence.
+                              nextMeta[i] = { ...nextMeta[i], cutout: false, alpha: false, cutoutUrl: undefined };
                               return { ...prev, images: nextImages, imageMeta: nextMeta };
                             });
                             toast.show('Reverted to original photo', { kind: 'default', duration: 2500 });
@@ -3442,7 +3446,24 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                                   // alpha attempt succeeded, and clear any pre-existing value
                                   // otherwise, so a stale `alpha: true` never survives a
                                   // flattened re-cut.
-                                  nextMeta[i] = { ...nextMeta[i], cutout: true, original: src, alpha: out.alpha === true };
+                                  //
+                                  // This write replaces what is DISPLAYED with the new inline
+                                  // cut-out (images[i]), so it must clear cutoutUrl, framedUrl and
+                                  // frame — exactly as polishItemPrimary does when it writes a
+                                  // fresh cutoutUrl. itemImageDisplay prefers framedUrl, then
+                                  // cutoutUrl, over the inline cut-out; leaving any of them behind
+                                  // means the renderer keeps drawing that old image while this
+                                  // flag claims a cut-out (and, with alpha, claims transparency)
+                                  // that was never applied to what's shown.
+                                  nextMeta[i] = {
+                                    ...nextMeta[i],
+                                    cutout: true,
+                                    original: src,
+                                    alpha: out.alpha === true,
+                                    cutoutUrl: undefined,
+                                    framedUrl: undefined,
+                                    frame: undefined,
+                                  };
                                   return { ...prev, images: nextImages, imageMeta: nextMeta };
                                 });
                                 toast.show('Background removed ✓', { kind: 'success', duration: 2500 });

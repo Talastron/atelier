@@ -5,7 +5,7 @@ import { rehostExternalImage } from "../lib/canvas.js";
 import { matchColorFamily } from "../lib/color.js";
 import { identifyItemWithGemini } from "../lib/ai.js";
 import { connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, getFounderCount, isAIEnabled, signOutUser, deleteMyAccount } from "../firebase.js";
-import { hasAlphaCutout, itemImageDisplay, polishItemPrimary, retrimItemPrimary } from "../lib/polish.js";
+import { itemImageDisplay, polishItemPrimary, retrimItemPrimary, surveyAlphaMigration } from "../lib/polish.js";
 import ItemTileImage from "../components/ItemTileImage.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
@@ -457,10 +457,11 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
   //
   // Always writes to Storage as cutoutUrl and NEVER over images[0]. On the
   // polish path images[0] is the untouched original; on the add path it IS the
-  // cut-out and is the only copy the account has. Writing to Storage either way
-  // makes add-path items into polish-path items - one shape in the database
-  // instead of two, the previous cut-out kept as a fallback, and undo is
-  // deleting one field.
+  // cut-out and is the only copy the account has, so overwriting it here would
+  // destroy the only copy on a failed upload. A newly added item now carries
+  // `alpha: true` inline already (see the add form), so hasAlphaCutout counts
+  // it done and this runner never touches it — add-path items reach this
+  // function only as pre-branch leftovers that predate the inline flag.
   //
   // The alpha flag IS the resume state. "Done" means "has alpha: true", so there
   // is no separate progress record that can drift out of step with what actually
@@ -479,13 +480,9 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     // are left alone too: polishItemPrimary drops framedUrl and frame, which is
     // right for an explicit re-polish of one item and wrong for a bulk run that
     // would silently discard every crop in the wardrobe.
-    const hasCutout = (it) => !!(it.imageMeta?.[0]?.cutoutUrl) || it.imageMeta?.[0]?.cutout === true;
-    const framed = all.filter((it) => !hasAlphaCutout(it) && hasCutout(it) && !!it.imageMeta?.[0]?.framedUrl).length;
-    const targets = all.filter((it) => !hasAlphaCutout(it) && hasCutout(it) && !it.imageMeta?.[0]?.framedUrl && !!(it.images || [])[0]);
-    const already = all.filter((it) => hasAlphaCutout(it)).length;
-    const noSource = all.length - targets.length - already - framed;
+    const { targets, already, framed, noCutout, noSource } = surveyAlphaMigration(all);
 
-    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noSource, framed });
+    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noCutout, noSource, framed });
     let done = 0, failed = 0;
     const failedItems = [];
     for (const it of targets) {
@@ -496,10 +493,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         else { failed += 1; failedItems.push(it); }
       } catch { failed += 1; failedItems.push(it); }
       done += 1;
-      setPolishState({ done, total: targets.length, failed, alpha: true, already, noSource, framed });
+      setPolishState({ done, total: targets.length, failed, alpha: true, already, noCutout, noSource, framed });
       await new Promise((r) => setTimeout(r, 0));
     }
-    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noSource, framed } });
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noCutout, noSource, framed } });
   };
 
   // Google Calendar connection state. null = still checking, true/false = known.
@@ -914,6 +911,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 <p className="mt-2 text-xs text-stone-400 leading-relaxed">
                   {polishState.already > 0 && `${polishState.already} already done · `}
                   {polishState.framed > 0 && `${polishState.framed} left framed · `}
+                  {polishState.noCutout > 0 && `${polishState.noCutout} with no cut-out to convert · `}
                   {polishState.noSource > 0 && `${polishState.noSource} with no photo to re-cut from · `}
                   keep this tab open and in front. Stopping loses no progress.
                 </p>
@@ -926,6 +924,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 {polishState.summary.done - polishState.summary.failed} {polishState.summary.alpha ? 're-cut' : polishState.summary.retrim ? 'tightened' : 'polished'}
                 {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original` : ''}
                 {polishState.summary.alpha && polishState.summary.framed > 0 ? ` · ${polishState.summary.framed} left framed` : ''}
+                {polishState.summary.alpha && polishState.summary.noCutout > 0 ? ` · ${polishState.summary.noCutout} had no cut-out to convert` : ''}
                 {polishState.summary.alpha && polishState.summary.noSource > 0 ? ` · ${polishState.summary.noSource} had no photo to re-cut from` : ''}
                 {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
               </p>

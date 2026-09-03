@@ -280,9 +280,11 @@ export async function composeOutfitExportImage(outfit, items) {
   // The polished cut-out, not the raw photo. Every background the user has had
   // removed was previously absent from the one artefact that leaves the app —
   // and a loosely-framed raw photo also loses more to fitting than a tight
-  // cut-out does. Falls back to the raw image when there is no cut-out, and
-  // loadImageForCanvas falls back again (weserv proxy) when a Storage URL is
-  // not canvas-safe, returning null rather than throwing.
+  // cut-out does. Falls back to the raw image when there is no cut-out.
+  // loadImageForCanvas itself has no further fallback for a Storage URL — it
+  // goes straight to the first-party proxy (weserv can't reach Storage either,
+  // see loadImageForCanvas above) — and returns null rather than throwing if
+  // that fails too.
   const sources = placements.map((p) => itemImageDisplay(p.item, 0).src || itemImages(p.item)[0]);
   const imgs = await Promise.all(sources.map((src) => loadImageForCanvas(src)));
 

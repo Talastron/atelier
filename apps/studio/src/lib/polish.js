@@ -26,22 +26,49 @@ export function flatlayTreatment(item) {
   return itemImageDisplay(item, 0).forceContain ? 'bare' : 'plate';
 }
 
-// Whether this item's cut-out carries real transparency, and so may overlap its
-// neighbours in a flat-lay. Written by the migration and by every new polish;
-// absent on everything cut out before phase two.
+// Whether the image this item actually DRAWS carries real transparency, and so
+// may overlap its neighbours in a flat-lay.
 //
-// The test is for `true` and not merely truthiness because this flag doubles as
-// the migration's resume checkpoint — "done" means "has alpha: true", and there
-// is no separate progress record to drift out of step with it. A half-written
-// value must read as not-done so the next run retries the item.
+// This is deliberately a question about the displayed pixels, not about a stored
+// field. The flag has disagreed with the pixels four separate times on this
+// branch — a framed crop overriding an alpha cut-out, a revert leaving the flag
+// behind, an editor button writing one cut-out while another still won the
+// precedence — and each was a writer that forgot. So the reads are defensive:
 //
-// Also requires the absence of a framedUrl. itemImageDisplay prefers a framed
-// crop over the cut-out, and a framed crop is always an opaque JPEG (see
-// renderFramedDataUrl) — so when one is present it, not the cut-out, is what
-// actually gets drawn, and its transparency (or lack of it) is what matters.
+//   framedUrl wins over everything and is always an opaque JPEG, so a framed
+//   item never bleeds, whatever the flag says.
+//
+//   A record naming BOTH a Storage cut-out and an inline one is ambiguous:
+//   itemImageDisplay draws cutoutUrl, but the flag may have been written for
+//   either. Refuse it rather than guess. Writers must clear what they supersede,
+//   and this is what catches the one that does not.
 export function hasAlphaCutout(item) {
   const meta = Array.isArray(item?.imageMeta) ? item.imageMeta : [];
-  return !meta[0]?.framedUrl && meta[0]?.alpha === true;
+  const m = meta[0] || {};
+  if (m.alpha !== true) return false;
+  if (m.framedUrl) return false;
+  if (m.cutoutUrl && m.cutout === true) return false;
+  return !!m.cutoutUrl || m.cutout === true;
+}
+
+// Sort a wardrobe into what a re-cut run will do to it. Pure, and exported for
+// the test — the arithmetic here has been wrong twice, and it is the only
+// account the user gets of what a half-hour run is about to touch.
+//
+// The buckets are disjoint and exhaustive: every item lands in exactly one.
+export function surveyAlphaMigration(items = []) {
+  const targets = [];
+  let already = 0, framed = 0, noCutout = 0, noSource = 0;
+  for (const it of items) {
+    const m = (Array.isArray(it?.imageMeta) ? it.imageMeta : [])[0] || {};
+    const hasCutout = !!m.cutoutUrl || m.cutout === true;
+    if (hasAlphaCutout(it)) already += 1;
+    else if (!hasCutout) noCutout += 1;
+    else if (m.framedUrl) framed += 1;
+    else if (!(Array.isArray(it?.images) ? it.images : [])[0]) noSource += 1;
+    else targets.push(it);
+  }
+  return { targets, already, framed, noCutout, noSource };
 }
 
 // Move a photo to the front, so it becomes the one the wardrobe shows.
@@ -129,13 +156,14 @@ export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
   while (meta.length < 1) meta.push({});
   // The alpha flag is also the migration's resume checkpoint, and it records
   // what was actually STORED, not what was asked for. trimCutoutDataUrl runs
-  // after removeImageBackground and re-decides for itself whether the pixels
-  // it is encoding have a transparent ground (falling back to white when it
-  // finds none) — its answer is a measured property of the bytes just
-  // uploaded, so it takes precedence when the trim ran. When it didn't run, or
-  // declined and left `out.url` as-is, fall back to `out.alpha`: trustworthy
-  // there because removeImageBackground FAILS rather than silently dropping
-  // alpha (see the WebP-support guard there).
+  // after removeImageBackground and re-decides for itself whether the source
+  // pixels it is trimming have a transparent ground (falling back to white
+  // when it finds none) — that answer takes precedence when the trim ran,
+  // because it is what decided whether this upload's fill guard ran (the
+  // `!keepAlpha` branch below), not because it re-measures the encoded bytes.
+  // When it didn't run, or declined and left `out.url` as-is, fall back to
+  // `out.alpha`: trustworthy there because removeImageBackground FAILS rather
+  // than silently dropping alpha (see the WebP-support guard there).
   meta[0] = { ...(meta[0] || {}), cutoutUrl };
   const storedAlpha = trimKeptAlpha !== null ? trimKeptAlpha : out.alpha;
   if (storedAlpha === true) meta[0].alpha = true;
@@ -159,7 +187,12 @@ export function revertItemPrimary(item) {
   // reporting an opaque photograph as bleedable, and — because the migration
   // filters on this same flag — mark the item permanently migrated so it is
   // never retried.
-  if (meta[0]) { delete meta[0].cutoutUrl; delete meta[0].alpha; }
+  //
+  // `cutout` must go too. It's the add-path's inline marker for "images[0] IS a
+  // cut-out" — leaving it true after a revert means surveyAlphaMigration still
+  // sees a cut-out to convert, and the next re-cut run resurrects exactly what
+  // this revert removed. A revert must leave no cut-out of either kind behind.
+  if (meta[0]) { delete meta[0].cutoutUrl; delete meta[0].alpha; delete meta[0].cutout; }
   return meta;
 }
 
@@ -229,5 +262,12 @@ export async function retrimItemPrimary(item, uid) {
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
   meta[0] = { ...(meta[0] || {}), cutoutUrl: newUrl };
+  // Reconcile the flag with what was just uploaded, the same as
+  // polishItemPrimary does with trimKeptAlpha. trimCutoutDataUrl re-decides for
+  // itself whether the trimmed pixels carry a transparent ground, falling back
+  // to a white fill when they don't — without this, a trim that flattened an
+  // alpha cut-out would leave `alpha: true` claiming otherwise.
+  if (trimmed.keepAlpha === true) meta[0].alpha = true;
+  else delete meta[0].alpha;
   return { ok: true, imageMeta: meta };
 }

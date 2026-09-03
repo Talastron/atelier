@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { itemImageDisplay, revertFramePrimary, flatlayTreatment, promoteImageToMain, hasAlphaCutout } from './polish.js';
+import { itemImageDisplay, revertFramePrimary, flatlayTreatment, promoteImageToMain, hasAlphaCutout, surveyAlphaMigration } from './polish.js';
 
 const mk = (images, imageMeta) => ({ images, imageMeta });
 
@@ -176,5 +176,59 @@ describe('hasAlphaCutout', () => {
   });
   it('is true again once framedUrl is removed', () => {
     expect(hasAlphaCutout(mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: true }]))).toBe(true);
+  });
+  // A record naming BOTH a Storage cut-out and an inline one is ambiguous:
+  // itemImageDisplay draws cutoutUrl, but the flag may have been written for
+  // either cut-out. This is the exact shape the editor's "Cut out" button
+  // produced before it was fixed to clear cutoutUrl.
+  it('is false when both cutoutUrl and inline cutout:true are set alongside alpha:true', () => {
+    expect(hasAlphaCutout(mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', cutout: true, alpha: true }]))).toBe(false);
+  });
+  it('is false when alpha:true is set with no cut-out of either kind present', () => {
+    expect(hasAlphaCutout(mk(['orig0'], [{ alpha: true }]))).toBe(false);
+  });
+});
+
+describe('surveyAlphaMigration', () => {
+  const already = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: true }]);
+  const framed = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', framedUrl: 'https://s/f.jpg', frame: {} }]);
+  const noCutout = mk(['orig0'], [{}]);
+  const noSource = mk([], [{ cutoutUrl: 'https://s/c.webp' }]);
+  const target = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp' }]);
+
+  it('sorts the five buckets disjointly, summing to the input length', () => {
+    const items = [already, framed, noCutout, noSource, target];
+    const result = surveyAlphaMigration(items);
+    expect(result.targets.length + result.already + result.framed + result.noCutout + result.noSource)
+      .toBe(items.length);
+  });
+
+  it('is empty and all-zero for an empty wardrobe', () => {
+    expect(surveyAlphaMigration([])).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0 });
+  });
+
+  it('an item with a cut-out and no alpha is the only kind that becomes a target', () => {
+    const result = surveyAlphaMigration([already, framed, noCutout, noSource, target]);
+    expect(result.targets).toEqual([target]);
+  });
+
+  it('counts an already-migrated item as already, not a target', () => {
+    const result = surveyAlphaMigration([already]);
+    expect(result).toMatchObject({ targets: [], already: 1, framed: 0, noCutout: 0, noSource: 0 });
+  });
+
+  it('counts a framed item as framed, not a target, even though it has a cut-out', () => {
+    const result = surveyAlphaMigration([framed]);
+    expect(result).toMatchObject({ targets: [], already: 0, framed: 1, noCutout: 0, noSource: 0 });
+  });
+
+  it('counts an item with no cut-out at all as noCutout, distinct from noSource', () => {
+    const result = surveyAlphaMigration([noCutout]);
+    expect(result).toMatchObject({ targets: [], already: 0, framed: 0, noCutout: 1, noSource: 0 });
+  });
+
+  it('counts a cut-out item with no source photo as noSource', () => {
+    const result = surveyAlphaMigration([noSource]);
+    expect(result).toMatchObject({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 1 });
   });
 });

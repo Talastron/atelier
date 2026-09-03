@@ -2888,10 +2888,15 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         const originalDataUrl = await compressImageToDataUrl(file);
         let dataUrl = originalDataUrl;
         let cutoutOk = null;
+        let cutoutAlpha = null;
         if (removeBackground) {
           setCutoutBusy(true);
-          const out = await removeImageBackground(originalDataUrl);
-          dataUrl = out.url; cutoutOk = out.ok;
+          let out = await removeImageBackground(originalDataUrl, { alpha: true });
+          // A browser that cannot write WebP cannot keep the alpha, and JPEG has
+          // no alpha channel to fall back on. Rather than lose the cut-out
+          // entirely there, take the flattened one — it simply will not overlap.
+          if (!out.ok) out = await removeImageBackground(originalDataUrl);
+          dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
           setCutoutBusy(false);
           toast.show(out.ok ? 'Background removed ✓ · tap to revert' : 'Cutout failed — kept original photo', { kind: out.ok ? 'success' : 'default', duration: 3500 });
         }
@@ -2901,7 +2906,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
           return {
             ...prev,
             images: [...(prev.images || []), dataUrl],
-            imageMeta: [...meta, { cutout: cutoutOk === true, original: cutoutOk === true ? originalDataUrl : undefined }],
+            imageMeta: [...meta, {
+              cutout: cutoutOk === true,
+              original: cutoutOk === true ? originalDataUrl : undefined,
+              ...(cutoutAlpha === true ? { alpha: true } : {}),
+            }],
           };
         });
         setStep((s) => (s === 1 ? 2 : s));
@@ -2927,10 +2936,15 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         const originalDataUrl = await compressImageToDataUrl(file);
         let dataUrl = originalDataUrl;
         let cutoutOk = null;
+        let cutoutAlpha = null;
         if (removeBackground) {
           setCutoutBusy(true);
-          const out = await removeImageBackground(originalDataUrl);
-          dataUrl = out.url; cutoutOk = out.ok;
+          let out = await removeImageBackground(originalDataUrl, { alpha: true });
+          // A browser that cannot write WebP cannot keep the alpha, and JPEG has
+          // no alpha channel to fall back on. Rather than lose the cut-out
+          // entirely there, take the flattened one — it simply will not overlap.
+          if (!out.ok) out = await removeImageBackground(originalDataUrl);
+          dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
           if (out.ok) okCount++; else failCount++;
         }
         if (!firstNewDataUrl) firstNewDataUrl = dataUrl;
@@ -2939,7 +2953,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
           return {
             ...prev,
             images: [...(prev.images || []), dataUrl].slice(0, 6),
-            imageMeta: [...meta, { cutout: cutoutOk === true, original: cutoutOk === true ? originalDataUrl : undefined }].slice(0, 6),
+            imageMeta: [...meta, {
+              cutout: cutoutOk === true,
+              original: cutoutOk === true ? originalDataUrl : undefined,
+              ...(cutoutAlpha === true ? { alpha: true } : {}),
+            }].slice(0, 6),
           };
         });
       }
@@ -3067,11 +3085,16 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       // Strip the bulky in-memory `original` base64 snapshot from imageMeta
       // before save (risks 1MiB Firestore cap). Small Storage-URL fields
       // (cutoutUrl, framedUrl) and frame params are kept intentionally.
+      //
+      // This is an ALLOWLIST: any field this map doesn't name is dropped from
+      // the saved item, `original` included. A new imageMeta field must be
+      // added here explicitly or it will silently fail to survive a save.
       const slimMeta = Array.isArray(formData.imageMeta)
         ? formData.imageMeta.map((m) => m ? {
             cutout: !!m.cutout,
             ...(m.angle ? { angle: m.angle } : {}),
             ...(m.cutoutUrl ? { cutoutUrl: m.cutoutUrl } : {}),
+            ...(m.alpha ? { alpha: true } : {}),
             ...(m.framedUrl ? { framedUrl: m.framedUrl } : {}),
             ...(m.frame ? { frame: m.frame } : {}),
           } : null)

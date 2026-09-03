@@ -381,8 +381,12 @@ export function composeFlatlay(pieces, { overlap = false, max = 8, bleed = () =>
     // Only a piece with real transparency may grow into its neighbours. An
     // opaque one that grew would paint a white rectangle across the garment
     // beneath — worse than the grid this replaced. A piece that cannot bleed
-    // keeps its exact box AND sinks below every piece that can, so nothing
-    // which grew can be covered by one.
+    // keeps its exact box, and every piece that CAN bleed is lifted above it
+    // with Z_PROMOTE, so nothing which grew can ever be covered by one.
+    // Promoting the accepted pieces rather than demoting the rejected ones is
+    // what keeps this safe by default: with nothing bled, this term is zero
+    // for every piece and z is exactly what it was before phase two (see
+    // Z_PROMOTE above for why demoting instead would not have been).
     const mayBleed = overlap && bleed(item) === true;
     const box = mayBleed ? bleedCell(cell, BLEED) : cell;
     return {

@@ -408,7 +408,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     for (const it of targets) {
       if (polishCancelRef.current) break;
       try {
-        const res = await polishItemPrimary(it, user.uid);
+        const res = await polishItemPrimary(it, user.uid, { alpha: true });
         if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
         else { failed += 1; failedItems.push(it); }
       } catch { failed += 1; failedItems.push(it); }

@@ -354,7 +354,7 @@ describe('composeFlatlay', () => {
     // The safety property. An opaque piece never grows, so it has nothing
     // beneath it to spoil; sinking it below every bleeding piece means nothing
     // that DID grow can be covered by one.
-    it('demotes every rejected piece below every accepted one', () => {
+    it('keeps every rejected piece below every accepted one', () => {
       const out = composeFlatlay(LOOK, { overlap: true, bleed: (item) => item.category === 'Tops' });
       const accepted = out.filter((p) => p.item.category === 'Tops');
       const rejected = out.filter((p) => p.item.category !== 'Tops');

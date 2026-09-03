@@ -121,8 +121,12 @@ export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
   const cutoutUrl = await getDownloadURL(r);
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
-  // The alpha flag is also the migration's resume checkpoint, so it is only ever
-  // written alongside a cut-out that actually carries transparency.
+  // The alpha flag is also the migration's resume checkpoint. `out.alpha` is
+  // the requested option echoed back, not a measured property of the encoded
+  // bytes — what makes it trustworthy is that removeImageBackground FAILS
+  // rather than silently falling back to a format without alpha (see the
+  // WebP-support guard there), so "alpha requested and out.ok" really does
+  // mean the upload below carries transparency.
   meta[0] = { ...(meta[0] || {}), cutoutUrl };
   if (out.alpha === true) meta[0].alpha = true;
   else delete meta[0].alpha;
@@ -140,7 +144,12 @@ export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
 // re-polish overwrites it.)
 export function revertItemPrimary(item) {
   const meta = Array.isArray(item.imageMeta) ? item.imageMeta.map((m) => ({ ...m })) : [];
-  if (meta[0]) { delete meta[0].cutoutUrl; }
+  // `alpha` describes the cut-out being removed here, not the original photo
+  // that replaces it. Leaving it set would both let hasAlphaCutout keep
+  // reporting an opaque photograph as bleedable, and — because the migration
+  // filters on this same flag — mark the item permanently migrated so it is
+  // never retried.
+  if (meta[0]) { delete meta[0].cutoutUrl; delete meta[0].alpha; }
   return meta;
 }
 
@@ -160,6 +169,12 @@ export async function frameItemPrimary(item, uid, dataUrl, frame) {
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
   meta[0] = { ...(meta[0] || {}), framedUrl, frame };
+  // A framed crop is deliberately opaque — renderFramedDataUrl fills white and
+  // encodes JPEG, which has no alpha channel — so a framed item must not
+  // bleed. Clear the flag the same way polishItemPrimary clears framedUrl/frame
+  // for the inverse ordering: each new image kind invalidates what the other
+  // kind claimed about the pixels.
+  delete meta[0].alpha;
   return { ok: true, imageMeta: meta };
 }
 

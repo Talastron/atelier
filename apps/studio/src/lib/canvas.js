@@ -657,7 +657,13 @@ export function autoEnhanceCanvas(canvas) {
 // weights are ~5MB) so it only loads when the user has opted in AND added an
 // image. Wrapped in try/catch with a hard fallback to the original data URL —
 // the previous integration broke rendering, so failures must be silent.
-export async function removeImageBackground(dataUrl) {
+// `alpha: true` keeps the transparency @imgly produces instead of compositing
+// onto white. Measured across 32 real garments, WebP with alpha at q80 is 1.64x
+// JPEG-on-white by aggregate bytes, and the largest was 147K against a 161KB
+// cap — the reason phase two is affordable at all. PNG with alpha is 10.2x,
+// which is what made the original flatten-onto-white decision correct at the
+// time and wrong to generalise.
+export async function removeImageBackground(dataUrl, { alpha = false } = {}) {
   try {
     const { removeBackground } = await import('@imgly/background-removal');
     const blob = await (await fetch(dataUrl)).blob();
@@ -690,8 +696,12 @@ export async function removeImageBackground(dataUrl) {
     // the file small and what phase two of the flat-lay work will undo — see
     // encode.js. Every surface that draws a cut-out puts it on a white ground,
     // so the flattening is invisible today.
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, w, h);
+    // Flattened onto white unless alpha was asked for. Discarding the alpha is
+    // what makes the file small, and what phase two undoes.
+    if (!alpha) {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, w, h);
+    }
     ctx.drawImage(cutoutImg, 0, 0, w, h);
 
     // WebP where the browser can write it, JPEG where it cannot. Measured on 32
@@ -704,6 +714,13 @@ export async function removeImageBackground(dataUrl) {
     // have quietly inflated storage on any browser without WebP, with nothing
     // in the logs to say so.
     const webp = await canEncodeWebp();
+    // JPEG cannot carry alpha. Falling back to it here would flatten the
+    // transparency with nothing in the logs to say so — the same silent class of
+    // failure the toDataURL feature-detect exists to prevent. An alpha request
+    // that cannot be honoured must FAIL, so the caller leaves the item
+    // unmigrated and reports it, rather than storing a flattened image and
+    // recording alpha: true against it.
+    if (alpha && !webp) throw new Error('this browser cannot write WebP, so alpha cannot be kept');
     const type = webp ? 'image/webp' : 'image/jpeg';
     const ladder = webp ? WEBP_LADDER : JPEG_LADDER;
     const cutoutUrl = await pickEncoding(
@@ -712,7 +729,7 @@ export async function removeImageBackground(dataUrl) {
       CUTOUT_BUDGET_CHARS,
     );
     if (!cutoutUrl) throw new Error('could not encode the cut-out');
-    return { url: cutoutUrl, ok: true };
+    return { url: cutoutUrl, ok: true, alpha };
   } catch (e) {
     console.warn('[wardrobe] background removal failed, keeping original:', e?.message);
     return { url: dataUrl, ok: false, error: e?.message || 'unknown error' };

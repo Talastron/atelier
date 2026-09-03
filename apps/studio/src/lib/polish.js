@@ -76,11 +76,12 @@ export function promoteImageToMain(item, index) {
 // URL-safe id for the Storage object.
 function safeId(s) { return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60) || 'x'; }
 
-// Polish item.images[0]: remove its background (onto white), upload the cut-out
-// to Storage, and return { imageMeta, ok } — the updated imageMeta array with
-// cutoutUrl set on index 0. The original images[0] is left untouched. On
-// failure returns { ok:false } and leaves imageMeta unchanged.
-export async function polishItemPrimary(item, uid) {
+// Polish item.images[0]: remove its background (onto white, or keeping the
+// alpha when asked), upload the cut-out to Storage, and return
+// { imageMeta, ok } — the updated imageMeta array with cutoutUrl set on index
+// 0. The original images[0] is left untouched. On failure returns
+// { ok:false } and leaves imageMeta unchanged.
+export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
   let original = (Array.isArray(item.images) ? item.images : [])[0];
   if (!original || !uid) return { ok: false };
   const { removeImageBackground } = await import('./canvas.js');
@@ -101,7 +102,7 @@ export async function polishItemPrimary(item, uid) {
   // and nothing anywhere reads the extension. Renaming would orphan every
   // existing object and risk putting polishItemPrimary and retrimItemPrimary on
   // different paths, for a cosmetic gain no user ever sees.
-  const out = await removeImageBackground(original); // { url, ok }
+  const out = await removeImageBackground(original, { alpha }); // { url, ok, alpha }
   if (!out.ok) return { ok: false, error: out.error };
   // Trim to the subject so it fills its tile (a delicate piece shouldn't float
   // tiny in a big white frame). Best-effort — keeps the untrimmed cut-out on
@@ -120,7 +121,11 @@ export async function polishItemPrimary(item, uid) {
   const cutoutUrl = await getDownloadURL(r);
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
+  // The alpha flag is also the migration's resume checkpoint, so it is only ever
+  // written alongside a cut-out that actually carries transparency.
   meta[0] = { ...(meta[0] || {}), cutoutUrl };
+  if (out.alpha === true) meta[0].alpha = true;
+  else delete meta[0].alpha;
   // A fresh cut-out invalidates any earlier manual frame (that crop was taken
   // from the pre-cut-out image). Drop the stale framedUrl/frame — otherwise the
   // old crop would display over the new cut-out and the editor would open a

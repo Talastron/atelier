@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { itemImageDisplay, revertFramePrimary, flatlayTreatment, promoteImageToMain } from './polish.js';
+import { itemImageDisplay, revertFramePrimary, flatlayTreatment, promoteImageToMain, hasAlphaCutout } from './polish.js';
 
 const mk = (images, imageMeta) => ({ images, imageMeta });
 
@@ -141,5 +141,32 @@ describe('promoteImageToMain', () => {
     promoteImageToMain(item, 1);
     expect(item.images).toEqual(['a', 'b']);
     expect(item.imageMeta).toEqual([{ cutout: true }, {}]);
+  });
+});
+
+describe('hasAlphaCutout', () => {
+  it('is false for an item with no imageMeta at all', () => {
+    expect(hasAlphaCutout({ images: ['a.jpg'] })).toBe(false);
+  });
+  it('is false for an empty imageMeta array', () => {
+    expect(hasAlphaCutout(mk(['a.jpg'], []))).toBe(false);
+  });
+  it('is false for an inline cut-out with no alpha flag', () => {
+    expect(hasAlphaCutout(mk(['cut0'], [{ cutout: true }]))).toBe(false);
+  });
+  it('is false for a Storage cut-out with no alpha flag', () => {
+    expect(hasAlphaCutout(mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp' }]))).toBe(false);
+  });
+  it('is true only when alpha is exactly true', () => {
+    expect(hasAlphaCutout(mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: true }]))).toBe(true);
+  });
+  // Truthiness is not enough: a half-written migration record must not be
+  // mistaken for a finished one, because the flag is also the resume checkpoint.
+  it('is false for a truthy non-true alpha value', () => {
+    expect(hasAlphaCutout(mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: 'yes' }]))).toBe(false);
+  });
+  it('is false for null and undefined items', () => {
+    expect(hasAlphaCutout(null)).toBe(false);
+    expect(hasAlphaCutout(undefined)).toBe(false);
   });
 });

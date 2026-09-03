@@ -26,6 +26,19 @@ export function flatlayTreatment(item) {
   return itemImageDisplay(item, 0).forceContain ? 'bare' : 'plate';
 }
 
+// Whether this item's cut-out carries real transparency, and so may overlap its
+// neighbours in a flat-lay. Written by the migration and by every new polish;
+// absent on everything cut out before phase two.
+//
+// The test is for `true` and not merely truthiness because this flag doubles as
+// the migration's resume checkpoint — "done" means "has alpha: true", and there
+// is no separate progress record to drift out of step with it. A half-written
+// value must read as not-done so the next run retries the item.
+export function hasAlphaCutout(item) {
+  const meta = Array.isArray(item?.imageMeta) ? item.imageMeta : [];
+  return meta[0]?.alpha === true;
+}
+
 // Move a photo to the front, so it becomes the one the wardrobe shows.
 //
 // `images` and `imageMeta` are parallel arrays, and keeping them in step is

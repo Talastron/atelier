@@ -46,11 +46,23 @@ const PIECE_SHADOW = 'drop-shadow(0 6px 14px rgba(28, 25, 23, 0.16))';
 const GROUND_MIGRATED = '#F7F5F2';
 const GROUND_LEGACY = '#FFFFFF';
 
-// A plated piece is a raw photograph: ItemTileImage samples its own background
-// and paints it behind, so it settles on any ground. Only a BARE cut-out
-// without alpha is the white box.
+// Which pieces bring their own rectangle, and so hold the whole look on the
+// legacy white ground.
+//
+// A bare cut-out without alpha is the obvious one — it IS an opaque white JPEG.
+// A PLATED piece counts too, and an earlier version of this wrongly exempted
+// them: the reasoning was that ItemTileImage samples the photograph's own
+// background and paints it behind, so the plate matches the picture. True, but
+// that only makes it settle against a ground of the SAME colour. Almost every
+// garment photograph is shot on white, so it samples to white and lands on cream
+// as exactly the rectangle this test exists to catch — visible on a white blouse
+// beside six clean cut-outs, which is how it was found.
+//
+// So cream arrives only when every piece in the look is a real cut-out with
+// alpha. That is conservative, and correctly so: a warm ground is not available
+// while one piece is still carrying its own white background.
 function showsWhiteBox(item) {
-  return flatlayTreatment(item) === 'bare' && !hasAlphaCutout(item);
+  return flatlayTreatment(item) === 'plate' || !hasAlphaCutout(item);
 }
 
 export default function Flatlay({

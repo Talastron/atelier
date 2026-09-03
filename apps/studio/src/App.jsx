@@ -3094,7 +3094,13 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
             cutout: !!m.cutout,
             ...(m.angle ? { angle: m.angle } : {}),
             ...(m.cutoutUrl ? { cutoutUrl: m.cutoutUrl } : {}),
-            ...(m.alpha ? { alpha: true } : {}),
+            // Tri-state, so truthiness will not do: true means the cut-out
+            // carries alpha, FALSE means it was tried and deliberately declined
+            // (a garment the segmentation cannot handle, left flattened), and
+            // absent means never tried. Collapsing false to absent would put a
+            // declined item back in the migration's target set and undo the
+            // choice on the next run.
+            ...(m.alpha === true ? { alpha: true } : m.alpha === false ? { alpha: false } : {}),
             ...(m.framedUrl ? { framedUrl: m.framedUrl } : {}),
             ...(m.frame ? { frame: m.frame } : {}),
           } : null)

@@ -72,17 +72,23 @@ export function hasAlphaCutout(item) {
 export function surveyAlphaMigration(items) {
   const list = Array.isArray(items) ? items : [];
   const targets = [];
-  let already = 0, framed = 0, noCutout = 0, noSource = 0;
+  let already = 0, framed = 0, noCutout = 0, noSource = 0, declined = 0;
   for (const it of list) {
     const m = (Array.isArray(it?.imageMeta) ? it.imageMeta : [])[0] || {};
     const hasCutout = !!m.cutoutUrl || m.cutout === true;
     if (hasAlphaCutout(it)) already += 1;
+    // `alpha: false` is a deliberate decline, not an absence. Some garments the
+    // segmentation cannot handle — a white top photographed on white gives it
+    // almost no boundary to find — and the honest answer for those is to leave
+    // them flattened. Re-cutting them on every run would undo that choice each
+    // time, at nine seconds an item.
+    else if (m.alpha === false) declined += 1;
     else if (!hasCutout) noCutout += 1;
     else if (m.framedUrl) framed += 1;
     else if (!(Array.isArray(it?.images) ? it.images : [])[0]) noSource += 1;
     else targets.push(it);
   }
-  return { targets, already, framed, noCutout, noSource };
+  return { targets, already, framed, noCutout, noSource, declined };
 }
 
 // Move a photo to the front, so it becomes the one the wardrobe shows.
@@ -213,11 +219,26 @@ export function revertItemPrimary(item) {
   // filters on this same flag — mark the item permanently migrated so it is
   // never retried.
   //
-  // `cutout` must go too. It's the add-path's inline marker for "images[0] IS a
-  // cut-out" — leaving it true after a revert means surveyAlphaMigration still
-  // sees a cut-out to convert, and the next re-cut run resurrects exactly what
-  // this revert removed. A revert must leave no cut-out of either kind behind.
-  if (meta[0]) { delete meta[0].cutoutUrl; delete meta[0].alpha; delete meta[0].cutout; }
+  // `cutout` STAYS. It is the add-path's marker for "images[0] IS a cut-out",
+  // which is a statement of fact and remains true after this revert — deleting
+  // it made the app forget, so the item rendered as a raw photograph, plated
+  // with rounded corners and a sampled background, rather than as the bare
+  // cut-out it still is.
+  //
+  // It was deleted to stop the next re-cut run resurrecting what a revert had
+  // removed. But "this has a cut-out" and "the user wants it re-cut" are
+  // different questions, and answering the second by falsifying the first cost
+  // the display. So the decline is recorded on its own terms: `alpha: false`
+  // means TRIED AND DECLINED, as distinct from absent, which means never tried.
+  // surveyAlphaMigration honours it, so the revert is durable.
+  //
+  // This is what makes a revert usable on the garments the segmentation cannot
+  // handle — a white top on white gives the model almost no boundary to find,
+  // and flattening onto white used to hide the resulting mush entirely.
+  if (meta[0]) {
+    delete meta[0].cutoutUrl;
+    meta[0].alpha = false;
+  }
   return meta;
 }
 

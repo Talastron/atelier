@@ -483,9 +483,9 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     // are left alone too: polishItemPrimary drops framedUrl and frame, which is
     // right for an explicit re-polish of one item and wrong for a bulk run that
     // would silently discard every crop in the wardrobe.
-    const { targets, already, framed, noCutout, noSource } = surveyAlphaMigration(all);
+    const { targets, already, framed, noCutout, noSource, declined } = surveyAlphaMigration(all);
 
-    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noCutout, noSource, framed });
+    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noCutout, noSource, framed, declined });
     let done = 0, failed = 0;
     const failedItems = [];
     for (const it of targets) {
@@ -496,10 +496,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         else { failed += 1; failedItems.push(it); }
       } catch { failed += 1; failedItems.push(it); }
       done += 1;
-      setPolishState({ done, total: targets.length, failed, alpha: true, already, noCutout, noSource, framed });
+      setPolishState({ done, total: targets.length, failed, alpha: true, already, noCutout, noSource, framed, declined });
       await new Promise((r) => setTimeout(r, 0));
     }
-    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noCutout, noSource, framed } });
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noCutout, noSource, framed, declined } });
   };
 
   // Google Calendar connection state. null = still checking, true/false = known.
@@ -916,6 +916,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                   {polishState.framed > 0 && `${polishState.framed} left framed · `}
                   {polishState.noCutout > 0 && `${polishState.noCutout} with no cut-out to convert · `}
                   {polishState.noSource > 0 && `${polishState.noSource} with no photo to re-cut from · `}
+                  {polishState.declined > 0 && `${polishState.declined} left flattened on purpose · `}
                   keep this tab open and in front. Stopping loses no progress.
                 </p>
               )}
@@ -929,6 +930,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 {polishState.summary.alpha && polishState.summary.framed > 0 ? ` · ${polishState.summary.framed} left framed` : ''}
                 {polishState.summary.alpha && polishState.summary.noCutout > 0 ? ` · ${polishState.summary.noCutout} had no cut-out to convert` : ''}
                 {polishState.summary.alpha && polishState.summary.noSource > 0 ? ` · ${polishState.summary.noSource} had no photo to re-cut from` : ''}
+                {polishState.summary.alpha && polishState.summary.declined > 0 ? ` · ${polishState.summary.declined} left flattened on purpose` : ''}
                 {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
               </p>
               {polishState.summary.failedItems?.length > 0 && (

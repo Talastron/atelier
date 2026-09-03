@@ -238,17 +238,34 @@ describe('withStorageCutout round-trips through hasAlphaCutout', () => {
 });
 
 describe('revertItemPrimary', () => {
-  it('strips cutoutUrl, alpha and the inline cutout marker from a migrated item', () => {
+  it('drops the Storage cut-out and records the decline', () => {
     const item = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', cutout: true, alpha: true, angle: 'front' }]);
     const meta = revertItemPrimary(item);
     expect(meta[0].cutoutUrl).toBeUndefined();
-    expect(meta[0].alpha).toBeUndefined();
-    expect(meta[0].cutout).toBeUndefined();
+    expect(meta[0].alpha).toBe(false);
     expect(meta[0].angle).toBe('front');
-    // hasAlphaCutout must agree the revert left no cut-out of either kind, so
-    // the migration treats the item as needing a fresh cut-out rather than
-    // re-cutting something that no longer exists.
     expect(hasAlphaCutout({ ...item, imageMeta: meta })).toBe(false);
+  });
+
+  // `cutout` is a statement of FACT — images[0] is a cut-out — and stays true
+  // through a revert. Deleting it made the app forget, so the item rendered as a
+  // raw photograph on a plate rather than as the bare cut-out it still is.
+  it('keeps the inline marker, which is still true of images[0]', () => {
+    const meta = revertItemPrimary(mk(['inline-cutout'], [{ cutoutUrl: 'https://s/c.webp', cutout: true, alpha: true }]));
+    expect(meta[0].cutout).toBe(true);
+    expect(itemImageDisplay({ images: ['inline-cutout'], imageMeta: meta }, 0))
+      .toEqual({ src: 'inline-cutout', forceContain: true });
+  });
+
+  // The durability property. A garment the segmentation cannot handle - a white
+  // top on white - is reverted deliberately, and the next re-cut run must leave
+  // it alone rather than spend nine seconds undoing the choice.
+  it('survives the next migration run', () => {
+    const item = mk(['inline-cutout'], [{ cutoutUrl: 'https://s/c.webp', cutout: true, alpha: true }]);
+    const reverted = { ...item, imageMeta: revertItemPrimary(item) };
+    const survey = surveyAlphaMigration([reverted]);
+    expect(survey.targets).toEqual([]);
+    expect(survey.declined).toBe(1);
   });
 
   it('is a no-op-safe copy when there is no imageMeta', () => {
@@ -292,12 +309,12 @@ describe('surveyAlphaMigration', () => {
   });
 
   it('is empty and all-zero for an empty wardrobe', () => {
-    expect(surveyAlphaMigration([])).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0 });
+    expect(surveyAlphaMigration([])).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0, declined: 0 });
   });
 
   it('treats a non-array input as an empty wardrobe rather than throwing', () => {
-    expect(surveyAlphaMigration(null)).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0 });
-    expect(surveyAlphaMigration(undefined)).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0 });
+    expect(surveyAlphaMigration(null)).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0, declined: 0 });
+    expect(surveyAlphaMigration(undefined)).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0, declined: 0 });
   });
 
   it('counts an already-migrated item as already, not a target', () => {

@@ -165,5 +165,8 @@ export async function trimCutoutDataUrl(dataUrl, {
   // Match every other failure path here: hand the original back, so a caller
   // doing `if (trimmed.ok) cutout = trimmed.url` still has something to keep.
   if (!url) return { url: dataUrl, ok: false };
-  return { url, ok: true };
+  // `keepAlpha` is a measured property of the pixels this function just
+  // encoded — not an option echoed back — so a caller like polishItemPrimary
+  // can trust it more than whatever alpha was originally requested.
+  return { url, ok: true, keepAlpha };
 }

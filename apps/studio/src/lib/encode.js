@@ -8,9 +8,9 @@
 // both are flattened onto the same white background. That is the entire reason
 // this exists — halving what every polished item costs, for a format change.
 //
-// (The same measurement found WebP WITH alpha at 1.64x JPEG. That is phase two
-// of the flat-lay work and needs an image migration; this file is the half that
-// needs none.)
+// (The same measurement found WebP WITH alpha at 1.64x JPEG. That is this
+// branch — phase two of the flat-lay work, with its own image migration; this
+// file is the half that needs none.)
 
 // Quality ladders, descending. WebP reaches a given visual quality at a lower
 // number than JPEG, so it can start lower and still look better.

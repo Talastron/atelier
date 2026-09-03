@@ -34,9 +34,14 @@ export function flatlayTreatment(item) {
 // the migration's resume checkpoint — "done" means "has alpha: true", and there
 // is no separate progress record to drift out of step with it. A half-written
 // value must read as not-done so the next run retries the item.
+//
+// Also requires the absence of a framedUrl. itemImageDisplay prefers a framed
+// crop over the cut-out, and a framed crop is always an opaque JPEG (see
+// renderFramedDataUrl) — so when one is present it, not the cut-out, is what
+// actually gets drawn, and its transparency (or lack of it) is what matters.
 export function hasAlphaCutout(item) {
   const meta = Array.isArray(item?.imageMeta) ? item.imageMeta : [];
-  return meta[0]?.alpha === true;
+  return !meta[0]?.framedUrl && meta[0]?.alpha === true;
 }
 
 // Move a photo to the front, so it becomes the one the wardrobe shows.
@@ -108,10 +113,11 @@ export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
   // tiny in a big white frame). Best-effort — keeps the untrimmed cut-out on
   // failure or when there's nothing safe to trim (white-on-white, already tight).
   let cutout = out.url;
+  let trimKeptAlpha = null;
   try {
     const { trimCutoutDataUrl } = await import('./trimCutout.js');
     const trimmed = await trimCutoutDataUrl(cutout);
-    if (trimmed.ok) cutout = trimmed.url;
+    if (trimmed.ok) { cutout = trimmed.url; trimKeptAlpha = trimmed.keepAlpha; }
   } catch { /* keep the untrimmed cut-out */ }
   const { storage } = await import('../firebase.js');
   const { ref, uploadString, getDownloadURL } = await import('firebase/storage');
@@ -121,14 +127,18 @@ export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
   const cutoutUrl = await getDownloadURL(r);
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
-  // The alpha flag is also the migration's resume checkpoint. `out.alpha` is
-  // the requested option echoed back, not a measured property of the encoded
-  // bytes — what makes it trustworthy is that removeImageBackground FAILS
-  // rather than silently falling back to a format without alpha (see the
-  // WebP-support guard there), so "alpha requested and out.ok" really does
-  // mean the upload below carries transparency.
+  // The alpha flag is also the migration's resume checkpoint, and it records
+  // what was actually STORED, not what was asked for. trimCutoutDataUrl runs
+  // after removeImageBackground and re-decides for itself whether the pixels
+  // it is encoding have a transparent ground (falling back to white when it
+  // finds none) — its answer is a measured property of the bytes just
+  // uploaded, so it takes precedence when the trim ran. When it didn't run, or
+  // declined and left `out.url` as-is, fall back to `out.alpha`: trustworthy
+  // there because removeImageBackground FAILS rather than silently dropping
+  // alpha (see the WebP-support guard there).
   meta[0] = { ...(meta[0] || {}), cutoutUrl };
-  if (out.alpha === true) meta[0].alpha = true;
+  const storedAlpha = trimKeptAlpha !== null ? trimKeptAlpha : out.alpha;
+  if (storedAlpha === true) meta[0].alpha = true;
   else delete meta[0].alpha;
   // A fresh cut-out invalidates any earlier manual frame (that crop was taken
   // from the pre-cut-out image). Drop the stale framedUrl/frame — otherwise the
@@ -169,12 +179,12 @@ export async function frameItemPrimary(item, uid, dataUrl, frame) {
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
   meta[0] = { ...(meta[0] || {}), framedUrl, frame };
-  // A framed crop is deliberately opaque — renderFramedDataUrl fills white and
-  // encodes JPEG, which has no alpha channel — so a framed item must not
-  // bleed. Clear the flag the same way polishItemPrimary clears framedUrl/frame
-  // for the inverse ordering: each new image kind invalidates what the other
-  // kind claimed about the pixels.
-  delete meta[0].alpha;
+  // No need to touch `alpha` here: hasAlphaCutout already returns false
+  // whenever framedUrl is set (a framed crop is deliberately opaque —
+  // renderFramedDataUrl fills white and encodes JPEG, which has no alpha
+  // channel — so a framed item must not bleed regardless of what the flag
+  // says). Leaving it alone means revertFramePrimary restores the alpha
+  // cut-out's behaviour for free, rather than having to re-derive it.
   return { ok: true, imageMeta: meta };
 }
 

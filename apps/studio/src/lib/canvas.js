@@ -721,15 +721,23 @@ export function autoEnhanceCanvas(canvas) {
 // time and wrong to generalise.
 export async function removeImageBackground(dataUrl, { alpha = false } = {}) {
   try {
+    // Checked before the model runs, not after. This is the one failure that is
+    // knowable in advance, and a caller that retries without alpha would
+    // otherwise pay for a full segmentation twice — about 18s an image instead
+    // of 9, and six times that in the multi-file add loop.
+    if (alpha && !(await canEncodeWebp())) {
+      throw new Error('this browser cannot write WebP, so alpha cannot be kept');
+    }
     const { removeBackground } = await import('@imgly/background-removal');
     const blob = await (await fetch(dataUrl)).blob();
     const outBlob = await removeBackground(blob);
 
     // The raw output is a PNG with alpha — often ~3-5x the size of the source
-    // JPEG. We composite onto a clean off-white background and re-encode as
-    // JPEG so the saved image stays under Firestore's 1MiB doc budget. The
-    // cream surface blends with the app's wardrobe cards (also cream) so the
-    // visual difference vs. true transparency is invisible in context.
+    // JPEG. Unless `alpha` was requested, we composite onto a plain white
+    // background and re-encode as WebP (or JPEG where WebP can't be written)
+    // so the saved image stays well under Firestore's 1MiB doc budget. When
+    // `alpha` is true, no fill happens below and the transparency is kept —
+    // see the WebP-support guard above, which is what makes that safe.
     const cutoutImg = await new Promise((resolve, reject) => {
       const fr = new FileReader();
       fr.onload = (e) => {
@@ -768,14 +776,11 @@ export async function removeImageBackground(dataUrl, { alpha = false } = {}) {
     // images is about ten times the JPEG it replaced. An unguarded switch would
     // have quietly inflated storage on any browser without WebP, with nothing
     // in the logs to say so.
+    // Already checked above when alpha was requested (and cached by
+    // canEncodeWebp, so calling it again here is free) — this call is only
+    // doing new work for the non-alpha path, to pick WebP over JPEG when
+    // available.
     const webp = await canEncodeWebp();
-    // JPEG cannot carry alpha. Falling back to it here would flatten the
-    // transparency with nothing in the logs to say so — the same silent class of
-    // failure the toDataURL feature-detect exists to prevent. An alpha request
-    // that cannot be honoured must FAIL, so the caller leaves the item
-    // unmigrated and reports it, rather than storing a flattened image and
-    // recording alpha: true against it.
-    if (alpha && !webp) throw new Error('this browser cannot write WebP, so alpha cannot be kept');
     const type = webp ? 'image/webp' : 'image/jpeg';
     const ladder = webp ? WEBP_LADDER : JPEG_LADDER;
     const cutoutUrl = await pickEncoding(
@@ -882,7 +887,10 @@ export async function renderFramedDataUrl(src, frame, { frameAspect = FRAME_ASPE
   c.width = outW;
   c.height = outH;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#FFFFFF'; // JPEG has no alpha; crop is full-bleed so this only guards rounding edges
+  // JPEG has no alpha. When `src` is an alpha cut-out this fill is doing real
+  // work, not just guarding rounding edges: it composites the whole garment
+  // onto white, which is exactly what makes a framed crop deliberately opaque.
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, outW, outH);
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
   let q = 0.86;

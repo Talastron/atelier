@@ -408,7 +408,11 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     for (const it of targets) {
       if (polishCancelRef.current) break;
       try {
-        const res = await polishItemPrimary(it, user.uid, { alpha: true });
+        // Try to keep transparency, but this button's job is to produce a
+        // cut-out either way — unlike the alpha migration below, it must not
+        // fail an item outright just because this browser can't write WebP.
+        let res = await polishItemPrimary(it, user.uid, { alpha: true });
+        if (!res.ok) res = await polishItemPrimary(it, user.uid, { alpha: false });
         if (res.ok) { await onUpdateItem({ ...it, imageMeta: res.imageMeta }); }
         else { failed += 1; failedItems.push(it); }
       } catch { failed += 1; failedItems.push(it); }
@@ -469,11 +473,19 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
     try { const net = await import("../lib/net.js"); net.clearAllHostBlocks(); } catch { /* non-blocking */ }
 
     const all = (polishItems || items) || [];
-    const targets = all.filter((it) => !hasAlphaCutout(it) && !!(it.images || [])[0]);
+    // Only items that already HAVE a cut-out. An item without one has had none
+    // made or has had it deliberately reverted, and this button's job is to
+    // convert cut-outs to alpha, not to create them. Items with a manual crop
+    // are left alone too: polishItemPrimary drops framedUrl and frame, which is
+    // right for an explicit re-polish of one item and wrong for a bulk run that
+    // would silently discard every crop in the wardrobe.
+    const hasCutout = (it) => !!(it.imageMeta?.[0]?.cutoutUrl) || it.imageMeta?.[0]?.cutout === true;
+    const framed = all.filter((it) => !hasAlphaCutout(it) && hasCutout(it) && !!it.imageMeta?.[0]?.framedUrl).length;
+    const targets = all.filter((it) => !hasAlphaCutout(it) && hasCutout(it) && !it.imageMeta?.[0]?.framedUrl && !!(it.images || [])[0]);
     const already = all.filter((it) => hasAlphaCutout(it)).length;
-    const noSource = all.length - targets.length - already;
+    const noSource = all.length - targets.length - already - framed;
 
-    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noSource });
+    setPolishState({ done: 0, total: targets.length, failed: 0, alpha: true, already, noSource, framed });
     let done = 0, failed = 0;
     const failedItems = [];
     for (const it of targets) {
@@ -484,10 +496,10 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         else { failed += 1; failedItems.push(it); }
       } catch { failed += 1; failedItems.push(it); }
       done += 1;
-      setPolishState({ done, total: targets.length, failed, alpha: true, already, noSource });
+      setPolishState({ done, total: targets.length, failed, alpha: true, already, noSource, framed });
       await new Promise((r) => setTimeout(r, 0));
     }
-    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noSource } });
+    setPolishState({ summary: { done, total: targets.length, failed, cancelled: polishCancelRef.current, failedItems, alpha: true, already, noSource, framed } });
   };
 
   // Google Calendar connection state. null = still checking, true/false = known.
@@ -901,6 +913,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               {polishState.alpha && (
                 <p className="mt-2 text-xs text-stone-400 leading-relaxed">
                   {polishState.already > 0 && `${polishState.already} already done · `}
+                  {polishState.framed > 0 && `${polishState.framed} left framed · `}
                   {polishState.noSource > 0 && `${polishState.noSource} with no photo to re-cut from · `}
                   keep this tab open and in front. Stopping loses no progress.
                 </p>
@@ -912,6 +925,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               <p className="mb-2">
                 {polishState.summary.done - polishState.summary.failed} {polishState.summary.alpha ? 're-cut' : polishState.summary.retrim ? 'tightened' : 'polished'}
                 {polishState.summary.failed ? ` · ${polishState.summary.failed} kept their original` : ''}
+                {polishState.summary.alpha && polishState.summary.framed > 0 ? ` · ${polishState.summary.framed} left framed` : ''}
                 {polishState.summary.alpha && polishState.summary.noSource > 0 ? ` · ${polishState.summary.noSource} had no photo to re-cut from` : ''}
                 {polishState.summary.cancelled ? ' · stopped — run again to continue' : ''}.
               </p>

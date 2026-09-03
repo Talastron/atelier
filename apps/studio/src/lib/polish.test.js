@@ -169,4 +169,12 @@ describe('hasAlphaCutout', () => {
     expect(hasAlphaCutout(null)).toBe(false);
     expect(hasAlphaCutout(undefined)).toBe(false);
   });
+  // A framed crop takes display precedence over the cut-out (itemImageDisplay)
+  // and is always an opaque JPEG, so its presence overrides the alpha flag.
+  it('is false when framedUrl is set alongside alpha: true', () => {
+    expect(hasAlphaCutout(mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: true, framedUrl: 'https://s/f.jpg' }]))).toBe(false);
+  });
+  it('is true again once framedUrl is removed', () => {
+    expect(hasAlphaCutout(mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: true }]))).toBe(true);
+  });
 });

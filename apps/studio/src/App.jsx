@@ -3405,7 +3405,10 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                             setFormData((prev) => {
                               const nextImages = [...prev.images]; nextImages[i] = original;
                               const nextMeta = [...(prev.imageMeta || [])];
-                              nextMeta[i] = { ...nextMeta[i], cutout: false };
+                              // `alpha` describes the cut-out being removed here, not the
+                              // original photo that replaces it — clear it along with
+                              // `cutout`, matching revertItemPrimary in polish.js.
+                              nextMeta[i] = { ...nextMeta[i], cutout: false, alpha: false };
                               return { ...prev, images: nextImages, imageMeta: nextMeta };
                             });
                             toast.show('Reverted to original photo', { kind: 'default', duration: 2500 });
@@ -3425,13 +3428,21 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                             const src = formData.images[i];
                             setCutoutBusy(true);
                             try {
-                              const out = await removeImageBackground(src);
+                              // Same alpha-with-fallback shape as the add-item path: try to
+                              // keep transparency, and only fall back to a flattened cut-out
+                              // if that fails (e.g. no WebP support).
+                              let out = await removeImageBackground(src, { alpha: true });
+                              if (!out.ok) out = await removeImageBackground(src);
                               if (out.ok) {
                                 setFormData((prev) => {
                                   const nextImages = [...prev.images]; nextImages[i] = out.url;
                                   const nextMeta = [...(prev.imageMeta || [])];
                                   while (nextMeta.length <= i) nextMeta.push({});
-                                  nextMeta[i] = { ...nextMeta[i], cutout: true, original: src };
+                                  // Record the flag from the actual result — set it when the
+                                  // alpha attempt succeeded, and clear any pre-existing value
+                                  // otherwise, so a stale `alpha: true` never survives a
+                                  // flattened re-cut.
+                                  nextMeta[i] = { ...nextMeta[i], cutout: true, original: src, alpha: out.alpha === true };
                                   return { ...prev, images: nextImages, imageMeta: nextMeta };
                                 });
                                 toast.show('Background removed ✓', { kind: 'success', duration: 2500 });

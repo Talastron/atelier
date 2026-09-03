@@ -113,7 +113,6 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
               <Flatlay
                 pieces={resolvedItems}
                 max={maxPieces}
-                overlap
                 padding={isHero ? '3rem 1.25rem 1rem' : '2.6rem 0.9rem 0.8rem'}
               />
             )}

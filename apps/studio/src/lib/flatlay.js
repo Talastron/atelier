@@ -95,6 +95,25 @@ const INNER_GUTTER = 0.006;
 // bounds it so it does not drift unnoticed.
 export const BLEED = 1.08;
 
+// Whether pieces overlap and tilt at all, across every surface. One constant so
+// the app and the share card cannot drift apart, and so this is a one-line
+// decision rather than three.
+//
+// OFF after visual review, 2026-09-03. The effect turned out subtle beside what
+// phase one's arrangement already achieved — a look read as an outfit rather
+// than an inventory before any of this — and the adjacency it created mostly
+// served to expose a larger problem: a piece is sized by its CATEGORY, not by
+// its silhouette, so `object-contain` scales a tall garment small and a wide one
+// large. Trousers came out narrow and shorts came out full-width from the same
+// box.
+//
+// The mechanism stays. It is tested, it costs nothing switched off, and it is
+// worth switching on once a piece's size reflects the garment rather than the
+// slot — at which point overlapping pieces will be comparing like with like.
+// Everything else phase two brought is independent of this flag: the alpha
+// cut-outs, the cream ground, and the shadow that traces the garment.
+export const FLATLAY_OVERLAP = false;
+
 // Every accepted piece is lifted above every rejected one. Promoting rather
 // than demoting matters: when nothing bleeds — the whole wardrobe until the
 // migration runs — this term is zero for every piece, so z is exactly what it

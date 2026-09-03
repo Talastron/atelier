@@ -1,6 +1,6 @@
 import React from 'react';
 import { Shirt } from 'lucide-react';
-import { composeFlatlay } from '../lib/flatlay.js';
+import { composeFlatlay, FLATLAY_OVERLAP } from '../lib/flatlay.js';
 import { flatlayTreatment, hasAlphaCutout, itemImageDisplay } from '../lib/polish.js';
 import { itemColors, itemImages } from '../lib/items.js';
 import ItemTileImage from './ItemTileImage.jsx';
@@ -56,7 +56,7 @@ function showsWhiteBox(item) {
 export default function Flatlay({
   pieces = [],
   max = 8,
-  overlap = false,
+  overlap = FLATLAY_OVERLAP,
   aspect,
   padding,
   ground,
@@ -127,7 +127,12 @@ export default function Flatlay({
       {placements.map((placement) => {
         const item = placement.item;
         const plated = flatlayTreatment(item) === 'plate';
-        const bleeding = overlap && hasAlphaCutout(item);
+        // Deliberately NOT gated on `overlap`. The shadow was introduced to
+        // separate a pale garment from the pale one it lies on, but it earns its
+        // place without any overlap at all: on cream a white garment has
+        // 1.088:1 contrast and no edge of its own, so the shadow is what makes
+        // it an object resting on a surface rather than a faint shape.
+        const shadowed = hasAlphaCutout(item);
         const src = itemImageDisplay(item, 0).src || itemImages(item)[0] || null;
         const openable = !!(onOpenItem && item?.id);
         const Tag = openable ? 'button' : 'div';
@@ -156,7 +161,7 @@ export default function Flatlay({
               height: `${(placement.h * 100).toFixed(2)}%`,
               zIndex: placement.z,
               transform: placement.rotation ? `rotate(${placement.rotation}deg)` : undefined,
-              filter: bleeding ? PIECE_SHADOW : undefined,
+              filter: shadowed ? PIECE_SHADOW : undefined,
             }}
           >
             {src && plated ? (

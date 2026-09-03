@@ -6,7 +6,7 @@ import { hexFromColorName } from "./color.js";
 import { COLOR_SWATCHES } from "./taxonomy.js";
 import { stripItemChips } from "../components/ItemChip.jsx";
 import { computeCropRect, FRAME_ASPECT } from './framing.js';
-import { composeFlatlay } from './flatlay.js';
+import { composeFlatlay, FLATLAY_OVERLAP } from './flatlay.js';
 import { hasAlphaCutout, itemImageDisplay } from './polish.js';
 import { fitContain, shareCardLayout, SHARE_CARD } from './shareCard.js';
 import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER, CUTOUT_BUDGET_CHARS } from './encode.js';
@@ -273,7 +273,7 @@ export async function composeOutfitExportImage(outfit, items) {
   // not: composeFlatlay returns placements in SLOT order (Tops:z3 before
   // Bottoms:z2), and ctx.drawImage paints in call order. Unsorted, the share
   // card would layer the opposite way from the app the moment pieces overlap.
-  const placements = composeFlatlay(pieces, { overlap: true, max: 6, bleed: hasAlphaCutout })
+  const placements = composeFlatlay(pieces, { overlap: FLATLAY_OVERLAP, max: 6, bleed: hasAlphaCutout })
     .slice()
     .sort((a, b) => a.z - b.z);
 

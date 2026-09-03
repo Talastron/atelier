@@ -8575,6 +8575,7 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
         <Flatlay
           pieces={pieces}
           max={8}
+          overlap
           aspect="1 / 1"
           onOpenItem={onOpenItem}
           paletteFilter={paletteFilter}

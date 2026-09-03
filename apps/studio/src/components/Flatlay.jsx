@@ -1,7 +1,7 @@
 import React from 'react';
 import { Shirt } from 'lucide-react';
 import { composeFlatlay } from '../lib/flatlay.js';
-import { flatlayTreatment, itemImageDisplay } from '../lib/polish.js';
+import { flatlayTreatment, hasAlphaCutout, itemImageDisplay } from '../lib/polish.js';
 import { itemColors, itemImages } from '../lib/items.js';
 import ItemTileImage from './ItemTileImage.jsx';
 
@@ -10,14 +10,20 @@ import ItemTileImage from './ItemTileImage.jsx';
 // imperceptible, and past that the columns visibly drift apart.
 const MAX_STAGE_ASPECT = 1.2;
 
+// The shadow under a piece that carries transparency. It is drawn with
+// filter: drop-shadow, which follows the ALPHA CHANNEL rather than the element
+// box — so it traces the garment, not a rectangle. On an opaque cut-out the same
+// rule would outline a box, which is why only bleeding pieces get it.
+//
+// It is doing more work than it looks. A white garment has essentially no
+// contrast against any cream in the palette (1.088:1 against the page), so once
+// pieces overlap there is nothing separating a white shirt from the cream coat
+// beneath it. The shadow is the separation, not a flourish on top of one.
+const PIECE_SHADOW = 'drop-shadow(0 6px 14px rgba(28, 25, 23, 0.16))';
+
 // A look composed as a flat-lay: pieces sit roughly where they are worn, rather
 // than in a grid of equal plates that reads as an inventory. The arrangement
 // comes from composeFlatlay, so a look composes identically wherever it appears.
-//
-// The ground is WHITE, and that is load-bearing. Every cut-out stored today is
-// a JPEG flattened onto #FFFFFF, so on white it is indistinguishable from a
-// transparent one and the garments appear to float — with no image migration at
-// all. Phase two changes `ground` to cream and flips `overlap`; nothing else.
 //
 // Sizing has two modes because the two surfaces size differently. Pass `aspect`
 // and the composition declares its own height (the look detail, which places it
@@ -25,17 +31,23 @@ const MAX_STAGE_ASPECT = 1.2;
 // (the Lookbook card, whose image area is a flex-1 region sized by what the
 // caption strip leaves over, and which cannot declare an aspect without
 // fighting the card's own proportions).
+//
+// The default ground is the page cream. It used to be white, and that was
+// load-bearing: every cut-out stored before phase two is a JPEG flattened onto
+// #FFFFFF, so on white it was indistinguishable from a transparent one. That is
+// no longer what keeps them from clashing — a piece without alpha simply does
+// not bleed, and sits below everything that does. See composeFlatlay's `bleed`.
 export default function Flatlay({
   pieces = [],
   max = 8,
   overlap = false,
   aspect,
   padding,
-  ground = '#FFFFFF',
+  ground = '#F7F5F2',
   onOpenItem,
   paletteFilter = null,
 }) {
-  const placements = composeFlatlay(pieces, { overlap, max });
+  const placements = composeFlatlay(pieces, { overlap, max, bleed: hasAlphaCutout });
 
   const matchesFilter = (item) => {
     if (!paletteFilter) return true;
@@ -89,6 +101,7 @@ export default function Flatlay({
       {placements.map((placement) => {
         const item = placement.item;
         const plated = flatlayTreatment(item) === 'plate';
+        const bleeding = overlap && hasAlphaCutout(item);
         const src = itemImageDisplay(item, 0).src || itemImages(item)[0] || null;
         const openable = !!(onOpenItem && item?.id);
         const Tag = openable ? 'button' : 'div';
@@ -117,6 +130,7 @@ export default function Flatlay({
               height: `${(placement.h * 100).toFixed(2)}%`,
               zIndex: placement.z,
               transform: placement.rotation ? `rotate(${placement.rotation}deg)` : undefined,
+              filter: bleeding ? PIECE_SHADOW : undefined,
             }}
           >
             {src && plated ? (

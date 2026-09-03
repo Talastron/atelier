@@ -32,22 +32,40 @@ const PIECE_SHADOW = 'drop-shadow(0 6px 14px rgba(28, 25, 23, 0.16))';
 // caption strip leaves over, and which cannot declare an aspect without
 // fighting the card's own proportions).
 //
-// The default ground is the page cream. It used to be white, and that was
-// load-bearing: every cut-out stored before phase two is a JPEG flattened onto
-// #FFFFFF, so on white it was indistinguishable from a transparent one. That is
-// no longer what keeps them from clashing — a piece without alpha simply does
-// not bleed, and sits below everything that does. See composeFlatlay's `bleed`.
+// The ground is chosen per composition, and it is not a free choice. Every
+// cut-out stored before phase two is a JPEG flattened onto #FFFFFF and drawn
+// object-contain, so it IS an opaque white rectangle: on white it passes for a
+// transparent one and the garments appear to float, and on cream it is a white
+// box across the page — the fault fixed in #73.
+//
+// Gating bleed per piece does not help here. Not bleeding stops a piece
+// covering its NEIGHBOUR; it says nothing about that piece against the GROUND.
+// So the ground stays white while any piece would show as a box, and turns
+// cream once none would. A part-migrated look therefore looks exactly as it
+// does today, and gains the warm ground only when it can carry it.
+const GROUND_MIGRATED = '#F7F5F2';
+const GROUND_LEGACY = '#FFFFFF';
+
+// A plated piece is a raw photograph: ItemTileImage samples its own background
+// and paints it behind, so it settles on any ground. Only a BARE cut-out
+// without alpha is the white box.
+function showsWhiteBox(item) {
+  return flatlayTreatment(item) === 'bare' && !hasAlphaCutout(item);
+}
+
 export default function Flatlay({
   pieces = [],
   max = 8,
   overlap = false,
   aspect,
   padding,
-  ground = '#F7F5F2',
+  ground,
   onOpenItem,
   paletteFilter = null,
 }) {
   const placements = composeFlatlay(pieces, { overlap, max, bleed: hasAlphaCutout });
+  const surface = ground
+    ?? (placements.some((p) => showsWhiteBox(p.item)) ? GROUND_LEGACY : GROUND_MIGRATED);
 
   const matchesFilter = (item) => {
     if (!paletteFilter) return true;
@@ -77,8 +95,8 @@ export default function Flatlay({
   // box and would ignore it entirely. Container query units follow the content
   // box too, so the square shrinks to match rather than overflowing.
   const outer = aspect
-    ? { position: 'relative', aspectRatio: aspect, background: ground, padding }
-    : { position: 'absolute', inset: 0, background: ground, containerType: 'size', padding };
+    ? { position: 'relative', aspectRatio: aspect, background: surface, padding }
+    : { position: 'absolute', inset: 0, background: surface, containerType: 'size', padding };
   const stage = aspect
     ? { position: 'absolute', inset: 0 }
     : {

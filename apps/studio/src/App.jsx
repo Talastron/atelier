@@ -3422,7 +3422,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                           Cutout · revert
                         </button>
                       )}
-                      {!formData.imageMeta?.[i]?.cutout && (
+                      {/* A Storage cut-out (cutoutUrl) is still a cut-out, even though this
+                          thumbnail — which always shows the raw images[i] — never displays
+                          it. Re-cutting one re-segments an already-segmented image and
+                          writes cutoutUrl: undefined, discarding the migrated Storage copy;
+                          on an add-path item images[0] is the only copy the account has. */}
+                      {!formData.imageMeta?.[i]?.cutout && !formData.imageMeta?.[i]?.cutoutUrl && (
                         <button type="button"
                           disabled={cutoutBusy}
                           onClick={async () => {

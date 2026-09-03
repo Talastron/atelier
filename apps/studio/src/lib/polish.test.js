@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { itemImageDisplay, revertFramePrimary, revertItemPrimary, flatlayTreatment, promoteImageToMain, hasAlphaCutout, surveyAlphaMigration } from './polish.js';
+import { itemImageDisplay, revertFramePrimary, revertItemPrimary, flatlayTreatment, promoteImageToMain, hasAlphaCutout, surveyAlphaMigration, withStorageCutout } from './polish.js';
 
 const mk = (images, imageMeta) => ({ images, imageMeta });
 
@@ -195,28 +195,45 @@ describe('hasAlphaCutout', () => {
   });
 });
 
-// The invariant that broke four times: a record a writer produces must be one
-// the predicate accepts. The writers themselves reach Firebase, so this asserts
-// the meta SHAPES they produce, which is where every one of those breaks was.
-describe('writer output round-trips through hasAlphaCutout', () => {
+// The invariant that broke in five consecutive reviews: a record a writer
+// produces must be one the predicate accepts. Previously this block asserted
+// hand-written literals that resembled the writers' output — deleting the
+// writers' marker-clearing left every test green. It now drives the real
+// shaping function, so it fails if that changes.
+describe('withStorageCutout round-trips through hasAlphaCutout', () => {
   const accepts = (meta) => hasAlphaCutout({ images: ['photo'], imageMeta: [meta] });
 
-  it('accepts what polishItemPrimary produces from a fresh item', () => {
-    expect(accepts({ cutoutUrl: 'https://s/c.webp', alpha: true })).toBe(true);
+  it('accepts what a fresh polish produces', () => {
+    expect(accepts(withStorageCutout({}, { cutoutUrl: 'https://s/c.webp', alpha: true }))).toBe(true);
   });
 
-  it('accepts what polishItemPrimary produces from an inline cut-out', () => {
-    // The add-path shape, after migration. The inline marker must be gone: the
-    // Storage cut-out supersedes it, and a record naming both is refused.
-    expect(accepts({ cutoutUrl: 'https://s/c.webp', alpha: true })).toBe(true);
+  // The add-path shape. This is the case that shipped broken: the inline marker
+  // survived alongside the new Storage URL, and the guard refused the record,
+  // so the item never bled and every migration run re-cut it.
+  it('accepts what migrating an inline cut-out produces', () => {
+    expect(accepts(withStorageCutout({ cutout: true }, { cutoutUrl: 'https://s/c.webp', alpha: true }))).toBe(true);
   });
 
-  it('accepts what the add path produces', () => {
-    expect(accepts({ cutout: true, alpha: true })).toBe(true);
+  it('clears the inline marker a Storage cut-out supersedes', () => {
+    expect(withStorageCutout({ cutout: true }, { cutoutUrl: 'u', alpha: true })).not.toHaveProperty('cutout');
   });
 
-  it('refuses a record naming both cut-outs, which no writer may now produce', () => {
-    expect(accepts({ cutout: true, cutoutUrl: 'https://s/c.webp', alpha: true })).toBe(false);
+  it('clears a crop taken from the image it replaces', () => {
+    const out = withStorageCutout({ framedUrl: 'f', frame: { x: 1 } }, { cutoutUrl: 'u', alpha: true });
+    expect(out).not.toHaveProperty('framedUrl');
+    expect(out).not.toHaveProperty('frame');
+  });
+
+  it('does not claim alpha when the encode did not keep it', () => {
+    const out = withStorageCutout({ alpha: true }, { cutoutUrl: 'u', alpha: false });
+    expect(out).not.toHaveProperty('alpha');
+    expect(accepts(out)).toBe(false);
+  });
+
+  it('does not mutate the meta it is given', () => {
+    const before = { cutout: true, alpha: true };
+    withStorageCutout(before, { cutoutUrl: 'u', alpha: true });
+    expect(before).toEqual({ cutout: true, alpha: true });
   });
 });
 

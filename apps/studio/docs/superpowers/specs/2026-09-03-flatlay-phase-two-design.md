@@ -236,10 +236,13 @@ image formats.
 ```js
 export const BLEED = 1.08;
 
-// Every accepted piece keeps its own z (1–5 plus a within-slot index). Subtracting
-// this puts a rejected piece below all of them however the slots are numbered, and
-// leaves the accepted pieces' order among themselves untouched.
-const Z_DEMOTE = 100;
+// Every accepted piece is lifted above every rejected one. Adding this to an
+// accepted piece's z, rather than subtracting an equivalent amount from a
+// rejected one, matters: when nothing bleeds — the whole wardrobe until the
+// migration runs — this term is zero for every piece, so z is exactly what it
+// was before phase two. Demoting instead would push every z negative, and a
+// negative CSS z-index can paint a piece behind its own ground.
+const Z_PROMOTE = 100;
 
 /**
  * @param {object[]} pieces
@@ -255,20 +258,26 @@ When `overlap` is true, for each placement:
 - **accepted** by `bleed` — scale `w`/`h` by `BLEED` about the centre, then slide back into frame:
   `x = min(max(x, 0), max(0, 1 - w))`, and the same for `y`. The outer `max(0, …)` matters: a piece
   grown wider than the frame would otherwise get a negative upper bound and be pushed off the left
-  edge — the exact fault being avoided. `z` unchanged.
-- **rejected** — geometry untouched; `z` becomes `z - Z_DEMOTE`, below every accepted piece.
+  edge — the exact fault being avoided. `z` becomes `z + Z_PROMOTE`, above every rejected piece.
+- **rejected** — geometry untouched; `z` unchanged.
 
 When `overlap` is false nothing changes at all, and the predicate is not consulted.
 
 ### `lib/polish.js` — the data-model question
 
 ```js
-// Whether this item's cut-out carries real transparency, and so may overlap its
-// neighbours. Written by the migration and by every new polish; absent on
-// everything cut out before phase two, which is why the test is for `true` and
-// not merely truthiness — an item with no imageMeta at all must answer false.
+// Whether the image this item actually DRAWS carries real transparency, and so
+// may overlap its neighbours. Deliberately a question about the displayed
+// pixels, not just the stored `alpha` field: a framed crop or an ambiguous
+// record naming both a Storage cut-out and an inline one must answer false
+// even when `alpha` is true, because itemImageDisplay's precedence decides
+// what is actually drawn and the flag has been wrong on its own several times.
 export function hasAlphaCutout(item) {
-  return item?.imageMeta?.[0]?.alpha === true;
+  const m = item?.imageMeta?.[0] || {};
+  if (m.alpha !== true) return false;
+  if (m.framedUrl) return false;
+  if (m.cutoutUrl && m.cutout === true) return false;
+  return !!m.cutoutUrl || m.cutout === true;
 }
 ```
 

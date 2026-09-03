@@ -444,6 +444,21 @@ describe('composeFlatlay', () => {
       }
     });
 
+    // The BLEED comment's 15.7% is a between-slot figure. Pieces sharing a slot
+    // are separated only by INNER_GUTTER, so they overlap roughly twice as hard
+    // — three necklaces in one slot reach about a third. That is a visual call,
+    // not a bug, but it should not drift without someone noticing.
+    it('keeps the worst same-slot overlap within a third of a piece', () => {
+      for (const [shape, categories] of Object.entries(SHAPES)) {
+        const out = composeFlatlay(categories.map((c, i) => piece(`p${i}`, c)), { overlap: true, bleed: () => true });
+        let worst = 0;
+        for (let i = 0; i < out.length; i++) {
+          for (let j = i + 1; j < out.length; j++) worst = Math.max(worst, overlapFrac(out[i], out[j]));
+        }
+        expect(worst, `${shape}: worst pairwise overlap`).toBeLessThan(0.35);
+      }
+    });
+
     // A tilted opaque cut-out shows a slanted white edge against the cream
     // ground. Only a piece that carries transparency may tilt.
     it('tilts only the pieces that may bleed', () => {

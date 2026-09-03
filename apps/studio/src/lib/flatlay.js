@@ -86,6 +86,13 @@ const INNER_GUTTER = 0.006;
 // six-piece look with the gutters retained:
 // 1.08 gives a 15.7% worst pairwise overlap across 8 overlapping pairs, with
 // nothing leaving the frame. This is the visual dial — 1.12 gives 24.1%.
+//
+// That 15.7% is a BETWEEN-slot figure. Pieces sharing one slot are separated
+// only by INNER_GUTTER, half of GUTTER, so they overlap roughly twice as hard:
+// three necklaces sharing the Jewellery slot ("layered jewellery" in the test
+// fixtures) reach about 32.8% at 1.08. A visual call, not a bug — but see the
+// 'keeps the worst same-slot overlap within a third of a piece' test, which
+// bounds it so it does not drift unnoticed.
 export const BLEED = 1.08;
 
 // Every accepted piece is lifted above every rejected one. Promoting rather
@@ -96,8 +103,8 @@ export const BLEED = 1.08;
 //
 // The guarantee holds while a slot's within-slot index cannot reach this: an
 // accepted z is at least 1 + Z_PROMOTE and a rejected one at most 5 + (n - 1)
-// for n pieces in one slot, so any `max` below 96 is safe. Call sites use 6
-// and 8.
+// for n pieces in one slot, so any `max` up to and including 96 is safe. Call
+// sites use 6 and 8.
 const Z_PROMOTE = 100;
 
 /**

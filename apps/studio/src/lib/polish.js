@@ -49,8 +49,11 @@ export function flatlayTreatment(item) {
 //
 //   A record naming BOTH a Storage cut-out and an inline one is ambiguous:
 //   itemImageDisplay draws cutoutUrl, but the flag may have been written for
-//   either. Refuse it rather than guess. Writers must clear what they supersede,
-//   and this is what catches the one that does not.
+//   either. Refuse it rather than guess. Every current writer clears what it
+//   supersedes (see withStorageCutout); what this guard actually catches is
+//   records written by the pre-branch build — the shipped editor button wrote
+//   `cutout: true` without clearing `cutoutUrl`, and those records exist in
+//   production data today.
 export function hasAlphaCutout(item) {
   const meta = Array.isArray(item?.imageMeta) ? item.imageMeta : [];
   const m = meta[0] || {};
@@ -62,7 +65,8 @@ export function hasAlphaCutout(item) {
 
 // Sort a wardrobe into what a re-cut run will do to it. Pure, and exported for
 // the test — the arithmetic here has been wrong twice, and it is the only
-// account the user gets of what a half-hour run is about to touch.
+// account the user gets of what a half-hour run touches, rendered as the run
+// proceeds.
 //
 // The buckets are disjoint and exhaustive: every item lands in exactly one.
 export function surveyAlphaMigration(items) {
@@ -113,6 +117,25 @@ export function promoteImageToMain(item, index) {
   nextMeta.unshift(movedMeta ?? {});
 
   return { ...item, images: nextImages, imageMeta: nextMeta };
+}
+
+// Shape imageMeta[0] for a freshly written Storage cut-out. Pure, and exported
+// because this is the invariant that broke in five consecutive reviews: the
+// record a writer produces must be one hasAlphaCutout accepts.
+//
+// A Storage cut-out supersedes everything that could describe a different
+// image — an inline cut-out marker, and a manual crop taken from the image this
+// one replaces. itemImageDisplay prefers cutoutUrl over the inline marker, so
+// leaving that marker names an image that is no longer drawn, and hasAlphaCutout
+// refuses a record naming both.
+export function withStorageCutout(meta, { cutoutUrl, alpha }) {
+  const next = { ...(meta || {}), cutoutUrl };
+  if (alpha === true) next.alpha = true;
+  else delete next.alpha;
+  delete next.cutout;
+  delete next.framedUrl;
+  delete next.frame;
+  return next;
 }
 
 // URL-safe id for the Storage object.
@@ -169,29 +192,13 @@ export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
   // after removeImageBackground and re-decides for itself whether the source
   // pixels it is trimming have a transparent ground (falling back to white
   // when it finds none) — that answer takes precedence when the trim ran,
-  // because it is what decided whether this upload's fill guard ran (the
-  // `!keepAlpha` branch below), not because it re-measures the encoded bytes.
-  // When it didn't run, or declined and left `out.url` as-is, fall back to
-  // `out.alpha`: trustworthy there because removeImageBackground FAILS rather
-  // than silently dropping alpha (see the WebP-support guard there).
-  meta[0] = { ...(meta[0] || {}), cutoutUrl };
+  // because it is what decided whether this upload's fill guard ran, not
+  // because it re-measures the encoded bytes. When it didn't run, or declined
+  // and left `out.url` as-is, fall back to `out.alpha`: trustworthy there
+  // because removeImageBackground FAILS rather than silently dropping alpha
+  // (see the WebP-support guard there).
   const storedAlpha = trimKeptAlpha !== null ? trimKeptAlpha : out.alpha;
-  if (storedAlpha === true) meta[0].alpha = true;
-  else delete meta[0].alpha;
-  // A fresh cut-out invalidates any earlier manual frame (that crop was taken
-  // from the pre-cut-out image). Drop the stale framedUrl/frame — otherwise the
-  // old crop would display over the new cut-out and the editor would open a
-  // mismatched base.
-  delete meta[0].framedUrl;
-  delete meta[0].frame;
-  // A Storage cut-out supersedes an inline one exactly as it supersedes a
-  // crop: itemImageDisplay prefers cutoutUrl over cutout:true, so a lingering
-  // inline marker describes an image that is no longer drawn. Left in place,
-  // it makes this record name both kinds of cut-out at once, which
-  // hasAlphaCutout refuses as ambiguous — the item's pixels would be right
-  // (the new alpha cut-out) but it would be reported opaque forever, and the
-  // migration would re-target and re-upload it on every subsequent run.
-  delete meta[0].cutout;
+  meta[0] = withStorageCutout(meta[0], { cutoutUrl, alpha: storedAlpha });
   return { ok: true, imageMeta: meta };
 }
 
@@ -279,18 +286,11 @@ export async function retrimItemPrimary(item, uid) {
   const newUrl = await getDownloadURL(r);
   const meta = Array.isArray(item.imageMeta) ? [...item.imageMeta] : [];
   while (meta.length < 1) meta.push({});
-  meta[0] = { ...(meta[0] || {}), cutoutUrl: newUrl };
   // Reconcile the flag with what was just uploaded, the same as
   // polishItemPrimary does with trimKeptAlpha. trimCutoutDataUrl re-decides for
   // itself whether the trimmed pixels carry a transparent ground, falling back
   // to a white fill when they don't — without this, a trim that flattened an
   // alpha cut-out would leave `alpha: true` claiming otherwise.
-  if (trimmed.keepAlpha === true) meta[0].alpha = true;
-  else delete meta[0].alpha;
-  // This re-upload is now the item's only Storage cut-out; an inline marker
-  // left alongside it would name both kinds at once and hasAlphaCutout would
-  // refuse the record as ambiguous, the same failure polishItemPrimary had.
-  // A re-trim of an item carrying both must leave only the Storage cut-out.
-  delete meta[0].cutout;
+  meta[0] = withStorageCutout(meta[0], { cutoutUrl: newUrl, alpha: trimmed.keepAlpha });
   return { ok: true, imageMeta: meta };
 }

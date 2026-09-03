@@ -44,3 +44,44 @@ describe('contentBounds', () => {
     expect(contentBounds(img)).toEqual({ x: 2, y: 2, w: 1, h: 1 });
   });
 });
+
+describe('contentBounds with an alpha mask', () => {
+  // Build RGBA pixels: a `size` square that is fully transparent except for an
+  // opaque red block at (bx, by, bw, bh). Transparent pixels are (0,0,0,0) —
+  // which is what getImageData returns and why a colour-only test reads them as
+  // BLACK, i.e. as subject.
+  const alphaPixels = (size, bx, by, bw, bh) => {
+    const data = new Uint8ClampedArray(size * size * 4); // all zeroes: transparent
+    for (let y = by; y < by + bh; y++) {
+      for (let x = bx; x < bx + bw; x++) {
+        const i = (y * size + x) * 4;
+        data[i] = 220; data[i + 1] = 40; data[i + 2] = 40; data[i + 3] = 255;
+      }
+    }
+    return { data, width: size, height: size };
+  };
+
+  it('finds the subject by alpha, not by colour, when the image has transparency', () => {
+    expect(contentBounds(alphaPixels(20, 5, 6, 4, 3))).toEqual({ x: 5, y: 6, w: 4, h: 3 });
+  });
+
+  it('still finds a subject on a white ground when there is no transparency', () => {
+    const size = 20;
+    const data = new Uint8ClampedArray(size * size * 4);
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; data[i + 3] = 255;
+    }
+    for (let y = 6; y < 9; y++) {
+      for (let x = 5; x < 9; x++) {
+        const i = (y * size + x) * 4;
+        data[i] = 220; data[i + 1] = 40; data[i + 2] = 40; data[i + 3] = 255;
+      }
+    }
+    expect(contentBounds({ data, width: size, height: size })).toEqual({ x: 5, y: 6, w: 4, h: 3 });
+  });
+
+  it('returns null for a fully transparent image', () => {
+    const size = 8;
+    expect(contentBounds({ data: new Uint8ClampedArray(size * size * 4), width: size, height: size })).toBeNull();
+  });
+});

@@ -8,26 +8,52 @@
 // items — or already-tight cut-outs — untrimmed rather than guessing wrong.
 import { canEncodeWebp, pickEncoding, WEBP_LADDER, JPEG_LADDER } from './encode.js';
 
-// Pure: given raw RGBA pixels, return the bounding box of "content" (non-white)
-// pixels as { x, y, w, h }, or null if there is none. `threshold` is how far the
-// darkest channel must fall below 255 to count as subject — high enough to
-// ignore off-white JPEG noise, low enough to catch cream/pale subjects.
+// Pure: given raw RGBA pixels, return the bounding box of "content" pixels as
+// { x, y, w, h }, or null if there is none. Two detection modes, because the
+// input can be either kind of cut-out. When the image carries transparency,
+// ALPHA is the truth and colour is irrelevant — a white shirt on a
+// transparent ground is entirely subject. When it does not, the subject is
+// what is not white, and `threshold` is how far the darkest channel must fall
+// below 255 to count: high enough to ignore off-white JPEG noise, low enough
+// to catch cream and pale subjects.
+//
+// Getting this wrong is silent and total. getImageData returns a fully
+// transparent pixel as (0, 0, 0, 0), so a colour-only test reads it as BLACK
+// and therefore as subject — the box becomes the whole frame, coverage hits
+// 1.0, and the caller concludes the cut-out is already tight and leaves it
+// alone.
 export function contentBounds({ data, width, height }, threshold = 14) {
+  let hasAlpha = false;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 255) { hasAlpha = true; break; }
+  }
+
   let minX = width, minY = height, maxX = -1, maxY = -1;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = (y * width + x) * 4;
-      const dev = 255 - Math.min(data[i], data[i + 1], data[i + 2]);
-      if (dev > threshold) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
+      const isContent = hasAlpha
+        ? data[i + 3] > 8
+        : 255 - Math.min(data[i], data[i + 1], data[i + 2]) >= threshold;
+      if (!isContent) continue;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
     }
   }
+
   if (maxX < 0) return null;
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+// Whether any pixel is less than fully opaque. Exported so the trim and the
+// encode agree about which kind of image they are handling.
+export function hasAlphaPixels({ data }) {
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 255) return true;
+  }
+  return false;
 }
 
 // DOM: load a white-bg cut-out data URL, find its subject, and return a tightly
@@ -80,8 +106,17 @@ export async function trimCutoutDataUrl(dataUrl, {
   out.width = cw;
   out.height = ch;
   const octx = out.getContext('2d');
-  octx.fillStyle = '#FFFFFF';
-  octx.fillRect(0, 0, cw, ch);
+  // Only paint a ground under a cut-out that HAS one. polishItemPrimary removes
+  // the background and then trims the result, so this function is what actually
+  // gets stored on the polish path — filling white here would flatten the alpha
+  // one line after removal produced it, and the migration would be a silent
+  // no-op on the path most items use. (#78 caught the same shape of bug when
+  // this function re-encoded WebP straight back to JPEG.)
+  const keepAlpha = hasAlphaPixels(pixels);
+  if (!keepAlpha) {
+    octx.fillStyle = '#FFFFFF';
+    octx.fillRect(0, 0, cw, ch);
+  }
   octx.drawImage(src, x0, y0, cw, ch, 0, 0, cw, ch);
 
   // Same encoding choice as removeImageBackground, and for a load-bearing
@@ -90,6 +125,10 @@ export async function trimCutoutDataUrl(dataUrl, {
   // JPEG, it would have converted every WebP cut-out straight back and undone
   // the saving completely on the polish path — the one most items use.
   const webp = await canEncodeWebp();
+  // JPEG has no alpha. Trimming an alpha cut-out on a browser that cannot write
+  // WebP would flatten it silently, so we return the input untrimmed instead —
+  // a slightly loose cut-out is a far better outcome than a destroyed one.
+  if (keepAlpha && !webp) return { url: dataUrl, ok: false };
   const url = await pickEncoding(
     async (quality) => out.toDataURL(webp ? 'image/webp' : 'image/jpeg', quality),
     webp ? WEBP_LADDER : JPEG_LADDER,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { itemImageDisplay, revertFramePrimary, flatlayTreatment, promoteImageToMain, hasAlphaCutout, surveyAlphaMigration } from './polish.js';
+import { itemImageDisplay, revertFramePrimary, revertItemPrimary, flatlayTreatment, promoteImageToMain, hasAlphaCutout, surveyAlphaMigration } from './polish.js';
 
 const mk = (images, imageMeta) => ({ images, imageMeta });
 
@@ -187,18 +187,89 @@ describe('hasAlphaCutout', () => {
   it('is false when alpha:true is set with no cut-out of either kind present', () => {
     expect(hasAlphaCutout(mk(['orig0'], [{ alpha: true }]))).toBe(false);
   });
+  // The shape every newly added item carries when the alpha attempt succeeds
+  // (see the add form in App.jsx), and which the survey's `already` bucket
+  // depends on.
+  it('is true for an inline cut-out with alpha:true and no cutoutUrl', () => {
+    expect(hasAlphaCutout(mk(['cut0'], [{ cutout: true, alpha: true }]))).toBe(true);
+  });
+});
+
+// The invariant that broke four times: a record a writer produces must be one
+// the predicate accepts. The writers themselves reach Firebase, so this asserts
+// the meta SHAPES they produce, which is where every one of those breaks was.
+describe('writer output round-trips through hasAlphaCutout', () => {
+  const accepts = (meta) => hasAlphaCutout({ images: ['photo'], imageMeta: [meta] });
+
+  it('accepts what polishItemPrimary produces from a fresh item', () => {
+    expect(accepts({ cutoutUrl: 'https://s/c.webp', alpha: true })).toBe(true);
+  });
+
+  it('accepts what polishItemPrimary produces from an inline cut-out', () => {
+    // The add-path shape, after migration. The inline marker must be gone: the
+    // Storage cut-out supersedes it, and a record naming both is refused.
+    expect(accepts({ cutoutUrl: 'https://s/c.webp', alpha: true })).toBe(true);
+  });
+
+  it('accepts what the add path produces', () => {
+    expect(accepts({ cutout: true, alpha: true })).toBe(true);
+  });
+
+  it('refuses a record naming both cut-outs, which no writer may now produce', () => {
+    expect(accepts({ cutout: true, cutoutUrl: 'https://s/c.webp', alpha: true })).toBe(false);
+  });
+});
+
+describe('revertItemPrimary', () => {
+  it('strips cutoutUrl, alpha and the inline cutout marker from a migrated item', () => {
+    const item = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', cutout: true, alpha: true, angle: 'front' }]);
+    const meta = revertItemPrimary(item);
+    expect(meta[0].cutoutUrl).toBeUndefined();
+    expect(meta[0].alpha).toBeUndefined();
+    expect(meta[0].cutout).toBeUndefined();
+    expect(meta[0].angle).toBe('front');
+    // hasAlphaCutout must agree the revert left no cut-out of either kind, so
+    // the migration treats the item as needing a fresh cut-out rather than
+    // re-cutting something that no longer exists.
+    expect(hasAlphaCutout({ ...item, imageMeta: meta })).toBe(false);
+  });
+
+  it('is a no-op-safe copy when there is no imageMeta', () => {
+    expect(revertItemPrimary({ images: ['a'] })).toEqual([]);
+  });
+
+  it('does not mutate the item it is given', () => {
+    const item = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: true }]);
+    revertItemPrimary(item);
+    expect(item.imageMeta[0]).toEqual({ cutoutUrl: 'https://s/c.webp', alpha: true });
+  });
 });
 
 describe('surveyAlphaMigration', () => {
   const already = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', alpha: true }]);
+  // Inline-shaped already/target fixtures cover the arm where the Critical
+  // this branch fixes actually lived: polishItemPrimary migrating exactly
+  // this shape without clearing the inline marker.
+  const alreadyInline = mk(['cut0'], [{ cutout: true, alpha: true }]);
   const framed = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp', framedUrl: 'https://s/f.jpg', frame: {} }]);
   const noCutout = mk(['orig0'], [{}]);
   const noSource = mk([], [{ cutoutUrl: 'https://s/c.webp' }]);
   const target = mk(['orig0'], [{ cutoutUrl: 'https://s/c.webp' }]);
+  const targetInline = mk(['cut0'], [{ cutout: true }]);
 
-  it('sorts the five buckets disjointly, summing to the input length', () => {
-    const items = [already, framed, noCutout, noSource, target];
+  // A sum-only assertion can't fail on its own: surveyAlphaMigration is an
+  // if/else if chain, so every item lands in exactly one bucket for ANY
+  // bucketing logic, correct or not — the sum holds even if every item were
+  // miscategorised. This pins down the counts AND the identities, so it can
+  // actually fail; the sum is kept only alongside them, as a redundant check.
+  it('sorts a mixed wardrobe into exact per-bucket counts and identifies the targets precisely', () => {
+    const items = [already, alreadyInline, framed, noCutout, noSource, target, targetInline];
     const result = surveyAlphaMigration(items);
+    expect(result.already).toBe(2);
+    expect(result.framed).toBe(1);
+    expect(result.noCutout).toBe(1);
+    expect(result.noSource).toBe(1);
+    expect(result.targets).toEqual([target, targetInline]);
     expect(result.targets.length + result.already + result.framed + result.noCutout + result.noSource)
       .toBe(items.length);
   });
@@ -207,13 +278,18 @@ describe('surveyAlphaMigration', () => {
     expect(surveyAlphaMigration([])).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0 });
   });
 
-  it('an item with a cut-out and no alpha is the only kind that becomes a target', () => {
-    const result = surveyAlphaMigration([already, framed, noCutout, noSource, target]);
-    expect(result.targets).toEqual([target]);
+  it('treats a non-array input as an empty wardrobe rather than throwing', () => {
+    expect(surveyAlphaMigration(null)).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0 });
+    expect(surveyAlphaMigration(undefined)).toEqual({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 0 });
   });
 
   it('counts an already-migrated item as already, not a target', () => {
     const result = surveyAlphaMigration([already]);
+    expect(result).toMatchObject({ targets: [], already: 1, framed: 0, noCutout: 0, noSource: 0 });
+  });
+
+  it('counts an already-migrated inline cut-out as already, not a target', () => {
+    const result = surveyAlphaMigration([alreadyInline]);
     expect(result).toMatchObject({ targets: [], already: 1, framed: 0, noCutout: 0, noSource: 0 });
   });
 
@@ -230,5 +306,10 @@ describe('surveyAlphaMigration', () => {
   it('counts a cut-out item with no source photo as noSource', () => {
     const result = surveyAlphaMigration([noSource]);
     expect(result).toMatchObject({ targets: [], already: 0, framed: 0, noCutout: 0, noSource: 1 });
+  });
+
+  it('targets an inline cut-out with no alpha, same as a Storage one', () => {
+    const result = surveyAlphaMigration([targetInline]);
+    expect(result.targets).toEqual([targetInline]);
   });
 });

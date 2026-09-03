@@ -17,11 +17,18 @@ export function itemImageDisplay(item, index = 0) {
 }
 
 // How a piece is drawn in a flat-lay composition. A cut-out or a framed crop is
-// white-backed, so on the composition's white ground it is indistinguishable
-// from a transparent one and can float. A raw photograph carries its own
-// background and cannot — it gets a plate behind it, exactly as the grid gives
-// it today. This is what lets a part-migrated wardrobe compose without ever
-// showing a photograph's background floating loose on the ground.
+// object-contain and can float free of a background plate; a raw photograph
+// carries its own background and cannot, so it gets a plate behind it, exactly
+// as the grid gives it today. This is what lets a part-migrated wardrobe
+// compose without ever showing a photograph's background floating loose on
+// the ground.
+//
+// Whether floating is actually safe is a separate question, answered by
+// hasAlphaCutout and Flatlay's ground choice, not by this function: a legacy
+// cut-out is an opaque white rectangle that only passes for transparent on a
+// white ground, so Flatlay keeps the ground white while any piece would show
+// as that box. A migrated cut-out carries real alpha, and the ground turns
+// cream once no piece needs the white box to hide behind.
 export function flatlayTreatment(item) {
   return itemImageDisplay(item, 0).forceContain ? 'bare' : 'plate';
 }
@@ -33,7 +40,9 @@ export function flatlayTreatment(item) {
 // field. The flag has disagreed with the pixels four separate times on this
 // branch — a framed crop overriding an alpha cut-out, a revert leaving the flag
 // behind, an editor button writing one cut-out while another still won the
-// precedence — and each was a writer that forgot. So the reads are defensive:
+// precedence, and a migration writing a Storage cut-out over an inline one
+// without clearing the marker it superseded — and each was a writer that
+// forgot. So the reads are defensive:
 //
 //   framedUrl wins over everything and is always an opaque JPEG, so a framed
 //   item never bleeds, whatever the flag says.
@@ -56,10 +65,11 @@ export function hasAlphaCutout(item) {
 // account the user gets of what a half-hour run is about to touch.
 //
 // The buckets are disjoint and exhaustive: every item lands in exactly one.
-export function surveyAlphaMigration(items = []) {
+export function surveyAlphaMigration(items) {
+  const list = Array.isArray(items) ? items : [];
   const targets = [];
   let already = 0, framed = 0, noCutout = 0, noSource = 0;
-  for (const it of items) {
+  for (const it of list) {
     const m = (Array.isArray(it?.imageMeta) ? it.imageMeta : [])[0] || {};
     const hasCutout = !!m.cutoutUrl || m.cutout === true;
     if (hasAlphaCutout(it)) already += 1;
@@ -174,6 +184,14 @@ export async function polishItemPrimary(item, uid, { alpha = false } = {}) {
   // mismatched base.
   delete meta[0].framedUrl;
   delete meta[0].frame;
+  // A Storage cut-out supersedes an inline one exactly as it supersedes a
+  // crop: itemImageDisplay prefers cutoutUrl over cutout:true, so a lingering
+  // inline marker describes an image that is no longer drawn. Left in place,
+  // it makes this record name both kinds of cut-out at once, which
+  // hasAlphaCutout refuses as ambiguous — the item's pixels would be right
+  // (the new alpha cut-out) but it would be reported opaque forever, and the
+  // migration would re-target and re-upload it on every subsequent run.
+  delete meta[0].cutout;
   return { ok: true, imageMeta: meta };
 }
 
@@ -269,5 +287,10 @@ export async function retrimItemPrimary(item, uid) {
   // alpha cut-out would leave `alpha: true` claiming otherwise.
   if (trimmed.keepAlpha === true) meta[0].alpha = true;
   else delete meta[0].alpha;
+  // This re-upload is now the item's only Storage cut-out; an inline marker
+  // left alongside it would name both kinds at once and hasAlphaCutout would
+  // refuse the record as ambiguous, the same failure polishItemPrimary had.
+  // A re-trim of an item carrying both must leave only the Storage cut-out.
+  delete meta[0].cutout;
   return { ok: true, imageMeta: meta };
 }

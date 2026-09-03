@@ -458,10 +458,13 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
   // Always writes to Storage as cutoutUrl and NEVER over images[0]. On the
   // polish path images[0] is the untouched original; on the add path it IS the
   // cut-out and is the only copy the account has, so overwriting it here would
-  // destroy the only copy on a failed upload. A newly added item now carries
-  // `alpha: true` inline already (see the add form), so hasAlphaCutout counts
-  // it done and this runner never touches it — add-path items reach this
-  // function only as pre-branch leftovers that predate the inline flag.
+  // destroy the only copy on a failed upload. A newly added item carries
+  // `alpha: true` inline already (see the add form) only when the alpha
+  // attempt succeeded, so hasAlphaCutout counts it done and this runner never
+  // touches it. On the WebP-unsupported fallback there, `alpha` is absent —
+  // that item still has `cutout: true` with no alpha flag, so this runner
+  // does reach it, alongside genuine pre-branch leftovers that predate the
+  // inline flag.
   //
   // The alpha flag IS the resume state. "Done" means "has alpha: true", so there
   // is no separate progress record that can drift out of step with what actually

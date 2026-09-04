@@ -50,8 +50,26 @@ No production code changes in this task. The point is a test that fails *after* 
 Create `apps/studio/src/lib/weather.test.js`:
 
 ```js
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { weatherAppropriatenessScore, pickTodaysRecommendation, weatherToSeasons } from './weather.js';
+
+// pickTodaysRecommendation does NOT return the top-scoring item. It takes the
+// top max(3, 20%) and then picks among them by hashing today's date, so the
+// choice is stable through a day and rotates across days. With a small
+// candidate pool that rotation IS the decision, so any assertion about a single
+// date is a coin flip. Every test here that exercises the picker drives the
+// clock across a range of dates instead.
+afterEach(() => { vi.useRealTimers(); });
+
+const offeredAcrossSeptember = (wardrobe, tempC) => {
+  const offered = new Set();
+  for (let day = 1; day <= 28; day += 1) {
+    vi.setSystemTime(new Date(2026, 8, day));
+    offered.add(pickTodaysRecommendation(wardrobe, tempC)?.id);
+  }
+  vi.useRealTimers();
+  return offered;
+};
 
 // The real item that prompted this work: Today's Pick offered it on a 24C day.
 const FLEECE = {
@@ -97,9 +115,11 @@ describe('the fleece at 24C — characterisation of the bug', () => {
     expect(weatherAppropriatenessScore(FLEECE, 24)).toBe(0.5);
   });
 
-  it('currently picks the fleece over a linen shirt on a 24C day', () => {
-    const pick = pickTodaysRecommendation([FLEECE, LINEN_SHIRT], 24);
-    expect(pick?.id).toBe('fleece');
+  // Across a month of dates rather than one: the date hash decides which of the
+  // top candidates is surfaced, so a single date proves nothing either way.
+  // What matters is that the fleece is offered AT ALL on a 24C day.
+  it('currently offers the fleece on some 24C days', () => {
+    expect(offeredAcrossSeptember([FLEECE, LINEN_SHIRT], 24)).toContain('fleece');
   });
 });
 ```
@@ -327,13 +347,18 @@ describe('pickVeto', () => {
 });
 
 describe('pickTodaysRecommendation', () => {
-  it('no longer picks the fleece on a 24C day', () => {
-    const pick = pickTodaysRecommendation([FLEECE, LINEN_SHIRT], 24);
-    expect(pick?.id).toBe('linen');
+  // The inversion of the characterisation test. "Never, on any date" is the
+  // property that matters and the one a single-date assertion cannot express —
+  // the date hash chooses among the top candidates, so one date proves nothing.
+  it('never offers the fleece on a 24C day, whatever the date', () => {
+    const offered = offeredAcrossSeptember([FLEECE, LINEN_SHIRT], 24);
+    expect(offered).not.toContain('fleece');
+    expect(offered).toEqual(new Set(['linen']));
   });
 
-  it('picks the fleece on a cold day', () => {
-    expect(pickTodaysRecommendation([FLEECE, LINEN_SHIRT], 8)?.id).toBe('fleece');
+  it('offers the fleece on a cold day, and never the linen shirt', () => {
+    const offered = offeredAcrossSeptember([FLEECE, LINEN_SHIRT], 8);
+    expect(offered).toEqual(new Set(['fleece']));
   });
 
   it('returns null when every garment contradicts the day', () => {
@@ -366,26 +391,16 @@ describe('pickTodaysRecommendation', () => {
 });
 ```
 
-Replace the import line at the top of the test file with:
+Extend the weather.js import to bring in the two new functions — leave the `vitest` import, the `afterEach`, and the `offeredAcrossSeptember` helper exactly as Task 1 left them:
 
 ```js
-import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   weatherAppropriatenessScore, pickTodaysRecommendation, weatherToSeasons,
   seasonsForTemp, pickVeto, isPickableToday,
 } from './weather.js';
 ```
 
-and add, directly after the imports:
-
-```js
-// pickTodaysRecommendation seeds its choice from today's date, and one test
-// below drives the clock deliberately. Reset it so no other test inherits a
-// frozen one.
-afterEach(() => { vi.useRealTimers(); });
-```
-
-Finally, **delete** the `describe('the fleece at 24C — characterisation of the bug', …)` block added in Task 1. Its two assertions are now false by design, and both are replaced above — `currently picks the fleece` by `no longer picks the fleece on a 24C day`, and `currently scores the fleece as neutral` by the name-reading test in Task 4.
+Finally, **delete** the `describe('the fleece at 24C — characterisation of the bug', …)` block added in Task 1. Its two assertions are now false by design, and both are replaced — `currently offers the fleece` by `never offers the fleece on a 24C day, whatever the date`, and `currently scores the fleece as neutral` by the name-reading test in Task 4.
 
 - [ ] **Step 2: Run it to verify it fails**
 

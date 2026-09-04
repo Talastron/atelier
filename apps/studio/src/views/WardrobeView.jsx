@@ -548,14 +548,14 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                   >
                     <div className="min-w-0">
                       <p className={`text-sm ${isActive ? 'text-stone-900 font-medium' : 'text-stone-800'}`}>{o.label}</p>
-                      <p className="text-[11px] text-stone-500 mt-0.5">{o.hint}</p>
+                      <p className="text-[13px] text-stone-500 mt-0.5">{o.hint}</p>
                     </div>
                     {isActive && <Check size={16} strokeWidth={2} className="shrink-0 text-stone-900 mt-0.5" />}
                   </button>
                 );
               })}
               <div className="border-t border-stone-200 mt-2 pt-2 px-4 pb-1">
-                <p className="text-[10px] text-stone-400 italic">★ Favourites always pin to the top</p>
+                <p className="text-[12px] text-stone-400 italic">★ Favourites always pin to the top</p>
               </div>
             </div>
           </>
@@ -953,7 +953,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
               })()}
 
               {item.status === 'wishlist' && (
-                <div className="mt-3 text-[11px] py-2 px-3 rounded-lg flex items-start gap-2 bg-stone-100 text-stone-600">
+                <div className="mt-3 text-[13px] py-2 px-3 rounded-lg flex items-start gap-2 bg-stone-100 text-stone-600">
                   <AlertCircle size={14} className="shrink-0 mt-0.5" strokeWidth={1.5} />
                   <span>
                     {measurements.waist
@@ -1037,7 +1037,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                   <span className="brass-rule" aria-hidden="true"></span> Today's pick
                 </p>
                 <p className="font-display text-base sm:text-lg text-white leading-tight truncate">{recommendation.name}</p>
-                <p className="text-[11px] text-stone-400 mt-1 truncate">
+                <p className="text-[13px] text-stone-400 mt-1 truncate">
                   {(() => {
                     const recSeasons = itemSeasons(recommendation);
                     return (
@@ -1083,7 +1083,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                   ? `Nothing in your collection suits ${Math.round(weather.temp)}°C.`
                   : 'No clothes in your collection yet.'}
               </p>
-              <p className="text-[11px] text-stone-500 mt-1">
+              <p className="text-[13px] text-stone-500 mt-1">
                 {ownsAGarment
                   ? 'Your pieces are tagged for other seasons — add a warm-weather piece, or check the season tags on what you own.'
                   : "Today's pick suggests something to wear, so it needs a top, a dress, trousers or a coat."}
@@ -1105,7 +1105,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
             <div className="flex-1 min-w-0">
               <p className="text-[10px] tracking-[0.2em] uppercase text-brass-700 font-semibold">✦ Tomorrow</p>
               <p className="font-display text-sm text-stone-900 truncate mt-0.5">{tomorrowOutfit.name}</p>
-              <p className="text-[11px] text-stone-500">{tomorrowPieces.length} pieces · tap to view</p>
+              <p className="text-[13px] text-stone-500">{tomorrowPieces.length} pieces · tap to view</p>
             </div>
             <ChevronRight size={18} className="text-brass-600 shrink-0" />
           </button>

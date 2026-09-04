@@ -167,14 +167,29 @@ export function weatherLabel(code, precipProb = null) {
   return 'Stormy';
 }
 
-// Given weather, suggest which item seasons fit.
-export function weatherToSeasons(weather) {
-  if (!weather) return null;
-  const t = weather.temp;
-  if (t < 5) return ['Winter'];
-  if (t < 14) return ['Autumn', 'Winter'];
-  if (t < 22) return ['Spring', 'Autumn'];
+// Which seasons a temperature FEELS like. The bands live here once, with two
+// entry points onto them, because there used to be two competing notions of
+// season in this file: this one, and a calendar month inside
+// pickTodaysRecommendation. On 3 September at 24C they disagreed — calendar
+// Autumn, thermometer Summer — and the picker consulted the calendar, so an
+// Autumn/Winter fleece was offered on a warm day.
+//
+// If the veto in pickVeto proves too strict for a British autumn, THIS is the
+// lever rather than the veto: 22C currently reads as Summer-only, which is a
+// warm reading of September. Widening the Spring/Autumn band upward admits more
+// of the wardrobe without weakening the rule.
+export function seasonsForTemp(tempC) {
+  if (tempC == null || Number.isNaN(tempC)) return null;
+  if (tempC < 5) return ['Winter'];
+  if (tempC < 14) return ['Autumn', 'Winter'];
+  if (tempC < 22) return ['Spring', 'Autumn'];
   return ['Summer'];
+}
+
+// Given weather, suggest which item seasons fit. Unchanged signature — several
+// callers pass the weather object — now delegating so there is one set of bands.
+export function weatherToSeasons(weather) {
+  return weather ? seasonsForTemp(weather.temp) : null;
 }
 
 export function getGreeting() {
@@ -208,6 +223,45 @@ export function firstName(user) {
 }
 
 
+// Which categories Today's Pick may suggest.
+//
+// Sportswear and Swimwear are garments and are deliberately absent: both are
+// driven by an activity rather than the weather, so suggesting a swimsuit
+// because it is 24C is wrong even when the temperature agrees. Shoes are absent
+// pending the rain question — sandals and boots are genuinely useful picks, but
+// including footwear without considering precipitation would suggest suede on a
+// wet day. None of these omissions is an oversight.
+const PICKABLE_CATEGORIES = new Set(['Tops', 'Bottoms', 'Dresses', 'Outerwear']);
+
+/**
+ * Why this item may not be Today's Pick, or null if it may.
+ *
+ * A veto, evaluated before any scoring, because a score term can be outvoted
+ * and was: season contributed a flat 0.25 while weather contributed at most
+ * 0.225, so an Autumn/Winter fleece beat the thermometer on a 24C day.
+ *
+ * Returns a reason rather than a boolean so the card's empty state can say
+ * something true instead of guessing.
+ *
+ * @returns {'not-a-garment'|'wrong-season'|null}
+ */
+export function pickVeto(item, tempC) {
+  if (!PICKABLE_CATEGORIES.has(item?.category)) return 'not-a-garment';
+  const felt = seasonsForTemp(tempC);
+  if (!felt) return null;                   // no temperature known — veto nothing
+  const declared = itemSeasons(item);
+  // Silence is not a declaration. Vetoing on absent data would punish an item
+  // that was never scanned, which is a data gap and not a wrong garment.
+  if (declared.length === 0) return null;
+  return declared.some((s) => felt.includes(s)) ? null : 'wrong-season';
+}
+
+// Defined in terms of pickVeto, deliberately, so the two can never disagree
+// about the same item.
+export function isPickableToday(item, tempC) {
+  return pickVeto(item, tempC) === null;
+}
+
 // Score an item's weather appropriateness against today's temperature.
 // Returns 0..1 (1 = ideal, 0 = strongly inappropriate). Used by
 // pickTodaysRecommendation to avoid suggesting a wool sweater in 30°C heat
@@ -221,14 +275,27 @@ export function weatherAppropriatenessScore(item, tempC) {
   const cat = (item.category || '').toLowerCase();
   const sub = (item.subCategory || '').toLowerCase();
   const styles = (itemStyles(item) || []).map((s) => (s || '').toLowerCase());
-  const text = `${cat} ${sub} ${styles.join(' ')}`;
+  // The NAME is in here for a reason. It used to be category + subCategory +
+  // styles only, and "Ladies Country Fleece Quarter Zip" carries the decisive
+  // word in its name — so the function returned a neutral 0.5 and Today's Pick
+  // offered it on a 24C day. Brand names occasionally collide with a pattern
+  // (a "Wool & The Gang" cardigan), which costs a little ranking accuracy and
+  // is worth it: the alternative is having no opinion at all about most items.
+  const name = (item.name || '').toLowerCase();
+  const text = `${name} ${cat} ${sub} ${styles.join(' ')}`;
 
   // Buckets:
   //   hot:  tempC >= 26  — sleeveless / shorts / dresses ideal; knits/coats penalised
   //   warm: 18-25        — light layers / chinos / t-shirts ideal
   //   cool: 10-17        — sweaters / long sleeves / jeans ideal
   //   cold: < 10         — coats / boots / wool / layers ideal
-  const HEAVY_PATTERNS = ['coat', 'jacket', 'blazer', 'sweater', 'jumper', 'knit', 'wool', 'cashmere', 'puffer', 'parka', 'trench', 'leather jacket', 'turtleneck'];
+  // The second group was missing entirely, which is why a fleece scored neutral
+  // even once the name was read. All of them are cold-weather constructions.
+  const HEAVY_PATTERNS = [
+    'coat', 'jacket', 'blazer', 'sweater', 'jumper', 'knit', 'wool', 'cashmere',
+    'puffer', 'parka', 'trench', 'leather jacket', 'turtleneck',
+    'fleece', 'sweatshirt', 'sherpa', 'shearling', 'quilted', 'padded', 'down', 'thermal', 'flannel',
+  ];
   const LIGHT_PATTERNS = ['tank', 'sleeveless', 'camisole', 'cami', 't-shirt', 'tee', 'shorts', 'sundress', 'sandal', 'flip', 'linen', 'cotton'];
   const LONG_SLEEVE_PATTERNS = ['long sleeve', 'long-sleeve', 'long sleeved'];
   const LAYER_PATTERNS = ['cardigan', 'cardi', 'gilet', 'vest'];
@@ -262,42 +329,38 @@ export function weatherAppropriatenessScore(item, tempC) {
   return Math.max(0, Math.min(1, score));
 }
 
-// Smart recommendation: prefers items you OWN + haven't worn recently +
-// are appropriate for today's actual temperature band. Picks one item.
-// Returns null if nothing eligible.
-//
-// tempC should be the day's HIGH (weather.temp from Open-Meteo daily max).
-// Pass null when geolocation is unavailable — falls back to season-only scoring.
+// Smart recommendation: prefers items you OWN + haven't worn recently, from
+// the garments that suit today's temperature. Season appropriateness is a
+// VETO applied before scoring, not a preference — see pickVeto. Returns null
+// when nothing is eligible, which the caller must render as an honest empty
+// state rather than falling back to a poor pick.
 export function pickTodaysRecommendation(items, tempC = null) {
-  const owned = live(items).filter((i) => i.status === 'owned');
-  if (owned.length === 0) return null;
-  const month = new Date().getMonth();
-  const season = month >= 2 && month <= 4 ? 'Spring'
-    : month >= 5 && month <= 7 ? 'Summer'
-    : month >= 8 && month <= 10 ? 'Autumn'
-    : 'Winter';
-  const scored = owned.map((item) => {
+  // The veto runs first, and season is part of it rather than part of the
+  // score. That is the fix: a score term can be outvoted, and this one was.
+  const eligible = live(items)
+    .filter((i) => i.status === 'owned')
+    .filter((i) => isPickableToday(i, tempC));
+  if (eligible.length === 0) return null;
+
+  const scored = eligible.map((item) => {
     const days = daysSinceLastWorn(item);
-    const seasonFit = itemSeasons(item).length === 0 ? 0.4 : itemSeasons(item).includes(season) ? 1 : 0;
     const recency = days === null ? 1 : Math.min(days / 60, 1);
-    // Favourites get a meaningful boost — pieces the user has explicitly
-    // starred should surface more often as Today's Pick than equally-suitable
-    // unstarred items.
-    const favouriteBoost = item.favorite ? 0.25 : 0;
+    const favouriteBoost = item.favorite ? 1 : 0;
     const weatherFit = weatherAppropriatenessScore(item, tempC);
-    // Weather is the dominant signal when known (0.45 weight); season is
-    // secondary (0.25); recency + favourite remain meaningful tie-breakers.
-    const score = weatherFit * 0.45 + seasonFit * 0.25 + recency * 0.15 + favouriteBoost * 0.15;
-    return { item, score, weatherFit };
+    // Weather keeps the majority share. The other two are tie-breakers among
+    // pieces that already suit the day — they are not competing signals, which
+    // is what the removed seasonFit term had become. Sums to 1.0, so these
+    // numbers stay comparable with the old scale.
+    const score = weatherFit * 0.60 + recency * 0.20 + favouriteBoost * 0.20;
+    return { item, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  // Hard filter: anything with weatherFit < 0.2 is too inappropriate for
-  // today's weather to ever be Today's Pick, no matter how favourited or
-  // unworn. (Wool jumper on a 34°C day = never Today's Pick.)
-  const eligible = scored.filter((s) => s.weatherFit >= 0.2);
-  const top = (eligible.length > 0 ? eligible : scored).slice(0, Math.max(3, Math.floor(scored.length * 0.2)));
-  if (top.length === 0) return null;
-  // Seed pick by today's date so it stays stable through the day, then rotates.
+
+  // Seed the pick by today's date so it stays stable through the day, then
+  // rotates. This is the ONLY remaining use of the current date, and it must
+  // not influence WHICH items are eligible — the calendar month used to decide
+  // that, and disagreed with the thermometer.
+  const top = scored.slice(0, Math.max(3, Math.floor(scored.length * 0.2)));
   const todayKey = new Date().toISOString().slice(0, 10);
   let h = 0; for (let i = 0; i < todayKey.length; i++) h = ((h << 5) - h + todayKey.charCodeAt(i)) | 0;
   return top[Math.abs(h) % top.length].item;

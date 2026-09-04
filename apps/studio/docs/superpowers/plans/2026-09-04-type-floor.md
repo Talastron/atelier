@@ -172,18 +172,31 @@ That file has exactly one. Apply the mapping to it: the size becomes `text-xs`, 
 
 - [ ] **Step 5: Verify the utilities actually exist — this is the point of the task**
 
-Start the dev server if it is not already running (check first: something may already be serving this worktree on 5173):
+**Do not try to verify this by looking at the app.** The Studio is behind a Google sign-in wall, so no agent can reach a rendered page. Read the compiled CSS instead, which is a stronger check anyway: it proves Tailwind emitted the rule, independent of whether any element happens to use it.
+
+Start the dev server if nothing is already serving this worktree (check first — and note the port tells you nothing about which tree is being served; read the path Vite prints):
 
 ```bash
 pnpm --dir apps/studio dev
 ```
 
-Open the app, find the Concierge prompt on Today, and inspect that element. Confirm **both**:
+Then ask the dev server for the compiled stylesheet and look for the three rules:
 
-- `font-size` computes to `12px`
-- `letter-spacing` computes to the expected em value (`0.05em`, `0.1em` or `0.28em` — whichever the mapping gave it), **not** `normal`
+```bash
+curl -s "http://localhost:5173/src/index.css" | grep -o "tracking-eyebrow[^}]*}"
+```
 
-If `letter-spacing` is `normal`, Tailwind did not generate the utility from `--tracking-*`. **STOP and report BLOCKED.** Do not proceed to Task 2. The architecture needs rethinking and finding that out here costs one site instead of 512.
+Expected: a rule of the form `.tracking-eyebrow{letter-spacing:var(--tracking-eyebrow)}` or `…:0.28em}`. Repeat for `tracking-meta` and `tracking-label`.
+
+If the greps return **nothing**, Tailwind did not generate utilities from the `--tracking-*` namespace. **STOP and report BLOCKED.** Do not proceed to Task 2. The architecture needs rethinking, and finding that out here costs one site instead of 512.
+
+Also confirm the token itself resolved rather than silently vanishing:
+
+```bash
+curl -s "http://localhost:5173/src/index.css" | grep -o "\-\-atelier-text-xs[^;]*;"
+```
+
+Expected: `--atelier-text-xs: 0.75rem;` — proof the barrel import landed and `type.css` is now reaching the app.
 
 - [ ] **Step 6: Build and test**
 

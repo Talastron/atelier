@@ -54,13 +54,15 @@ Create `apps/studio/src/components/OutfitFlatLay.jsx` containing, in order:
 
 ```jsx
 import React from 'react';
+import { Shirt, ChevronRight } from 'lucide-react';
 import Flatlay from './Flatlay.jsx';
+import ItemTileImage from './ItemTileImage.jsx';
 import { itemColors, itemImages } from '../lib/items.js';
 ```
 
 then the block comment and the whole function body from `App.jsx:8616-8728`, **copied without modification**, with `function OutfitFlatLay(` changed to `export default function OutfitFlatLay(`.
 
-Its dependencies are exactly three — `Flatlay`, `itemColors`, `itemImages` — verified by scanning the block. Nothing else in it reaches into `App.jsx`'s scope.
+**Read the block and list its dependencies yourself rather than trusting the five above.** An earlier draft of this plan claimed there were exactly three, "verified by scanning the block" — the scan was a regex matching names beginning `item`, or literally `Flatlay`, or `use`, so it could not match `ItemTileImage`, `Shirt` or `ChevronRight` and confidently reported their absence. Following it would have produced a component with three undefined references.
 
 - [ ] **Step 3: Delete the definition from `App.jsx` and import instead**
 

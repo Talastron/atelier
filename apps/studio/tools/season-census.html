@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Season census</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 28px; background: #FAF9F7; color: #1c1917; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p.sub { color: #78716c; font-size: 13px; margin: 0 0 18px; max-width: 76ch; line-height: 1.6; }
+    label { font-size: 13px; color: #78716c; }
+    input { font: inherit; width: 5rem; padding: 6px 10px; border: 1px solid #e7e5e4; border-radius: 8px; }
+    button { font: inherit; padding: 8px 18px; border-radius: 999px; border: 1px solid #1c1917;
+      background: #1c1917; color: #fff; cursor: pointer; margin-left: 10px; }
+    button:disabled { opacity: .5; cursor: default; }
+    #status { font-size: 13px; color: #78716c; margin-top: 14px; min-height: 20px; }
+    table { border-collapse: collapse; font-size: 13px; background: #fff; border: 1px solid #e7e5e4; margin-top: 14px; }
+    th, td { padding: 7px 14px; text-align: right; border-bottom: 1px solid #e7e5e4; white-space: nowrap; }
+    th:first-child, td:first-child, td.note { text-align: left; }
+    td.note { color: #a8a29e; }
+    th { font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: #78716c; font-weight: 500; }
+    tfoot td { font-weight: 700; background: #faf9f7; }
+    code { background: #f5f5f4; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .verdict { background: #fff; border: 1px solid #e7e5e4; border-left: 3px solid #C9A66B;
+      border-radius: 0 12px 12px 0; padding: 14px 18px; font-size: 13px; line-height: 1.7; margin-top: 20px; max-width: 78ch; }
+  </style>
+</head>
+<body>
+  <h1>Season census</h1>
+  <p class="sub">
+    How many of your garments Today's Pick can actually suggest on a given day. An item's own season
+    declaration is now a veto — a piece tagged Autumn/Winter is never suggested at 24&deg;C — which is
+    correct, and has a failure mode worth measuring rather than assuming: a British wardrobe skews cold,
+    so if almost nothing qualifies on a warm day the card shows its empty state most days and reads as
+    broken rather than careful.
+    <br><br>
+    Sign in to the app at <code>localhost:5173</code> first; this page shares that session.
+  </p>
+
+  <div>
+    <label for="temp">Temperature &deg;C</label>
+    <input id="temp" type="number" value="24" min="-20" max="45" step="1">
+    <button id="run">Count</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="out"></div>
+  <div class="verdict" id="verdict" hidden></div>
+
+  <script type="module" src="./season-census.js"></script>
+</body>
+</html>

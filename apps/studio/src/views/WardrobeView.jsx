@@ -4,7 +4,7 @@ import { AlertCircle, ArrowUpDown, Check, ChevronDown, ChevronRight, Heart, Plus
 import { daysSinceLastWorn, isItemAvailable, itemColors, itemCondition, itemImages, itemNeedsDetail, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemCostPerWear, live, resolveOutfitItems, todayISO } from "../lib/items.js";
 import { useImageBg } from "../lib/imageBg.js";
 import { itemImageDisplay } from "../lib/polish.js";
-import { fetchTodaysWeather, pickTodaysRecommendation, weatherToSeasons, pickVeto } from "../lib/weather.js";
+import { fetchTodaysWeather, weatherToSeasons } from "../lib/weather.js";
 import { CATEGORIES, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES, DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES, SPORTSWEAR_SUBCATEGORIES, BAG_SUBCATEGORIES, SHOE_SUBCATEGORIES, SWIMWEAR_SUBCATEGORIES, STYLES, SEASONS, COLOR_SWATCHES, ITEM_CONDITIONS } from "../lib/taxonomy.js";
 
 function WardrobeCardImage({ item }) {
@@ -382,21 +382,6 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
     return m >= 2 && m <= 4 ? 'Spring' : m >= 5 && m <= 7 ? 'Summer' : m >= 8 && m <= 10 ? 'Autumn' : 'Winter';
   })();
 
-  // Recommendation uses actual temperature for appropriateness scoring.
-  // weather.temp is the day's HIGH from Open-Meteo daily max — the right
-  // number for dressing decisions. Falls back gracefully to null when
-  // geolocation is denied or the fetch hasn't settled yet.
-  const pickRec = () => {
-    const owned = items.filter((i) => i.status === 'owned');
-    if (owned.length === 0) return null;
-    // weather.temp is the daily max temperature (°C). pickTodaysRecommendation
-    // vetoes on season before scoring and returns null when nothing is
-    // eligible; a null tempC vetoes nothing.
-    const tempC = weather?.temp ?? null;
-    return pickTodaysRecommendation(owned, tempC);
-  };
-  const [recommendation, setRecommendation] = useState(() => pickRec());
-  useEffect(() => { setRecommendation(pickRec()); /* eslint-disable-next-line */ }, [items.length, weather]);
   const [brandFilter, setBrandFilter] = useState('All Brands');
   const [subCategoryFilter, setSubCategoryFilter] = useState('All Types');
   const [styleFilter, setStyleFilter] = useState('All Styles');
@@ -1004,94 +989,12 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
           desktop toolbar at the top of the wardrobe view (above the grid),
           so this column no longer needs its own sticky bar. Cards flow
           naturally and scroll with the page. */}
+      {/* Today's Pick moved to the Today home, where a card by that name
+          belongs. It was here because it draws on your own pieces — but this
+          aside is `hidden lg:grid`, so a phone never saw it, and Today is the
+          screen you open in the morning. This rail now carries tomorrow's
+          planned outfit only. */}
       <aside className="hidden lg:grid lg:grid-cols-2 lg:col-span-12 lg:col-start-1 lg:row-start-1 gap-3 lg:pb-2 items-start">
-        {/* Daily Brief / Today tile / digest moved to the Today home (Effort 2).
-            This rail now carries only "Today's Pick" — a weather-aware nudge
-            from your own pieces, which stays with the wardrobe. */}
-        {recommendation && (() => {
-          const reasons = [];
-          const tempC = weather?.temp ?? null;
-          if (tempC != null) {
-            // No hedge. Everything reaching this card has passed pickVeto, so
-            // its declared seasons genuinely include what today feels like.
-            //
-            // This used to say "fits" above a 0.5 score and "for" below it —
-            // softening the claim rather than changing the pick, and the
-            // distinction was invisible to anyone reading the card. That is how
-            // a fleece came to be recommended on a 24°C day with the code's own
-            // wording admitting it did not fit.
-            reasons.push(`fits today's ${Math.round(tempC)}°C`);
-          }
-          const days = daysSinceLastWorn(recommendation);
-          if (days === null) reasons.push("never worn");
-          else if (days >= 30) reasons.push(`not worn in ${Math.floor(days / 30)} month${days < 60 ? '' : 's'}`);
-          else if (days >= 14) reasons.push(`not worn in ${days} days`);
-          return (
-            <button onClick={() => onItemClick?.(recommendation.id)}
-              className="text-left w-full bg-stone-900 text-white rounded-2xl lg:rounded-3xl p-4 sm:p-5 flex items-center gap-4 group hover:bg-stone-700 transition-all smooth-shadow active:scale-[0.98]">
-              <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden bg-stone-800 shrink-0">
-                {itemImages(recommendation)[0] && <img src={itemImages(recommendation)[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-1.5 flex items-center gap-2">
-                  <span className="brass-rule" aria-hidden="true"></span> Today's pick
-                </p>
-                <p className="font-display text-base sm:text-lg text-white leading-tight truncate">{recommendation.name}</p>
-                <p className="text-[13px] text-stone-400 mt-1 truncate">
-                  {(() => {
-                    const recSeasons = itemSeasons(recommendation);
-                    return (
-                      <>
-                        {recommendation.brand}
-                        {recSeasons.length > 0 && ` · ${recSeasons.join(' · ')}`}
-                      </>
-                    );
-                  })()}
-                </p>
-                {reasons.length > 0 && (
-                  <p className="text-[10px] text-emerald-300/90 mt-2 tracking-wide italic truncate" title={reasons.join(' · ')}>
-                    Suggested · {reasons.join(' · ')}
-                  </p>
-                )}
-              </div>
-            </button>
-          );
-        })()}
-        {/* Nothing eligible is a real answer, not a gap. Every cold-weather
-            piece is vetoed on a warm day, so this fires for a wardrobe that
-            skews Autumn/Winter — honest, but if it fires most days the feature
-            reads as broken rather than careful. The lever for that is
-            seasonsForTemp's bands, not the veto: 22°C currently reads as
-            Summer-only, which is a warm reading of a British September.
-            Rendered only when there IS a wardrobe: a brand-new account should
-            see the empty-collection state, not a weather note. */}
-        {!recommendation && items.length > 0 && weather?.temp != null && (() => {
-          // Which of the two empty states this is. pickVeto returns a reason
-          // rather than a boolean precisely so this sentence can be true: a
-          // collection of jewellery and bags has nothing to suggest for a
-          // different reason than one full of winter coats in July.
-          const ownsAGarment = items.some(
-            (i) => i.status === 'owned' && pickVeto(i, weather.temp) !== 'not-a-garment',
-          );
-          return (
-            <div className="text-left w-full bg-stone-100 text-stone-600 rounded-2xl lg:rounded-3xl p-4 sm:p-5">
-              <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-1.5 flex items-center gap-2">
-                <span className="brass-rule" aria-hidden="true"></span> Today's pick
-              </p>
-              <p className="font-display text-base sm:text-lg text-stone-800 leading-tight">
-                {ownsAGarment
-                  ? `Nothing in your collection suits ${Math.round(weather.temp)}°C.`
-                  : 'No clothes in your collection yet.'}
-              </p>
-              <p className="text-[13px] text-stone-500 mt-1">
-                {ownsAGarment
-                  ? 'Your pieces are tagged for other seasons — add a warm-weather piece, or check the season tags on what you own.'
-                  : "Today's pick suggests something to wear, so it needs a top, a dress, trousers or a coat."}
-              </p>
-            </div>
-          );
-        })()}
-
         {tomorrowOutfit && (
           <button onClick={() => onOpenOutfit?.(tomorrowOutfit.id)}
             className="text-left w-full bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 hover:bg-amber-100/70 transition-all active:scale-[0.99]">

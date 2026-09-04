@@ -79,7 +79,12 @@ export default function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null
                           className={`w-full flex items-center gap-3 py-2.5 text-left ${openable ? 'group cursor-pointer hover:bg-stone-100/50 -mx-2 px-2 rounded-lg transition-colors' : ''}`}
                         >
                           {/* Thumbnail */}
-                          <div className="w-11 h-11 rounded-lg bg-stone-100 border border-stone-200 overflow-hidden shrink-0">
+                          {/* 64px, not 44. The composition above shows these
+                              same garments at 185-333px, so a 44px chip named
+                              the piece at a twelfth of the size it had been
+                              drawn at four rows earlier - a drop big enough to
+                              read as a broken thumbnail rather than an index. */}
+                          <div className="w-16 h-16 rounded-lg bg-stone-100 border border-stone-200 overflow-hidden shrink-0">
                             {thumb ? (
                               <ItemTileImage item={p} alt={p.name || ""} />
                             ) : (

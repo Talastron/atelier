@@ -904,8 +904,15 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
 
             <div className="px-1">
               <div className="flex justify-between items-start mb-1.5 gap-4">
+                {/* Brand alone. This used to append the seasons, and the
+                    result never fitted: the caption box is ~140px and
+                    "HOLLAND COOPER • SPRING · SUMMER · AUTUMN" wants 409px, so
+                    94 of these captions were being truncated mid-brand at the
+                    old 10px too. The seasons were costing the brand its own
+                    name to show information nobody could read. They remain on
+                    the item's detail view, where there is room for them. */}
                 <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">
-                  {item.brand}{itemSeasons(item).length > 0 && ` • ${itemSeasons(item).join(' · ')}`}
+                  {item.brand}
                 </p>
                 <p className="text-sm font-medium text-stone-900 shrink-0">£{item.price}</p>
               </div>

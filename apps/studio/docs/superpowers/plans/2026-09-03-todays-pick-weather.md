@@ -511,9 +511,13 @@ Expected: PASS. If `gives the same pick whatever the month` fails, a calendar re
 
 - [ ] **Step 6: Confirm the calendar is gone from the picker**
 
-Run: `grep -n "getMonth" apps/studio/src/lib/weather.js`
+Run: `awk '/^export function pickTodaysRecommendation/,/^}/' apps/studio/src/lib/weather.js | grep -c "getMonth"`
 
-Expected: no output. (`WardrobeView.jsx` still has its own `currentSeason` for the Daily Brief — that is a different feature and stays.)
+Expected: `0`.
+
+Grepping the whole file is too broad and will report a false positive: `localISODate` inside `fetchTravelForecast` uses `getMonth()` to format a `YYYY-MM-DD` string for matching forecast days to trip days. That is calendar *arithmetic*, not a season, and it stays. What must be gone is any calendar reference **in the picker** — hence the scoped range.
+
+(`WardrobeView.jsx` also keeps its own `currentSeason` for the Daily Brief. Different feature, stays.)
 
 - [ ] **Step 7: Run the whole suite**
 

@@ -533,14 +533,14 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                   >
                     <div className="min-w-0">
                       <p className={`text-sm ${isActive ? 'text-stone-900 font-medium' : 'text-stone-800'}`}>{o.label}</p>
-                      <p className="text-[13px] text-stone-500 mt-0.5">{o.hint}</p>
+                      <p className="text-sm text-stone-500 mt-0.5">{o.hint}</p>
                     </div>
                     {isActive && <Check size={16} strokeWidth={2} className="shrink-0 text-stone-900 mt-0.5" />}
                   </button>
                 );
               })}
               <div className="border-t border-stone-200 mt-2 pt-2 px-4 pb-1">
-                <p className="text-[12px] text-stone-400 italic">★ Favourites always pin to the top</p>
+                <p className="text-xs text-stone-400 italic">★ Favourites always pin to the top</p>
               </div>
             </div>
           </>
@@ -938,7 +938,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
               })()}
 
               {item.status === 'wishlist' && (
-                <div className="mt-3 text-[13px] py-2 px-3 rounded-lg flex items-start gap-2 bg-stone-100 text-stone-600">
+                <div className="mt-3 text-sm py-2 px-3 rounded-lg flex items-start gap-2 bg-stone-100 text-stone-600">
                   <AlertCircle size={14} className="shrink-0 mt-0.5" strokeWidth={1.5} />
                   <span>
                     {measurements.waist
@@ -1008,7 +1008,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
             <div className="flex-1 min-w-0">
               <p className="text-xs tracking-eyebrow uppercase text-brass-700 font-semibold">✦ Tomorrow</p>
               <p className="font-display text-sm text-stone-900 truncate mt-0.5">{tomorrowOutfit.name}</p>
-              <p className="text-[13px] text-stone-500">{tomorrowPieces.length} pieces · tap to view</p>
+              <p className="text-sm text-stone-500">{tomorrowPieces.length} pieces · tap to view</p>
             </div>
             <ChevronRight size={18} className="text-brass-600 shrink-0" />
           </button>

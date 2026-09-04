@@ -1116,7 +1116,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             {aiBusy ? 'Styling…' : isAIEnabled() ? 'Style with Concierge' : 'Concierge — setup'}
           </button>
           {softNudgeActive() && (
-            <p className="text-center text-[13px] italic text-stone-400">
+            <p className="text-center text-sm italic text-stone-400">
               You've styled a few looks — save one you love to your Lookbook.
             </p>
           )}
@@ -1518,7 +1518,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                           <h4 className="text-xs font-bold text-stone-700 uppercase tracking-eyebrow shrink-0">
                             {slot}
                           </h4>
-                          <span className="text-[12px] text-stone-400 shrink-0">· {pool.length}</span>
+                          <span className="text-xs text-stone-400 shrink-0">· {pool.length}</span>
                           {filled.length > 0 && (
                             <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-700 shrink-0" title={`${filled.length} picked`}>
                               <Check size={10} strokeWidth={2.5} />
@@ -1882,7 +1882,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         value={sortMode}
                         onChange={(e) => setSortMode(e.target.value)}
                         aria-label="Sort looks"
-                        className="absolute inset-0 w-full h-full text-[16px] opacity-0 cursor-pointer"
+                        className="absolute inset-0 w-full h-full text-base opacity-0 cursor-pointer"
                       >
                         <option value="recent">Recent</option>
                         <option value="most-worn">Most worn</option>
@@ -1908,7 +1908,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               <button
                 type="button"
                 onClick={() => setActiveTagFilter(null)}
-                className="mt-3 text-stone-700 underline-offset-4 hover:underline text-[12px] tracking-wide"
+                className="mt-3 text-stone-700 underline-offset-4 hover:underline text-xs tracking-wide"
               >
                 Show all looks
               </button>
@@ -2150,7 +2150,7 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[13px] text-stone-400 italic mb-3">Some items have been deleted from your wardrobe.</p>
+                  <p className="text-sm text-stone-400 italic mb-3">Some items have been deleted from your wardrobe.</p>
                 )}
 
                 <button onClick={() => onApply(entry)} disabled={resolvedItems.length === 0}

@@ -15,6 +15,18 @@
   --font-display: 'Playfair Display', serif;
   --font-sans: 'Jost', sans-serif;
 
+  /* Reading sizes, raised one step. Tailwind's defaults are 12/14/16/18px and
+     every one of them was judged too small on screen. Because the app is now
+     entirely rem-based - no arbitrary px sizes left anywhere - these four
+     declarations move all 1381 type classes at once, and keep honouring the
+     reader's own browser text setting on top.
+     Display sizes (xl and above) are deliberately untouched: they are already
+     20px+ and this is a legibility change, not a louder headline. */
+  --text-xs:   0.8125rem;   /* 13px, was 12 - the editorial labels */
+  --text-sm:   0.9375rem;   /* 15px, was 14 - body copy and product names */
+  --text-base: 1.0625rem;   /* 17px, was 16 */
+  --text-lg:   1.1875rem;   /* 19px, was 18 */
+
   /* Editorial label tracking, in three roles. The app had ELEVEN values across
      496 sites — tracking-wide through tracking-[0.3em] — which sampling showed
      were three roles that had drifted, not eleven intentions.

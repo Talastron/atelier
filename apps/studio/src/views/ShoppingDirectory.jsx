@@ -59,7 +59,7 @@ function ShopRow({ shop, saveShop, deleteShop }) {
         <div className="mt-6 pt-6 border-t border-stone-100">
           <div className="flex items-baseline justify-between mb-4">
             <p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase">Size Chart (cm)</p>
-            <p className="text-[12px] text-stone-400">Enter what you can — partial rows are fine.</p>
+            <p className="text-xs text-stone-400">Enter what you can — partial rows are fine.</p>
           </div>
           <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 mb-2 text-xs tracking-label uppercase text-stone-400 font-semibold">
             <span>Size</span><span>Bust</span><span>Waist</span><span>Hips</span><span></span>

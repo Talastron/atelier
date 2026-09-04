@@ -148,7 +148,7 @@ export default function InspirationView({ inspirations, onOpenInspiration, onAdd
                         {(insp.caption || cardPalette.length > 0 || (isAnalysed && totalGarments > 0)) && (
                           <div className="absolute inset-x-0 bottom-0 p-3 sm:p-3.5 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
                             {insp.caption && !parseSourceUrl(insp.caption) && (
-                              <p className="font-display text-white text-[13px] sm:text-sm leading-snug truncate mb-1.5 drop-shadow-sm">
+                              <p className="font-display text-white text-sm sm:text-sm leading-snug truncate mb-1.5 drop-shadow-sm">
                                 {insp.caption}
                               </p>
                             )}

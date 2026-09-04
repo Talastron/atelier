@@ -277,7 +277,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
                   }
                 }}
                 disabled={!imageBlob || busy}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-xs tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
               >
                 <PinterestGlyph size={16} />
                 Pin to Pinterest
@@ -289,13 +289,13 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
                   toast.show('Image saved — open Instagram to post', { kind: 'default', eyebrow: 'TIP' });
                 }}
                 disabled={!imageBlob || busy}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-xs tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-60"
               >
                 <InstagramGlyph size={16} />
                 Save for Instagram
               </button>
             </div>
-            <p className="text-[12px] text-stone-400 italic mt-2">
+            <p className="text-xs text-stone-400 italic mt-2">
               On mobile, the standard Share button covers Pinterest, Instagram and more.
             </p>
           </div>
@@ -1544,7 +1544,7 @@ function DigitalWardrobe() {
             <div className="fixed top-0 inset-x-0 z-50 pointer-events-none px-4"
                  style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
               <div className="mx-auto max-w-3xl pointer-events-auto">
-                <div className="glass-panel rounded-full shadow-sm px-4 sm:px-5 py-2 flex items-center justify-between gap-3 text-[13px] sm:text-xs">
+                <div className="glass-panel rounded-full shadow-sm px-4 sm:px-5 py-2 flex items-center justify-between gap-3 text-sm sm:text-xs">
                   <div className="flex items-center gap-2 sm:gap-2.5 text-stone-600 min-w-0">
                     <span className="font-display italic text-stone-900 text-sm sm:text-base leading-none shrink-0">Demo</span>
                     <span className="hidden sm:inline text-stone-400">·</span>
@@ -1841,7 +1841,7 @@ function DigitalWardrobe() {
                     )}
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
-                      <p className="text-[13px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
+                      <p className="text-sm text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
                     </div>
                   </button>
                   <div className="my-1 border-t border-stone-100" />
@@ -1907,7 +1907,7 @@ function DigitalWardrobe() {
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
-                    <p className="text-[13px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
+                    <p className="text-sm text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
                   </div>
                 </button>
                 <div className="my-1 border-t border-stone-100" />
@@ -3233,7 +3233,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                         </div>
                       )}
                       {findStep === 'no-match' && (
-                        <p className="text-[13px] text-stone-500 italic">
+                        <p className="text-sm text-stone-500 italic">
                           Couldn't identify a specific brand or product — try Google Shopping below to find it yourself.
                         </p>
                       )}
@@ -3248,7 +3248,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                         <Search size={14} strokeWidth={1.5} />
                         Search Google Shopping
                         {findResult.searchQuery && (
-                          <span className="text-stone-400 text-[12px] truncate max-w-[120px] hidden sm:inline">
+                          <span className="text-stone-400 text-xs truncate max-w-[120px] hidden sm:inline">
                             "{findResult.searchQuery}"
                           </span>
                         )}
@@ -3278,7 +3278,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                         </div>
                       </div>
 
-                      {findError && <p className="text-[13px] text-red-700 italic">{findError}</p>}
+                      {findError && <p className="text-sm text-red-700 italic">{findError}</p>}
 
                       {/* Escape hatch back to normal AI analysis */}
                       <button
@@ -3544,7 +3544,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                     </label>
                   )}
                 </div>
-                <p className="text-[12px] text-stone-400 mt-2">Or paste with Ctrl+V. First photo is shown on the card — tap "Make main" on any other to promote it.</p>
+                <p className="text-xs text-stone-400 mt-2">Or paste with Ctrl+V. First photo is shown on the card — tap "Make main" on any other to promote it.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -3655,14 +3655,14 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       formData.status === 'owned' ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
                     }`}>
                     <div>Owned</div>
-                    <div className={`text-[12px] mt-1 ${formData.status === 'owned' ? 'text-stone-300' : 'text-stone-400'}`}>It's in my wardrobe</div>
+                    <div className={`text-xs mt-1 ${formData.status === 'owned' ? 'text-stone-300' : 'text-stone-400'}`}>It's in my wardrobe</div>
                   </button>
                   <button type="button" onClick={() => setFormData({ ...formData, status: 'wishlist' })}
                     className={`flex-1 py-4 px-3 rounded-xl text-sm font-medium transition-all border text-center ${
                       formData.status === 'wishlist' ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
                     }`}>
                     <div>Wishlist</div>
-                    <div className={`text-[12px] mt-1 ${formData.status === 'wishlist' ? 'text-stone-300' : 'text-stone-400'}`}>I want this</div>
+                    <div className={`text-xs mt-1 ${formData.status === 'wishlist' ? 'text-stone-300' : 'text-stone-400'}`}>I want this</div>
                   </button>
                 </div>
               </div>
@@ -3904,7 +3904,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
       <div className="text-xs tracking-eyebrow uppercase text-[#c9a85f] mb-2">The Concierge's read</div>
       {fit ? (
         <>
-          <p className="font-display italic text-[15px] leading-relaxed text-cream">{fit.verdict}</p>
+          <p className="font-display italic text-base leading-relaxed text-cream">{fit.verdict}</p>
           <div className="text-xs text-stone-400 mt-2">{fit.tier}</div>
           <button onClick={() => setExpanded((v) => !v)} className="text-xs underline text-stone-300 mt-3">
             {expanded ? 'Hide the detail' : 'Why?'}
@@ -3913,7 +3913,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
             <div className="mt-3 space-y-2">
               {fit.dimensions.map((d, idx) => (
                 <div key={idx}>
-                  <div className="flex justify-between text-[13px] text-stone-400"><span>{d.label}</span><span>{d.state}</span></div>
+                  <div className="flex justify-between text-sm text-stone-400"><span>{d.label}</span><span>{d.state}</span></div>
                   <div className="h-1 rounded-full bg-stone-700 overflow-hidden"><div className="h-full bg-[#c9a85f]" style={{ width: `${Math.round(d.level * 100)}%` }} /></div>
                 </div>
               ))}
@@ -4418,7 +4418,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         <p className="text-xs font-medium text-brass-800">
                           {reminder.material} care · worn {reminder.wearsSince} {reminder.wearsSince === 1 ? 'time' : 'times'}
                         </p>
-                        <p className="text-[13px] text-brass-700/80 mt-0.5 leading-relaxed">Suggested: {reminder.action}.</p>
+                        <p className="text-sm text-brass-700/80 mt-0.5 leading-relaxed">Suggested: {reminder.action}.</p>
                       </div>
                       <button onClick={onMarkCared}
                         className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors shrink-0">
@@ -4519,7 +4519,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       </span>
                     )}
                   </div>
-                  <p className="text-[13px] text-stone-500 mt-2">
+                  <p className="text-sm text-stone-500 mt-2">
                     Tracking since {new Date(history[0].date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })} · {history.length} observation{history.length === 1 ? '' : 's'}
                   </p>
                 </div>
@@ -4559,7 +4559,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         {purchaseVerdictBusy ? 'Re-scoring…' : 'Re-score'}
                       </button>
                     </div>
-                    <p className="text-[12px] text-stone-400 italic mt-3">Scored against your own wardrobe. The studio advises; the decision is yours.</p>
+                    <p className="text-xs text-stone-400 italic mt-3">Scored against your own wardrobe. The studio advises; the decision is yours.</p>
                   </div>
                 ) : (
                   <>
@@ -4608,7 +4608,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                           {fitEstimateBusy ? 'Re-estimating…' : 'Re-estimate'}
                         </button>
                       </div>
-                      <p className="text-[12px] text-stone-400 italic mt-3">AI estimate — not a guarantee. Best when you own pieces from this brand.</p>
+                      <p className="text-xs text-stone-400 italic mt-3">AI estimate — not a guarantee. Best when you own pieces from this brand.</p>
                     </div>
                   ) : (
                     <>
@@ -4677,7 +4677,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                     })}
                   </div>
                   {current !== 'available' && (
-                    <p className="text-[13px] text-stone-500 mt-2 italic">AI styling will skip this piece until it's available again.</p>
+                    <p className="text-sm text-stone-500 mt-2 italic">AI styling will skip this piece until it's available again.</p>
                   )}
                 </div>
               );
@@ -4756,7 +4756,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       </a>
                     ))}
                   </div>
-                  <p className="text-[12px] text-stone-400 italic mt-2">Searches open in a new tab — Atelier doesn't track or compare prices itself.</p>
+                  <p className="text-xs text-stone-400 italic mt-2">Searches open in a new tab — Atelier doesn't track or compare prices itself.</p>
                 </div>
               );
             })()}
@@ -4956,7 +4956,7 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
             <p className="text-xs font-medium text-stone-900 truncate px-1">{s.name}</p>
             <p className="text-xs text-stone-500 uppercase tracking-meta truncate px-1 mt-0.5">{s.brand}</p>
             {reasons?.[0] && (
-              <p className="text-[12px] text-brass-600 px-1 mt-0.5 truncate" title={reasons.join(' · ')}>
+              <p className="text-xs text-brass-600 px-1 mt-0.5 truncate" title={reasons.join(' · ')}>
                 {reasons[0]}
               </p>
             )}
@@ -4964,7 +4964,7 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
         ))}
         </div>
       </div>
-      <p className="text-[12px] text-stone-400 italic mt-2">Suggested by brand, palette, style, season and what you've already paired.</p>
+      <p className="text-xs text-stone-400 italic mt-2">Suggested by brand, palette, style, season and what you've already paired.</p>
     </div>
   );
 }
@@ -5326,7 +5326,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
                           {['Tops','Bottoms','Dresses','Outerwear','Sportswear','Swimwear','Shoes','Bags','Accessories','Jewellery'].map((c) => <option key={c}>{c}</option>)}
                         </select>
                       </div>
-                      <p className="text-[12px] text-stone-400 mt-1">
+                      <p className="text-xs text-stone-400 mt-1">
                         {(d.result.colors || []).slice(0, 3).join(' · ')}
                         {d.result.confidence != null && <span className="ml-2">{d.result.confidence}/100</span>}
                       </p>
@@ -5493,7 +5493,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                   </a>
                 </div>
                 {sortedShops.length === 0 && (
-                  <p className="text-[13px] text-stone-400 mt-3 italic">Add some brands in Profile → Shops to surface them here.</p>
+                  <p className="text-sm text-stone-400 mt-3 italic">Add some brands in Profile → Shops to surface them here.</p>
                 )}
               </div>
 
@@ -5585,7 +5585,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                         ) : (
                           <>
                             <p className="text-sm text-red-800 truncate">{r.url}</p>
-                            <p className="text-[12px] text-red-700 mt-0.5">{r.error}</p>
+                            <p className="text-xs text-red-700 mt-0.5">{r.error}</p>
                           </>
                         )}
                       </div>
@@ -6450,7 +6450,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                               <p className="text-stone-900 text-sm font-medium leading-snug">
                                 {g.description}
                                 {g.brand_guess && (
-                                  <span className="text-[13px] italic text-amber-700 font-normal ml-2">· likely {g.brand_guess}</span>
+                                  <span className="text-sm italic text-amber-700 font-normal ml-2">· likely {g.brand_guess}</span>
                                 )}
                               </p>
 
@@ -6468,7 +6468,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                     </span>
                                   )}
                                   {g.buyingNote && (
-                                    <p className="w-full text-[13px] text-stone-400 italic mt-1">{g.buyingNote}</p>
+                                    <p className="w-full text-sm text-stone-400 italic mt-1">{g.buyingNote}</p>
                                   )}
                                   {/* Owning something close enough isn't the end of the
                                       advice — name the piece that would wear this look
@@ -6476,7 +6476,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                   {g.betterMatch && (
                                     <div className="w-full mt-2 pt-2.5 border-t border-stone-100">
                                       <p className="text-xs tracking-label uppercase text-stone-400">A closer match would be</p>
-                                      <p className="text-[12px] text-stone-700 leading-snug mt-1">{g.betterMatch}</p>
+                                      <p className="text-xs text-stone-700 leading-snug mt-1">{g.betterMatch}</p>
                                       <div className="flex flex-wrap gap-1.5 mt-2.5">
                                         {onAddMissingToWishlist && (
                                           <button onClick={() => onAddMissingToWishlist(g.betterMatch, { category: g.category, upgradeFor: matchedItem.name })}
@@ -6652,7 +6652,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
                       <div className={`aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2 ${isFocal ? 'ring-2 ring-brass-300' : ''}`}>
                         <ItemTileImage item={p} alt={p.name || ""} />
                       </div>
-                      <p className={`text-[13px] truncate ${isFocal ? 'text-brass-300 font-medium' : 'text-stone-300'}`}>
+                      <p className={`text-sm truncate ${isFocal ? 'text-brass-300 font-medium' : 'text-stone-300'}`}>
                         {isFocal ? '★ ' : ''}{p.name}
                       </p>
                       <p className="text-xs text-stone-500 truncate uppercase tracking-meta">{p.brand}</p>
@@ -6777,7 +6777,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
                     <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
                       <ItemTileImage item={p} alt={p.name || ""} />
                     </div>
-                    <p className="text-[13px] text-stone-300 truncate">{p.name}</p>
+                    <p className="text-sm text-stone-300 truncate">{p.name}</p>
                     <p className="text-xs text-stone-500 truncate uppercase tracking-meta">{p.brand}</p>
                   </div>
                 ))}
@@ -7270,7 +7270,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
               <button
                 type="button"
                 onClick={retry}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-[12px] tracking-wide hover:bg-stone-700 transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-xs tracking-wide hover:bg-stone-700 transition-colors shadow-sm"
               >
                 <Sparkles size={13} strokeWidth={1.75} className="text-amber-400" />
                 Tap to retry
@@ -7411,14 +7411,14 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
           <button
             type="button"
             onClick={() => { onSchedule(itemIds, todayISO); setScheduleOpen(false); }}
-            className="px-2 py-0.5 rounded-full text-[13px] text-stone-700 hover:bg-stone-200 transition-colors"
+            className="px-2 py-0.5 rounded-full text-sm text-stone-700 hover:bg-stone-200 transition-colors"
           >
             Today
           </button>
           <button
             type="button"
             onClick={() => { onSchedule(itemIds, tomorrowISO); setScheduleOpen(false); }}
-            className="px-2 py-0.5 rounded-full text-[13px] text-stone-700 hover:bg-stone-200 transition-colors"
+            className="px-2 py-0.5 rounded-full text-sm text-stone-700 hover:bg-stone-200 transition-colors"
           >
             Tomorrow
           </button>
@@ -7426,7 +7426,7 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
             type="date"
             min={todayISO}
             onChange={(e) => { if (e.target.value) { onSchedule(itemIds, e.target.value); setScheduleOpen(false); } }}
-            className="px-1.5 py-0.5 text-[13px] bg-transparent border-l border-stone-300 outline-none focus:bg-white"
+            className="px-1.5 py-0.5 text-sm bg-transparent border-l border-stone-300 outline-none focus:bg-white"
             style={{ fontSize: '16px' }}
           />
           <button
@@ -7502,11 +7502,11 @@ function ConciergeComposingIndicator({ onCancel = null }) {
   return (
     <div className="inline-flex items-center gap-2.5 text-stone-700">
       <Sparkles size={16} strokeWidth={1.5} className="text-amber-500 animate-pulse shrink-0" />
-      <span className="font-display italic text-[14px] sm:text-[15px]">
+      <span className="font-display italic text-sm sm:text-base">
         {currentStage}
       </span>
       {showElapsed && (
-        <span className="text-[13px] tabular-nums text-stone-400 ml-1">
+        <span className="text-sm tabular-nums text-stone-400 ml-1">
           {elapsedSec}s
         </span>
       )}
@@ -7539,7 +7539,7 @@ function ConciergeMessage({ role, text, streaming = false, items = [], onOpenIte
           {streaming && !text ? (
             <ConciergeComposingIndicator onCancel={onCancel} />
           ) : (
-            <p className="font-display text-stone-900 leading-relaxed text-[15px] sm:text-base whitespace-pre-line">
+            <p className="font-display text-stone-900 leading-relaxed text-base sm:text-base whitespace-pre-line">
               {renderTextWithChips(text, { items, onOpenItem })}
               {streaming && <span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" aria-hidden="true" />}
             </p>
@@ -7673,7 +7673,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
                 {copied ? 'Copied ✓' : 'Copy'}
               </button>
             </div>
-            <p className="text-[12px] text-stone-400 mt-2 leading-relaxed">Tip: tap the URL above to select, then long-press → Copy if the button doesn't work in your browser.</p>
+            <p className="text-xs text-stone-400 mt-2 leading-relaxed">Tip: tap the URL above to select, then long-press → Copy if the button doesn't work in your browser.</p>
           </div>
         </div>
       </div>
@@ -8104,7 +8104,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         {styleFitBusy ? 'Composing…' : '+ Add personal note'}
                       </button>
                     )}
-                    {styleFitError && <p className="text-[13px] text-stone-500 mt-2 italic">{styleFitError}</p>}
+                    {styleFitError && <p className="text-sm text-stone-500 mt-2 italic">{styleFitError}</p>}
                   </div>
                 )}
               </div>
@@ -8211,7 +8211,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[12px] text-stone-400 italic">No tags yet — add a few to find this look faster.</p>
+                  <p className="text-xs text-stone-400 italic">No tags yet — add a few to find this look faster.</p>
                 )}
 
                 {editingTags && typeof onSaveOutfit === 'function' && (
@@ -8308,7 +8308,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 {(() => {
                   const memberCollections = collections.filter((c) => c.outfitIds.includes(outfit.id));
                   if (memberCollections.length === 0 && !addToCollectionOpen) {
-                    return <p className="text-[12px] text-stone-400 italic">Not in any collection yet.</p>;
+                    return <p className="text-xs text-stone-400 italic">Not in any collection yet.</p>;
                   }
                   return (
                     <div className="flex flex-wrap gap-1.5">
@@ -9025,7 +9025,7 @@ function NotificationManager({ items, outfits, schedules }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-stone-900">Reminders?</p>
-          <p className="text-[13px] text-stone-500 mt-0.5 leading-relaxed">
+          <p className="text-sm text-stone-500 mt-0.5 leading-relaxed">
             Get a heads-up about tomorrow's planned outfit and care reminders the next time you open Atelier.
           </p>
           <div className="flex gap-2 mt-2">

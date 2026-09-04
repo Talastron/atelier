@@ -63,7 +63,7 @@ export default function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null
                 <div className="flex items-center gap-2.5 mb-3">
                   <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
                   <span className="text-xs tracking-eyebrow uppercase font-medium text-stone-600">{category}</span>
-                  <span className="text-[12px] text-stone-300">·</span>
+                  <span className="text-xs text-stone-300">·</span>
                   <span className="text-xs tracking-meta text-stone-400">{items.length}</span>
                 </div>
                 <ul className="space-y-0">

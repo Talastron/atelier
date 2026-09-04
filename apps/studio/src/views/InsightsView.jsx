@@ -973,7 +973,7 @@ function ManifestoBody({ text }) {
       <Label>Colour and texture</Label>
       <p className="italic mb-5">{parts.colour}</p>
       <Label>What you're reaching for</Label>
-      <p className="italic text-[17px] leading-relaxed pl-4 border-l-2 border-[#c9a85f] text-stone-900 mb-4">{parts.aspiration}</p>
+      <p className="italic text-lg leading-relaxed pl-4 border-l-2 border-[#c9a85f] text-stone-900 mb-4">{parts.aspiration}</p>
       <div className="font-display italic text-stone-500 text-right">— Your Concierge</div>
     </div>
   );
@@ -1151,7 +1151,7 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
       )}
 
       {(manifesto || isStreaming) && (
-        <div className="relative z-10 mt-6 bg-cream text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-[15px] leading-[1.8] font-display">
+        <div className="relative z-10 mt-6 bg-cream text-stone-800 rounded-2xl p-6 sm:p-8 text-sm sm:text-base leading-[1.8] font-display">
           {isStreaming ? (
             <div className="whitespace-pre-line italic">{streamingText}<span className="inline-block w-0.5 h-4 align-middle ml-0.5 bg-stone-700 animate-pulse" /></div>
           ) : (
@@ -1496,7 +1496,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
               type="button"
               onClick={() => onJumpToWardrobe?.({ filter: 'untagged' })}
               disabled={!onJumpToWardrobe}
-              className="group mt-8 inline-flex items-center gap-1.5 text-[13px] text-stone-500 italic font-display enabled:hover:text-stone-900 transition-colors disabled:cursor-default"
+              className="group mt-8 inline-flex items-center gap-1.5 text-sm text-stone-500 italic font-display enabled:hover:text-stone-900 transition-colors disabled:cursor-default"
             >
               <span className="not-italic font-sans tabular-nums font-semibold text-stone-700 group-enabled:group-hover:text-stone-900">{ownedItems.length - taggedItemsCount}</span>
               item{ownedItems.length - taggedItemsCount === 1 ? '' : 's'} without colour tags — review &amp; fix
@@ -1576,7 +1576,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                           <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
                         )}
                       </div>
-                      <p className={`text-[13px] truncate ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-700'}`}>{it.name}</p>
+                      <p className={`text-sm truncate ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-700'}`}>{it.name}</p>
                       <p className="text-xs text-stone-500 truncate uppercase tracking-meta">{it.brand}</p>
                     </Wrap>
                   );

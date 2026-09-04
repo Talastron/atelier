@@ -643,7 +643,7 @@ function DailyBriefCard({
           <span className="text-xs uppercase tracking-[0.16em] text-stone-400">On today</span>
           <span className="text-sm text-stone-700">{eventTime} · {leadEvent.title}</span>
           {calendarEvents.length > 1 && (
-            <span className="ml-auto text-[13px] text-stone-400">dressed for the day's most demanding moment</span>
+            <span className="ml-auto text-sm text-stone-400">dressed for the day's most demanding moment</span>
           )}
         </div>
       )}
@@ -679,7 +679,7 @@ const Row = ({ icon, accent, title, sub, onClick, item }) => (
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-stone-900 truncate">{title}</p>
-        <p className="text-[13px] text-stone-500 truncate">{sub}</p>
+        <p className="text-sm text-stone-500 truncate">{sub}</p>
       </div>
       <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
     </button>

@@ -275,14 +275,27 @@ export function weatherAppropriatenessScore(item, tempC) {
   const cat = (item.category || '').toLowerCase();
   const sub = (item.subCategory || '').toLowerCase();
   const styles = (itemStyles(item) || []).map((s) => (s || '').toLowerCase());
-  const text = `${cat} ${sub} ${styles.join(' ')}`;
+  // The NAME is in here for a reason. It used to be category + subCategory +
+  // styles only, and "Ladies Country Fleece Quarter Zip" carries the decisive
+  // word in its name — so the function returned a neutral 0.5 and Today's Pick
+  // offered it on a 24C day. Brand names occasionally collide with a pattern
+  // (a "Wool & The Gang" cardigan), which costs a little ranking accuracy and
+  // is worth it: the alternative is having no opinion at all about most items.
+  const name = (item.name || '').toLowerCase();
+  const text = `${name} ${cat} ${sub} ${styles.join(' ')}`;
 
   // Buckets:
   //   hot:  tempC >= 26  — sleeveless / shorts / dresses ideal; knits/coats penalised
   //   warm: 18-25        — light layers / chinos / t-shirts ideal
   //   cool: 10-17        — sweaters / long sleeves / jeans ideal
   //   cold: < 10         — coats / boots / wool / layers ideal
-  const HEAVY_PATTERNS = ['coat', 'jacket', 'blazer', 'sweater', 'jumper', 'knit', 'wool', 'cashmere', 'puffer', 'parka', 'trench', 'leather jacket', 'turtleneck'];
+  // The second group was missing entirely, which is why a fleece scored neutral
+  // even once the name was read. All of them are cold-weather constructions.
+  const HEAVY_PATTERNS = [
+    'coat', 'jacket', 'blazer', 'sweater', 'jumper', 'knit', 'wool', 'cashmere',
+    'puffer', 'parka', 'trench', 'leather jacket', 'turtleneck',
+    'fleece', 'sweatshirt', 'sherpa', 'shearling', 'quilted', 'padded', 'down', 'thermal', 'flannel',
+  ];
   const LIGHT_PATTERNS = ['tank', 'sleeveless', 'camisole', 'cami', 't-shirt', 'tee', 'shorts', 'sundress', 'sandal', 'flip', 'linen', 'cotton'];
   const LONG_SLEEVE_PATTERNS = ['long sleeve', 'long-sleeve', 'long sleeved'];
   const LAYER_PATTERNS = ['cardigan', 'cardi', 'gilet', 'vest'];

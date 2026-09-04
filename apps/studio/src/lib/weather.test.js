@@ -192,3 +192,51 @@ describe('pickTodaysRecommendation', () => {
     expect(picks).toEqual(new Set(['linen']));
   });
 });
+
+describe('weatherAppropriatenessScore', () => {
+  // The word "Fleece" is in the item's NAME. The function used to build its
+  // matched text from category, subCategory and styles only, so it returned a
+  // neutral 0.5 and had no opinion about a fleece on a warm day.
+  it('reads the item name, not just its category and tags', () => {
+    const fleece = { name: 'Ladies Country Fleece Quarter Zip', category: 'Tops', subCategory: '' };
+    expect(weatherAppropriatenessScore(fleece, 24)).toBeLessThan(0.5);
+  });
+
+  it('penalises each heavy pattern on a warm day', () => {
+    for (const word of ['fleece', 'sweatshirt', 'sherpa', 'shearling', 'quilted', 'padded', 'down', 'thermal', 'flannel']) {
+      const item = { name: `A ${word} thing`, category: 'Tops', subCategory: '' };
+      expect(weatherAppropriatenessScore(item, 24), word).toBeLessThan(0.5);
+    }
+  });
+
+  it('penalises each heavy pattern harder on a hot day', () => {
+    for (const word of ['fleece', 'sweatshirt', 'sherpa', 'shearling', 'quilted', 'padded', 'down', 'thermal', 'flannel']) {
+      const item = { name: `A ${word} thing`, category: 'Tops', subCategory: '' };
+      expect(weatherAppropriatenessScore(item, 30), word)
+        .toBeLessThan(weatherAppropriatenessScore(item, 24));
+    }
+  });
+
+  it('rewards each heavy pattern on a cold day', () => {
+    for (const word of ['fleece', 'sweatshirt', 'sherpa', 'shearling', 'quilted', 'padded', 'down', 'thermal', 'flannel']) {
+      const item = { name: `A ${word} thing`, category: 'Tops', subCategory: '' };
+      expect(weatherAppropriatenessScore(item, 2), word).toBeGreaterThan(0.5);
+    }
+  });
+
+  it('is neutral when the temperature is unknown', () => {
+    expect(weatherAppropriatenessScore({ name: 'Fleece', category: 'Tops' }, null)).toBe(0.5);
+  });
+
+  it('stays within 0..1', () => {
+    const worst = { name: 'quilted padded down thermal fleece wool cashmere', category: 'Outerwear', subCategory: 'Puffer coat' };
+    expect(weatherAppropriatenessScore(worst, 35)).toBeGreaterThanOrEqual(0);
+    expect(weatherAppropriatenessScore(worst, 35)).toBeLessThanOrEqual(1);
+    const best = { name: 'linen sleeveless cotton camisole tank', category: 'Tops' };
+    expect(weatherAppropriatenessScore(best, 35)).toBeLessThanOrEqual(1);
+  });
+
+  it('is falsy-safe', () => {
+    expect(weatherAppropriatenessScore({}, 24)).toBe(0.5);
+  });
+});

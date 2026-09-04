@@ -42,7 +42,7 @@ export default class ErrorBoundary extends React.Component {
             Reload Atelier
           </button>
           {isDev && this.state.error && (
-            <pre className="mt-8 text-left text-[11px] leading-relaxed text-claret-700 bg-white border border-stone-200 rounded-xl p-4 overflow-auto max-h-60 whitespace-pre-wrap">
+            <pre className="mt-8 text-left text-[13px] leading-relaxed text-claret-700 bg-white border border-stone-200 rounded-xl p-4 overflow-auto max-h-60 whitespace-pre-wrap">
               {this.state.error.message}
               {'\n\n'}
               {this.state.error.stack}

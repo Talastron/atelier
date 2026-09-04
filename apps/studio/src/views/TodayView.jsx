@@ -15,6 +15,7 @@ import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
+import TodaysPick from "../components/TodaysPick.jsx";
 import { hasClothingBase, isClothingBase } from "../lib/outfit.js";
 
 const COMPOSE_STAGES = [
@@ -726,7 +727,7 @@ function DailyBriefCard({
           <span className="text-xs uppercase tracking-[0.16em] text-stone-400">On today</span>
           <span className="text-sm text-stone-700">{eventTime} · {leadEvent.title}</span>
           {calendarEvents.length > 1 && (
-            <span className="ml-auto text-[11px] text-stone-400">dressed for the day's most demanding moment</span>
+            <span className="ml-auto text-[13px] text-stone-400">dressed for the day's most demanding moment</span>
           )}
         </div>
       )}
@@ -762,7 +763,7 @@ const Row = ({ icon, accent, title, sub, onClick, item }) => (
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-stone-900 truncate">{title}</p>
-        <p className="text-[11px] text-stone-500 truncate">{sub}</p>
+        <p className="text-[13px] text-stone-500 truncate">{sub}</p>
       </div>
       <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
     </button>
@@ -955,6 +956,16 @@ export default function TodayView({ user, items, measurements, schedules, outfit
         onEditPreferences={onEditPreferences}
         onExportOutfit={onExportOutfit}
       />
+
+      {/* One piece worth rewearing, under the outfit rather than beside it: the
+          Brief answers "what shall I wear", this answers "what am I forgetting I
+          own". It lived in the Wardrobe rail until now, which meant a card
+          called Today's pick did not appear on Today, and was inside an aside
+          marked hidden lg:grid so a phone never showed it at all.
+
+          It is free and instant where the Brief costs an AI call and can rate
+          limit, so on a day the Brief fails this still says something true. */}
+      <TodaysPick items={items} weather={weather} onItemClick={onItemClick} />
 
       {/* Ask your stylist — a slim concierge bar directly under the hero (it only
           opens the stylist sidebar, so it's a line, not a panel). */}

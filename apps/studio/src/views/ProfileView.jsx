@@ -809,7 +809,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-stone-400 mt-2">Display only — existing prices keep their numbers.</p>
+            <p className="text-[12px] text-stone-400 mt-2">Display only — existing prices keep their numbers.</p>
           </div>
 
           <div>
@@ -825,7 +825,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                     aiTempPreset === p.v ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
                   }`}>
                   <div>{p.label}</div>
-                  <div className={`text-[10px] mt-0.5 ${aiTempPreset === p.v ? 'text-stone-300' : 'text-stone-400'}`}>{p.sub}</div>
+                  <div className={`text-[12px] mt-0.5 ${aiTempPreset === p.v ? 'text-stone-300' : 'text-stone-400'}`}>{p.sub}</div>
                 </button>
               ))}
             </div>
@@ -854,7 +854,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-stone-400 mt-2">Powers the spending meter on Insights. Counts owned items added this month (by purchase date if set, otherwise added date). Leave blank to hide the meter.</p>
+            <p className="text-[12px] text-stone-400 mt-2">Powers the spending meter on Insights. Counts owned items added this month (by purchase date if set, otherwise added date). Leave blank to hide the meter.</p>
           </div>
         </div>
       </div>

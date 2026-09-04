@@ -347,11 +347,17 @@ export function pickTodaysRecommendation(items, tempC = null) {
     const recency = days === null ? 1 : Math.min(days / 60, 1);
     const favouriteBoost = item.favorite ? 1 : 0;
     const weatherFit = weatherAppropriatenessScore(item, tempC);
-    // Weather keeps the majority share. The other two are tie-breakers among
-    // pieces that already suit the day — they are not competing signals, which
-    // is what the removed seasonFit term had become. Sums to 1.0, so these
-    // numbers stay comparable with the old scale.
-    const score = weatherFit * 0.60 + recency * 0.20 + favouriteBoost * 0.20;
+    // Neglect leads, and that follows from the veto rather than contradicting
+    // it. pickVeto has already guaranteed every candidate suits the day, so
+    // ranking them by weather again would mostly re-sort pieces that are all
+    // acceptable. What the card is FOR, sitting beneath a Daily Brief that
+    // already composes a whole outfit, is surfacing what you have forgotten you
+    // own — so the least-worn eligible piece should win.
+    //
+    // weatherFit still refines: among Summer-tagged pieces a camisole beats a
+    // long-sleeved linen shirt at 30°C, and the veto cannot express that.
+    // Sums to 1.0, as before.
+    const score = recency * 0.45 + weatherFit * 0.35 + favouriteBoost * 0.20;
     return { item, score };
   });
   scored.sort((a, b) => b.score - a.score);

@@ -520,12 +520,12 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                 }`}>
                 <span className="text-xs sm:text-sm">{day}</span>
                 {list.length > 0 && (
-                  <span className={`text-[8px] sm:text-[10px] mt-0.5 ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
+                  <span className={`text-[8px] sm:text-[12px] mt-0.5 ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
                     {list.length} wear{list.length === 1 ? '' : 's'}
                   </span>
                 )}
                 {scheduled && !list.length && (
-                  <span className={`text-[8px] sm:text-[10px] mt-0.5 ${isSelected ? 'text-amber-200' : 'text-brass-600'}`}>
+                  <span className={`text-[8px] sm:text-[12px] mt-0.5 ${isSelected ? 'text-amber-200' : 'text-brass-600'}`}>
                     ✦ planned
                   </span>
                 )}
@@ -1201,7 +1201,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                           });
                         }}
                         title={a.hint}
-                        className={`px-3 py-1.5 rounded-full text-[11px] transition-colors border ${
+                        className={`px-3 py-1.5 rounded-full text-[13px] transition-colors border ${
                           selected
                             ? 'bg-brass-300 text-stone-900 border-brass-400'
                             : 'bg-white text-stone-600 border-stone-300 hover:border-stone-500'
@@ -1230,7 +1230,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                   className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none resize-none"
                   style={{ fontSize: '16px' /* avoid iOS auto-zoom */ }}
                 />
-                <p className="text-[10px] text-stone-400 italic leading-relaxed">
+                <p className="text-[12px] text-stone-400 italic leading-relaxed">
                   Atelier also factors in cultural dress norms for the destination — covered shoulders for religious sites, modest hemlines where appropriate, climate-specific cover-ups.
                 </p>
               </div>
@@ -1239,7 +1239,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                 className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 disabled:opacity-50">
                 Compose this trip
               </button>
-              <p className="text-[10px] text-stone-400 leading-relaxed">
+              <p className="text-[12px] text-stone-400 leading-relaxed">
                 Forecast via Open-Meteo for the first ~14 days. Days beyond use seasonal climate. The Concierge composes outfits + a packing list from your wardrobe and the activities you selected — iterate per day, export, or save & schedule.
               </p>
             </form>
@@ -1379,7 +1379,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                             </button>
                           </div>
                           {isSparse && (
-                            <p className="text-[10px] text-amber-700 italic mb-2">
+                            <p className="text-[12px] text-amber-700 italic mb-2">
                               Sparse outfit ({pieces.length} piece{pieces.length === 1 ? '' : 's'}) — Reroll for a fuller composition.
                             </p>
                           )}
@@ -1455,7 +1455,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                                       × {dayCount}
                                     </span>
                                   </div>
-                                  <p className="mt-1 text-[10px] text-stone-600 text-center truncate w-full leading-tight">{p.name || p.brand || p.category}</p>
+                                  <p className="mt-1 text-[12px] text-stone-600 text-center truncate w-full leading-tight">{p.name || p.brand || p.category}</p>
                                 </div>
                               ))}
                             </div>
@@ -1463,7 +1463,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                         );
                       })}
                     </div>
-                    <p className="mt-4 text-[10px] text-stone-400 italic">
+                    <p className="mt-4 text-[12px] text-stone-400 italic">
                       Green badges mark backbone pieces (worn 3+ days). Use Copy or Print below to take this list with you.
                     </p>
                   </div>
@@ -1592,7 +1592,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                           key={c}
                           type="button"
                           onClick={() => setPickerCategory(c)}
-                          className={`px-3 py-1.5 rounded-full text-[11px] whitespace-nowrap transition-colors border ${
+                          className={`px-3 py-1.5 rounded-full text-[13px] whitespace-nowrap transition-colors border ${
                             pickerCategory === c
                               ? 'bg-stone-900 text-white border-stone-900'
                               : 'bg-white text-stone-600 border-stone-300 hover:border-stone-500'
@@ -1636,7 +1636,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                                 )}
                               </div>
                               <div className="p-1.5">
-                                <p className="text-[10px] text-stone-900 truncate leading-tight">{p.name || p.brand || p.category}</p>
+                                <p className="text-[12px] text-stone-900 truncate leading-tight">{p.name || p.brand || p.category}</p>
                                 {p.brand && p.name && <p className="text-[9px] text-stone-500 truncate leading-tight">{p.brand}</p>}
                               </div>
                             </button>
@@ -1646,7 +1646,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                     )}
                   </div>
                   <div className="px-5 py-3 border-t border-stone-200 bg-stone-50 shrink-0 flex justify-between items-center">
-                    <p className="text-[10px] text-stone-500">{filtered.length} piece{filtered.length === 1 ? '' : 's'} · {currentDayIds.size} already on this day</p>
+                    <p className="text-[12px] text-stone-500">{filtered.length} piece{filtered.length === 1 ? '' : 's'} · {currentDayIds.size} already on this day</p>
                     <button onClick={() => setAddingToDay(null)} type="button" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 px-3 py-1">Done</button>
                   </div>
                 </div>
@@ -2140,7 +2140,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
               <button key={t.id} type="button" onClick={() => setOpenTripId(t.id)} className="shrink-0 text-left bg-white border border-stone-200/60 rounded-2xl p-4 smooth-shadow hover:border-brass-300 transition-colors min-w-[220px]">
                 <p className="text-[9px] tracking-[0.25em] uppercase text-brass-600 mb-1">{t.status === 'active' ? 'Active' : 'Upcoming'}</p>
                 <p className="font-display text-stone-900 text-lg leading-tight truncate">{t.name}</p>
-                {t.location && <p className="text-[11px] text-stone-500 truncate">{t.location}</p>}
+                {t.location && <p className="text-[13px] text-stone-500 truncate">{t.location}</p>}
                 <p className="text-[10px] text-stone-400 mt-1 tracking-wide">
                   {new Date(t.startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → {new Date(t.endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {t.days.length} day{t.days.length === 1 ? '' : 's'}
                 </p>
@@ -2272,7 +2272,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
                                 <p className="font-display italic text-xs text-brass-600 mt-1.5">{relativeLabel}</p>
                               )}
                               {day.eventName && (
-                                <p className="font-display italic text-[11px] text-stone-500 mt-2 leading-tight">{day.eventName}</p>
+                                <p className="font-display italic text-[13px] text-stone-500 mt-2 leading-tight">{day.eventName}</p>
                               )}
                             </div>
 

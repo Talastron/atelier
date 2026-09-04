@@ -1496,7 +1496,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
               type="button"
               onClick={() => onJumpToWardrobe?.({ filter: 'untagged' })}
               disabled={!onJumpToWardrobe}
-              className="group mt-8 inline-flex items-center gap-1.5 text-[11px] text-stone-500 italic font-display enabled:hover:text-stone-900 transition-colors disabled:cursor-default"
+              className="group mt-8 inline-flex items-center gap-1.5 text-[13px] text-stone-500 italic font-display enabled:hover:text-stone-900 transition-colors disabled:cursor-default"
             >
               <span className="not-italic font-sans tabular-nums font-semibold text-stone-700 group-enabled:group-hover:text-stone-900">{ownedItems.length - taggedItemsCount}</span>
               item{ownedItems.length - taggedItemsCount === 1 ? '' : 's'} without colour tags — review &amp; fix
@@ -1576,7 +1576,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                           <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
                         )}
                       </div>
-                      <p className={`text-[11px] truncate ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-700'}`}>{it.name}</p>
+                      <p className={`text-[13px] truncate ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-700'}`}>{it.name}</p>
                       <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{it.brand}</p>
                     </Wrap>
                   );

@@ -295,7 +295,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
                 Save for Instagram
               </button>
             </div>
-            <p className="text-[10px] text-stone-400 italic mt-2">
+            <p className="text-[12px] text-stone-400 italic mt-2">
               On mobile, the standard Share button covers Pinterest, Instagram and more.
             </p>
           </div>
@@ -1544,7 +1544,7 @@ function DigitalWardrobe() {
             <div className="fixed top-0 inset-x-0 z-50 pointer-events-none px-4"
                  style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.75rem)' }}>
               <div className="mx-auto max-w-3xl pointer-events-auto">
-                <div className="glass-panel rounded-full shadow-sm px-4 sm:px-5 py-2 flex items-center justify-between gap-3 text-[11px] sm:text-xs">
+                <div className="glass-panel rounded-full shadow-sm px-4 sm:px-5 py-2 flex items-center justify-between gap-3 text-[13px] sm:text-xs">
                   <div className="flex items-center gap-2 sm:gap-2.5 text-stone-600 min-w-0">
                     <span className="font-display italic text-stone-900 text-sm sm:text-base leading-none shrink-0">Demo</span>
                     <span className="hidden sm:inline text-stone-400">·</span>
@@ -1806,12 +1806,16 @@ function DigitalWardrobe() {
           {/* DESKTOP ACCOUNT AVATAR — fixed top-right, fades on scroll (like the
               mobile pattern). Opens a small menu (Profile + Sign out). Lives here,
               not in the sidebar, so it reads as the conventional top-right account
-              corner and keeps the sidebar a clean nav column. */}
+              corner and keeps the sidebar a clean nav column.
+              48px, not the 40 it shared with the mobile button: this is the only
+              control in a wide band of empty header, and at 40 it read as an
+              afterthought. The mobile one keeps 40, where space is tight and 40
+              is a perfectly good touch target. */}
           <div className="hidden lg:block">
             <button
               type="button"
               onClick={() => setDesktopAccountOpen((o) => !o)}
-              className={`fixed right-12 z-40 w-10 h-10 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+              className={`fixed right-12 z-40 w-12 h-12 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
               style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
               aria-label="Account"
               aria-haspopup="menu"
@@ -1837,7 +1841,7 @@ function DigitalWardrobe() {
                     )}
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
-                      <p className="text-[11px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
+                      <p className="text-[13px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
                     </div>
                   </button>
                   <div className="my-1 border-t border-stone-100" />
@@ -1903,7 +1907,7 @@ function DigitalWardrobe() {
                   )}
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-stone-900 truncate">{user?.displayName || (demoMode ? 'Demo guest' : 'Account')}</p>
-                    <p className="text-[11px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
+                    <p className="text-[13px] text-stone-500 truncate">{user?.email || (demoMode ? 'Sign up to save' : '')}</p>
                   </div>
                 </button>
                 <div className="my-1 border-t border-stone-100" />
@@ -3229,7 +3233,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                         </div>
                       )}
                       {findStep === 'no-match' && (
-                        <p className="text-[11px] text-stone-500 italic">
+                        <p className="text-[13px] text-stone-500 italic">
                           Couldn't identify a specific brand or product — try Google Shopping below to find it yourself.
                         </p>
                       )}
@@ -3244,7 +3248,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                         <Search size={14} strokeWidth={1.5} />
                         Search Google Shopping
                         {findResult.searchQuery && (
-                          <span className="text-stone-400 text-[10px] truncate max-w-[120px] hidden sm:inline">
+                          <span className="text-stone-400 text-[12px] truncate max-w-[120px] hidden sm:inline">
                             "{findResult.searchQuery}"
                           </span>
                         )}
@@ -3274,7 +3278,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                         </div>
                       </div>
 
-                      {findError && <p className="text-[11px] text-red-700 italic">{findError}</p>}
+                      {findError && <p className="text-[13px] text-red-700 italic">{findError}</p>}
 
                       {/* Escape hatch back to normal AI analysis */}
                       <button
@@ -3540,7 +3544,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                     </label>
                   )}
                 </div>
-                <p className="text-[10px] text-stone-400 mt-2">Or paste with Ctrl+V. First photo is shown on the card — tap "Make main" on any other to promote it.</p>
+                <p className="text-[12px] text-stone-400 mt-2">Or paste with Ctrl+V. First photo is shown on the card — tap "Make main" on any other to promote it.</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -3651,14 +3655,14 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       formData.status === 'owned' ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
                     }`}>
                     <div>Owned</div>
-                    <div className={`text-[10px] mt-1 ${formData.status === 'owned' ? 'text-stone-300' : 'text-stone-400'}`}>It's in my wardrobe</div>
+                    <div className={`text-[12px] mt-1 ${formData.status === 'owned' ? 'text-stone-300' : 'text-stone-400'}`}>It's in my wardrobe</div>
                   </button>
                   <button type="button" onClick={() => setFormData({ ...formData, status: 'wishlist' })}
                     className={`flex-1 py-4 px-3 rounded-xl text-sm font-medium transition-all border text-center ${
                       formData.status === 'wishlist' ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
                     }`}>
                     <div>Wishlist</div>
-                    <div className={`text-[10px] mt-1 ${formData.status === 'wishlist' ? 'text-stone-300' : 'text-stone-400'}`}>I want this</div>
+                    <div className={`text-[12px] mt-1 ${formData.status === 'wishlist' ? 'text-stone-300' : 'text-stone-400'}`}>I want this</div>
                   </button>
                 </div>
               </div>
@@ -3909,7 +3913,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
             <div className="mt-3 space-y-2">
               {fit.dimensions.map((d, idx) => (
                 <div key={idx}>
-                  <div className="flex justify-between text-[11px] text-stone-400"><span>{d.label}</span><span>{d.state}</span></div>
+                  <div className="flex justify-between text-[13px] text-stone-400"><span>{d.label}</span><span>{d.state}</span></div>
                   <div className="h-1 rounded-full bg-stone-700 overflow-hidden"><div className="h-full bg-[#c9a85f]" style={{ width: `${Math.round(d.level * 100)}%` }} /></div>
                 </div>
               ))}
@@ -4414,7 +4418,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         <p className="text-xs font-medium text-brass-800">
                           {reminder.material} care · worn {reminder.wearsSince} {reminder.wearsSince === 1 ? 'time' : 'times'}
                         </p>
-                        <p className="text-[11px] text-brass-700/80 mt-0.5 leading-relaxed">Suggested: {reminder.action}.</p>
+                        <p className="text-[13px] text-brass-700/80 mt-0.5 leading-relaxed">Suggested: {reminder.action}.</p>
                       </div>
                       <button onClick={onMarkCared}
                         className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors shrink-0">
@@ -4515,7 +4519,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-stone-500 mt-2">
+                  <p className="text-[13px] text-stone-500 mt-2">
                     Tracking since {new Date(history[0].date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })} · {history.length} observation{history.length === 1 ? '' : 's'}
                   </p>
                 </div>
@@ -4555,7 +4559,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         {purchaseVerdictBusy ? 'Re-scoring…' : 'Re-score'}
                       </button>
                     </div>
-                    <p className="text-[10px] text-stone-400 italic mt-3">Scored against your own wardrobe. The studio advises; the decision is yours.</p>
+                    <p className="text-[12px] text-stone-400 italic mt-3">Scored against your own wardrobe. The studio advises; the decision is yours.</p>
                   </div>
                 ) : (
                   <>
@@ -4604,7 +4608,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                           {fitEstimateBusy ? 'Re-estimating…' : 'Re-estimate'}
                         </button>
                       </div>
-                      <p className="text-[10px] text-stone-400 italic mt-3">AI estimate — not a guarantee. Best when you own pieces from this brand.</p>
+                      <p className="text-[12px] text-stone-400 italic mt-3">AI estimate — not a guarantee. Best when you own pieces from this brand.</p>
                     </div>
                   ) : (
                     <>
@@ -4673,7 +4677,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                     })}
                   </div>
                   {current !== 'available' && (
-                    <p className="text-[11px] text-stone-500 mt-2 italic">AI styling will skip this piece until it's available again.</p>
+                    <p className="text-[13px] text-stone-500 mt-2 italic">AI styling will skip this piece until it's available again.</p>
                   )}
                 </div>
               );
@@ -4752,7 +4756,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       </a>
                     ))}
                   </div>
-                  <p className="text-[10px] text-stone-400 italic mt-2">Searches open in a new tab — Atelier doesn't track or compare prices itself.</p>
+                  <p className="text-[12px] text-stone-400 italic mt-2">Searches open in a new tab — Atelier doesn't track or compare prices itself.</p>
                 </div>
               );
             })()}
@@ -4952,7 +4956,7 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
             <p className="text-xs font-medium text-stone-900 truncate px-1">{s.name}</p>
             <p className="text-[10px] text-stone-500 uppercase tracking-wider truncate px-1 mt-0.5">{s.brand}</p>
             {reasons?.[0] && (
-              <p className="text-[10px] text-brass-600 px-1 mt-0.5 truncate" title={reasons.join(' · ')}>
+              <p className="text-[12px] text-brass-600 px-1 mt-0.5 truncate" title={reasons.join(' · ')}>
                 {reasons[0]}
               </p>
             )}
@@ -4960,7 +4964,7 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
         ))}
         </div>
       </div>
-      <p className="text-[10px] text-stone-400 italic mt-2">Suggested by brand, palette, style, season and what you've already paired.</p>
+      <p className="text-[12px] text-stone-400 italic mt-2">Suggested by brand, palette, style, season and what you've already paired.</p>
     </div>
   );
 }
@@ -5322,7 +5326,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
                           {['Tops','Bottoms','Dresses','Outerwear','Sportswear','Swimwear','Shoes','Bags','Accessories','Jewellery'].map((c) => <option key={c}>{c}</option>)}
                         </select>
                       </div>
-                      <p className="text-[10px] text-stone-400 mt-1">
+                      <p className="text-[12px] text-stone-400 mt-1">
                         {(d.result.colors || []).slice(0, 3).join(' · ')}
                         {d.result.confidence != null && <span className="ml-2">{d.result.confidence}/100</span>}
                       </p>
@@ -5489,7 +5493,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                   </a>
                 </div>
                 {sortedShops.length === 0 && (
-                  <p className="text-[11px] text-stone-400 mt-3 italic">Add some brands in Profile → Shops to surface them here.</p>
+                  <p className="text-[13px] text-stone-400 mt-3 italic">Add some brands in Profile → Shops to surface them here.</p>
                 )}
               </div>
 
@@ -5581,7 +5585,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                         ) : (
                           <>
                             <p className="text-sm text-red-800 truncate">{r.url}</p>
-                            <p className="text-[10px] text-red-700 mt-0.5">{r.error}</p>
+                            <p className="text-[12px] text-red-700 mt-0.5">{r.error}</p>
                           </>
                         )}
                       </div>
@@ -6446,7 +6450,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                               <p className="text-stone-900 text-sm font-medium leading-snug">
                                 {g.description}
                                 {g.brand_guess && (
-                                  <span className="text-[11px] italic text-amber-700 font-normal ml-2">· likely {g.brand_guess}</span>
+                                  <span className="text-[13px] italic text-amber-700 font-normal ml-2">· likely {g.brand_guess}</span>
                                 )}
                               </p>
 
@@ -6464,7 +6468,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                     </span>
                                   )}
                                   {g.buyingNote && (
-                                    <p className="w-full text-[11px] text-stone-400 italic mt-1">{g.buyingNote}</p>
+                                    <p className="w-full text-[13px] text-stone-400 italic mt-1">{g.buyingNote}</p>
                                   )}
                                   {/* Owning something close enough isn't the end of the
                                       advice — name the piece that would wear this look
@@ -6648,7 +6652,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
                       <div className={`aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2 ${isFocal ? 'ring-2 ring-brass-300' : ''}`}>
                         <ItemTileImage item={p} alt={p.name || ""} />
                       </div>
-                      <p className={`text-[11px] truncate ${isFocal ? 'text-brass-300 font-medium' : 'text-stone-300'}`}>
+                      <p className={`text-[13px] truncate ${isFocal ? 'text-brass-300 font-medium' : 'text-stone-300'}`}>
                         {isFocal ? '★ ' : ''}{p.name}
                       </p>
                       <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
@@ -6773,7 +6777,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
                     <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-700 mb-2">
                       <ItemTileImage item={p} alt={p.name || ""} />
                     </div>
-                    <p className="text-[11px] text-stone-300 truncate">{p.name}</p>
+                    <p className="text-[13px] text-stone-300 truncate">{p.name}</p>
                     <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
                   </div>
                 ))}
@@ -7407,14 +7411,14 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
           <button
             type="button"
             onClick={() => { onSchedule(itemIds, todayISO); setScheduleOpen(false); }}
-            className="px-2 py-0.5 rounded-full text-[11px] text-stone-700 hover:bg-stone-200 transition-colors"
+            className="px-2 py-0.5 rounded-full text-[13px] text-stone-700 hover:bg-stone-200 transition-colors"
           >
             Today
           </button>
           <button
             type="button"
             onClick={() => { onSchedule(itemIds, tomorrowISO); setScheduleOpen(false); }}
-            className="px-2 py-0.5 rounded-full text-[11px] text-stone-700 hover:bg-stone-200 transition-colors"
+            className="px-2 py-0.5 rounded-full text-[13px] text-stone-700 hover:bg-stone-200 transition-colors"
           >
             Tomorrow
           </button>
@@ -7422,7 +7426,7 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
             type="date"
             min={todayISO}
             onChange={(e) => { if (e.target.value) { onSchedule(itemIds, e.target.value); setScheduleOpen(false); } }}
-            className="px-1.5 py-0.5 text-[11px] bg-transparent border-l border-stone-300 outline-none focus:bg-white"
+            className="px-1.5 py-0.5 text-[13px] bg-transparent border-l border-stone-300 outline-none focus:bg-white"
             style={{ fontSize: '16px' }}
           />
           <button
@@ -7502,7 +7506,7 @@ function ConciergeComposingIndicator({ onCancel = null }) {
         {currentStage}
       </span>
       {showElapsed && (
-        <span className="text-[11px] tabular-nums text-stone-400 ml-1">
+        <span className="text-[13px] tabular-nums text-stone-400 ml-1">
           {elapsedSec}s
         </span>
       )}
@@ -7669,7 +7673,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
                 {copied ? 'Copied ✓' : 'Copy'}
               </button>
             </div>
-            <p className="text-[10px] text-stone-400 mt-2 leading-relaxed">Tip: tap the URL above to select, then long-press → Copy if the button doesn't work in your browser.</p>
+            <p className="text-[12px] text-stone-400 mt-2 leading-relaxed">Tip: tap the URL above to select, then long-press → Copy if the button doesn't work in your browser.</p>
           </div>
         </div>
       </div>
@@ -8100,7 +8104,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         {styleFitBusy ? 'Composing…' : '+ Add personal note'}
                       </button>
                     )}
-                    {styleFitError && <p className="text-[11px] text-stone-500 mt-2 italic">{styleFitError}</p>}
+                    {styleFitError && <p className="text-[13px] text-stone-500 mt-2 italic">{styleFitError}</p>}
                   </div>
                 )}
               </div>
@@ -8668,7 +8672,7 @@ function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null }) {
                 <div className="flex items-center gap-2.5 mb-3">
                   <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
                   <span className="text-[10px] tracking-[0.28em] uppercase font-medium text-stone-600">{category}</span>
-                  <span className="text-[10px] text-stone-300">·</span>
+                  <span className="text-[12px] text-stone-300">·</span>
                   <span className="text-[10px] tracking-wide text-stone-400">{items.length}</span>
                 </div>
                 <ul className="space-y-0">
@@ -9134,7 +9138,7 @@ function NotificationManager({ items, outfits, schedules }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-stone-900">Reminders?</p>
-          <p className="text-[11px] text-stone-500 mt-0.5 leading-relaxed">
+          <p className="text-[13px] text-stone-500 mt-0.5 leading-relaxed">
             Get a heads-up about tomorrow's planned outfit and care reminders the next time you open Atelier.
           </p>
           <div className="flex gap-2 mt-2">

@@ -1058,9 +1058,11 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
           );
         })()}
         {/* Nothing eligible is a real answer, not a gap. Every cold-weather
-            piece is vetoed on a warm day, so this will fire for a wardrobe
-            that skews Autumn/Winter — which is honest, and the reason Task 6
-            measures the season distribution before calling the veto right.
+            piece is vetoed on a warm day, so this fires for a wardrobe that
+            skews Autumn/Winter — honest, but if it fires most days the feature
+            reads as broken rather than careful. The lever for that is
+            seasonsForTemp's bands, not the veto: 22°C currently reads as
+            Summer-only, which is a warm reading of a British September.
             Rendered only when there IS a wardrobe: a brand-new account should
             see the empty-collection state, not a weather note. */}
         {!recommendation && items.length > 0 && weather?.temp != null && (() => {

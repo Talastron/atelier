@@ -116,10 +116,18 @@ export const CARE_RULES = {
 
 export const NEUTRAL_COLORS = ['Black', 'White', 'Cream', 'Beige', 'Brown', 'Tan', 'Grey', 'Navy', 'Gold', 'Silver', 'Rose Gold'];
 
+// Burgundy and Plum are here because the wardrobe kept needing them and had
+// nowhere to put them. matchColorFamily has recognised the WORDS for a long
+// time — burgundy, wine, maroon, plum, aubergine — and folded them into Red and
+// Purple, so a burgundy trench was not unclassified but confidently
+// misclassified. Adding the families is what makes those mappings honest.
+//
+// Ordered beside the family each used to be swallowed by, so the picker reads
+// as a spectrum rather than an afterthought.
 export const COLOR_FAMILIES = [
   'Black', 'White', 'Cream', 'Beige', 'Brown', 'Tan', 'Grey',
-  'Red', 'Pink', 'Orange', 'Yellow', 'Olive', 'Green', 'Teal',
-  'Blue', 'Navy', 'Purple',
+  'Red', 'Burgundy', 'Pink', 'Orange', 'Yellow', 'Olive', 'Green', 'Teal',
+  'Blue', 'Navy', 'Purple', 'Plum',
   'Gold', 'Silver', 'Rose Gold',
   'Multicolor',
 ];
@@ -127,9 +135,9 @@ export const COLOR_FAMILIES = [
 export const COLOR_SWATCHES = {
   Black: '#1c1917', White: '#FAFAF9', Cream: '#F5EFE6', Beige: '#D5C3A1',
   Brown: '#6B4226', Tan: '#B89570', Grey: '#9CA3AF',
-  Red: '#DC2626', Pink: '#EC4899', Orange: '#F97316', Yellow: '#EAB308',
+  Red: '#DC2626', Burgundy: '#7B2233', Pink: '#EC4899', Orange: '#F97316', Yellow: '#EAB308',
   Olive: '#65731F', Green: '#16A34A', Teal: '#0D9488',
-  Blue: '#2563EB', Navy: '#1E3A8A', Purple: '#9333EA',
+  Blue: '#2563EB', Navy: '#1E3A8A', Purple: '#9333EA', Plum: '#6D3B63',
   Gold: 'linear-gradient(135deg, #F4D27A, #C9A961 45%, #E6C870 70%, #B8860B)',
   Silver: 'linear-gradient(135deg, #ECECEC, #B8B8B8 45%, #DADADA 70%, #9C9C9C)',
   'Rose Gold': 'linear-gradient(135deg, #F4D0CB, #C97F73 50%, #E8B4A6)',
@@ -143,9 +151,12 @@ export const COLOUR_HEX_MAP = {
   silver: '#c4c4c0', navy: '#1f2a44', blue: '#3e6791', 'sky blue': '#86b0d3',
   cobalt: '#1a3d82', denim: '#4d6d8a', green: '#5a6f4e', olive: '#7a7048',
   forest: '#3b4a36', khaki: '#8a8060', teal: '#3e7373', sage: '#8fa887',
-  red: '#9a3a30', burgundy: '#5d2a2a', rust: '#a55a3a', terracotta: '#b05e42',
+  red: '#9a3a30', burgundy: '#5d2a2a', wine: '#5a2733', maroon: '#5f2a2a',
+  oxblood: '#4e2226', claret: '#6b2436', merlot: '#5c2331',
+  rust: '#a55a3a', terracotta: '#b05e42',
   pink: '#e0b7be', blush: '#e9c9c5', rose: '#c98996', fuchsia: '#b03070',
-  purple: '#6b4a72', lilac: '#b9a7c6', lavender: '#b0a8c8',
+  purple: '#6b4a72', plum: '#6d3b63', aubergine: '#4f2f4a', damson: '#5a2f52',
+  mulberry: '#6a3352', lilac: '#b9a7c6', lavender: '#b0a8c8',
   gold: '#c9a45e', brass: '#b3924b', yellow: '#d9b54a', mustard: '#b8963a',
   orange: '#cc7a3a', coral: '#d46a5a',
 };

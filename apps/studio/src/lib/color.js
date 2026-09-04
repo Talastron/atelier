@@ -18,9 +18,18 @@ export function matchColorFamily(raw) {
     ['mustard', 'Yellow'], ['ochre', 'Yellow'],
     ['olive', 'Green'], ['forest', 'Green'], ['emerald', 'Green'], ['sage', 'Green'], ['mint', 'Green'],
     ['sky', 'Blue'], ['cobalt', 'Blue'], ['azure', 'Blue'], ['denim', 'Blue'], ['teal', 'Blue'],
-    ['burgundy', 'Red'], ['wine', 'Red'], ['maroon', 'Red'], ['crimson', 'Red'], ['scarlet', 'Red'],
+    // The deep reds now land on Burgundy rather than Red. These words were
+    // always recognised and always folded into Red, so a burgundy trench was
+    // not unclassified — it was confidently wrong. Crimson and scarlet stay
+    // Red: they are bright, not deep.
+    ['burgundy', 'Burgundy'], ['wine', 'Burgundy'], ['maroon', 'Burgundy'],
+    ['oxblood', 'Burgundy'], ['claret', 'Burgundy'], ['merlot', 'Burgundy'],
+    ['crimson', 'Red'], ['scarlet', 'Red'],
     ['fuchsia', 'Pink'], ['rose', 'Pink'], ['blush', 'Pink'], ['coral', 'Pink'], ['salmon', 'Pink'],
-    ['plum', 'Purple'], ['lilac', 'Purple'], ['lavender', 'Purple'], ['violet', 'Purple'],
+    // And the deep purples on Plum. Lilac, lavender and violet stay Purple for
+    // the same reason crimson stays Red — they are light, and Plum is not.
+    ['plum', 'Plum'], ['aubergine', 'Plum'], ['damson', 'Plum'], ['mulberry', 'Plum'],
+    ['lilac', 'Purple'], ['lavender', 'Purple'], ['violet', 'Purple'],
     ['chocolate', 'Brown'], ['cocoa', 'Brown'], ['espresso', 'Brown'], ['mocha', 'Brown'],
     ['tangerine', 'Orange'], ['peach', 'Orange'], ['rust', 'Orange'], ['terracotta', 'Orange'],
   ];

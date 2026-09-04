@@ -204,6 +204,34 @@ Verification is four things:
 
 ---
 
+## Superseded at review (4 Sep 2026)
+
+Two non-goals below were overturned by Sibylle on seeing the result, and the
+work was done. They are left listed rather than deleted, because *why* they were
+scoped out and *why* that turned out wrong is the useful record.
+
+**"Sizes already ≥12px are untouched" — overturned.** Once the labels were
+legible, the 41 `text-[13px]` sentence lines became the most conspicuous small
+thing on the page. They were excluded on the reasoning that they were already
+above the floor, which was true and beside the point: they are prose you read,
+not labels you glance at, and 13px prose is harder than a 12px label. The
+remaining 87 arbitrary sizes were moved onto the scale (12→xs, 13/14→sm,
+15/16→base, 17→lg), leaving **zero** hardcoded text sizes in the app.
+
+**"No change to thumbnails" — overturned.** The credit thumbnails measured 42px
+in the live page while the composition above drew the same garments at
+185–333px. That is not small, it is a twelfth of the size the same object had
+four rows earlier. Credits 44→64px, digest 48→64px, digest icons 20→24px.
+
+**And a step the spec never contemplated:** with every size rem-based, the whole
+reading ladder could be raised from one place. `--text-xs` 12→13, `--text-sm`
+14→15, `--text-base` 16→17, `--text-lg` 18→19, display sizes untouched. Four
+declarations moved 1381 type classes. That option only existed *because* the
+migration removed the last hardcoded pixel — the floor work bought the ability to
+tune the whole app, which was worth more than the floor itself.
+
+---
+
 ## Non-goals
 
 - **Sizes already at or above 12px are untouched** — `text-[12px]`, `[13px]`, `[15px]`, and

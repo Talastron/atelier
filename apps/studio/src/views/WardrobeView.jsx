@@ -4,7 +4,7 @@ import { AlertCircle, ArrowUpDown, Check, ChevronDown, ChevronRight, Heart, Plus
 import { daysSinceLastWorn, isItemAvailable, itemColors, itemCondition, itemImages, itemNeedsDetail, itemSeasons, itemStyles, itemWearCount, itemWearHistory, itemCostPerWear, live, resolveOutfitItems, todayISO } from "../lib/items.js";
 import { useImageBg } from "../lib/imageBg.js";
 import { itemImageDisplay } from "../lib/polish.js";
-import { fetchTodaysWeather, pickTodaysRecommendation, weatherToSeasons, weatherAppropriatenessScore } from "../lib/weather.js";
+import { fetchTodaysWeather, pickTodaysRecommendation, weatherToSeasons, pickVeto } from "../lib/weather.js";
 import { CATEGORIES, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES, DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES, SPORTSWEAR_SUBCATEGORIES, BAG_SUBCATEGORIES, SHOE_SUBCATEGORIES, SWIMWEAR_SUBCATEGORIES, STYLES, SEASONS, COLOR_SWATCHES, ITEM_CONDITIONS } from "../lib/taxonomy.js";
 
 function WardrobeCardImage({ item }) {
@@ -389,8 +389,9 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
   const pickRec = () => {
     const owned = items.filter((i) => i.status === 'owned');
     if (owned.length === 0) return null;
-    // weather.temp is the daily max temperature (°C). weatherAppropriatenessScore
-    // inside pickTodaysRecommendation handles null gracefully (neutral 0.5).
+    // weather.temp is the daily max temperature (°C). pickTodaysRecommendation
+    // vetoes on season before scoring and returns null when nothing is
+    // eligible; a null tempC vetoes nothing.
     const tempC = weather?.temp ?? null;
     return pickTodaysRecommendation(owned, tempC);
   };
@@ -1011,17 +1012,15 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
           const reasons = [];
           const tempC = weather?.temp ?? null;
           if (tempC != null) {
-            const fit = weatherAppropriatenessScore(recommendation, tempC);
-            // Only show the weather note when the item genuinely passes
-            // temperature appropriateness (fit >= 0.5 = neutral-to-good).
-            // Below that it still surfaces as Today's Pick (no hard block at
-            // the card level — the hard filter is inside pickTodaysRecommendation),
-            // but we don't mislead with "fits today's 34°C" for a borderline pick.
-            if (fit >= 0.5) {
-              reasons.push(`fits today's ${Math.round(tempC)}°C`);
-            } else {
-              reasons.push(`for today's ${Math.round(tempC)}°C`);
-            }
+            // No hedge. Everything reaching this card has passed pickVeto, so
+            // its declared seasons genuinely include what today feels like.
+            //
+            // This used to say "fits" above a 0.5 score and "for" below it —
+            // softening the claim rather than changing the pick, and the
+            // distinction was invisible to anyone reading the card. That is how
+            // a fleece came to be recommended on a 24°C day with the code's own
+            // wording admitting it did not fit.
+            reasons.push(`fits today's ${Math.round(tempC)}°C`);
           }
           const days = daysSinceLastWorn(recommendation);
           if (days === null) reasons.push("never worn");
@@ -1056,6 +1055,38 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                 )}
               </div>
             </button>
+          );
+        })()}
+        {/* Nothing eligible is a real answer, not a gap. Every cold-weather
+            piece is vetoed on a warm day, so this will fire for a wardrobe
+            that skews Autumn/Winter — which is honest, and the reason Task 6
+            measures the season distribution before calling the veto right.
+            Rendered only when there IS a wardrobe: a brand-new account should
+            see the empty-collection state, not a weather note. */}
+        {!recommendation && items.length > 0 && weather?.temp != null && (() => {
+          // Which of the two empty states this is. pickVeto returns a reason
+          // rather than a boolean precisely so this sentence can be true: a
+          // collection of jewellery and bags has nothing to suggest for a
+          // different reason than one full of winter coats in July.
+          const ownsAGarment = items.some(
+            (i) => i.status === 'owned' && pickVeto(i, weather.temp) !== 'not-a-garment',
+          );
+          return (
+            <div className="text-left w-full bg-stone-100 text-stone-600 rounded-2xl lg:rounded-3xl p-4 sm:p-5">
+              <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-1.5 flex items-center gap-2">
+                <span className="brass-rule" aria-hidden="true"></span> Today's pick
+              </p>
+              <p className="font-display text-base sm:text-lg text-stone-800 leading-tight">
+                {ownsAGarment
+                  ? `Nothing in your collection suits ${Math.round(weather.temp)}°C.`
+                  : 'No clothes in your collection yet.'}
+              </p>
+              <p className="text-[11px] text-stone-500 mt-1">
+                {ownsAGarment
+                  ? 'Your pieces are tagged for other seasons — add a warm-weather piece, or check the season tags on what you own.'
+                  : "Today's pick suggests something to wear, so it needs a top, a dress, trousers or a coat."}
+              </p>
+            </div>
           );
         })()}
 

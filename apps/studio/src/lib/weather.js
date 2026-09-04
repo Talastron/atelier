@@ -167,14 +167,29 @@ export function weatherLabel(code, precipProb = null) {
   return 'Stormy';
 }
 
-// Given weather, suggest which item seasons fit.
-export function weatherToSeasons(weather) {
-  if (!weather) return null;
-  const t = weather.temp;
-  if (t < 5) return ['Winter'];
-  if (t < 14) return ['Autumn', 'Winter'];
-  if (t < 22) return ['Spring', 'Autumn'];
+// Which seasons a temperature FEELS like. The bands live here once, with two
+// entry points onto them, because there used to be two competing notions of
+// season in this file: this one, and a calendar month inside
+// pickTodaysRecommendation. On 3 September at 24C they disagreed — calendar
+// Autumn, thermometer Summer — and the picker consulted the calendar, so an
+// Autumn/Winter fleece was offered on a warm day.
+//
+// If the veto in pickVeto proves too strict for a British autumn, THIS is the
+// lever rather than the veto: 22C currently reads as Summer-only, which is a
+// warm reading of September. Widening the Spring/Autumn band upward admits more
+// of the wardrobe without weakening the rule.
+export function seasonsForTemp(tempC) {
+  if (tempC == null || Number.isNaN(tempC)) return null;
+  if (tempC < 5) return ['Winter'];
+  if (tempC < 14) return ['Autumn', 'Winter'];
+  if (tempC < 22) return ['Spring', 'Autumn'];
   return ['Summer'];
+}
+
+// Given weather, suggest which item seasons fit. Unchanged signature — several
+// callers pass the weather object — now delegating so there is one set of bands.
+export function weatherToSeasons(weather) {
+  return weather ? seasonsForTemp(weather.temp) : null;
 }
 
 export function getGreeting() {

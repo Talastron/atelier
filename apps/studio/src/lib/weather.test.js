@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { weatherAppropriatenessScore, pickTodaysRecommendation, weatherToSeasons } from './weather.js';
+import { weatherAppropriatenessScore, pickTodaysRecommendation, weatherToSeasons, seasonsForTemp } from './weather.js';
 
 // pickTodaysRecommendation does NOT return the top-scoring item. It takes the
 // top max(3, 20%) and then picks among them by hashing today's date, so the
@@ -53,6 +53,36 @@ describe('weatherToSeasons', () => {
 
   it('is null with no weather', () => {
     expect(weatherToSeasons(null)).toBeNull();
+  });
+});
+
+describe('seasonsForTemp', () => {
+  it('maps a bare temperature to the seasons it feels like', () => {
+    expect(seasonsForTemp(2)).toEqual(['Winter']);
+    expect(seasonsForTemp(10)).toEqual(['Autumn', 'Winter']);
+    expect(seasonsForTemp(18)).toEqual(['Spring', 'Autumn']);
+    expect(seasonsForTemp(24)).toEqual(['Summer']);
+  });
+
+  it('is null when the temperature is unknown', () => {
+    expect(seasonsForTemp(null)).toBeNull();
+    expect(seasonsForTemp(undefined)).toBeNull();
+    expect(seasonsForTemp(NaN)).toBeNull();
+  });
+
+  // The boundaries, because they are the lever if the veto proves too strict.
+  it('treats the band edges as the lower bound of the warmer band', () => {
+    expect(seasonsForTemp(5)).toEqual(['Autumn', 'Winter']);
+    expect(seasonsForTemp(14)).toEqual(['Spring', 'Autumn']);
+    expect(seasonsForTemp(22)).toEqual(['Summer']);
+  });
+
+  // One source of truth: the object-shaped entry point must agree with the
+  // temperature-shaped one at every boundary.
+  it('agrees with weatherToSeasons', () => {
+    for (const t of [-5, 0, 4, 5, 13, 14, 21, 22, 30]) {
+      expect(weatherToSeasons({ temp: t }), `${t}C`).toEqual(seasonsForTemp(t));
+    }
   });
 });
 

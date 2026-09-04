@@ -42,7 +42,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
           language instead of being a flat list floating in the page. */}
       <div className="flex items-center gap-3 mb-4 px-1">
         <span className="brass-rule" aria-hidden="true"></span>
-        <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">
+        <p className="text-stone-400 text-xs tracking-eyebrow uppercase font-medium">
           Studio
         </p>
       </div>
@@ -60,7 +60,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
             <Sparkles size={18} strokeWidth={1.5} />
           </span>
           <span className="text-sm font-medium">Concierge</span>
-          <span className="ml-auto text-[9px] tracking-[0.25em] uppercase text-stone-400 group-hover:text-brass-500 transition-colors">Ask</span>
+          <span className="ml-auto text-xs tracking-eyebrow uppercase text-stone-400 group-hover:text-brass-500 transition-colors">Ask</span>
         </button>
         {/* Primary pillars */}
         <DesktopNavItem id="today" icon={Home} label="Today" activeTab={activeTab} setTab={setActiveTab} />
@@ -74,7 +74,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenConcierge, user
             the top, so this group stays purely supporting destinations. */}
         <div className="flex items-center gap-3 mt-6 mb-3 px-1">
           <span className="brass-rule" aria-hidden="true"></span>
-          <p className="text-stone-400 text-[10px] tracking-[0.28em] uppercase font-medium">More</p>
+          <p className="text-stone-400 text-xs tracking-eyebrow uppercase font-medium">More</p>
         </div>
         <DesktopNavItem id="inspiration" icon={Bookmark} label="Inspiration" activeTab={activeTab} setTab={(id) => { setInspirationDefaultFilter('all'); setActiveTab(id); }} />
         <DesktopNavItem id="insights" icon={FileText} label="Insights" activeTab={activeTab} setTab={setActiveTab} />

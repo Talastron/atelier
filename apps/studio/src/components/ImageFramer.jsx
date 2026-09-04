@@ -156,9 +156,9 @@ export default function ImageFramer({ baseSrc, initialFrame, onCommit, onClose }
             <span className="text-xs font-medium text-stone-700 w-10 text-right">{frame.zoom.toFixed(2)}×</span>
           </div>
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-[13px] text-stone-400">Frame 3:4 · matches your grid</span>
+            <span className="text-sm text-stone-400">Frame 3:4 · matches your grid</span>
             <button type="button" onClick={onReset} disabled={status !== 'ready'}
-              className="text-[13px] text-stone-500 hover:text-stone-800 disabled:opacity-40">Reset</button>
+              className="text-sm text-stone-500 hover:text-stone-800 disabled:opacity-40">Reset</button>
           </div>
         </div>
       </div>

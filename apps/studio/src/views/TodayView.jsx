@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Share2, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
-import { itemDisplayName, summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
+import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
 import { generateOutfitWithGemini } from "../lib/ai.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief, readRecentBases, appendRecentBase, readRemoteRecentBases, writeRemoteRecentBases, mergeRecent } from "../dailyBrief";
@@ -10,6 +10,7 @@ import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
+import OutfitFlatLay from "../components/OutfitFlatLay.jsx";
 import { groupDigestCards } from "../lib/digest.js";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
@@ -50,7 +51,7 @@ function ComposingPlaceholder({ title = 'The Daily Brief', stage }) {
   return (
     <div className="rounded-2xl border border-stone-200/70 bg-white p-6 sm:p-8 smooth-shadow">
       <style>{`@keyframes atelierSheen{0%{background-position:-150% 0}100%{background-position:250% 0}}`}</style>
-      <p className="text-[10px] tracking-[0.28em] uppercase text-stone-400">{title}</p>
+      <p className="text-xs tracking-eyebrow uppercase text-stone-400">{title}</p>
       <div className="mt-5 flex items-center gap-3">
         <span className="brass-rule" aria-hidden="true" />
         <p className="font-display italic text-lg sm:text-xl text-stone-700">{stage}</p>
@@ -443,21 +444,6 @@ function DailyBriefCard({
     .filter(Boolean)
     .sort((a, b) => (BRIEF_CATEGORY_ORDER[a.category] ?? 2.5) - (BRIEF_CATEGORY_ORDER[b.category] ?? 2.5));
 
-  // Lookbook tiles — ALL pieces shown at equal size on one aligned grid (the
-  // marketing site's OutfitPreview language). Clothing leads (briefItems is already
-  // clothing-first sorted), then accessories; jewellery collapses into one "stack"
-  // tile when there are 2+ so it doesn't overrun the grid. Equal sizing is what
-  // gives clean alignment with no ragged whitespace — emphasis comes from order +
-  // the brass caption, not size.
-  const GARMENT_CATS = new Set(['Dresses', 'Tops', 'Bottoms', 'Outerwear', 'Sportswear', 'Swimwear']);
-  const imgOf = (it) => it?.images?.[0] || it?.imageUrl || null;
-  // Jewellery gets its own full-width strip below the board — several small
-  // pieces need room to be visible. The board shows garments + the other
-  // accessories (shoes, bags, sunglasses…).
-  const mainTiles = briefItems.filter((it) => it.category !== 'Jewellery').slice(0, 8);
-  const jewelleryPieces = briefItems.filter((it) => it.category === 'Jewellery').slice(0, 10);
-
-
   // A short, honest lead line from data we already hold — the dense rationale
   // moves behind "Why this".
   const leadLine = weather
@@ -469,42 +455,6 @@ function DailyBriefCard({
   const eventTime = leadEvent && !leadEvent.allDay
     ? new Date(leadEvent.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     : leadEvent ? 'All day' : null;
-
-  const openBrief = () => onOpenOutfit?.(brief);
-
-  // One outfit tile (white flat-lay card + caption), extracted so the desktop
-  // outfit-board and the mobile grid share exactly one implementation.
-  const renderLookCard = (t, i, widthCls) => {
-    const garment = GARMENT_CATS.has(t.category);
-    const eyebrow = t.subCategory || t.category;
-    return (
-      <button
-        key={t.id}
-        type="button"
-        onClick={openBrief}
-        className={`animate-in group flex ${widthCls} flex-col gap-2 text-left`}
-        style={{ animationDelay: `${i * 60}ms` }}
-        aria-label={`Open ${t.name} in today's look`}
-      >
-        <div className="rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-2.5 sm:p-3">
-          <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white">
-            {imgOf(t) ? (
-              <ItemTileImage item={t} alt={t.name} zoomOnHover />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-widest text-stone-400">{t.category}</div>
-            )}
-          </div>
-        </div>
-        <div>
-          <p className={`text-[9px] font-medium uppercase tracking-[0.18em] ${garment ? 'text-brass-600' : 'text-stone-500'}`}>{eyebrow}</p>
-          {/* Display name, not the raw listing: a caption this narrow used to
-              clip "Straight-Leg Dark Wash Jeans" to "Straight-Leg Dark W…". */}
-          <p className="mt-0.5 line-clamp-2 font-display text-[13px] leading-snug text-stone-800" title={t.name}>{itemDisplayName(t)}</p>
-        </div>
-      </button>
-    );
-  };
-
 
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
@@ -572,56 +522,22 @@ function DailyBriefCard({
           weather line (that read as duplication). */}
       <h3 className="font-display text-2xl sm:text-3xl text-stone-900">Styled for today.</h3>
 
-      {/* The look — equal tiles on one aligned grid, clothing first, captioned,
-          LEFT-aligned with the headline. Flat tiles, object-cover (no seams). */}
-      {/* Editorial flat-lay: white item cards lift off the card's own warm ivory
-          surface — no nested panel (the card IS the ivory ground). Garments
-          anchor as a hero row; jewellery gets its own strip below. */}
-      <div className="mt-5">
-        {/* Mobile: reliable 2-column grid (an odd last piece sits bottom-left —
-            standard, and far better than the mis-sized flex that stacked
-            everything one-per-row). */}
-        <div className="grid grid-cols-2 gap-3 sm:hidden">
-          {mainTiles.map((t, i) => renderLookCard(t, i, 'w-full'))}
-        </div>
-        {/* Desktop: one centred row on a common baseline — garments are the
-            larger hero tier, the other accessories a medium supporting size.
-            Jewellery has its own strip below, so the main row stays short enough
-            to sit on one line without ragged wrapping. */}
-        <div className="hidden sm:flex sm:flex-wrap sm:items-end sm:justify-center sm:gap-5">
-          {mainTiles.map((t, i) => renderLookCard(
-            t,
-            i,
-            GARMENT_CATS.has(t.category) ? 'w-[clamp(180px,20vw,244px)]' : 'w-[clamp(150px,16vw,200px)]',
-          ))}
-        </div>
+      {/* The look, composed the way every other surface composes one.
 
-        {/* Jewellery — its own full-width strip so several small pieces stay
-            visible and grouped (labelled by count), rather than tiny or hidden
-            inside a shared tile. */}
-        {jewelleryPieces.length > 0 && (
-          <div className="mt-4 border-t border-stone-200/60 pt-4">
-            <p className="mb-2.5 px-0.5 text-[9px] font-medium uppercase tracking-[0.2em] text-brass-600">
-              Jewellery · {jewelleryPieces.length} {jewelleryPieces.length === 1 ? 'piece' : 'pieces'}
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {jewelleryPieces.map((j, i) => (
-                <button
-                  key={j.id}
-                  type="button"
-                  onClick={openBrief}
-                  className="animate-in group w-[clamp(140px,15vw,180px)]"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                  aria-label={`Open ${j.name} in today's look`}
-                >
-                  <div className="aspect-square overflow-hidden rounded-2xl bg-white smooth-shadow border border-stone-200/50 p-3">
-                    {imgOf(j) ? <ItemTileImage item={j} alt={j.name} zoomOnHover /> : null}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          This was three separate hierarchies: a two-column grid on mobile, a
+          centred row on desktop with garments at one width and accessories at
+          another, and a full-width jewellery strip underneath. All three
+          existed to stop small pieces being lost among large ones — which
+          composeFlatlay already handles, anatomically, with per-piece caps so
+          jewellery never renders coat-sized. Keeping both would be two
+          hierarchies disagreeing.
+
+          The credits list is what the tiles were also doing: naming the pieces.
+          On a card telling you what to wear this morning, knowing the third
+          item is your Chelsea Saddle Bag rather than a brown shape is
+          information, so the composition alone would not have been enough. */}
+      <div className="mt-5">
+        <OutfitFlatLay pieces={briefItems} onOpenItem={onOpenItem} />
       </div>
 
       {/* Stylist's note — a warm, gently recessed panel (deeper than the ivory
@@ -631,7 +547,7 @@ function DailyBriefCard({
       <div className="mt-7 flex flex-col gap-4 rounded-2xl bg-[#efe8db] p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
         <Sparkles size={20} strokeWidth={1.4} className="hidden shrink-0 text-brass-500 sm:block" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">Stylist's note</p>
+          <p className="text-xs font-medium uppercase tracking-eyebrow text-stone-500">Stylist's note</p>
           {/* variant="inline": this is the stylist's prose, and the pieces it
               names are already shown as tiles directly above it. Repeating
               them as thumbnail pills mid-sentence added no information and
@@ -639,7 +555,7 @@ function DailyBriefCard({
           <p className="mt-1.5 text-sm italic leading-relaxed text-stone-700">{renderTextWithChips(brief.reasoning, { items, onOpenItem, variant: 'inline' })}</p>
           <button
             onClick={() => setWhyOpen(o => !o)}
-            className="mt-4 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-stone-500 underline-offset-4 hover:text-stone-800"
+            className="mt-4 inline-flex items-center gap-1.5 text-xs uppercase tracking-eyebrow text-stone-500 underline-offset-4 hover:text-stone-800"
           >
             <ChevronRight size={13} strokeWidth={1.5} className={`transition-transform ${whyOpen ? 'rotate-90' : ''}`} />
             {whyOpen ? 'Hide details' : 'What the Concierge saw'}
@@ -727,7 +643,7 @@ function DailyBriefCard({
           <span className="text-xs uppercase tracking-[0.16em] text-stone-400">On today</span>
           <span className="text-sm text-stone-700">{eventTime} · {leadEvent.title}</span>
           {calendarEvents.length > 1 && (
-            <span className="ml-auto text-[13px] text-stone-400">dressed for the day's most demanding moment</span>
+            <span className="ml-auto text-sm text-stone-400">dressed for the day's most demanding moment</span>
           )}
         </div>
       )}
@@ -755,15 +671,15 @@ const Row = ({ icon, accent, title, sub, onClick, item }) => (
           at icon size defeats the point of showing the piece at all. The icon
           fallback matches so a photoless row doesn't jump. */}
       {item && itemImages(item).length > 0 ? (
-        <span className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-stone-100">
+        <span className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-stone-100">
           <ItemTileImage item={item} alt={item.name} />
         </span>
       ) : (
-        <span className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
+        <span className={`w-16 h-16 rounded-xl flex items-center justify-center shrink-0 ${accent}`}>{icon}</span>
       )}
       <div className="flex-1 min-w-0">
         <p className="text-sm text-stone-900 truncate">{title}</p>
-        <p className="text-[13px] text-stone-500 truncate">{sub}</p>
+        <p className="text-sm text-stone-500 truncate">{sub}</p>
       </div>
       <ChevronRight size={14} strokeWidth={1.5} className="text-stone-300 shrink-0" />
     </button>
@@ -815,27 +731,27 @@ function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, 
 
   const renderCard = (c, i) => {
     if (c.kind === 'care') {
-      return <Row key={i} item={c.item} icon={<Sparkles size={20} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+      return <Row key={i} item={c.item} icon={<Sparkles size={24} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
         title={c.item.name} sub={`${c.reminder.material} · ${c.reminder.wearsSince} wears since care · usually every ${c.reminder.everyN}`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'stale-fav') {
       const d = daysSinceLastWorn(c.item);
-      return <Row key={i} item={c.item} icon={<Star size={20} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+      return <Row key={i} item={c.item} icon={<Star size={24} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
         title={c.item.name} sub={d === null ? 'Favourite · never worn' : `Favourite · ${d} days since last wear`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'price-drop') {
       const h = c.item.priceHistory;
       const drop = Math.round((1 - h[h.length - 1].price / h[h.length - 2].price) * 100);
-      return <Row key={i} item={c.item} icon={<TrendingDown size={20} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
+      return <Row key={i} item={c.item} icon={<TrendingDown size={24} strokeWidth={1.5} />} accent="bg-brass-100 text-brass-700"
         title={c.item.name} sub={`Price dropped ${drop}% · now £${h[h.length - 1].price}`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'overdue') {
       const daysOver = Math.floor((new Date(todayKey) - new Date(c.item.lentReturnBy)) / 86_400_000);
-      return <Row key={i} item={c.item} icon={<AlertCircle size={20} strokeWidth={1.5} />} accent="bg-claret-50 text-claret-700"
+      return <Row key={i} item={c.item} icon={<AlertCircle size={24} strokeWidth={1.5} />} accent="bg-claret-50 text-claret-700"
         title={c.item.name} sub={`Lent to ${c.item.lentTo} · ${daysOver} day${daysOver === 1 ? '' : 's'} overdue`} onClick={() => onOpenItem?.(c.item.id)} />;
     }
     if (c.kind === 'inspo-unanalysed') {
-      return <Row key={i} icon={<Bookmark size={20} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
+      return <Row key={i} icon={<Bookmark size={24} strokeWidth={1.5} />} accent="bg-stone-100 text-stone-700"
         title={`${c.total} inspiration${c.total === 1 ? '' : 's'} waiting`} sub="Open the board to analyse them with the Concierge"
         onClick={() => onOpenInspirationTab ? onOpenInspirationTab() : onOpenInspiration?.(c.inspiration.id)} />;
     }
@@ -846,13 +762,13 @@ function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, 
     <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-7 smooth-shadow">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg sm:text-xl text-stone-900">Needs attention</h3>
-        <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
+        <span className="text-xs tracking-eyebrow uppercase text-stone-400">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
       </div>
       <div className="space-y-4">
         {groups.map((group) => (
           <div key={group.id}>
             {showHeaders && (
-              <p className="mb-1 text-[10px] tracking-[0.2em] uppercase text-stone-400">{group.label}</p>
+              <p className="mb-1 text-xs tracking-eyebrow uppercase text-stone-400">{group.label}</p>
             )}
             <ul className="space-y-1">
               {group.cards.map(renderCard)}

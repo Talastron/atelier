@@ -46,11 +46,11 @@ export default function TodaysPick({ items = [], weather, onItemClick, className
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-1.5 flex items-center gap-2">
+          <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5 flex items-center gap-2">
             <span className="brass-rule" aria-hidden="true"></span> Today's pick
           </p>
           <p className="font-display text-base sm:text-lg text-white leading-tight truncate">{recommendation.name}</p>
-          <p className="text-[13px] text-stone-400 mt-1 truncate">
+          <p className="text-sm text-stone-400 mt-1 truncate">
             {recommendation.brand}
             {seasons.length > 0 && ` · ${seasons.join(' · ')}`}
           </p>
@@ -59,7 +59,7 @@ export default function TodaysPick({ items = [], weather, onItemClick, className
             // explains WHY the app is suggesting this garment, and it used to be
             // the least legible thing on the card: 11px, sentence case, muted
             // and slanted all at once.
-            <p className="text-[13px] text-emerald-300 mt-2 truncate" title={reasons.join(' · ')}>
+            <p className="text-sm text-emerald-300 mt-2 truncate" title={reasons.join(' · ')}>
               {reasons.join(' · ')}
             </p>
           )}
@@ -81,7 +81,7 @@ export default function TodaysPick({ items = [], weather, onItemClick, className
   const ownsAGarment = owned.some((i) => pickVeto(i, tempC) !== 'not-a-garment');
   return (
     <div className={`text-left w-full bg-stone-100 text-stone-600 rounded-2xl lg:rounded-3xl p-4 sm:p-5 ${className}`}>
-      <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-1.5 flex items-center gap-2">
+      <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5 flex items-center gap-2">
         <span className="brass-rule" aria-hidden="true"></span> Today's pick
       </p>
       <p className="font-display text-base sm:text-lg text-stone-800 leading-tight">
@@ -89,7 +89,7 @@ export default function TodaysPick({ items = [], weather, onItemClick, className
           ? `Nothing in your collection suits ${Math.round(tempC)}°C.`
           : 'No clothes in your collection yet.'}
       </p>
-      <p className="text-[13px] text-stone-500 mt-1">
+      <p className="text-sm text-stone-500 mt-1">
         {ownsAGarment
           ? 'Your pieces are tagged for other seasons — add a warm-weather piece, or check the season tags on what you own.'
           : "Today's pick suggests something to wear, so it needs a top, a dress, trousers or a coat."}

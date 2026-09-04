@@ -21,7 +21,7 @@ function WardrobeCardImage({ item }) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center text-stone-300 bg-stone-100">
         <Shirt size={48} strokeWidth={1} />
-        <span className="text-[10px] uppercase tracking-widest mt-2">No photo</span>
+        <span className="text-xs uppercase tracking-label mt-2">No photo</span>
       </div>
     );
   }
@@ -194,7 +194,7 @@ function WardrobeFiltersSheet({
               In wash, filter becomes 'unavailable' and the visible
               pill row de-highlights; a badge appears in the toolbar. */}
           <div>
-            <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Condition</h4>
+            <h4 className="text-xs tracking-label uppercase text-stone-500 font-semibold mb-3">Condition</h4>
             <ChipRow
               items={CONDITION_OPTIONS.map((o) => o.label)}
               value={CONDITION_KEYS.has(filter) ? CONDITION_LABEL_BY_KEY[filter] : 'Any condition'}
@@ -211,27 +211,27 @@ function WardrobeFiltersSheet({
           </div>
           {subCategories && (
             <div>
-              <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Sub-type</h4>
+              <h4 className="text-xs tracking-label uppercase text-stone-500 font-semibold mb-3">Sub-type</h4>
               <ChipRow items={['All Types', ...subCategories]} value={subCategoryFilter} set={setSubCategoryFilter} />
             </div>
           )}
           <div>
-            <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Season</h4>
+            <h4 className="text-xs tracking-label uppercase text-stone-500 font-semibold mb-3">Season</h4>
             <ChipRow items={SEASONS} value={seasonFilter} set={setSeasonFilter} />
           </div>
           <div>
-            <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Style</h4>
+            <h4 className="text-xs tracking-label uppercase text-stone-500 font-semibold mb-3">Style</h4>
             <ChipRow items={['All Styles', ...STYLES]} value={styleFilter} set={setStyleFilter} />
           </div>
           {usedColors.length > 0 && (
             <div>
-              <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Colour</h4>
+              <h4 className="text-xs tracking-label uppercase text-stone-500 font-semibold mb-3">Colour</h4>
               <ChipRow items={['All Colours', ...usedColors]} value={colorFilter} set={setColorFilter} getSwatch={(c) => c !== 'All Colours' ? COLOR_SWATCHES[c] : null} />
             </div>
           )}
           {allBrands.length > 1 && (
             <div>
-              <h4 className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Brand</h4>
+              <h4 className="text-xs tracking-label uppercase text-stone-500 font-semibold mb-3">Brand</h4>
               <ChipRow items={allBrands} value={brandFilter} set={setBrandFilter} />
             </div>
           )}
@@ -503,7 +503,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
         <SlidersHorizontal size={14} strokeWidth={1.5} />
         Filters
         {activeFilterCount > 0 && (
-          <span className="bg-white/20 text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>
+          <span className="bg-white/20 text-xs tracking-label uppercase px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>
         )}
       </button>
 
@@ -519,7 +519,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
           <>
             <div className="fixed inset-0 z-30" onClick={() => setSortMenuOpen(false)} aria-hidden="true" />
             <div className="absolute z-40 mt-2 left-0 sm:left-auto sm:right-0 min-w-[15rem] bg-white rounded-2xl shadow-2xl border border-stone-200 py-2 animate-in fade-in slide-in-from-top-2 duration-150" role="menu">
-              <p className="px-4 pt-1 pb-2 text-[10px] tracking-widest uppercase text-stone-400 font-medium">Sort by</p>
+              <p className="px-4 pt-1 pb-2 text-xs tracking-label uppercase text-stone-400 font-medium">Sort by</p>
               {WARDROBE_SORT_OPTIONS.map((o) => {
                 const isActive = o.key === sortBy;
                 return (
@@ -533,14 +533,14 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                   >
                     <div className="min-w-0">
                       <p className={`text-sm ${isActive ? 'text-stone-900 font-medium' : 'text-stone-800'}`}>{o.label}</p>
-                      <p className="text-[13px] text-stone-500 mt-0.5">{o.hint}</p>
+                      <p className="text-sm text-stone-500 mt-0.5">{o.hint}</p>
                     </div>
                     {isActive && <Check size={16} strokeWidth={2} className="shrink-0 text-stone-900 mt-0.5" />}
                   </button>
                 );
               })}
               <div className="border-t border-stone-200 mt-2 pt-2 px-4 pb-1">
-                <p className="text-[12px] text-stone-400 italic">★ Favourites always pin to the top</p>
+                <p className="text-xs text-stone-400 italic">★ Favourites always pin to the top</p>
               </div>
             </div>
           </>
@@ -562,7 +562,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
       {anyFilterActive && (
         <button
           onClick={resetAllFilters}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200"
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs tracking-label uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200"
           title="Clear search, status, category, and all advanced filters"
         >
           <X size={12} strokeWidth={1.75} />
@@ -585,7 +585,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
       {items.length > 0 && (
         <button
           onClick={selectMode ? exitSelectMode : () => enterSelectMode()}
-          className={`h-11 shrink-0 px-4 rounded-full text-[10px] tracking-widest uppercase border transition-colors duration-200 ${
+          className={`h-11 shrink-0 px-4 rounded-full text-xs tracking-label uppercase border transition-colors duration-200 ${
             selectMode
               ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-700'
               : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500 hover:text-stone-900'
@@ -613,7 +613,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
           {/* Greeting now lives on the Today home; Wardrobe is pure inventory. */}
           <div className="flex items-center gap-3 flex-wrap mb-2 lg:mb-1">
             <span className="brass-rule" aria-hidden="true"></span>
-            <p className="text-stone-500 text-[10px] sm:text-xs tracking-[0.28em] uppercase font-medium">
+            <p className="text-stone-500 text-xs tracking-eyebrow uppercase font-medium">
               Your Wardrobe
             </p>
           </div>
@@ -630,7 +630,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
             <button onClick={onOpenConcierge}
               className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-200 hover:border-brass-400 text-stone-700 hover:text-brass-700 transition-colors duration-200 group">
               <Sparkles size={14} strokeWidth={1.5} className="text-brass-500 group-hover:text-brass-600 transition-colors" />
-              <span className="text-[11px] tracking-widest uppercase font-medium">Ask the Concierge</span>
+              <span className="text-xs tracking-label uppercase font-medium">Ask the Concierge</span>
             </button>
           )}
         </div>
@@ -763,7 +763,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
               // sidebar nav — anchored, not floating). Inactive hover gets
               // a subtle stone-100 bg too so the affordance is clearer than
               // text-only color change.
-              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-xs tracking-meta uppercase transition-colors duration-200 ${
                 filter === f ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
               }`}
             >
@@ -848,14 +848,14 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
             <div className={`aspect-[3/4] rounded-2xl bg-stone-100 relative overflow-hidden smooth-shadow lg:group-hover:shadow-xl transition-shadow duration-500 ${selectMode && isSelected ? 'opacity-90' : ''}`}>
               <div className="absolute top-4 left-4 z-20 flex items-center gap-2 flex-wrap max-w-[calc(100%-3.5rem)]">
                 {item.status === 'wishlist' && (
-                  <span className="glass-panel text-stone-900 text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5">
+                  <span className="glass-panel text-stone-900 text-xs uppercase tracking-meta px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5">
                     <Heart size={12} className="fill-stone-900" strokeWidth={0} /> Wishlist
                   </span>
                 )}
                 {item.lentTo && (() => {
                   const overdue = item.lentReturnBy && item.lentReturnBy < todayISO();
                   return (
-                    <span className={`text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 ${
+                    <span className={`text-xs uppercase tracking-meta px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 ${
                       overdue ? 'bg-red-600 text-white' : 'glass-panel text-stone-900'
                     }`}>
                       {overdue ? 'Overdue' : `Lent · ${item.lentTo}`}
@@ -870,7 +870,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                     red: 'bg-red-600 text-white',
                   };
                   return (
-                    <span className={`text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium ${tones[meta?.color] || 'bg-stone-700 text-white'}`}>
+                    <span className={`text-xs uppercase tracking-meta px-3 py-1.5 rounded-full font-medium ${tones[meta?.color] || 'bg-stone-700 text-white'}`}>
                       {meta?.short || itemCondition(item)}
                     </span>
                   );
@@ -904,8 +904,15 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
 
             <div className="px-1">
               <div className="flex justify-between items-start mb-1.5 gap-4">
-                <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">
-                  {item.brand}{itemSeasons(item).length > 0 && ` • ${itemSeasons(item).join(' · ')}`}
+                {/* Brand alone. This used to append the seasons, and the
+                    result never fitted: the caption box is ~140px and
+                    "HOLLAND COOPER • SPRING · SUMMER · AUTUMN" wants 409px, so
+                    94 of these captions were being truncated mid-brand at the
+                    old 10px too. The seasons were costing the brand its own
+                    name to show information nobody could read. They remain on
+                    the item's detail view, where there is room for them. */}
+                <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">
+                  {item.brand}
                 </p>
                 <p className="text-sm font-medium text-stone-900 shrink-0">£{item.price}</p>
               </div>
@@ -930,7 +937,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                 const days = daysSinceLastWorn(item);
                 const stale = days === null || days >= 90;
                 return (
-                  <p className={`text-[11px] mt-1.5 tracking-wide ${stale ? 'text-stone-400' : 'text-stone-600'}`}>
+                  <p className={`text-xs mt-1.5 tracking-meta ${stale ? 'text-stone-400' : 'text-stone-600'}`}>
                     {w === 0 ? 'Not worn yet'
                       : `${w} ${w === 1 ? 'wear' : 'wears'}${cpw !== null ? ` · £${cpw < 10 ? cpw.toFixed(2) : Math.round(cpw)}/wear` : ''}`}
                   </p>
@@ -938,7 +945,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
               })()}
 
               {item.status === 'wishlist' && (
-                <div className="mt-3 text-[13px] py-2 px-3 rounded-lg flex items-start gap-2 bg-stone-100 text-stone-600">
+                <div className="mt-3 text-sm py-2 px-3 rounded-lg flex items-start gap-2 bg-stone-100 text-stone-600">
                   <AlertCircle size={14} className="shrink-0 mt-0.5" strokeWidth={1.5} />
                   <span>
                     {measurements.waist
@@ -1006,9 +1013,9 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
               ))}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] tracking-[0.2em] uppercase text-brass-700 font-semibold">✦ Tomorrow</p>
+              <p className="text-xs tracking-eyebrow uppercase text-brass-700 font-semibold">✦ Tomorrow</p>
               <p className="font-display text-sm text-stone-900 truncate mt-0.5">{tomorrowOutfit.name}</p>
-              <p className="text-[13px] text-stone-500">{tomorrowPieces.length} pieces · tap to view</p>
+              <p className="text-sm text-stone-500">{tomorrowPieces.length} pieces · tap to view</p>
             </div>
             <ChevronRight size={18} className="text-brass-600 shrink-0" />
           </button>

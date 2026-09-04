@@ -47,7 +47,7 @@ export default function WeekStrip({ events = [], schedules = {}, outfits = [], o
     <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-7 smooth-shadow">
       <div className="mb-5 flex items-baseline justify-between">
         <h3 className="font-display text-lg sm:text-xl text-stone-900">Your week</h3>
-        <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">{range}</span>
+        <span className="text-xs tracking-eyebrow uppercase text-stone-400">{range}</span>
       </div>
       <div className="flex gap-1.5">
         {days.map((iso) => {
@@ -63,7 +63,7 @@ export default function WeekStrip({ events = [], schedules = {}, outfits = [], o
               className="flex-1 min-w-0 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-stone-100 transition-colors"
               aria-label={d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
             >
-              <span className="text-[10px] tracking-wide uppercase text-stone-400">
+              <span className="text-xs tracking-meta uppercase text-stone-400">
                 {d.toLocaleDateString('en-GB', { weekday: 'short' })}
               </span>
               <span className={`w-8 h-8 flex items-center justify-center rounded-full text-sm tabular-nums ${isToday ? 'bg-stone-900 text-white' : 'text-stone-800'}`}>
@@ -86,7 +86,7 @@ export default function WeekStrip({ events = [], schedules = {}, outfits = [], o
                 onClick={() => onOpenOutfit?.(outfit.id)}
                 className="w-full flex items-center gap-2 text-left py-1 px-2 -mx-2 rounded-xl hover:bg-stone-100 transition-colors"
               >
-                <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400 shrink-0">{label}</span>
+                <span className="text-xs tracking-eyebrow uppercase text-stone-400 shrink-0">{label}</span>
                 <span className="text-sm text-stone-900 truncate">{outfit.name}</span>
               </button>
             </li>

@@ -69,7 +69,7 @@ function BackfillCard({ items = [], shops = [], onUpdateItem, onReviewManually }
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-600 font-medium">Data hygiene</span>
+            <span className="text-xs tracking-eyebrow uppercase text-brass-600 font-medium">Data hygiene</span>
           </div>
           <h3 className="font-display text-xl md:text-2xl text-stone-900">Complete my data</h3>
           <p className="text-stone-500 text-sm mt-2 leading-relaxed max-w-xl">
@@ -166,7 +166,7 @@ function RehostCard({ items = [], onUpdateItem }) {
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-600 font-medium">Storage</span>
+            <span className="text-xs tracking-eyebrow uppercase text-brass-600 font-medium">Storage</span>
           </div>
           <h3 className="font-display text-xl md:text-2xl text-stone-900">Rehost external images</h3>
           <p className="text-stone-500 text-sm mt-2 leading-relaxed max-w-xl">
@@ -183,7 +183,7 @@ function RehostCard({ items = [], onUpdateItem }) {
           </button>
         )}
         {candidates.length === 0 && (
-          <span className="inline-flex items-center gap-2 text-[11px] tracking-widest uppercase text-emerald-700 shrink-0">
+          <span className="inline-flex items-center gap-2 text-xs tracking-label uppercase text-emerald-700 shrink-0">
             <Check size={12} strokeWidth={2.5} /> All rehosted
           </span>
         )}
@@ -212,7 +212,7 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
 
   const Row = ({ label, options, value, onPick }) => (
     <div>
-      <p className="text-[10px] tracking-widest uppercase text-stone-500 font-bold mb-2">{label}</p>
+      <p className="text-xs tracking-label uppercase text-stone-500 font-bold mb-2">{label}</p>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => (
           <button key={opt} type="button" onClick={() => onPick(value === opt ? '' : opt)}
@@ -238,7 +238,7 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
             Tell the Concierge how you actually dress. Every suggestion (Today tile, Styling Studio, Travel packing) gets sharper when these are set.
           </p>
         </div>
-        <span className={`text-[10px] tracking-widest uppercase ${populated ? 'text-emerald-700' : 'text-brass-600'}`}>
+        <span className={`text-xs tracking-label uppercase ${populated ? 'text-emerald-700' : 'text-brass-600'}`}>
           {populated ? 'Active in prompts' : 'Not set yet'}
         </span>
       </div>
@@ -251,7 +251,7 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
       </div>
 
       <div className="mt-6">
-        <p className="text-[10px] tracking-widest uppercase text-stone-500 font-bold mb-2">
+        <p className="text-xs tracking-label uppercase text-stone-500 font-bold mb-2">
           Style principles <span className="font-normal normal-case tracking-normal text-stone-400 ml-1">(pick up to 3)</span>
         </p>
         <div className="flex flex-wrap gap-2">
@@ -286,27 +286,27 @@ function FitProfileCard({ measurements }) {
   return (
     <div className="bg-stone-900 text-white px-6 md:px-10 py-8 md:py-10">
       <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-        <span className="text-[10px] uppercase tracking-[0.28em] text-brass-300">Your fit profile</span>
-        <span className="text-[10px] uppercase tracking-[0.2em] text-stone-500">Body shape based</span>
+        <span className="text-xs uppercase tracking-eyebrow text-brass-300">Your fit profile</span>
+        <span className="text-xs uppercase tracking-eyebrow text-stone-500">Body shape based</span>
       </div>
       <p className="text-4xl md:text-5xl font-display font-medium mt-2 mb-2">{shape}</p>
       <p className="text-stone-300 text-sm leading-relaxed mb-8 max-w-2xl">{guide.blurb}</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <h4 className="text-[10px] font-semibold tracking-[0.2em] uppercase text-brass-300 mb-4">Styles that flatter</h4>
+          <h4 className="text-xs font-semibold tracking-eyebrow uppercase text-brass-300 mb-4">Styles that flatter</h4>
           <ul className="space-y-2 text-sm text-stone-100 leading-relaxed">
             {guide.flatter.map((tip) => <li key={tip} className="flex gap-3"><span className="text-brass-400">·</span>{tip}</li>)}
           </ul>
         </div>
         <div>
-          <h4 className="text-[10px] font-semibold tracking-[0.2em] uppercase text-stone-400 mb-4">Worth avoiding</h4>
+          <h4 className="text-xs font-semibold tracking-eyebrow uppercase text-stone-400 mb-4">Worth avoiding</h4>
           <ul className="space-y-2 text-sm text-stone-100 leading-relaxed">
             {guide.avoid.map((tip) => <li key={tip} className="flex gap-3"><span className="text-stone-500">·</span>{tip}</li>)}
           </ul>
         </div>
       </div>
-      <p className="text-[10px] text-stone-500 mt-8 uppercase tracking-widest">
+      <p className="text-xs text-stone-500 mt-8 uppercase tracking-label">
         General stylist guidance — not a per-item size recommendation. Brand size charts coming next.
       </p>
     </div>
@@ -591,7 +591,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         <div className="flex flex-wrap gap-2">
           {[['group-account', 'Account'], ['group-you', 'Style & Fit'], ['group-preferences', 'Preferences'], ['group-data', 'Your Data'], ...(isOwner ? [['group-people', 'People']] : [])].map(([gid, label]) => (
             <a key={gid} href={`#${gid}`}
-              className="text-[10px] sm:text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors duration-200">
+              className="text-xs tracking-label uppercase px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors duration-200">
               {label}
             </a>
           ))}
@@ -620,7 +620,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-400 mb-1.5">Signed in</p>
+              <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5">Signed in</p>
               <p className="font-display text-2xl md:text-3xl text-stone-900 leading-tight truncate">{user.displayName || 'Your account'}</p>
               <p className="text-stone-500 text-xs tracking-wide mt-1 truncate">{user.email}</p>
               {isOwner && subStatus && <div className="mt-2"><SubscriptionPill state={subStatus} /></div>}
@@ -637,7 +637,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
             )}
             <button
               onClick={signOutUser}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-full border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-900 text-[10px] tracking-[0.2em] uppercase transition-colors shrink-0"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-full border border-stone-200 text-stone-500 hover:border-stone-400 hover:text-stone-900 text-xs tracking-eyebrow uppercase transition-colors shrink-0"
               aria-label="Sign out"
             >
               <LogOut size={14} strokeWidth={1.5} />
@@ -749,7 +749,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               { id: 'hips', label: 'Hips', unit: 'cm', fit: true }, { id: 'shoeSize', label: 'Shoe size', unit: 'EU' },
             ].map(field => (
               <div key={field.id} className="relative">
-                <label className="flex items-center gap-1.5 text-[10px] tracking-[0.2em] font-semibold text-stone-500 uppercase mb-2 ml-1">
+                <label className="flex items-center gap-1.5 text-xs tracking-eyebrow font-semibold text-stone-500 uppercase mb-2 ml-1">
                   {field.label}
                   {field.fit && <span className="w-1 h-1 rounded-full bg-brass-400" title="Powers fit predictions" aria-hidden="true" />}
                 </label>
@@ -757,14 +757,14 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                   <input type="number" name={field.id} value={localMeasurements[field.id] || ''} onChange={handleChange}
                     className="w-full pl-5 pr-12 py-4 bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 outline-none transition-all text-stone-900 text-lg font-display"
                   />
-                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[11px] tracking-widest uppercase text-stone-400 pointer-events-none">{field.unit}</span>
+                  <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs tracking-label uppercase text-stone-400 pointer-events-none">{field.unit}</span>
                 </div>
               </div>
             ))}
           </div>
 
           <div className="mt-10 pt-8 border-t border-stone-100 flex items-center justify-between gap-4 flex-wrap">
-            <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 flex items-center gap-2">
+            <p className="text-xs tracking-eyebrow uppercase text-stone-400 flex items-center gap-2">
               <span className="w-1 h-1 rounded-full bg-brass-400" aria-hidden="true" /> Powers fit &amp; body shape
             </p>
             <button onClick={() => saveMeasurements(localMeasurements)} className="bg-stone-900 text-white px-7 py-3.5 rounded-full font-medium text-sm flex items-center gap-2.5 hover:bg-stone-700 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]">
@@ -798,7 +798,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Currency</label>
+            <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Currency</label>
             <div className="flex flex-wrap gap-2">
               {['GBP', 'USD', 'EUR'].map((c) => (
                 <button key={c} onClick={() => setCurrency(c)}
@@ -809,11 +809,11 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                 </button>
               ))}
             </div>
-            <p className="text-[12px] text-stone-400 mt-2">Display only — existing prices keep their numbers.</p>
+            <p className="text-xs text-stone-400 mt-2">Display only — existing prices keep their numbers.</p>
           </div>
 
           <div>
-            <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Concierge temperament</label>
+            <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Concierge temperament</label>
             <div className="flex flex-wrap gap-2">
               {[
                 { v: 'safe', label: 'Safe', sub: 'Consistent' },
@@ -825,14 +825,14 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                     aiTempPreset === p.v ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
                   }`}>
                   <div>{p.label}</div>
-                  <div className={`text-[12px] mt-0.5 ${aiTempPreset === p.v ? 'text-stone-300' : 'text-stone-400'}`}>{p.sub}</div>
+                  <div className={`text-xs mt-0.5 ${aiTempPreset === p.v ? 'text-stone-300' : 'text-stone-400'}`}>{p.sub}</div>
                 </button>
               ))}
             </div>
           </div>
 
           <div className="sm:col-span-2">
-            <label htmlFor="monthly-budget" className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Monthly shopping budget</label>
+            <label htmlFor="monthly-budget" className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Monthly shopping budget</label>
             <div className="flex items-center gap-3 flex-wrap">
               <div className="relative flex-1 max-w-xs">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 text-sm">{CURRENCY_SYMBOLS[currency] || '£'}</span>
@@ -849,12 +849,12 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               </div>
               {measurements?.monthlyBudget > 0 && (
                 <button onClick={() => { setBudgetInput(''); saveMeasurements({ ...measurements, monthlyBudget: null }); }}
-                  className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline underline-offset-2">
+                  className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 underline underline-offset-2">
                   Clear
                 </button>
               )}
             </div>
-            <p className="text-[12px] text-stone-400 mt-2">Powers the spending meter on Insights. Counts owned items added this month (by purchase date if set, otherwise added date). Leave blank to hide the meter.</p>
+            <p className="text-xs text-stone-400 mt-2">Powers the spending meter on Insights. Counts owned items added this month (by purchase date if set, otherwise added date). Leave blank to hide the meter.</p>
           </div>
         </div>
       </div>
@@ -863,7 +863,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
               <span className="brass-rule shrink-0" aria-hidden="true"></span>
-              <h3 className="font-display text-xl md:text-2xl text-stone-900">Photo cutouts <span className="text-[10px] tracking-widest uppercase text-brass-600 ml-2 align-middle">Beta</span></h3>
+              <h3 className="font-display text-xl md:text-2xl text-stone-900">Photo cutouts <span className="text-xs tracking-label uppercase text-brass-600 ml-2 align-middle">Beta</span></h3>
             </div>
             <p className="text-stone-500 text-sm leading-relaxed max-w-xl">
               Remove the background from item photos so each piece sits on a clean white card. New items are polished automatically; if a cut-out ever looks wrong, the original is kept and one tap reverts it. Heavy in-browser model — first run downloads ~5MB.
@@ -988,7 +988,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
           {founderCount !== null && (
             <div className="mt-7 pt-6 border-t border-stone-200/80 flex items-center gap-3">
               <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
-              <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">
+              <p className="text-xs tracking-eyebrow uppercase text-stone-500">
                 Atelier · {founderCount.toLocaleString()} founder{founderCount === 1 ? '' : 's'} to date
               </p>
             </div>
@@ -1033,7 +1033,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               <span className="brass-rule shrink-0" aria-hidden="true"></span>
               <h3 className="font-display text-xl md:text-2xl text-stone-900">Trash</h3>
             </div>
-            <span className="text-[10px] tracking-widest uppercase text-stone-500">{deletedItems.length} item{deletedItems.length === 1 ? '' : 's'}</span>
+            <span className="text-xs tracking-label uppercase text-stone-500">{deletedItems.length} item{deletedItems.length === 1 ? '' : 's'}</span>
           </div>
           <p className="text-stone-500 text-sm mb-6">Deleted items live here for 30 days. Restore anything, or remove forever.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -1045,9 +1045,9 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                     <ItemTileImage item={item} alt={item.name} />
                   </div>
                   <p className="text-xs text-stone-900 truncate">{item.name}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-stone-400">Deleted {days}d ago</p>
+                  <p className="text-xs uppercase tracking-meta text-stone-400">Deleted {days}d ago</p>
                   <div className="flex gap-1">
-                    <button onClick={() => onRestoreItem?.(item.id)} className="flex-1 px-2 py-1.5 text-[10px] tracking-widest uppercase rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors">
+                    <button onClick={() => onRestoreItem?.(item.id)} className="flex-1 px-2 py-1.5 text-xs tracking-label uppercase rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors">
                       Restore
                     </button>
                     <button onClick={() => onHardDeleteItem?.(item.id)} className="px-2 py-1.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Delete forever">
@@ -1167,7 +1167,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
               <div key={entry.email} className="flex items-center justify-between py-3 px-4 bg-stone-50 border border-stone-200/60 rounded-xl group">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm text-stone-900 truncate">{entry.displayName || entry.email}</p>
-                  {entry.displayName && <p className="text-[10px] text-stone-500 uppercase tracking-wider mt-0.5 truncate">{entry.email}</p>}
+                  {entry.displayName && <p className="text-xs text-stone-500 uppercase tracking-meta mt-0.5 truncate">{entry.email}</p>}
                 </div>
                 {/* Always visible — this used to be opacity-0 until :hover,
                     which meant there was no way to discover or use it on

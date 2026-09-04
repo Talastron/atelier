@@ -17,7 +17,7 @@ function MobileNavItem({ icon: Icon, label, id, activeTab, setTab, onScrollTop }
       aria-current={isActive ? 'page' : undefined}
     >
       <Icon size={22} strokeWidth={isActive ? 2 : 1.5} className={`transition-all duration-200 ${isActive ? 'text-stone-900 scale-110' : 'text-stone-400'}`} />
-      <span className={`text-[10px] tracking-wide transition-colors ${isActive ? 'text-stone-900 font-medium' : 'text-stone-400'}`}>{label}</span>
+      <span className={`text-xs tracking-meta transition-colors ${isActive ? 'text-stone-900 font-medium' : 'text-stone-400'}`}>{label}</span>
       {isActive && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-stone-900" />}
     </button>
   );
@@ -112,7 +112,7 @@ function MobileFAB({ onTap, onLongPress }) {
       {/* Mid-press tooltip — brass label confirming the gesture. */}
       {holdActive && (
         <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none animate-in fade-in slide-in-from-bottom-1 duration-150 z-10">
-          <div className="text-[10px] tracking-[0.25em] uppercase text-stone-900 bg-brass-100 ring-1 ring-brass-300 px-3 py-1.5 rounded-full shadow-md font-medium">
+          <div className="text-xs tracking-eyebrow uppercase text-stone-900 bg-brass-100 ring-1 ring-brass-300 px-3 py-1.5 rounded-full shadow-md font-medium">
             Your stylist ✦
           </div>
         </div>

@@ -100,7 +100,7 @@ export function ItemChip({ itemId, fallbackName, items, onOpenItem, variant = 'c
       ) : (
         <span className="w-5 h-5 rounded-full bg-stone-300 shrink-0" aria-hidden="true" />
       )}
-      <span className="text-[13px] truncate">{item.name || fallbackName}</span>
+      <span className="text-sm truncate">{item.name || fallbackName}</span>
     </button>
   );
 }

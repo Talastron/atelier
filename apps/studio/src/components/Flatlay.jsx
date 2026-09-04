@@ -32,38 +32,24 @@ const PIECE_SHADOW = 'drop-shadow(0 6px 14px rgba(28, 25, 23, 0.16))';
 // caption strip leaves over, and which cannot declare an aspect without
 // fighting the card's own proportions).
 //
-// The ground is chosen per composition, and it is not a free choice. Every
-// cut-out stored before phase two is a JPEG flattened onto #FFFFFF and drawn
-// object-contain, so it IS an opaque white rectangle: on white it passes for a
-// transparent one and the garments appear to float, and on cream it is a white
-// box across the page — the fault fixed in #73.
+// The ground is white, always, and it is a card colour rather than a taste.
 //
-// Gating bleed per piece does not help here. Not bleeding stops a piece
-// covering its NEIGHBOUR; it says nothing about that piece against the GROUND.
-// So the ground stays white while any piece would show as a box, and turns
-// cream once none would. A part-migrated look therefore looks exactly as it
-// does today, and gains the warm ground only when it can carry it.
-const GROUND_MIGRATED = '#F7F5F2';
-const GROUND_LEGACY = '#FFFFFF';
-
-// Which pieces bring their own rectangle, and so hold the whole look on the
-// legacy white ground.
+// A composition sits on a Lookbook card, and the PAGE behind that card is
+// #F7F5F2. Give the composition the same cream and the card loses its edge: it
+// stops reading as a panel on the page and starts reading as a hole in it. Two
+// migrated looks turned cream beside two unmigrated ones that stayed white, and
+// the grid looked broken — which is how this was found.
 //
-// A bare cut-out without alpha is the obvious one — it IS an opaque white JPEG.
-// A PLATED piece counts too, and an earlier version of this wrongly exempted
-// them: the reasoning was that ItemTileImage samples the photograph's own
-// background and paints it behind, so the plate matches the picture. True, but
-// that only makes it settle against a ground of the SAME colour. Almost every
-// garment photograph is shot on white, so it samples to white and lands on cream
-// as exactly the rectangle this test exists to catch — visible on a white blouse
-// beside six clean cut-outs, which is how it was found.
+// This is the same argument already written down for the share card, where the
+// panel stays white for exactly this reason and against the same page. It was
+// reasoned through there and not applied here.
 //
-// So cream arrives only when every piece in the look is a real cut-out with
-// alpha. That is conservative, and correctly so: a warm ground is not available
-// while one piece is still carrying its own white background.
-function showsWhiteBox(item) {
-  return flatlayTreatment(item) === 'plate' || !hasAlphaCutout(item);
-}
+// Nothing is lost by it. A white garment has essentially no contrast against
+// cream either (1.088:1), so the ground was never what separated pale pieces —
+// PIECE_SHADOW is, and it works identically on both. And white remains what a
+// cut-out stored before phase two needs: those are JPEGs flattened onto #FFFFFF,
+// so on white they pass for transparent, and on cream they are visible boxes.
+const GROUND = '#FFFFFF';
 
 export default function Flatlay({
   pieces = [],
@@ -76,8 +62,7 @@ export default function Flatlay({
   paletteFilter = null,
 }) {
   const placements = composeFlatlay(pieces, { overlap, max, bleed: hasAlphaCutout });
-  const surface = ground
-    ?? (placements.some((p) => showsWhiteBox(p.item)) ? GROUND_LEGACY : GROUND_MIGRATED);
+  const surface = ground ?? GROUND;
 
   const matchesFilter = (item) => {
     if (!paletteFilter) return true;

@@ -1,13 +1,40 @@
 /* Design tokens — the single source of truth for BOTH apps. Imported so the
    @theme below can REFERENCE them instead of mirroring hexes: edit
    packages/design-tokens/colors.css once and it flows through to the app.
-   (apps/marketing consumes the same package the same way.) */
-@import '@atelier/design-tokens/colors.css';
+
+   This imports the BARREL (colours + type + space), which is what
+   apps/marketing has always imported. Until now the Studio took colors.css
+   alone, so type.css never reached the product: the app hardcoded 512 text
+   sizes below --atelier-text-xs, the floor its own scale defines. All three
+   token files declare nothing but :root custom properties, so importing them
+   renders nothing differently on its own — it makes the values available. */
+@import '@atelier/design-tokens/index.css';
 @import "tailwindcss";
 
 @theme {
   --font-display: 'Playfair Display', serif;
   --font-sans: 'Jost', sans-serif;
+
+  /* Reading sizes, raised one step. Tailwind's defaults are 12/14/16/18px and
+     every one of them was judged too small on screen. Because the app is now
+     entirely rem-based - no arbitrary px sizes left anywhere - these four
+     declarations move all 1381 type classes at once, and keep honouring the
+     reader's own browser text setting on top.
+     Display sizes (xl and above) are deliberately untouched: they are already
+     20px+ and this is a legibility change, not a louder headline. */
+  --text-xs:   0.8125rem;   /* 13px, was 12 - the editorial labels */
+  --text-sm:   0.9375rem;   /* 15px, was 14 - body copy and product names */
+  --text-base: 1.0625rem;   /* 17px, was 16 */
+  --text-lg:   1.1875rem;   /* 19px, was 18 */
+
+  /* Editorial label tracking, in three roles. The app had ELEVEN values across
+     496 sites — tracking-wide through tracking-[0.3em] — which sampling showed
+     were three roles that had drifted, not eleven intentions.
+     --atelier-tracking-eyebrow described 45 of those 496; it captured one
+     instance of the convention rather than the convention. */
+  --tracking-meta:    0.05em;   /* helper text, quiet metadata */
+  --tracking-label:   0.1em;    /* buttons, field labels, controls */
+  --tracking-eyebrow: var(--atelier-tracking-eyebrow);  /* 0.28em — section headings */
 
   /* Neutrals — cream/ink now exist as utilities (bg-cream, text-ink) so the
      app can stop hardcoding #F7F5F2 / #1c1917. */

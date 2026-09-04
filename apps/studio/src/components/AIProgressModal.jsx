@@ -26,7 +26,7 @@ export default function AIProgressModal({ open, stage, title = 'Putting together
           <span className="w-2 h-2 rounded-full bg-stone-700 animate-bounce" style={{ animationDelay: '150ms' }} />
           <span className="w-2 h-2 rounded-full bg-stone-500 animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
-        <p className="text-[10px] text-stone-400 tracking-widest uppercase mt-6">Composed by Atelier</p>
+        <p className="text-xs text-stone-400 tracking-label uppercase mt-6">Composed by Atelier</p>
       </div>
     </div>,
     document.body

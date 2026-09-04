@@ -46,7 +46,7 @@ export function ToastProvider({ children }) {
               role={isError ? 'alert' : undefined}>
               <div className="flex items-center gap-2.5 mb-1">
                 <span className={`inline-block w-4 h-px ${isError ? 'bg-red-400' : 'bg-brass-400'}`} aria-hidden="true" />
-                <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${isError ? 'text-red-600' : 'text-stone-500'}`}>
+                <span className={`text-xs tracking-eyebrow uppercase font-medium ${isError ? 'text-red-600' : 'text-stone-500'}`}>
                   {eyebrowFor(t)}
                 </span>
               </div>

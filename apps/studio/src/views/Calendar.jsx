@@ -21,7 +21,7 @@ function DiaryStatTile({ eyebrow, value, suffix, tone = 'default', children }) {
   const numberClass = tone === 'brass' && value > 0 ? 'text-brass-600' : tone === 'dim' ? 'text-stone-300' : 'text-stone-900';
   return (
     <div>
-      <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">{eyebrow}</p>
+      <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-2">{eyebrow}</p>
       {children || (
         <p className={`font-display text-3xl sm:text-4xl leading-none ${numberClass}`}>
           {animated}
@@ -187,7 +187,7 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
                 type="button"
                 onClick={() => { if (confirmDelete) { onDeleteTrip(); } else { setConfirmDelete(true); } }}
                 onBlur={() => setConfirmDelete(false)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[12px] tracking-wide transition-colors ${confirmDelete ? 'bg-red-600 text-white hover:bg-red-700' : 'border border-stone-200 text-stone-500 hover:border-red-300 hover:text-red-600'}`}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs tracking-wide transition-colors ${confirmDelete ? 'bg-red-600 text-white hover:bg-red-700' : 'border border-stone-200 text-stone-500 hover:border-red-300 hover:text-red-600'}`}
                 title={`${trip.days?.length || 0} planned day${(trip.days?.length || 0) === 1 ? '' : 's'} will be removed`}
               >
                 <Trash2 size={14} strokeWidth={1.5} />
@@ -197,7 +197,7 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
             <button
               type="button"
               onClick={() => setPackingOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-[12px] tracking-wide hover:bg-stone-700 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-stone-900 text-white text-xs tracking-wide hover:bg-stone-700 transition-colors"
             >
               <Download size={14} strokeWidth={1.5} />
               View packing list
@@ -211,7 +211,7 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
         <header className="mb-10 sm:mb-12">
           <div className="flex items-center gap-3 mb-4">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">
+            <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">
               {trip.status === 'active' ? 'Active trip' : trip.status === 'upcoming' ? 'Upcoming trip' : 'Past trip'}
             </span>
           </div>
@@ -221,10 +221,10 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
           {trip.location && (
             <p className="font-display italic text-stone-500 text-base sm:text-lg mt-3">{trip.location}</p>
           )}
-          <p className="text-[11px] text-stone-500 mt-3 tracking-[0.18em] uppercase">
+          <p className="text-xs text-stone-500 mt-3 tracking-eyebrow uppercase">
             {startLabel} → {endLabel}
           </p>
-          <p className="text-[10px] text-stone-400 mt-1 tracking-wide">
+          <p className="text-xs text-stone-400 mt-1 tracking-meta">
             {totalDays} day{totalDays === 1 ? '' : 's'} · {totalPieces} piece{totalPieces === 1 ? '' : 's'} packed · {tripOutfits.length} outfit{tripOutfits.length === 1 ? '' : 's'}
           </p>
         </header>
@@ -232,7 +232,7 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
         {/* Day-by-day section header */}
         <div className="flex items-center gap-3 mb-6 sm:mb-8">
           <span className="brass-rule" aria-hidden="true"></span>
-          <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Day by day</span>
+          <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Day by day</span>
         </div>
 
         {tripOutfits.length === 0 ? (
@@ -260,17 +260,17 @@ function TripDetailView({ trip, outfits, items, schedules, onClose, onOpenOutfit
                       );
                     })}
                     {pieces.length > 4 && (
-                      <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-lg bg-stone-100 border border-stone-200 flex items-center justify-center text-[10px] tracking-wide text-stone-500">
+                      <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-lg bg-stone-100 border border-stone-200 flex items-center justify-center text-xs tracking-meta text-stone-500">
                         +{pieces.length - 4}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] tracking-widest uppercase text-stone-400">{dayLabel}</p>
+                    <p className="text-xs tracking-label uppercase text-stone-400">{dayLabel}</p>
                     <p className="font-display text-stone-900 text-base sm:text-lg leading-tight truncate group-hover:text-brass-700 transition-colors mt-0.5">
                       {outfit.name}
                     </p>
-                    <p className="text-[10px] tracking-wide uppercase text-stone-500 mt-1">
+                    <p className="text-xs tracking-meta uppercase text-stone-500 mt-1">
                       {pieces.length} piece{pieces.length === 1 ? '' : 's'}
                     </p>
                   </div>
@@ -467,7 +467,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
           </button>
           <div className="text-center">
             <p className="font-display text-xl sm:text-2xl text-stone-900">{monthLabel}</p>
-            <p className="text-[10px] tracking-widest uppercase text-stone-500 mt-1">
+            <p className="text-xs tracking-label uppercase text-stone-500 mt-1">
               {totalWearsInMonth} wears · {plannedInMonth} planned
             </p>
           </div>
@@ -479,18 +479,18 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
         <div className="flex items-center justify-end mb-3 gap-2 flex-wrap">
           <button onClick={() => downloadIcs(`atelier-calendar-${todayISO()}.ics`, schedules, outfits, items)}
             disabled={Object.values(schedules || {}).filter((s) => s?.outfitId).length === 0}
-            className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 transition-all disabled:opacity-40 inline-flex items-center gap-1.5">
+            className="text-xs tracking-label uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 transition-all disabled:opacity-40 inline-flex items-center gap-1.5">
             <Download size={12} strokeWidth={1.5} /> Export .ics
           </button>
           <button onClick={toggleRangeMode}
-            className={`text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full transition-all border ${
+            className={`text-xs tracking-label uppercase px-3 py-1.5 rounded-full transition-all border ${
               rangeMode ? 'bg-stone-900 text-white border-stone-900' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-500'
             }`}>
             {rangeMode ? '× Cancel range' : '✦ Pack for trip'}
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 text-center text-[10px] tracking-widest uppercase text-stone-400 mb-2">
+        <div className="grid grid-cols-7 gap-1 text-center text-xs tracking-label uppercase text-stone-400 mb-2">
           {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => <div key={d}>{d}</div>)}
         </div>
         <div className="grid grid-cols-7 gap-1 sm:gap-2">
@@ -520,12 +520,12 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                 }`}>
                 <span className="text-xs sm:text-sm">{day}</span>
                 {list.length > 0 && (
-                  <span className={`text-[8px] sm:text-[12px] mt-0.5 ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
+                  <span className={`text-xs mt-0.5 ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
                     {list.length} wear{list.length === 1 ? '' : 's'}
                   </span>
                 )}
                 {scheduled && !list.length && (
-                  <span className={`text-[8px] sm:text-[12px] mt-0.5 ${isSelected ? 'text-amber-200' : 'text-brass-600'}`}>
+                  <span className={`text-xs mt-0.5 ${isSelected ? 'text-amber-200' : 'text-brass-600'}`}>
                     ✦ planned
                   </span>
                 )}
@@ -545,11 +545,11 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
         return (
           <div className="bg-stone-900 text-white rounded-[2rem] p-5 sm:p-6 flex items-center justify-between gap-4 flex-wrap">
             <div className="min-w-0">
-              <p className="text-[10px] tracking-widest uppercase text-stone-400">Trip range</p>
+              <p className="text-xs tracking-label uppercase text-stone-400">Trip range</p>
               <p className="font-display text-lg sm:text-xl mt-1">
                 {startLabel}{endLabel ? ` → ${endLabel}` : ' — tap end date'}
               </p>
-              <p className="text-[10px] tracking-wider uppercase text-stone-400 mt-1">{days} day{days === 1 ? '' : 's'} · {plannedDays} planned</p>
+              <p className="text-xs tracking-meta uppercase text-stone-400 mt-1">{days} day{days === 1 ? '' : 's'} · {plannedDays} planned</p>
             </div>
             <div className="flex gap-2 flex-wrap items-center">
               {/* ONE button. Outfits + packing list + iteration + export all
@@ -583,7 +583,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
               {onSaveOutfit && isAIEnabled() && plannedDays > 0 && (
                 <button
                   onClick={() => setPackingOpen(true)}
-                  className="text-[10px] tracking-widest uppercase text-stone-400 hover:text-stone-100 underline-offset-4 hover:underline"
+                  className="text-xs tracking-label uppercase text-stone-400 hover:text-stone-100 underline-offset-4 hover:underline"
                   title={`View packing list from ${plannedDays} already-scheduled outfit${plannedDays === 1 ? '' : 's'}`}
                 >
                   Or view list from existing schedule
@@ -612,17 +612,17 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="inline-block w-3 h-px bg-amber-400 shrink-0" aria-hidden="true" />
-                    <span className="text-[10px] tracking-[0.28em] uppercase text-amber-800 font-medium shrink-0">Trip</span>
-                    <span className="text-[12px] text-stone-700 font-display truncate">{tripInfo.name}</span>
+                    <span className="text-xs tracking-eyebrow uppercase text-amber-800 font-medium shrink-0">Trip</span>
+                    <span className="text-xs text-stone-700 font-display truncate">{tripInfo.name}</span>
                   </div>
-                  <span className="text-[10px] tracking-wide text-stone-500 shrink-0">
+                  <span className="text-xs tracking-meta text-stone-500 shrink-0">
                     {new Date(tripInfo.startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     {' → '}
                     {new Date(tripInfo.endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
                 {tripInfo.location && tripInfo.location !== tripInfo.name && (
-                  <p className="text-[10px] tracking-wide text-stone-500 mt-1">{tripInfo.location}</p>
+                  <p className="text-xs tracking-meta text-stone-500 mt-1">{tripInfo.location}</p>
                 )}
                 <div className="flex gap-3 mt-2">
                   <button
@@ -632,7 +632,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                       setRangeEnd(tripInfo.endISO);
                       setPackingOpen(true);
                     }}
-                    className="text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 underline-offset-4 hover:underline"
+                    className="text-xs tracking-label uppercase text-stone-700 hover:text-stone-900 underline-offset-4 hover:underline"
                   >
                     View packing list
                   </button>
@@ -643,10 +643,10 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
               <div className="flex items-baseline gap-3 flex-wrap min-w-0">
                 <h3 className="font-display text-xl sm:text-2xl text-stone-900">{formattedDate}</h3>
                 {scheduledOutfit && (
-                  <span className="text-[10px] tracking-widest uppercase text-brass-600 bg-brass-50 px-2 py-0.5 rounded-full shrink-0">Planned</span>
+                  <span className="text-xs tracking-label uppercase text-brass-600 bg-brass-50 px-2 py-0.5 rounded-full shrink-0">Planned</span>
                 )}
                 {!scheduledOutfit && selectedWears.length > 0 && (
-                  <span className="text-[10px] tracking-widest uppercase text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full shrink-0">{selectedWears.length} worn</span>
+                  <span className="text-xs tracking-label uppercase text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full shrink-0">{selectedWears.length} worn</span>
                 )}
               </div>
               {isFutureOrToday && onScheduleOutfit && (
@@ -675,11 +675,11 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
               <div>
                 <div className="flex items-center gap-2.5 mb-1.5">
                   <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
-                  <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500">On your calendar</span>
+                  <span className="text-xs tracking-eyebrow uppercase text-stone-500">On your calendar</span>
                 </div>
                 <ul className="space-y-1">
                   {dayEvents.map((e) => (
-                    <li key={e.id} className="text-[12px] text-stone-700 flex items-baseline gap-2">
+                    <li key={e.id} className="text-xs text-stone-700 flex items-baseline gap-2">
                       <span className="text-stone-400 tabular-nums tracking-wide shrink-0">
                         {e.allDay ? 'All day' : new Date(e.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                       </span>
@@ -699,12 +699,12 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                   onClick={() => onOpenOutfit?.(scheduledOutfit.id)}
                   className="w-full text-left bg-amber-50 hover:bg-amber-100/70 transition-colors px-4 pt-4 pb-3"
                 >
-                  <div className="text-[10px] tracking-widest uppercase text-brass-600 mb-1">Planned look</div>
+                  <div className="text-xs tracking-label uppercase text-brass-600 mb-1">Planned look</div>
                   <div className="font-display text-stone-900 text-lg sm:text-xl leading-tight">{scheduledOutfit.name}</div>
                   {scheduledOutfit.tags && scheduledOutfit.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {scheduledOutfit.tags.slice(0, 5).map((tag) => (
-                        <span key={tag} className="text-[9px] tracking-wide uppercase text-stone-600 bg-white/70 border border-stone-200 px-1.5 py-0.5 rounded-full">{tag}</span>
+                        <span key={tag} className="text-xs tracking-meta uppercase text-stone-600 bg-white/70 border border-stone-200 px-1.5 py-0.5 rounded-full">{tag}</span>
                       ))}
                     </div>
                   )}
@@ -721,13 +721,13 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
                 </div>
                 {/* Action row */}
                 <div className="bg-white border-t border-amber-200 px-4 py-2 flex justify-end">
-                  <button onClick={() => onScheduleOutfit(selectedDate, null)} className="text-[10px] tracking-widest uppercase text-stone-400 hover:text-red-600 transition-colors">Unschedule</button>
+                  <button onClick={() => onScheduleOutfit(selectedDate, null)} className="text-xs tracking-label uppercase text-stone-400 hover:text-red-600 transition-colors">Unschedule</button>
                 </div>
               </div>
             )}
 
             <div>
-              <p className="text-[10px] tracking-widest uppercase text-stone-500 mb-3">{selectedWears.length > 0 ? 'Actually worn' : 'Wear log'}</p>
+              <p className="text-xs tracking-label uppercase text-stone-500 mb-3">{selectedWears.length > 0 ? 'Actually worn' : 'Wear log'}</p>
               {selectedWears.length === 0 ? (
                 <p className="text-stone-400 italic text-sm">{isFutureOrToday ? 'Nothing logged yet — log wears from any item\'s detail view.' : 'Nothing was logged for this day.'}</p>
               ) : (
@@ -762,7 +762,7 @@ function WearCalendar({ items, outfits = [], schedules = {}, onScheduleOutfit, o
             setRangeEnd(end.toISOString().slice(0, 10));
             setPackingOpen(true);
           }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-[12px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 text-xs tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors"
         >
           <Download size={14} strokeWidth={1.5} />
           Download packing list
@@ -1126,7 +1126,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
       <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div>
-            <p className="text-[10px] tracking-widest uppercase text-stone-500">Travel capsule</p>
+            <p className="text-xs tracking-label uppercase text-stone-500">Travel capsule</p>
             <h3 className="text-xl font-display text-stone-900 mt-1">Plan {days} day{days === 1 ? '' : 's'} with Concierge</h3>
           </div>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -1143,7 +1143,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 
               {/* Destination */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">Destination</label>
+                <label className="block text-xs tracking-label uppercase text-stone-500 font-medium">Destination</label>
                 <input
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
@@ -1155,7 +1155,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 
               {/* Trip type — three mutually-exclusive chips. */}
               <div className="space-y-2">
-                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">Trip type</label>
+                <label className="block text-xs tracking-label uppercase text-stone-500 font-medium">Trip type</label>
                 <div className="flex gap-2 flex-wrap">
                   {[
                     { id: 'vacation', label: 'Vacation' },
@@ -1182,7 +1182,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                   submit time and passed into the Concierge prompt so the
                   composition honours them (e.g. beach → swimwear in capsule). */}
               <div className="space-y-2">
-                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+                <label className="block text-xs tracking-label uppercase text-stone-500 font-medium">
                   Activities <span className="text-stone-400 normal-case tracking-normal">(optional — pick any that apply)</span>
                 </label>
                 <div className="flex gap-1.5 flex-wrap">
@@ -1201,7 +1201,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                           });
                         }}
                         title={a.hint}
-                        className={`px-3 py-1.5 rounded-full text-[13px] transition-colors border ${
+                        className={`px-3 py-1.5 rounded-full text-sm transition-colors border ${
                           selected
                             ? 'bg-brass-300 text-stone-900 border-brass-400'
                             : 'bg-white text-stone-600 border-stone-300 hover:border-stone-500'
@@ -1219,7 +1219,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                   because it lets the user be destination-specific (Vatican,
                   Trastevere wedding, Tate Modern, Sperlonga beach day). */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+                <label className="block text-xs tracking-label uppercase text-stone-500 font-medium">
                   Specific places or events <span className="text-stone-400 normal-case tracking-normal">(optional — be as concrete as you like)</span>
                 </label>
                 <textarea
@@ -1230,7 +1230,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                   className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none resize-none"
                   style={{ fontSize: '16px' /* avoid iOS auto-zoom */ }}
                 />
-                <p className="text-[12px] text-stone-400 italic leading-relaxed">
+                <p className="text-xs text-stone-400 italic leading-relaxed">
                   Atelier also factors in cultural dress norms for the destination — covered shoulders for religious sites, modest hemlines where appropriate, climate-specific cover-ups.
                 </p>
               </div>
@@ -1239,7 +1239,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                 className="w-full bg-stone-900 text-white py-3 rounded-xl font-medium hover:bg-stone-700 disabled:opacity-50">
                 Compose this trip
               </button>
-              <p className="text-[12px] text-stone-400 leading-relaxed">
+              <p className="text-xs text-stone-400 leading-relaxed">
                 Forecast via Open-Meteo for the first ~14 days. Days beyond use seasonal climate. The Concierge composes outfits + a packing list from your wardrobe and the activities you selected — iterate per day, export, or save & schedule.
               </p>
             </form>
@@ -1273,7 +1273,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                   </div>
                 ))}
                 {days > 5 && (
-                  <p className="text-center text-[10px] tracking-widest uppercase text-stone-400">
+                  <p className="text-center text-xs tracking-label uppercase text-stone-400">
                     +{days - 5} more day{days - 5 === 1 ? '' : 's'}
                   </p>
                 )}
@@ -1293,7 +1293,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
           {stage === 'done' && plan && (
             <>
               <div className="bg-stone-900 text-white rounded-2xl p-4">
-                <p className="text-[10px] tracking-widest uppercase text-stone-400 mb-1">{forecast?.name}{forecast?.country ? `, ${forecast.country}` : ''}</p>
+                <p className="text-xs tracking-label uppercase text-stone-400 mb-1">{forecast?.name}{forecast?.country ? `, ${forecast.country}` : ''}</p>
                 <p className="text-sm italic text-stone-200">{plan.summary}</p>
               </div>
               <div className="space-y-3">
@@ -1311,12 +1311,12 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                         </p>
                         <div className="flex items-center gap-2">
                           {fcDay && !fcDay.estimated && (
-                            <span className="text-[10px] tracking-wider uppercase text-stone-500">
+                            <span className="text-xs tracking-meta uppercase text-stone-500">
                               {fcDay.tmin}-{fcDay.tmax}°C · {weatherLabel(fcDay.code)}
                             </span>
                           )}
                           {fcDay?.estimated && (
-                            <span className="text-[10px] tracking-wider uppercase text-stone-400 italic">
+                            <span className="text-xs tracking-meta uppercase text-stone-400 italic">
                               Seasonal estimate
                             </span>
                           )}
@@ -1324,7 +1324,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                             type="button"
                             onClick={() => rerollDay(d.date)}
                             disabled={isRerolling}
-                            className="text-[10px] tracking-wider uppercase text-stone-500 hover:text-stone-900 border border-stone-300 hover:border-stone-500 rounded-full px-2 py-0.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="text-xs tracking-meta uppercase text-stone-500 hover:text-stone-900 border border-stone-300 hover:border-stone-500 rounded-full px-2 py-0.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Compose this day again"
                           >
                             {isRerolling ? 'Rerolling…' : '↻ Reroll'}
@@ -1353,7 +1353,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                                 {itemImages(p)[0] ? (
                                   <ItemTileImage item={p} alt={p.name || p.category} />
                                 ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
+                                  <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-meta text-stone-400 text-center px-1">{p.category}</div>
                                 )}
                                 {/* Remove button — always visible on mobile (tap target),
                                     opacity-on-hover on desktop. Small X badge in top-left. */}
@@ -1375,11 +1375,11 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                               title="Add a piece from your wardrobe to this day"
                             >
                               <Plus size={20} strokeWidth={1.5} />
-                              <span className="text-[9px] uppercase tracking-wider">Add</span>
+                              <span className="text-xs uppercase tracking-meta">Add</span>
                             </button>
                           </div>
                           {isSparse && (
-                            <p className="text-[12px] text-amber-700 italic mb-2">
+                            <p className="text-xs text-amber-700 italic mb-2">
                               Sparse outfit ({pieces.length} piece{pieces.length === 1 ? '' : 's'}) — Reroll for a fuller composition.
                             </p>
                           )}
@@ -1418,15 +1418,15 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                   <div className="bg-white border border-stone-200 rounded-2xl p-5">
                     <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
                       <div>
-                        <p className="text-[10px] tracking-widest uppercase text-stone-500">The Packing List</p>
+                        <p className="text-xs tracking-label uppercase text-stone-500">The Packing List</p>
                         <h3 className="text-lg font-display text-stone-900 mt-0.5">{entries.length} piece{entries.length === 1 ? '' : 's'} for {plan.days.length} day{plan.days.length === 1 ? '' : 's'}</h3>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] tracking-wider uppercase text-stone-400">
+                        <p className="text-xs tracking-meta uppercase text-stone-400">
                           {(entries.length / Math.max(plan.days.length, 1)).toFixed(1)}× per day
                         </p>
                         {backbone > 0 && (
-                          <p className="text-[10px] tracking-wider uppercase text-emerald-700 mt-0.5">
+                          <p className="text-xs tracking-meta uppercase text-emerald-700 mt-0.5">
                             {backbone} backbone piece{backbone === 1 ? '' : 's'}
                           </p>
                         )}
@@ -1437,7 +1437,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                         const list = byCategory.get(cat);
                         return (
                           <div key={cat}>
-                            <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 mb-2">
+                            <p className="text-xs tracking-eyebrow uppercase text-stone-500 mb-2">
                               {cat} <span className="text-stone-300">·</span> <span className="text-stone-400">{list.length}</span>
                             </p>
                             <div className="flex flex-wrap gap-2">
@@ -1447,15 +1447,15 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                                     {itemImages(p)[0] ? (
                                       <ItemTileImage item={p} alt={p.name || p.category} />
                                     ) : (
-                                      <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
+                                      <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-meta text-stone-400 text-center px-1">{p.category}</div>
                                     )}
                                     {/* Usage badge — backbone pieces (3+) get emerald;
                                         supporting pieces (1-2) get neutral. */}
-                                    <span className={`absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${dayCount >= 3 ? 'bg-emerald-600 text-white' : 'bg-stone-800/85 text-white'}`}>
+                                    <span className={`absolute top-1 right-1 text-xs font-bold px-1.5 py-0.5 rounded-full ${dayCount >= 3 ? 'bg-emerald-600 text-white' : 'bg-stone-800/85 text-white'}`}>
                                       × {dayCount}
                                     </span>
                                   </div>
-                                  <p className="mt-1 text-[12px] text-stone-600 text-center truncate w-full leading-tight">{p.name || p.brand || p.category}</p>
+                                  <p className="mt-1 text-xs text-stone-600 text-center truncate w-full leading-tight">{p.name || p.brand || p.category}</p>
                                 </div>
                               ))}
                             </div>
@@ -1463,7 +1463,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                         );
                       })}
                     </div>
-                    <p className="mt-4 text-[12px] text-stone-400 italic">
+                    <p className="mt-4 text-xs text-stone-400 italic">
                       Green badges mark backbone pieces (worn 3+ days). Use Copy or Print below to take this list with you.
                     </p>
                   </div>
@@ -1576,7 +1576,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                 <div className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl overflow-hidden shadow-2xl flex flex-col max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
                   <div className="px-5 py-4 border-b border-stone-200 flex justify-between items-start shrink-0">
                     <div>
-                      <p className="text-[10px] tracking-widest uppercase text-stone-500">Add a piece</p>
+                      <p className="text-xs tracking-label uppercase text-stone-500">Add a piece</p>
                       <h3 className="text-base font-medium text-stone-900 mt-0.5">
                         to {new Date(addingToDay + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
                       </h3>
@@ -1592,7 +1592,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                           key={c}
                           type="button"
                           onClick={() => setPickerCategory(c)}
-                          className={`px-3 py-1.5 rounded-full text-[13px] whitespace-nowrap transition-colors border ${
+                          className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors border ${
                             pickerCategory === c
                               ? 'bg-stone-900 text-white border-stone-900'
                               : 'bg-white text-stone-600 border-stone-300 hover:border-stone-500'
@@ -1627,17 +1627,17 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                                 {itemImages(p)[0] ? (
                                   <ItemTileImage item={p} alt={p.name || p.category} />
                                 ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[10px] uppercase tracking-wider text-stone-400 text-center px-1">{p.category}</div>
+                                  <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-meta text-stone-400 text-center px-1">{p.category}</div>
                                 )}
                                 {alreadyAdded && (
                                   <div className="absolute inset-0 flex items-center justify-center bg-emerald-700/20">
-                                    <span className="bg-emerald-700 text-white text-[10px] uppercase tracking-widest px-2 py-1 rounded-full">✓ Added</span>
+                                    <span className="bg-emerald-700 text-white text-xs uppercase tracking-label px-2 py-1 rounded-full">✓ Added</span>
                                   </div>
                                 )}
                               </div>
                               <div className="p-1.5">
-                                <p className="text-[12px] text-stone-900 truncate leading-tight">{p.name || p.brand || p.category}</p>
-                                {p.brand && p.name && <p className="text-[9px] text-stone-500 truncate leading-tight">{p.brand}</p>}
+                                <p className="text-xs text-stone-900 truncate leading-tight">{p.name || p.brand || p.category}</p>
+                                {p.brand && p.name && <p className="text-xs text-stone-500 truncate leading-tight">{p.brand}</p>}
                               </div>
                             </button>
                           );
@@ -1646,8 +1646,8 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
                     )}
                   </div>
                   <div className="px-5 py-3 border-t border-stone-200 bg-stone-50 shrink-0 flex justify-between items-center">
-                    <p className="text-[12px] text-stone-500">{filtered.length} piece{filtered.length === 1 ? '' : 's'} · {currentDayIds.size} already on this day</p>
-                    <button onClick={() => setAddingToDay(null)} type="button" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 px-3 py-1">Done</button>
+                    <p className="text-xs text-stone-500">{filtered.length} piece{filtered.length === 1 ? '' : 's'} · {currentDayIds.size} already on this day</p>
+                    <button onClick={() => setAddingToDay(null)} type="button" className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 px-3 py-1">Done</button>
                   </div>
                 </div>
               </div>
@@ -1659,12 +1659,12 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
           <div className="px-6 py-4 border-t border-stone-200/60 bg-white shrink-0 flex gap-2 justify-between flex-wrap">
             <div className="flex gap-2">
               <button onClick={handleCopyAsText} type="button"
-                className="text-[10px] tracking-wider uppercase px-3 py-2 rounded-full border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-1.5"
+                className="text-xs tracking-meta uppercase px-3 py-2 rounded-full border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-1.5"
                 title="Copy the packing list as plain text — paste into Notes, email, or SMS">
                 <Copy size={12} strokeWidth={1.5} /> Copy list
               </button>
               <button onClick={handlePrint} type="button"
-                className="text-[10px] tracking-wider uppercase px-3 py-2 rounded-full border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-1.5"
+                className="text-xs tracking-meta uppercase px-3 py-2 rounded-full border border-stone-300 text-stone-700 hover:bg-stone-50 transition-colors flex items-center gap-1.5"
                 title="Open the browser print dialog — save as PDF or print on paper">
                 <Printer size={12} strokeWidth={1.5} /> Print / PDF
               </button>
@@ -1785,7 +1785,7 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
       <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh] print:max-h-none print:rounded-none print:shadow-none print:bg-white" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-8 py-5 border-b border-stone-200/60 bg-white shrink-0 print:border-0">
           <div>
-            <p className="text-[10px] tracking-widest uppercase text-stone-500">Packing list</p>
+            <p className="text-xs tracking-label uppercase text-stone-500">Packing list</p>
             <h3 className="font-display text-xl sm:text-2xl text-stone-900 mt-1">{startLabel} → {endLabel}</h3>
             <p className="text-xs text-stone-500 mt-1">{dayCount} day{dayCount === 1 ? '' : 's'} · {totalPieces} piece{totalPieces === 1 ? '' : 's'} to pack</p>
           </div>
@@ -1817,7 +1817,7 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
             <div className="space-y-8">
               {orderedCategories.map((cat) => (
                 <div key={cat}>
-                  <h4 className="text-[10px] tracking-widest uppercase text-stone-500 mb-3 font-bold">{cat} · {byCategory[cat].length}</h4>
+                  <h4 className="text-xs tracking-label uppercase text-stone-500 mb-3 font-bold">{cat} · {byCategory[cat].length}</h4>
                   <ul className="space-y-2">
                     {byCategory[cat].map(({ item, days }) => (
                       <li key={item.id} className="flex items-center gap-3 py-2 border-b border-stone-200/50 last:border-0">
@@ -1827,7 +1827,7 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-stone-900 truncate">{item.name}</p>
-                          <p className="text-[10px] uppercase tracking-wider text-stone-500 truncate">
+                          <p className="text-xs uppercase tracking-meta text-stone-500 truncate">
                             {item.brand}{days.length > 1 ? ` · for ${days.length} days` : ''}
                           </p>
                         </div>
@@ -1838,11 +1838,11 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
               ))}
 
               <div className="pt-6 border-t border-stone-200">
-                <h4 className="text-[10px] tracking-widest uppercase text-stone-500 mb-3 font-bold">Day by day</h4>
+                <h4 className="text-xs tracking-label uppercase text-stone-500 mb-3 font-bold">Day by day</h4>
                 <ul className="space-y-2">
                   {dayList.map((d) => (
                     <li key={d.iso} className="flex items-baseline gap-3 text-sm">
-                      <span className="text-stone-500 w-20 text-[11px] tracking-wider uppercase shrink-0">{d.label}</span>
+                      <span className="text-stone-500 w-20 text-xs tracking-meta uppercase shrink-0">{d.label}</span>
                       <span className="text-stone-900">{d.outfit ? d.outfit.name : <span className="text-stone-400 italic">— not planned —</span>}</span>
                     </li>
                   ))}
@@ -1886,7 +1886,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
       <div className="bg-cream w-full sm:max-w-lg sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-center px-4 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div>
-            <p className="text-[10px] tracking-widest uppercase text-stone-500">Schedule for</p>
+            <p className="text-xs tracking-label uppercase text-stone-500">Schedule for</p>
             <h3 className="text-xl font-display font-medium text-stone-900">{formatted}</h3>
           </div>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -1909,7 +1909,7 @@ function SchedulePickerModal({ date, outfits, items, onClose, onPick }) {
                     ))}
                   </div>
                   <p className="text-xs font-medium text-stone-900 truncate px-1">{outfit.name}</p>
-                  <p className="text-[10px] text-stone-500 uppercase tracking-wider px-1">{pieces.length} pieces</p>
+                  <p className="text-xs text-stone-500 uppercase tracking-meta px-1">{pieces.length} pieces</p>
                 </button>
               );
             })}
@@ -1937,10 +1937,10 @@ function DiaryStatsRow({ daysCount, wears, streak, mostWorn, onOpenItem }) {
       <div className="min-w-0"><DiaryStatTile eyebrow="Current streak" value={streak} suffix={`day${streak === 1 ? '' : 's'}`} tone={streak > 0 ? 'brass' : 'dim'} /></div>
       {mostWorn && (
         <div className="col-span-2 md:col-span-1 min-w-0">
-          <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400 mb-2">Most worn</p>
+          <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-2">Most worn</p>
           <button onClick={() => onOpenItem?.(mostWorn.item.id)} className="text-left group block w-full max-w-full min-w-0">
             <p className="font-display text-base sm:text-lg text-stone-900 leading-tight group-hover:text-brass-700 transition-colors truncate">{mostWorn.item.name}</p>
-            <p className="text-[10px] tracking-wider uppercase text-stone-500 mt-1">× {mostWorn.count} wear{mostWorn.count === 1 ? '' : 's'}</p>
+            <p className="text-xs tracking-meta uppercase text-stone-500 mt-1">× {mostWorn.count} wear{mostWorn.count === 1 ? '' : 's'}</p>
           </button>
         </div>
       )}
@@ -2105,7 +2105,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
       <header className="mb-8 sm:mb-12">
         <div className="flex items-center gap-3 mb-4">
           <span className="brass-rule" aria-hidden="true" />
-          <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500 font-medium">Calendar</span>
+          <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Calendar</span>
         </div>
         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl text-stone-900 tracking-tight leading-[0.95]">
           Every wear, every plan
@@ -2131,17 +2131,17 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-3">
               <span className="brass-rule" aria-hidden="true" />
-              <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Upcoming trips</span>
+              <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Upcoming trips</span>
             </div>
-            <button type="button" onClick={handlePlanTrip} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-500 transition-colors">＋ Plan a trip</button>
+            <button type="button" onClick={handlePlanTrip} className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 px-3 py-1.5 border border-stone-200 rounded-full hover:border-stone-500 transition-colors">＋ Plan a trip</button>
           </div>
           <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
             {trips.filter((t) => t.status !== 'past').map((t) => (
               <button key={t.id} type="button" onClick={() => setOpenTripId(t.id)} className="shrink-0 text-left bg-white border border-stone-200/60 rounded-2xl p-4 smooth-shadow hover:border-brass-300 transition-colors min-w-[220px]">
-                <p className="text-[9px] tracking-[0.25em] uppercase text-brass-600 mb-1">{t.status === 'active' ? 'Active' : 'Upcoming'}</p>
+                <p className="text-xs tracking-eyebrow uppercase text-brass-600 mb-1">{t.status === 'active' ? 'Active' : 'Upcoming'}</p>
                 <p className="font-display text-stone-900 text-lg leading-tight truncate">{t.name}</p>
-                {t.location && <p className="text-[13px] text-stone-500 truncate">{t.location}</p>}
-                <p className="text-[10px] text-stone-400 mt-1 tracking-wide">
+                {t.location && <p className="text-sm text-stone-500 truncate">{t.location}</p>}
+                <p className="text-xs text-stone-400 mt-1 tracking-meta">
                   {new Date(t.startISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → {new Date(t.endISO + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {t.days.length} day{t.days.length === 1 ? '' : 's'}
                 </p>
               </button>
@@ -2158,7 +2158,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
             { id: 'calendar', label: 'Month' },
           ].map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+              className={`px-6 sm:px-8 py-2 sm:py-2.5 rounded-full text-xs tracking-meta uppercase transition-colors duration-200 ${
                 tab === t.id ? 'bg-white text-stone-900 font-medium shadow-sm' : 'text-stone-500 hover:text-stone-900'
               }`}>
               {t.label}
@@ -2193,7 +2193,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
             <div className="flex flex-wrap gap-2 mb-10">
               {FILTERS.map((f) => (
                 <button key={f.id} onClick={() => setFilter(f.id)}
-                  className={`px-4 py-2 text-[11px] tracking-widest uppercase rounded-full transition-colors duration-200 ${
+                  className={`px-4 py-2 text-xs tracking-label uppercase rounded-full transition-colors duration-200 ${
                     filter === f.id
                       ? 'bg-stone-900 text-white'
                       : 'bg-white text-stone-600 border border-stone-300 hover:border-stone-500 hover:text-stone-900'
@@ -2210,7 +2210,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
               <p className="font-display italic text-stone-400 text-xl sm:text-2xl mb-3">No wears logged yet.</p>
               <p className="text-sm text-stone-500 max-w-sm mx-auto leading-relaxed">Log a wear from any item or outfit and it will begin to appear here — the start of your style record.</p>
               <button onClick={() => setTab('calendar')}
-                className="mt-6 inline-flex items-center gap-2 text-[11px] tracking-widest uppercase text-stone-700 hover:text-brass-700 transition-colors">
+                className="mt-6 inline-flex items-center gap-2 text-xs tracking-label uppercase text-stone-700 hover:text-brass-700 transition-colors">
                 <Calendar size={14} strokeWidth={1.5} />
                 Open the calendar
               </button>
@@ -2219,7 +2219,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
             <div className="text-center py-20">
               <p className="font-display italic text-stone-400 text-lg mb-3">No entries match this filter.</p>
               <button onClick={() => setFilter('all')}
-                className="text-[11px] tracking-widest uppercase text-brass-600 hover:text-brass-700 transition-colors">
+                className="text-xs tracking-label uppercase text-brass-600 hover:text-brass-700 transition-colors">
                 Show all
               </button>
             </div>
@@ -2234,7 +2234,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
                     <div className="mb-10 pb-6 border-b border-stone-200">
                       <div className="flex items-baseline gap-3 mb-2">
                         <span className="inline-block w-6 h-px bg-brass-400" aria-hidden="true" />
-                        <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500">{monthYear}</span>
+                        <span className="text-xs tracking-eyebrow uppercase text-stone-500">{monthYear}</span>
                       </div>
                       <h2 className="font-display text-3xl sm:text-4xl text-stone-900 mb-3 tracking-tight">{monthName}</h2>
                       <div className="flex items-baseline gap-5 text-sm text-stone-500 flex-wrap">
@@ -2267,12 +2267,12 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
                           <li key={day.date} className="grid grid-cols-[auto_1fr] gap-5 sm:gap-8 items-start">
                             <div className="shrink-0 w-16 sm:w-24 text-right" style={{ position: 'sticky', top: '6rem' }}>
                               <p className={`font-display text-4xl sm:text-6xl leading-none ${isToday ? 'text-brass-600' : 'text-stone-900'}`}>{dayNum}</p>
-                              <p className="text-[9px] tracking-[0.25em] uppercase text-stone-500 mt-2">{dayWeek}</p>
+                              <p className="text-xs tracking-eyebrow uppercase text-stone-500 mt-2">{dayWeek}</p>
                               {relativeLabel && (
                                 <p className="font-display italic text-xs text-brass-600 mt-1.5">{relativeLabel}</p>
                               )}
                               {day.eventName && (
-                                <p className="font-display italic text-[13px] text-stone-500 mt-2 leading-tight">{day.eventName}</p>
+                                <p className="font-display italic text-sm text-stone-500 mt-2 leading-tight">{day.eventName}</p>
                               )}
                             </div>
 
@@ -2368,7 +2368,7 @@ export default function DiaryView({ items = [], outfits = [], schedules = {}, on
                 {lightboxPhoto.caption}
               </p>
             )}
-            <p className="text-[10px] tracking-[0.3em] uppercase text-white/60">
+            <p className="text-xs tracking-eyebrow uppercase text-white/60">
               {new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>

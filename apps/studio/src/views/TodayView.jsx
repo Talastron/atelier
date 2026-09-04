@@ -51,7 +51,7 @@ function ComposingPlaceholder({ title = 'The Daily Brief', stage }) {
   return (
     <div className="rounded-2xl border border-stone-200/70 bg-white p-6 sm:p-8 smooth-shadow">
       <style>{`@keyframes atelierSheen{0%{background-position:-150% 0}100%{background-position:250% 0}}`}</style>
-      <p className="text-[10px] tracking-[0.28em] uppercase text-stone-400">{title}</p>
+      <p className="text-xs tracking-eyebrow uppercase text-stone-400">{title}</p>
       <div className="mt-5 flex items-center gap-3">
         <span className="brass-rule" aria-hidden="true" />
         <p className="font-display italic text-lg sm:text-xl text-stone-700">{stage}</p>
@@ -547,7 +547,7 @@ function DailyBriefCard({
       <div className="mt-7 flex flex-col gap-4 rounded-2xl bg-[#efe8db] p-5 sm:flex-row sm:items-start sm:gap-6 sm:p-6">
         <Sparkles size={20} strokeWidth={1.4} className="hidden shrink-0 text-brass-500 sm:block" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-stone-500">Stylist's note</p>
+          <p className="text-xs font-medium uppercase tracking-eyebrow text-stone-500">Stylist's note</p>
           {/* variant="inline": this is the stylist's prose, and the pieces it
               names are already shown as tiles directly above it. Repeating
               them as thumbnail pills mid-sentence added no information and
@@ -555,7 +555,7 @@ function DailyBriefCard({
           <p className="mt-1.5 text-sm italic leading-relaxed text-stone-700">{renderTextWithChips(brief.reasoning, { items, onOpenItem, variant: 'inline' })}</p>
           <button
             onClick={() => setWhyOpen(o => !o)}
-            className="mt-4 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-stone-500 underline-offset-4 hover:text-stone-800"
+            className="mt-4 inline-flex items-center gap-1.5 text-xs uppercase tracking-eyebrow text-stone-500 underline-offset-4 hover:text-stone-800"
           >
             <ChevronRight size={13} strokeWidth={1.5} className={`transition-transform ${whyOpen ? 'rotate-90' : ''}`} />
             {whyOpen ? 'Hide details' : 'What the Concierge saw'}
@@ -762,13 +762,13 @@ function DailyDigest({ items, inspirations = [], onOpenItem, onOpenInspiration, 
     <div className="rounded-3xl border border-stone-200/70 bg-white p-6 sm:p-7 smooth-shadow">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg sm:text-xl text-stone-900">Needs attention</h3>
-        <span className="text-[10px] tracking-[0.2em] uppercase text-stone-400">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
+        <span className="text-xs tracking-eyebrow uppercase text-stone-400">{cards.length} item{cards.length === 1 ? '' : 's'}</span>
       </div>
       <div className="space-y-4">
         {groups.map((group) => (
           <div key={group.id}>
             {showHeaders && (
-              <p className="mb-1 text-[10px] tracking-[0.2em] uppercase text-stone-400">{group.label}</p>
+              <p className="mb-1 text-xs tracking-eyebrow uppercase text-stone-400">{group.label}</p>
             )}
             <ul className="space-y-1">
               {group.cards.map(renderCard)}

@@ -10,7 +10,7 @@ export default function EditorialHeader({ eyebrow, title, subtitle, right, class
         {eyebrow && (
           <div className="flex items-center gap-3 mb-3">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">{eyebrow}</span>
+            <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">{eyebrow}</span>
           </div>
         )}
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-display text-stone-900 tracking-tight leading-[1.05]">{title}</h2>

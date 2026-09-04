@@ -49,7 +49,7 @@ export default function InspirationView({ inspirations, onOpenInspiration, onAdd
           <div className="flex items-center gap-2 flex-wrap sticky top-0 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-12 lg:px-12 py-3 bg-cream border-b border-stone-200/60">
             {unanalysed.length > 0 && [['all', `All · ${inspirations.length}`], ['unanalysed', `Unanalysed · ${unanalysed.length}`]].map(([f, label]) => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border ${
+                className={`shrink-0 text-xs tracking-label uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border ${
                   filter === f
                     ? 'bg-stone-900 text-white border-stone-900 hover:bg-stone-700'
                     : 'bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900'
@@ -58,13 +58,13 @@ export default function InspirationView({ inspirations, onOpenInspiration, onAdd
             {/* Cross-link to wishlist */}
             {wishlistCount > 0 && onJumpToWishlist && (
               <button onClick={onJumpToWishlist}
-                className="shrink-0 text-[10px] sm:text-xs tracking-widest uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 inline-flex items-center gap-1.5 ml-auto">
+                className="shrink-0 text-xs tracking-label uppercase px-3 py-1.5 rounded-full transition-colors duration-200 border bg-white border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 inline-flex items-center gap-1.5 ml-auto">
                 <Heart size={11} strokeWidth={1.5} /> Wishlist · {wishlistCount}
                 <ChevronRight size={11} strokeWidth={1.5} className="-mr-0.5" />
               </button>
             )}
             {unanalysed.length > 0 && (
-              <span className="text-[10px] tracking-widest uppercase text-stone-500 ml-2 w-full sm:w-auto">
+              <span className="text-xs tracking-label uppercase text-stone-500 ml-2 w-full sm:w-auto">
                 <Sparkles size={11} strokeWidth={1.5} className="inline -mt-0.5 mr-1 text-brass-400" />
                 Tap any card to analyse it with the Concierge
               </span>
@@ -125,12 +125,12 @@ export default function InspirationView({ inspirations, onOpenInspiration, onAdd
                         {/* Top-left: analysis state */}
                         <div className="absolute top-2.5 left-2.5">
                           {isAnalysed ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-sm text-[9px] tracking-[0.22em] uppercase font-medium text-stone-800">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-sm text-xs tracking-eyebrow uppercase font-medium text-stone-800">
                               <span className="inline-block w-1.5 h-1.5 rounded-full bg-brass-500" aria-hidden="true" />
                               Analysed
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-900/80 backdrop-blur-sm text-[9px] tracking-[0.22em] uppercase font-medium text-white animate-pulse">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-900/80 backdrop-blur-sm text-xs tracking-eyebrow uppercase font-medium text-white animate-pulse">
                               <Sparkles size={9} strokeWidth={2} />
                               Tap to analyse
                             </span>
@@ -139,7 +139,7 @@ export default function InspirationView({ inspirations, onOpenInspiration, onAdd
 
                         {/* Top-right: source hostname (when imported from URL) */}
                         {sourceHost && (
-                          <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-white/85 backdrop-blur-sm text-[8px] tracking-[0.22em] uppercase text-stone-600">
+                          <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-white/85 backdrop-blur-sm text-xs tracking-eyebrow uppercase text-stone-600">
                             {sourceHost}
                           </span>
                         )}
@@ -170,7 +170,7 @@ export default function InspirationView({ inspirations, onOpenInspiration, onAdd
                                 })}
                               </div>
                               {isAnalysed && totalGarments > 0 && (
-                                <span className={`text-[9px] tracking-widest uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
+                                <span className={`text-xs tracking-label uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
                                   matchCount === 0
                                     ? 'bg-amber-500/20 text-amber-100'
                                     : matchCount === totalGarments

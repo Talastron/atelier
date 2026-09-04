@@ -30,7 +30,7 @@ export default class ErrorBoundary extends React.Component {
       <div className="min-h-screen bg-cream flex items-center justify-center p-6 text-stone-900">
         <div className="max-w-md w-full text-center">
           <div className="h-1 w-16 mx-auto mb-8 rounded-full bg-gradient-to-r from-brass-200 via-brass-400 to-brass-200" aria-hidden="true" />
-          <p className="text-[10px] tracking-[0.3em] uppercase text-stone-400 mb-3">Atelier</p>
+          <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-3">Atelier</p>
           <h1 className="font-display text-3xl md:text-4xl tracking-tight mb-4">Something slipped</h1>
           <p className="text-stone-500 text-sm leading-relaxed mb-8">
             An unexpected error interrupted the page. Your wardrobe is safe — nothing was changed. Reloading usually sets it right.

@@ -62,9 +62,9 @@ export default function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null
               <div key={category} className="break-inside-avoid mb-6 sm:mb-8">
                 <div className="flex items-center gap-2.5 mb-3">
                   <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
-                  <span className="text-[10px] tracking-[0.28em] uppercase font-medium text-stone-600">{category}</span>
+                  <span className="text-xs tracking-eyebrow uppercase font-medium text-stone-600">{category}</span>
                   <span className="text-[12px] text-stone-300">·</span>
-                  <span className="text-[10px] tracking-wide text-stone-400">{items.length}</span>
+                  <span className="text-xs tracking-meta text-stone-400">{items.length}</span>
                 </div>
                 <ul className="space-y-0">
                   {items.map((p, i) => {
@@ -93,7 +93,7 @@ export default function OutfitFlatLay({ pieces, onOpenItem, paletteFilter = null
                             <p className={`text-sm text-stone-900 truncate leading-tight ${openable ? 'group-hover:text-brass-700 transition-colors' : ''}`}>
                               {p.name}
                             </p>
-                            <p className="text-[10px] tracking-wider uppercase text-stone-500 truncate mt-0.5">
+                            <p className="text-xs tracking-meta uppercase text-stone-500 truncate mt-0.5">
                               {p.brand || ' '}
                             </p>
                           </div>

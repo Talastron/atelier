@@ -24,7 +24,7 @@ export default function WhyThisPanel({ weather, season, styleProfile, temperatur
         <button
           type="button"
           onClick={onEditPreferences}
-          className="mt-3 text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 inline-flex items-center gap-1 underline-offset-4 hover:underline"
+          className="mt-3 text-xs tracking-label uppercase text-stone-600 hover:text-stone-900 inline-flex items-center gap-1 underline-offset-4 hover:underline"
         >
           Update preferences →
         </button>

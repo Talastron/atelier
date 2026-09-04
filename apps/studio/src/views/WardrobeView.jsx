@@ -904,7 +904,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
 
             <div className="px-1">
               <div className="flex justify-between items-start mb-1.5 gap-4">
-                <p className="text-xs font-semibold text-stone-500 tracking-eyebrow uppercase truncate">
+                <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">
                   {item.brand}{itemSeasons(item).length > 0 && ` • ${itemSeasons(item).join(' · ')}`}
                 </p>
                 <p className="text-sm font-medium text-stone-900 shrink-0">£{item.price}</p>

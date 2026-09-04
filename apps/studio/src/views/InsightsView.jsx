@@ -36,7 +36,7 @@ function PinToPinterestButton({ imageBlob, busy, setBusy, cardType, name, shared
           setBusy(false);
         }
       }}
-      className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+      className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-xs tracking-label uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
     >
       <PinterestGlyph size={16} />
       Pin to Pinterest
@@ -104,7 +104,7 @@ function StyleDNAShareModal({ items, measurements, onClose }) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div className="flex items-center gap-3">
             <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
-            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Share your Style DNA</span>
+            <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Share your Style DNA</span>
           </div>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors" aria-label="Close">
             <X size={16} strokeWidth={1.5} />
@@ -115,7 +115,7 @@ function StyleDNAShareModal({ items, measurements, onClose }) {
             {composing && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-stone-400">
                 <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin" />
-                <p className="text-[10px] tracking-[0.28em] uppercase">Composing</p>
+                <p className="text-xs tracking-eyebrow uppercase">Composing</p>
               </div>
             )}
             {error && !composing && (
@@ -125,7 +125,7 @@ function StyleDNAShareModal({ items, measurements, onClose }) {
               <img src={imageUrl} alt="Your Style DNA card" className="w-full h-full object-contain" />
             )}
           </div>
-          <p className="text-[10px] tracking-widest uppercase text-stone-400 text-center mt-3">1080 × 1920 · Instagram Story · Pinterest</p>
+          <p className="text-xs tracking-label uppercase text-stone-400 text-center mt-3">1080 × 1920 · Instagram Story · Pinterest</p>
         </div>
         <div className="px-6 py-5 border-t border-stone-200/60 bg-white space-y-3 shrink-0"
              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}>
@@ -135,7 +135,7 @@ function StyleDNAShareModal({ items, measurements, onClose }) {
             {busy ? 'Opening share…' : 'Share'}
           </button>
           <button onClick={handleDownload} disabled={!imageBlob || busy}
-            className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
+            className="w-full h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-xs tracking-label uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
             <Download size={13} strokeWidth={1.5} /> Save image
           </button>
           <PinToPinterestButton
@@ -200,7 +200,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-600 font-medium">Concierge audit</span>
+            <span className="text-xs tracking-eyebrow uppercase text-brass-600 font-medium">Concierge audit</span>
           </div>
           <h3 className="font-display text-xl md:text-2xl text-stone-900">Gap analysis &amp; recommendations</h3>
           <p className="text-stone-500 text-sm mt-2 leading-relaxed max-w-xl">
@@ -228,7 +228,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
       {state.status === 'done' && state.data && (
         <div className="mt-8 grid md:grid-cols-3 gap-6">
           <div>
-            <h4 className="text-[10px] tracking-widest uppercase text-emerald-800 font-bold mb-3">Strengths</h4>
+            <h4 className="text-xs tracking-label uppercase text-emerald-800 font-bold mb-3">Strengths</h4>
             <ul className="space-y-3">
               {(state.data.strengths || []).map((s, i) => (
                 <li key={i} className="border-l-2 border-emerald-300 pl-3">
@@ -239,7 +239,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
             </ul>
           </div>
           <div>
-            <h4 className="text-[10px] tracking-widest uppercase text-brass-700 font-bold mb-3">Gaps</h4>
+            <h4 className="text-xs tracking-label uppercase text-brass-700 font-bold mb-3">Gaps</h4>
             <ul className="space-y-3">
               {(state.data.gaps || []).map((g, i) => (
                 <li key={i} className="border-l-2 border-amber-300 pl-3">
@@ -250,7 +250,7 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
             </ul>
           </div>
           <div>
-            <h4 className="text-[10px] tracking-widest uppercase text-stone-700 font-bold mb-3">Buy next</h4>
+            <h4 className="text-xs tracking-label uppercase text-stone-700 font-bold mb-3">Buy next</h4>
             <ul className="space-y-3">
               {(state.data.recommendations || []).map((r, i) => (
                 <li key={i} className="border-l-2 border-stone-400 pl-3">
@@ -501,10 +501,10 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
               const asCard = !isMore && meta.photo && meta.contain;
               const asPhoto = !isMore && meta.photo && !meta.contain;
               const light = asCard || (!isMore && !meta.photo); // cut-out or empty → dark ink
-              const catCls = heroish ? 'text-xs sm:text-sm' : 'text-[9px] sm:text-[10px]';
-              const pctCls = heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]';
+              const catCls = heroish ? 'text-xs sm:text-sm' : 'text-xs';
+              const pctCls = 'text-xs';
               const priceCls = `font-display ${heroish ? 'text-2xl md:text-3xl' : big ? 'text-lg md:text-xl' : 'text-sm'}`;
-              const pieceCls = heroish ? 'text-[10px] sm:text-xs' : 'text-[9px]';
+              const pieceCls = 'text-xs';
 
               if (isMore) {
                 // Folded tail — a warm taupe summary plate that belongs to the
@@ -516,11 +516,11 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
                     <p className={`font-display text-stone-900 ${big ? 'text-xl md:text-2xl' : 'text-base'}`}>
                       £{tile.value.toLocaleString()}
                     </p>
-                    <p className="text-[9px] sm:text-[10px] tracking-[0.22em] uppercase text-stone-500 font-medium mt-1.5">
+                    <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium mt-1.5">
                       + {moreMeta?.count ?? 0} more {moreMeta?.count === 1 ? 'category' : 'categories'}
                     </p>
                     {moreMeta?.categories?.length > 0 && (
-                      <p className="text-[9px] sm:text-[10px] tracking-[0.14em] uppercase text-stone-400 mt-2 leading-relaxed max-w-[85%]">
+                      <p className="text-xs tracking-label uppercase text-stone-400 mt-2 leading-relaxed max-w-[85%]">
                         {moreMeta.categories.join(' · ')}
                       </p>
                     )}
@@ -551,7 +551,7 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
                     </div>
                     <div className={`relative px-3 pb-3 md:px-4 md:pb-4 pt-2 ${asCard ? 'border-t border-stone-200/60' : ''}`}>
                       {heroish && meta.brand && (
-                        <p className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-brass-600 font-medium mb-1 truncate">
+                        <p className="text-xs tracking-eyebrow uppercase text-brass-600 font-medium mb-1 truncate">
                           {meta.brand}
                         </p>
                       )}
@@ -573,7 +573,7 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
                     {heroish && (
                       <div className="absolute top-3 right-3 flex items-center gap-2">
                         <span className="w-5 h-px bg-brass-400/70" />
-                        <span className="text-[9px] tracking-[0.3em] uppercase text-brass-500 font-medium">Largest</span>
+                        <span className="text-xs tracking-eyebrow uppercase text-brass-500 font-medium">Largest</span>
                       </div>
                     )}
                   </div>
@@ -597,12 +597,12 @@ function CategoryTreemap({ categoryBreakdown, ownedItems, onJumpToWardrobe }) {
                   {heroish && (
                     <div className="absolute top-3 right-3 flex items-center gap-2">
                       <span className="w-5 h-px bg-brass-300/70" />
-                      <span className="text-[9px] tracking-[0.3em] uppercase text-brass-200/90 font-medium">Largest</span>
+                      <span className="text-xs tracking-eyebrow uppercase text-brass-200/90 font-medium">Largest</span>
                     </div>
                   )}
                   <div className="absolute left-0 right-0 bottom-0 p-3 md:p-4 text-white">
                     {heroish && meta.brand && (
-                      <p className="text-[10px] sm:text-[11px] tracking-[0.25em] uppercase text-brass-200/90 font-medium mb-1 truncate">
+                      <p className="text-xs tracking-eyebrow uppercase text-brass-200/90 font-medium mb-1 truncate">
                         {meta.brand}
                       </p>
                     )}
@@ -860,13 +860,13 @@ function WearTimelineCard({ ownedItems, timeline }) {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
-            <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Wear rhythm · last 12 months</p>
+            <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-semibold">Wear rhythm · last 12 months</p>
           </div>
           <h3 className="font-display text-2xl md:text-3xl text-stone-900">
             {totalThisYear} <span className="text-stone-400 text-lg font-normal">wears in {new Date().getFullYear()}</span>
           </h3>
         </div>
-        <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
+        <span className="text-xs tracking-label uppercase text-stone-400 italic font-display">
           {peakCount > 0 ? `Peak · ${peakLabel} (${peakCount})` : 'Awaiting wear data'}
         </span>
       </div>
@@ -912,8 +912,8 @@ function WearTimelineCard({ ownedItems, timeline }) {
           doesn't feel like a contributions wall — present, never demanding. */}
       <div className="mt-8 pt-6 border-t border-stone-100">
         <div className="flex items-baseline justify-between mb-3 gap-2 flex-wrap">
-          <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">A year in days</p>
-          <div className="flex items-center gap-1.5 text-[9px] tracking-widest uppercase text-stone-400">
+          <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-semibold">A year in days</p>
+          <div className="flex items-center gap-1.5 text-xs tracking-label uppercase text-stone-400">
             <span>less</span>
             {[0, 1, 2, 4, 6].map((n) => (
               <span key={n} className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: heatColor(n) }} />
@@ -964,7 +964,7 @@ function ManifestoBody({ text }) {
     return <div className="whitespace-pre-line">{text}</div>;
   }
   const Label = ({ children }) => (
-    <div className="font-sans text-[10px] tracking-[0.18em] uppercase text-[#9a7b4f] mb-1.5">{children}</div>
+    <div className="font-sans text-xs tracking-eyebrow uppercase text-[#9a7b4f] mb-1.5">{children}</div>
   );
   return (
     <div className="not-italic">
@@ -1103,7 +1103,7 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
         <div className="min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <span className="brass-rule" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-medium">A private brief, by the Concierge</span>
+            <span className="text-xs tracking-eyebrow uppercase text-brass-300 font-medium">A private brief, by the Concierge</span>
           </div>
           <h3 className="font-display text-2xl md:text-3xl text-white">Style manifesto</h3>
           <p className="text-stone-400 text-sm leading-relaxed max-w-xl mt-3">
@@ -1117,7 +1117,7 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
                   style={{ width: `${Math.min(100, (totalWears / WEARS_THRESHOLD) * 100)}%` }}
                 />
               </div>
-              <span className="text-[11px] tracking-wide tabular-nums text-stone-400 shrink-0">
+              <span className="text-xs tracking-meta tabular-nums text-stone-400 shrink-0">
                 {totalWears} / {WEARS_THRESHOLD} wears
               </span>
             </div>
@@ -1158,7 +1158,7 @@ function StyleManifestoCard({ measurements, saveMeasurements, items = [], outfit
             <ManifestoBody text={manifesto} />
           )}
           {!isStreaming && generatedAt && (
-            <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-5 font-sans not-italic flex items-center gap-3">
+            <p className="text-xs tracking-label uppercase text-stone-400 mt-5 font-sans not-italic flex items-center gap-3">
               <span className="brass-rule" aria-hidden="true"></span>
               Written {new Date(generatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
@@ -1386,7 +1386,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
         <div className="flex flex-wrap gap-2">
           {SECTIONS.map((s) => (
             <a key={s.id} href={`#${s.id}`}
-              className="text-[10px] sm:text-xs tracking-widest uppercase px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors duration-200">
+              className="text-xs tracking-label uppercase px-4 py-2 rounded-full bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors duration-200">
               {s.label}
             </a>
           ))}
@@ -1410,12 +1410,12 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           <div>
             <div className="flex items-center gap-3 mb-2">
               <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
-              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Composition</p>
+              <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-semibold">Composition</p>
             </div>
             <h3 className="font-display text-2xl text-stone-900">Investment by category</h3>
           </div>
           {Object.keys(categoryBreakdown).length > 0 && onJumpToWardrobe && (
-            <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">Tap a tile to open in your wardrobe</span>
+            <span className="text-xs tracking-label uppercase text-stone-400 italic font-display">Tap a tile to open in your wardrobe</span>
           )}
         </div>
         <CategoryTreemap
@@ -1431,16 +1431,16 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true" />
-                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">Palette</p>
+                <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-semibold">Palette</p>
               </div>
               <h3 className="font-display text-xl md:text-2xl text-stone-900">Colour profile</h3>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-[10px] tracking-widest uppercase text-stone-400 italic font-display">
+              <span className="text-xs tracking-label uppercase text-stone-400 italic font-display">
                 {sortedColors.length} colour {sortedColors.length === 1 ? 'family' : 'families'}
               </span>
               <button onClick={() => setDnaShareOpen(true)}
-                className="text-[10px] tracking-widest uppercase px-4 py-2 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5">
+                className="text-xs tracking-label uppercase px-4 py-2 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5">
                 <Share2 size={12} strokeWidth={1.5} /> Share my Style DNA
               </button>
             </div>
@@ -1484,7 +1484,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                 );
               })}
               {sortedColors.length > 8 && (
-                <p className="text-[10px] tracking-widest uppercase text-stone-400 italic pt-1">
+                <p className="text-xs tracking-label uppercase text-stone-400 italic pt-1">
                   + {sortedColors.length - 8} more in your palette
                 </p>
               )}
@@ -1524,7 +1524,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
         <div id="insights-behaviour" className="scroll-mt-24 bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
             <div>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-1">Season coverage · {seasonName} {now.getFullYear()}</p>
+              <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-semibold mb-1">Season coverage · {seasonName} {now.getFullYear()}</p>
               <h3 className="font-display text-3xl sm:text-4xl text-stone-900">
                 {seasonCoveragePct.toFixed(0)}%
                 <span className="text-base sm:text-lg text-stone-400 font-normal ml-2">of your {seasonName.toLowerCase()} wardrobe</span>
@@ -1536,7 +1536,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                 : coverageTone === 'mid' ? 'text-stone-900'
                 : 'text-brass-700'
               }`}>{wornThisSeason.length}/{inSeasonItems.length}</p>
-              <p className="text-[10px] tracking-widest uppercase text-stone-500">pieces worn</p>
+              <p className="text-xs tracking-label uppercase text-stone-500">pieces worn</p>
             </div>
           </div>
           <DialBar
@@ -1552,9 +1552,9 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           {seasonUnworn.length > 0 && (
             <div className="mt-6 pt-6 border-t border-stone-100">
               <div className="flex items-baseline justify-between mb-3 gap-2 flex-wrap">
-                <p className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold">Unworn this {seasonName.toLowerCase()} · try one</p>
+                <p className="text-xs tracking-label uppercase text-stone-500 font-semibold">Unworn this {seasonName.toLowerCase()} · try one</p>
                 {inSeasonItems.length - wornThisSeason.length > seasonUnworn.length && onJumpToWardrobe && (
-                  <button onClick={() => onJumpToWardrobe({ filter: 'stale' })} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 inline-flex items-center gap-1">
+                  <button onClick={() => onJumpToWardrobe({ filter: 'stale' })} className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 inline-flex items-center gap-1">
                     See all → <ChevronRight size={11} strokeWidth={1.5} />
                   </button>
                 )}
@@ -1577,7 +1577,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                         )}
                       </div>
                       <p className={`text-[13px] truncate ${clickable ? 'text-stone-700 group-hover:text-stone-900' : 'text-stone-700'}`}>{it.name}</p>
-                      <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{it.brand}</p>
+                      <p className="text-xs text-stone-500 truncate uppercase tracking-meta">{it.brand}</p>
                     </Wrap>
                   );
                 })}
@@ -1608,7 +1608,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-3">
                 <span className="brass-rule" aria-hidden="true" />
-                <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">The Diary</span>
+                <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">The Diary</span>
               </div>
               <h3 className="font-display text-2xl sm:text-3xl text-stone-900 leading-tight group-hover:text-brass-700 transition-colors">
                 What you've actually worn
@@ -1623,7 +1623,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                   <span className="text-stone-500">last logged <strong className="text-stone-900 font-medium">{friendlyDay(recentDiary[0].date).toLowerCase()}</strong></span>
                 )}
               </div>
-              <span className="inline-flex items-center gap-1.5 mt-5 text-[11px] tracking-widest uppercase text-stone-700 group-hover:text-brass-700 transition-colors">
+              <span className="inline-flex items-center gap-1.5 mt-5 text-xs tracking-label uppercase text-stone-700 group-hover:text-brass-700 transition-colors">
                 Open the Diary <ChevronRight size={12} strokeWidth={1.5} className="opacity-60 group-hover:translate-x-0.5 group-hover:opacity-100 transition-all" />
               </span>
             </div>
@@ -1637,17 +1637,17 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <div className="bg-white border border-stone-200/60 rounded-2xl p-5 smooth-shadow">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500 font-semibold">Total wears</p>
+          <p className="text-xs uppercase tracking-eyebrow text-stone-500 font-semibold">Total wears</p>
           <p className="font-display text-3xl md:text-4xl text-stone-900 mt-2">{totalWears}</p>
           <p className="text-xs text-stone-500 mt-1">across all owned items</p>
         </div>
         <div className="bg-white border border-stone-200/60 rounded-2xl p-5 smooth-shadow">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500 font-semibold">Items in rotation</p>
+          <p className="text-xs uppercase tracking-eyebrow text-stone-500 font-semibold">Items in rotation</p>
           <p className="font-display text-3xl md:text-4xl text-stone-900 mt-2">{wornPieces}<span className="text-stone-300 text-xl"> / {ownedItems.length}</span></p>
           <p className="text-xs text-stone-500 mt-1">pieces worn at least once</p>
         </div>
         <div className="bg-white border border-stone-200/60 rounded-2xl p-5 smooth-shadow">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-stone-500 font-semibold">Stale (90+ days)</p>
+          <p className="text-xs uppercase tracking-eyebrow text-stone-500 font-semibold">Stale (90+ days)</p>
           <p className="font-display text-3xl md:text-4xl text-stone-900 mt-2">{stale.length}</p>
           <p className="text-xs text-stone-500 mt-1">filterable in the wardrobe</p>
         </div>
@@ -1679,7 +1679,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">{item.name}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-stone-500 mt-0.5 truncate">{item.brand} · {item._wears} {item._wears === 1 ? 'wear' : 'wears'}</p>
+                  <p className="text-xs uppercase tracking-meta text-stone-500 mt-0.5 truncate">{item.brand} · {item._wears} {item._wears === 1 ? 'wear' : 'wears'}</p>
                 </div>
                 <p className="font-display text-lg text-stone-900 whitespace-nowrap">£{item._cpw < 10 ? item._cpw.toFixed(2) : Math.round(item._cpw)}<span className="text-stone-400 text-xs">/wear</span></p>
               </div>
@@ -1692,7 +1692,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
         <div className="bg-white border border-stone-200/60 rounded-[2rem] p-6 md:p-8 smooth-shadow">
           <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
             <h3 className="font-display text-xl md:text-2xl text-stone-900">Worst value · still paying for these</h3>
-            <span className="text-[10px] uppercase tracking-widest text-stone-400">Owned 6+ months</span>
+            <span className="text-xs uppercase tracking-label text-stone-400">Owned 6+ months</span>
           </div>
           <p className="text-stone-500 text-xs mb-6">High-spend pieces with little wear so far — fair game for restyling, re-selling, or returning to rotation.</p>
           <div className="space-y-4">
@@ -1704,7 +1704,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">{item.name}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-stone-500 mt-0.5 truncate">
+                  <p className="text-xs uppercase tracking-meta text-stone-500 mt-0.5 truncate">
                     {item.brand} · {item._wears === 0 ? 'never worn' : `${item._wears} ${item._wears === 1 ? 'wear' : 'wears'}`} · £{item.price}
                   </p>
                 </div>
@@ -1731,7 +1731,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">{item.name}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-stone-500 mt-0.5 truncate">{item.brand}</p>
+                  <p className="text-xs uppercase tracking-meta text-stone-500 mt-0.5 truncate">{item.brand}</p>
                 </div>
                 <p className="font-display text-lg text-stone-900 whitespace-nowrap">{item._wears}<span className="text-stone-400 text-xs"> wears</span></p>
               </div>
@@ -1778,7 +1778,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                     <ItemTileImage item={item} alt={item.name} />
                   </div>
                   <p className={`text-xs truncate ${clickable ? 'text-stone-900 group-hover:text-stone-700' : 'text-stone-900'}`}>{item.name}</p>
-                  <p className="text-[10px] uppercase tracking-wider text-stone-400">
+                  <p className="text-xs uppercase tracking-meta text-stone-400">
                     {item._days === null ? 'Never worn' : `${item._days}d ago`}
                   </p>
                 </Wrap>
@@ -1811,7 +1811,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
         <div className="bg-stone-900 text-white p-7 md:p-9 rounded-[2rem] relative overflow-hidden">
           <div className="flex items-center gap-3 mb-5">
             <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
-            <p className="text-stone-400 text-[10px] font-semibold tracking-[0.28em] uppercase">Current Archive Value</p>
+            <p className="text-stone-400 text-xs font-semibold tracking-eyebrow uppercase">Current Archive Value</p>
           </div>
           <h3 className="text-5xl md:text-6xl font-display font-medium tracking-tight">£{ownedTotal.toLocaleString()}</h3>
           <p className="text-xs text-stone-400 mt-6 tracking-widest uppercase">
@@ -1829,10 +1829,10 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           <div className="flex items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3">
               <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
-              <p className="text-stone-500 text-[10px] font-semibold tracking-[0.28em] uppercase">Wishlist Target</p>
+              <p className="text-stone-500 text-xs font-semibold tracking-eyebrow uppercase">Wishlist Target</p>
             </div>
             {wishlistItems.length > 0 && (
-              <span className="text-[10px] tracking-widest uppercase text-stone-400 group-hover:text-stone-900 transition-colors inline-flex items-center gap-1">
+              <span className="text-xs tracking-label uppercase text-stone-400 group-hover:text-stone-900 transition-colors inline-flex items-center gap-1">
                 View <ChevronRight size={12} strokeWidth={1.5} />
               </span>
             )}
@@ -1868,7 +1868,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
               <>
                 <div className="flex items-center gap-3 mb-4">
                   <span className="inline-block w-5 h-px" style={{ backgroundColor: accent, opacity: 0.7 }} aria-hidden="true" />
-                  <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-semibold">{eyebrow} · {monthName}</p>
+                  <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-semibold">{eyebrow} · {monthName}</p>
                 </div>
                 <div className="flex items-baseline justify-between gap-3 mb-5 flex-wrap">
                   <div>
@@ -1879,7 +1879,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
                   </div>
                   <div className="text-right">
                     <p className={`text-xl sm:text-2xl font-display ${accentClass}`}>{budgetPct.toFixed(0)}%</p>
-                    <p className="text-[10px] tracking-widest uppercase text-stone-500">{monthSpendItems.length} item{monthSpendItems.length === 1 ? '' : 's'}</p>
+                    <p className="text-xs tracking-label uppercase text-stone-500">{monthSpendItems.length} item{monthSpendItems.length === 1 ? '' : 's'}</p>
                   </div>
                 </div>
                 <DialBar value={budgetPct} fill={accent} height={6} />
@@ -1895,12 +1895,12 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
           {monthSpendItems.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-5">
               {monthSpendItems.slice(0, 8).map((i) => (
-                <span key={i.id} className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600">
+                <span key={i.id} className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600">
                   {i.name}{i.price ? ` · £${Number(i.price).toLocaleString()}` : ''}
                 </span>
               ))}
               {monthSpendItems.length > 8 && (
-                <span className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full text-stone-500">+ {monthSpendItems.length - 8} more</span>
+                <span className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full text-stone-500">+ {monthSpendItems.length - 8} more</span>
               )}
             </div>
           )}
@@ -1909,7 +1909,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
         <button onClick={onOpenProfile}
           id="insights-spending"
           className="scroll-mt-24 w-full text-left bg-white border border-dashed border-stone-300 rounded-[2rem] p-6 md:p-8 hover:border-stone-500 transition-colors group">
-          <p className="text-[10px] tracking-[0.2em] uppercase text-stone-500 font-semibold mb-2">Spending · {monthName}</p>
+          <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-semibold mb-2">Spending · {monthName}</p>
           <h3 className="font-display text-2xl text-stone-900">£{monthSpend.toLocaleString()} added this month</h3>
           <p className="text-sm text-stone-500 mt-3 leading-relaxed">
             Set a monthly budget in Profile → Settings to track headroom and get alerts when you approach the limit.

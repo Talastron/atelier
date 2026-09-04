@@ -152,7 +152,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 caption strip below. */}
             <div className="absolute top-5 left-5 z-20 flex items-center gap-2.5">
               <span className={`inline-block w-4 h-px ${wornPhoto ? 'bg-brass-200' : 'bg-brass-300'}`} aria-hidden="true"></span>
-              <span className={`text-[9px] tracking-[0.28em] uppercase font-medium ${wornPhoto ? 'text-white/90' : 'text-stone-500'}`}>
+              <span className={`text-xs tracking-eyebrow uppercase font-medium ${wornPhoto ? 'text-white/90' : 'text-stone-500'}`}>
                 {indexLabel} · {resolvedItems.length} {resolvedItems.length === 1 ? 'piece' : 'pieces'}
               </span>
             </div>
@@ -185,7 +185,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 {outfit.name}
               </h3>
               {outfit.intent && (
-                <p className="text-[10px] tracking-[0.28em] uppercase text-white/80 mt-1.5 truncate">
+                <p className="text-xs tracking-eyebrow uppercase text-white/80 mt-1.5 truncate">
                   {outfit.intent}
                 </p>
               )}
@@ -194,7 +194,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                   {outfit.tags.slice(0, 5).map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white/80 text-[10px] tracking-wide uppercase"
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/15 border border-white/25 text-white/80 text-xs tracking-meta uppercase"
                     >
                       {tag}
                     </span>
@@ -208,7 +208,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                 {outfit.name}
               </h3>
               {outfit.intent && (
-                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mt-1.5 truncate">
+                <p className="text-xs tracking-eyebrow uppercase text-stone-500 mt-1.5 truncate">
                   {outfit.intent}
                 </p>
               )}
@@ -217,7 +217,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
                   {outfit.tags.slice(0, 5).map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[10px] tracking-wide uppercase"
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-xs tracking-meta uppercase"
                     >
                       {tag}
                     </span>
@@ -912,7 +912,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                   : 'bg-stone-100 border-dashed border-stone-300'
         }`}>
         {pieces.length === 0 ? (
-          <span className={`text-[9px] lg:text-xs font-medium tracking-widest uppercase text-center px-1 leading-tight ${covered ? 'text-stone-300 line-through' : 'text-stone-400'}`}>{slot}</span>
+          <span className={`text-xs lg:text-xs font-medium tracking-label uppercase text-center px-1 leading-tight ${covered ? 'text-stone-300 line-through' : 'text-stone-400'}`}>{slot}</span>
         ) : pieces.length === 1 ? (
           <>
             <ItemTileImage item={pieces[0]} alt={pieces[0].name} />
@@ -937,7 +937,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               </div>
             ))}
             {pieces.length > 4 && (
-              <span className="absolute bottom-1 right-1 bg-stone-900 text-white text-[9px] tracking-wider px-1.5 py-0.5 rounded-full">+{pieces.length - 4}</span>
+              <span className="absolute bottom-1 right-1 bg-stone-900 text-white text-xs tracking-meta px-1.5 py-0.5 rounded-full">+{pieces.length - 4}</span>
             )}
           </div>
         )}
@@ -982,13 +982,13 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             <GripVertical size={11} strokeWidth={1.5} />
           </div>
           {item.status === 'wishlist' && (
-            <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[8px] tracking-widest uppercase font-medium pointer-events-none">
+            <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs tracking-label uppercase font-medium pointer-events-none">
               Wishlist
             </span>
           )}
         </div>
         <p className="text-xs font-medium text-stone-900 truncate px-1" title={item.name}>{itemDisplayName(item)}</p>
-        <p className="text-[10px] text-stone-500 uppercase tracking-wider px-1 mt-0.5">{item.brand}</p>
+        <p className="text-xs text-stone-500 uppercase tracking-meta px-1 mt-0.5">{item.brand}</p>
       </div>
     );
   };
@@ -1031,7 +1031,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               ]
           ).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
-              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+              className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-xs tracking-meta uppercase transition-colors duration-200 ${
                 tab === id ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
               }`}
             >
@@ -1074,9 +1074,9 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                 header. Replaces the previous Wand icon + plain text label. */}
             <div className="flex items-center gap-3">
               <span className="brass-rule" aria-hidden="true"></span>
-              <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Style intent</span>
+              <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Style intent</span>
             </div>
-            <button onClick={() => setShowCustom((s) => !s)} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors duration-200">
+            <button onClick={() => setShowCustom((s) => !s)} className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 transition-colors duration-200">
               {showCustom ? 'Hide custom' : '+ Custom intent'}
             </button>
           </div>
@@ -1120,7 +1120,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               You've styled a few looks — save one you love to your Lookbook.
             </p>
           )}
-          <div className="flex items-center justify-center gap-4 text-[11px] tracking-widest uppercase">
+          <div className="flex items-center justify-center gap-4 text-xs tracking-label uppercase">
             <button onClick={handleQuickStyle} disabled={aiBusy || abComparing}
               className="text-stone-500 hover:text-stone-900 transition-colors duration-200 disabled:opacity-50 inline-flex items-center gap-1.5">
               <Wand2 size={11} strokeWidth={1.5} /> Quick pick
@@ -1140,7 +1140,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           {/* Quick mood presets — unified hover convention */}
           {isAIEnabled() && (
             <div>
-              <p className="text-[10px] tracking-[0.28em] uppercase text-stone-400 mb-2 font-medium">Or try a mood</p>
+              <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-2 font-medium">Or try a mood</p>
               <div className="flex flex-wrap gap-2">
                 {MOOD_PRESETS.map((mood) => (
                   <button key={mood} disabled={aiBusy}
@@ -1168,12 +1168,12 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                 <button onClick={() => setAiNote(null)} className="text-stone-400 hover:text-white shrink-0"><X size={14} /></button>
               </div>
               {aiNoteStale && (
-                <p className="mt-3 ml-7 text-[10px] tracking-widest uppercase text-amber-300/90">
+                <p className="mt-3 ml-7 text-xs tracking-label uppercase text-amber-300/90">
                   You&rsquo;ve changed this look since the Concierge described it
                 </p>
               )}
               <div className="mt-4 ml-7 space-y-2">
-                <p className="text-[10px] tracking-widest uppercase text-stone-400 font-semibold">Refine</p>
+                <p className="text-xs tracking-label uppercase text-stone-400 font-semibold">Refine</p>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { label: 'Try another', intent: null, refine: false },
@@ -1185,7 +1185,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                     { label: 'Swap bottoms', intent: 'swap the bottoms while keeping the rest', refine: true },
                   ].map((r) => (
                     <button key={r.label} onClick={() => handleAIStyle(r.intent, { refine: r.refine })} disabled={aiBusy}
-                      className="text-[11px] tracking-wide text-stone-200 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50">
+                      className="text-xs tracking-meta text-stone-200 hover:text-white border border-stone-700 hover:border-stone-500 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50">
                       {r.label}
                     </button>
                   ))}
@@ -1209,7 +1209,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
 
           {/* Capsule generator — unified light-pill hover convention. */}
           <div className="pt-3 border-t border-stone-100 flex items-center justify-between gap-3 flex-wrap">
-            <span className="text-[10px] tracking-widest uppercase text-stone-500">Multiple looks at once</span>
+            <span className="text-xs tracking-label uppercase text-stone-500">Multiple looks at once</span>
             <button onClick={() => setCapsuleOpen(true)}
               className="px-4 py-2 rounded-full text-xs bg-white border border-stone-300 text-stone-700 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center gap-2">
               <Sparkles size={14} strokeWidth={1.5} /> Build a capsule
@@ -1217,7 +1217,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
           </div>
 
           {!isAIEnabled() && (
-            <p className="text-[10px] text-stone-400 tracking-wide italic">
+            <p className="text-xs text-stone-400 tracking-meta italic">
               Atelier styling needs the Concierge configured. Add <code>VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic</code> to <code>.env.local</code> from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline">aistudio.google.com</a> to enable.
             </p>
           )}
@@ -1299,15 +1299,15 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       </button>
                     ))}
                   </div>
-                  <span className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0">{picked.length}/{OUTFIT_SLOTS.length}</span>
+                  <span className="text-xs tracking-label uppercase text-stone-400 shrink-0">{picked.length}/{OUTFIT_SLOTS.length}</span>
                   {outfitName.trim() ? (
                     <button onClick={handleSave}
-                      className="text-[10px] tracking-widest uppercase px-3 py-2 rounded-full bg-amber-300 text-stone-900 font-medium shrink-0">
+                      className="text-xs tracking-label uppercase px-3 py-2 rounded-full bg-amber-300 text-stone-900 font-medium shrink-0">
                       Save
                     </button>
                   ) : (
                     <button onClick={() => document.querySelector('input[placeholder="Name this look…"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                      className="text-[10px] tracking-widest uppercase px-3 py-2 rounded-full bg-white text-stone-900 font-medium shrink-0">
+                      className="text-xs tracking-label uppercase px-3 py-2 rounded-full bg-white text-stone-900 font-medium shrink-0">
                       Name…
                     </button>
                   )}
@@ -1352,9 +1352,9 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         picking. Lets the user know at a glance how complete
                         their composition is without scanning all 10 slots. */}
                     {pieceCount === 0 ? (
-                      <span className="hidden lg:inline text-[10px] uppercase tracking-widest text-stone-400">Drag or tap</span>
+                      <span className="hidden lg:inline text-xs uppercase tracking-label text-stone-400">Drag or tap</span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest">
+                      <span className="inline-flex items-center gap-1.5 text-xs uppercase tracking-label">
                         <span className="text-stone-500">{pieceCount} {pieceCount === 1 ? 'piece' : 'pieces'}</span>
                         {isComplete && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 font-medium">
@@ -1410,13 +1410,13 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       <div className="mb-5 lg:mb-8">
                         <div className="flex items-center gap-2.5 mb-2">
                           <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
-                          <span className="text-[10px] tracking-[0.28em] uppercase font-medium text-stone-500">Composing palette</span>
+                          <span className="text-xs tracking-eyebrow uppercase font-medium text-stone-500">Composing palette</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
                           {studioPalette.map(({ name, count, hex }) => (
                             <div key={name} className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-0.5 rounded-full bg-white border border-stone-200">
                               <span className="block w-4 h-4 rounded-full border border-stone-300/70 shrink-0" style={{ backgroundColor: hex }} aria-hidden="true" />
-                              <span className="text-[10px] tracking-wide uppercase text-stone-700">
+                              <span className="text-xs tracking-meta uppercase text-stone-700">
                                 {name}
                                 {count > 1 && <span className="text-stone-400 ml-1">×{count}</span>}
                               </span>
@@ -1448,7 +1448,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                           disabled={suggestingName}
                           title={suggestingName ? 'Composing a name with the Concierge' : 'Suggest a name with the Concierge'}
                           aria-busy={suggestingName}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:cursor-not-allowed"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs tracking-label uppercase text-stone-600 hover:text-stone-900 hover:bg-white border border-stone-200 hover:border-stone-500 bg-white/70 transition-colors duration-200 disabled:cursor-not-allowed"
                         >
                           <Sparkles size={10} strokeWidth={1.75} className={suggestingName ? 'animate-pulse text-amber-500' : 'text-amber-500'} />
                           {suggestingName ? 'Composing…' : 'Suggest'}
@@ -1467,7 +1467,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         — the most common reason the Save button stays disabled.
                         Better than a silent grey button. */}
                     {pieceCount > 0 && !outfitName.trim() && (
-                      <p className="text-[10px] tracking-widest uppercase text-stone-400 text-center mt-2">
+                      <p className="text-xs tracking-label uppercase text-stone-400 text-center mt-2">
                         Name your look to save it
                       </p>
                     )}
@@ -1482,7 +1482,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               </div>
               {items.some((i) => i.status === 'wishlist') && (
                 <div className="flex items-center gap-2 mb-4 px-2">
-                  <label className="text-[10px] tracking-widest uppercase text-stone-500 cursor-pointer flex items-center gap-1.5">
+                  <label className="text-xs tracking-label uppercase text-stone-500 cursor-pointer flex items-center gap-1.5">
                     <input
                       type="checkbox"
                       checked={includeWishlist}
@@ -1515,7 +1515,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <span className="inline-block w-3 h-px bg-brass-400 shrink-0" aria-hidden="true" />
-                          <h4 className="text-[11px] font-bold text-stone-700 uppercase tracking-[0.2em] shrink-0">
+                          <h4 className="text-xs font-bold text-stone-700 uppercase tracking-eyebrow shrink-0">
                             {slot}
                           </h4>
                           <span className="text-[12px] text-stone-400 shrink-0">· {pool.length}</span>
@@ -1532,7 +1532,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                                   <ItemTileImage item={item} alt={item.name || ""} />
                                 </div>
                               ))}
-                              {filled.length > 3 && <span className="text-[9px] text-stone-400 self-center ml-1">+{filled.length - 3}</span>}
+                              {filled.length > 3 && <span className="text-xs text-stone-400 self-center ml-1">+{filled.length - 3}</span>}
                             </div>
                           )}
                         </div>
@@ -1603,7 +1603,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         onClick={() => chooseCoverView(value)}
                         aria-pressed={coverView === value}
                         title={`Show looks as ${label.toLowerCase()}`}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] tracking-wider uppercase transition-colors duration-200 ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs tracking-meta uppercase transition-colors duration-200 ${
                           coverView === value
                             ? 'bg-white text-stone-900 font-medium'
                             : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
@@ -1637,8 +1637,8 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
             if (!coll) return null;
             return (
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] tracking-widest uppercase text-stone-500">Collection</span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase">
+                <span className="text-xs tracking-label uppercase text-stone-500">Collection</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-900 text-white text-xs tracking-meta uppercase">
                   {coll.name}
                   <button type="button" onClick={() => setActiveCollection(null)} className="text-white/60 hover:text-white ml-0.5 leading-none" aria-label="Clear collection filter">×</button>
                 </span>
@@ -1658,14 +1658,14 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                 <div className="flex items-center gap-3">
                   <span className="brass-rule" aria-hidden="true"></span>
                   <h3 className="font-display text-stone-900 text-lg sm:text-xl">Collections</h3>
-                  <span className="text-[10px] tracking-widest uppercase text-stone-400">{collections.length}</span>
+                  <span className="text-xs tracking-label uppercase text-stone-400">{collections.length}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {activeCollection && (
                     <button
                       type="button"
                       onClick={() => setActiveCollection(null)}
-                      className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline"
+                      className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline"
                     >
                       Show all
                     </button>
@@ -1674,7 +1674,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                     <button
                       type="button"
                       onClick={() => { setNewCollectionOpen(true); setNewCollectionName(''); }}
-                      className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline"
+                      className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline"
                     >
                       + New collection
                     </button>
@@ -1712,7 +1712,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       </div>
                       <div className="p-3">
                         <p className="font-display text-sm text-stone-900 truncate">{coll.name}</p>
-                        <p className="text-[10px] tracking-widest uppercase text-stone-400 mt-0.5">
+                        <p className="text-xs tracking-label uppercase text-stone-400 mt-0.5">
                           {collOutfits.length} look{collOutfits.length === 1 ? '' : 's'}
                         </p>
                       </div>
@@ -1726,8 +1726,8 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                 if (!coll) return null;
                 return (
                   <div className="mt-4 flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] tracking-widest uppercase text-stone-500">Showing:</span>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase">
+                    <span className="text-xs tracking-label uppercase text-stone-500">Showing:</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-900 text-white text-xs tracking-meta uppercase">
                       {coll.name}
                       <button type="button" onClick={() => setActiveCollection(null)} className="text-white/60 hover:text-white ml-0.5 leading-none" aria-label="Clear collection filter">×</button>
                     </span>
@@ -1749,7 +1749,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       setNewCollectionName('');
                     }}
                   >
-                    <p className="text-[10px] tracking-widest uppercase text-stone-500 mb-1">New collection</p>
+                    <p className="text-xs tracking-label uppercase text-stone-500 mb-1">New collection</p>
                     <h3 className="font-display text-stone-900 text-lg mb-4">Name your moodboard</h3>
                     <input
                       autoFocus
@@ -1764,14 +1764,14 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       <button
                         type="button"
                         onClick={() => setNewCollectionOpen(false)}
-                        className="flex-1 px-4 py-2.5 rounded-full border border-stone-300 text-stone-700 text-[11px] tracking-wide uppercase hover:border-stone-900"
+                        className="flex-1 px-4 py-2.5 rounded-full border border-stone-300 text-stone-700 text-xs tracking-meta uppercase hover:border-stone-900"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={!newCollectionName.trim()}
-                        className="flex-1 px-4 py-2.5 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 disabled:opacity-50"
+                        className="flex-1 px-4 py-2.5 rounded-full bg-stone-900 text-white text-xs tracking-meta uppercase hover:bg-stone-700 disabled:opacity-50"
                       >
                         Create
                       </button>
@@ -1824,7 +1824,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         setBackfillProgress(null);
                       }
                     }}
-                    className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                    className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs tracking-meta uppercase bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 transition-colors disabled:opacity-50"
                     disabled={backfillBusy}
                   >
                     <Sparkles size={12} strokeWidth={1.75} />
@@ -1839,7 +1839,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                       <button
                         type="button"
                         onClick={() => setActiveTagFilter(null)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                        className={`px-3 py-1.5 rounded-full text-xs tracking-meta uppercase transition-colors ${
                           activeTagFilter === null
                             ? 'bg-stone-900 text-white'
                             : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
@@ -1852,7 +1852,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                           key={tag}
                           type="button"
                           onClick={() => setActiveTagFilter(tag === activeTagFilter ? null : tag)}
-                          className={`px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                          className={`px-3 py-1.5 rounded-full text-xs tracking-meta uppercase transition-colors ${
                             activeTagFilter === tag
                               ? 'bg-stone-900 text-white'
                               : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-900'
@@ -1874,7 +1874,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                         every pill in the row. */}
                     <div className="shrink-0 self-end sm:self-auto relative inline-flex">
                       <span aria-hidden="true"
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase bg-white border border-stone-200 text-stone-700 transition-colors">
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs tracking-meta uppercase bg-white border border-stone-200 text-stone-700 transition-colors">
                         {SORT_LABELS[sortMode] || SORT_LABELS.recent}
                         <ChevronDown size={12} strokeWidth={1.5} className="text-stone-400" />
                       </span>
@@ -2059,7 +2059,7 @@ function ABCompareModal({ pair, onClose, onPick }) {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6 text-white">
           <div>
-            <p className="text-[10px] tracking-[0.2em] uppercase text-stone-400">Pick the look you prefer</p>
+            <p className="text-xs tracking-eyebrow uppercase text-stone-400">Pick the look you prefer</p>
             <h2 className="text-2xl sm:text-3xl font-display mt-1">A or B?</h2>
           </div>
           <button onClick={onClose} className="p-2.5 text-stone-300 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-colors" aria-label="Close">
@@ -2096,11 +2096,11 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
   return (
     <div className="space-y-4">
       {/* Canonical segmented-track pill size — matches Wardrobe status pills
-          and Studio tabs (px-4 sm:px-5 py-3 sm:py-2 text-[10px] sm:text-xs). */}
+          and Studio tabs (px-4 sm:px-5 py-3 sm:py-2 text-xs). */}
       <div className="flex bg-stone-200/50 p-1.5 rounded-full w-fit">
         {[['all', 'All'], ['favorites', '★ Favourites']].map(([f, label]) => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-[10px] sm:text-xs tracking-wider uppercase transition-colors duration-200 ${
+            className={`whitespace-nowrap px-4 sm:px-5 py-3 sm:py-2 rounded-full text-xs tracking-meta uppercase transition-colors duration-200 ${
               filter === f ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
             }`}>
             {label}
@@ -2119,7 +2119,7 @@ function AIHistoryView({ history, items, onApply, onToggleFavorite, onDelete }) 
               <div key={entry.id} className="bg-white border border-stone-200/60 rounded-2xl p-4 sm:p-5 smooth-shadow">
                 <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] tracking-widest uppercase text-stone-400">{date}{entry.refined ? ' · refinement' : ''}</p>
+                    <p className="text-xs tracking-label uppercase text-stone-400">{date}{entry.refined ? ' · refinement' : ''}</p>
                     <p className="text-sm text-stone-900 font-medium mt-1 truncate">{entry.intent || 'Everyday look'}</p>
                   </div>
                   <div className="flex gap-1 shrink-0">
@@ -2193,7 +2193,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
           </p>
 
           <div>
-            <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Trip / Capsule name (optional)</label>
+            <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Trip / Capsule name (optional)</label>
             <input value={tripName} onChange={(e) => setTripName(e.target.value)}
               placeholder="e.g. Lisbon, Work week, Long weekend"
               className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors"
@@ -2201,7 +2201,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
           </div>
 
           <div>
-            <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-3">Number of looks</label>
+            <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-3">Number of looks</label>
             <div className="flex flex-wrap gap-2">
               {[3, 4, 5, 6, 7].map((n) => (
                 <button key={n} type="button" onClick={() => setCount(n)}
@@ -2215,7 +2215,7 @@ function CapsuleBuilder({ onClose, onGenerate }) {
           </div>
 
           <div>
-            <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-3">Style focus (optional)</label>
+            <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-3">Style focus (optional)</label>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setStyleFilter(null)}
                 className={`px-3 py-2.5 sm:py-1.5 rounded-full text-xs font-medium transition-all border ${

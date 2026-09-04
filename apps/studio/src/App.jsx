@@ -175,7 +175,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
         <div className="flex items-center justify-between px-6 py-5 border-b border-stone-200/60 bg-white shrink-0">
           <div className="flex items-center gap-3">
             <span className="inline-block w-5 h-px bg-brass-300" aria-hidden="true"></span>
-            <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Share this look</span>
+            <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Share this look</span>
           </div>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors" aria-label="Close">
             <X size={16} strokeWidth={1.5} />
@@ -196,7 +196,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
             {composing && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-stone-400">
                 <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin"></div>
-                <p className="text-[10px] tracking-[0.28em] uppercase">Composing</p>
+                <p className="text-xs tracking-eyebrow uppercase">Composing</p>
               </div>
             )}
             {error && !composing && (
@@ -208,7 +208,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
               <img src={imageUrl} alt="Preview of the composed look" className="w-full h-full object-contain" />
             )}
           </div>
-          <p className="text-[10px] tracking-widest uppercase text-stone-400 text-center mt-3">
+          <p className="text-xs tracking-label uppercase text-stone-400 text-center mt-3">
             1080 × 1920 · Instagram Story · Pinterest
           </p>
         </div>
@@ -227,12 +227,12 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
           </button>
           <div className="flex gap-2">
             <button onClick={handleDownload} disabled={!imageBlob || busy}
-              className="flex-1 h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
+              className="flex-1 h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-xs tracking-label uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5 disabled:opacity-50">
               <Download size={13} strokeWidth={1.5} /> Save image
             </button>
             {onCreateLink && (
               <button onClick={() => { onCreateLink(imageBlob); onClose(); }}
-                className="flex-1 h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-[10px] tracking-widest uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5">
+                className="flex-1 h-11 bg-white border border-stone-300 text-stone-700 rounded-full text-xs tracking-label uppercase font-medium hover:border-stone-500 hover:text-stone-900 transition-colors duration-200 inline-flex items-center justify-center gap-1.5">
                 <LinkIcon size={12} strokeWidth={1.5} /> Public link
               </button>
             )}
@@ -243,7 +243,7 @@ function ShareLookModal({ outfit, items, onClose, onCreateLink }) {
               share sheet typically already includes both if the apps are
               installed, so we hide this row on small screens. */}
           <div className="hidden sm:block pt-4 border-t border-stone-200/60">
-            <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 mb-2.5">Share to</p>
+            <p className="text-xs tracking-eyebrow uppercase text-stone-500 mb-2.5">Share to</p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1852,7 +1852,7 @@ function DigitalWardrobe() {
                   <div className="my-1 border-t border-stone-100" />
                   <button type="button" onClick={() => { setDesktopAccountOpen(false); signOutUser(); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-stone-400 hover:bg-stone-50 hover:text-stone-700 transition-colors">
                     <LogOut size={15} strokeWidth={1.5} />
-                    <span className="text-[11px] tracking-widest uppercase">Sign out</span>
+                    <span className="text-xs tracking-label uppercase">Sign out</span>
                   </button>
                 </div>
               </>
@@ -1934,7 +1934,7 @@ function DigitalWardrobe() {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-stone-400 hover:bg-stone-50 hover:text-stone-700 transition-colors"
                 >
                   <LogOut size={15} strokeWidth={1.5} />
-                  <span className="text-[11px] tracking-widest uppercase">Sign out</span>
+                  <span className="text-xs tracking-label uppercase">Sign out</span>
                 </button>
               </div>
             </div>
@@ -2415,7 +2415,7 @@ function PhotoLightbox({ images, startIndex = 0, alt = '', onClose }) {
       )}
 
       {/* Hint */}
-      <div className="absolute bottom-2 right-3 hidden sm:block text-white/30 text-[10px] tracking-widest uppercase pointer-events-none"
+      <div className="absolute bottom-2 right-3 hidden sm:block text-white/30 text-xs tracking-label uppercase pointer-events-none"
            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}>
         {images.length > 1 ? 'Swipe or ← → · double-click to zoom' : 'Double-click to zoom · scroll to zoom in'}
       </div>
@@ -2563,7 +2563,7 @@ function SignInScreen({ onSignIn }) {
 
       {error && <p className="mt-6 text-xs text-red-700 max-w-sm text-center leading-relaxed">{error}</p>}
 
-      <p className="absolute bottom-6 inset-x-0 text-center text-[11px] tracking-wide text-stone-400">
+      <p className="absolute bottom-6 inset-x-0 text-center text-xs tracking-meta text-stone-400">
         <a href="https://myatelier.style/legal/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-stone-700 transition-colors">Privacy</a>
         <span className="mx-2" aria-hidden="true">·</span>
         <a href="https://myatelier.style/legal/terms" target="_blank" rel="noopener noreferrer" className="hover:text-stone-700 transition-colors">Terms</a>
@@ -3155,7 +3155,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               </p>
 
               <form onSubmit={importFromLink} className="space-y-3">
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase">Import via Link</label>
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase">Import via Link</label>
                 <div className="relative flex items-center">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <LinkIcon size={18} className="text-stone-400" strokeWidth={1.5} />
@@ -3186,7 +3186,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                 <div className="rounded-2xl border border-stone-200 bg-white overflow-hidden">
                   {/* Header row */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100">
-                    <p className="text-[10px] tracking-widest uppercase font-semibold text-stone-500">
+                    <p className="text-xs tracking-label uppercase font-semibold text-stone-500">
                       {findStep === 'searching' ? 'Searching…' : 'Find this online'}
                     </p>
                     <button
@@ -3203,7 +3203,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   {findStep === 'searching' && (
                     <div className="py-8 flex flex-col items-center gap-3 text-stone-600">
                       <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin" />
-                      <p className="text-[11px] tracking-[0.28em] uppercase text-stone-500">Identifying product</p>
+                      <p className="text-xs tracking-eyebrow uppercase text-stone-500">Identifying product</p>
                     </div>
                   )}
 
@@ -3219,11 +3219,11 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       {findResult.confidence !== 'low' && (
                         <div className="flex items-center gap-2 flex-wrap">
                           {findResult.brand && (
-                            <span className="px-2.5 py-1 rounded-full bg-stone-900 text-white text-[10px] tracking-widest uppercase">
+                            <span className="px-2.5 py-1 rounded-full bg-stone-900 text-white text-xs tracking-label uppercase">
                               {findResult.brand}
                             </span>
                           )}
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] tracking-widest uppercase ${
+                          <span className={`px-2.5 py-1 rounded-full text-xs tracking-label uppercase ${
                             findResult.confidence === 'high'
                               ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                               : 'bg-amber-50 text-amber-800 border border-amber-200'
@@ -3256,7 +3256,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
                       {/* URL paste */}
                       <div className="space-y-2">
-                        <p className="text-[10px] tracking-widest uppercase text-stone-500">Found the listing? Paste the URL to import it:</p>
+                        <p className="text-xs tracking-label uppercase text-stone-500">Found the listing? Paste the URL to import it:</p>
                         <div className="flex gap-2">
                           <input
                             type="url"
@@ -3271,7 +3271,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                             type="button"
                             onClick={handleFindPasteImport}
                             disabled={!findPasteUrl.trim() || isLoading}
-                            className="px-4 py-2 rounded-xl bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 disabled:opacity-50 transition-colors shrink-0"
+                            className="px-4 py-2 rounded-xl bg-stone-900 text-white text-xs tracking-meta uppercase hover:bg-stone-700 disabled:opacity-50 transition-colors shrink-0"
                           >
                             {isLoading ? '…' : 'Import'}
                           </button>
@@ -3284,7 +3284,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       <button
                         type="button"
                         onClick={() => { handleFindReset(); }}
-                        className="w-full text-[11px] tracking-wide text-stone-400 hover:text-stone-900 hover:underline underline-offset-4 transition-colors"
+                        className="w-full text-xs tracking-meta text-stone-400 hover:text-stone-900 hover:underline underline-offset-4 transition-colors"
                       >
                         Or go back to other add options
                       </button>
@@ -3297,61 +3297,61 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               {findStep === 'idle' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <label className="group relative flex flex-col items-center justify-center p-5 sm:p-6 bg-stone-900 border border-stone-900 rounded-2xl cursor-pointer hover:bg-stone-700 transition-all col-span-2 sm:col-span-3 text-center">
-                  <span className="absolute top-2 right-2 text-[9px] tracking-widest uppercase text-brass-300 font-medium">Fastest</span>
+                  <span className="absolute top-2 right-2 text-xs tracking-label uppercase text-brass-300 font-medium">Fastest</span>
                   <Sparkles size={26} strokeWidth={1} className="mb-2 text-brass-300 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-display text-base sm:text-lg text-white">Identify with Concierge</span>
-                  <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase">Snap any item · category, brand, colours, name — auto-filled</span>
+                  <span className="text-xs text-stone-400 mt-1 tracking-meta uppercase">Snap any item · category, brand, colours, name — auto-filled</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handleIdentifyInput} className="hidden" />
                 </label>
                 {/* Find this online — new card */}
                 <label className="group relative flex flex-col items-center justify-center p-5 sm:p-6 bg-white border-2 border-stone-200 hover:border-stone-900 rounded-2xl cursor-pointer transition-all col-span-2 sm:col-span-3 text-center">
-                  <span className="absolute top-2 right-2 text-[9px] tracking-widest uppercase text-stone-400 font-medium">Best images</span>
+                  <span className="absolute top-2 right-2 text-xs tracking-label uppercase text-stone-400 font-medium">Best images</span>
                   <Search size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-display text-base sm:text-lg text-stone-900">Find this online</span>
-                  <span className="text-[10px] text-stone-500 mt-1 tracking-wide uppercase">Snap · AI finds the real listing · import name, brand, official image, price</span>
+                  <span className="text-xs text-stone-500 mt-1 tracking-meta uppercase">Snap · AI finds the real listing · import name, brand, official image, price</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handleFindInput} className="hidden" />
                 </label>
                 {onOpenSweep && (
                   <button type="button" onClick={onOpenSweep} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-brass-50 border border-brass-300 rounded-2xl cursor-pointer hover:border-brass-500 transition-all col-span-2 sm:col-span-3">
                     <Camera size={22} strokeWidth={1} className="mb-2 text-brass-700 group-hover:scale-110 transition-transform duration-300" />
                     <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Closet sweep</span>
-                    <span className="text-[10px] text-stone-500 mt-1 tracking-wide uppercase text-center">Take many photos in a row · AI identifies each · save them all</span>
+                    <span className="text-xs text-stone-500 mt-1 tracking-meta uppercase text-center">Take many photos in a row · AI identifies each · save them all</span>
                   </button>
                 )}
                 {onOpenBulkImport && (
                   <button type="button" onClick={onOpenBulkImport} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all col-span-2 sm:col-span-3">
                     <LinkIcon size={22} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                     <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Search & Bulk Import</span>
-                    <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Find on the web · paste many URLs at once</span>
+                    <span className="text-xs text-stone-400 mt-1 tracking-meta uppercase text-center">Find on the web · paste many URLs at once</span>
                   </button>
                 )}
                 <label className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                   <Camera size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Add Photos</span>
-                  <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Up to 6</span>
+                  <span className="text-xs text-stone-400 mt-1 tracking-meta uppercase text-center">Up to 6</span>
                   <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                 </label>
                 <label className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                   <Wand2 size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Scan Label</span>
-                  <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Care tag · barcode</span>
+                  <span className="text-xs text-stone-400 mt-1 tracking-meta uppercase text-center">Care tag · barcode</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handleScanInput} className="hidden" />
                 </label>
                 {onOpenReceiptModal && (
                   <button type="button" onClick={onOpenReceiptModal} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                     <Sparkles size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                     <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Paste Receipt</span>
-                    <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Order email</span>
+                    <span className="text-xs text-stone-400 mt-1 tracking-meta uppercase text-center">Order email</span>
                   </button>
                 )}
                 <button type="button" onClick={() => setStep(2)} className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all">
                   <Plus size={24} strokeWidth={1} className="mb-2 text-stone-900 group-hover:scale-110 transition-transform duration-300" />
                   <span className="font-medium text-xs sm:text-sm text-stone-900 text-center">Manual Entry</span>
-                  <span className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase text-center">Type details</span>
+                  <span className="text-xs text-stone-400 mt-1 tracking-meta uppercase text-center">Type details</span>
                 </button>
               </div>
               )}
-              <p className="text-[10px] text-stone-400 tracking-wide text-center">
+              <p className="text-xs text-stone-400 tracking-meta text-center">
                 Tip: on desktop, copy an image and press <span className="font-medium text-stone-600">Ctrl+V</span> anywhere in this dialog to paste it in.
               </p>
               {error && <p className="text-xs text-red-700">{error}</p>}
@@ -3387,7 +3387,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               )}
               <div>
                 <div className="flex items-baseline justify-between mb-3 gap-3 flex-wrap">
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase">
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase">
                     Photos <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">{formData.images.length} / 6</span>
                   </label>
                   {formData.images.length === 0 && (formData.brand || formData.name) && (
@@ -3395,7 +3395,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       href={`https://www.google.com/search?tbm=shop&q=${encodeURIComponent([formData.brand, formData.name].filter(Boolean).join(' '))}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5"
+                      className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors inline-flex items-center gap-1.5"
                     >
                       Find product photo ↗
                     </a>
@@ -3427,7 +3427,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                             });
                             toast.show('Reverted to original photo', { kind: 'default', duration: 2500 });
                           }}
-                          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-emerald-600 text-white text-[9px] tracking-widest uppercase rounded-full font-medium shadow-sm hover:bg-emerald-700 transition-colors"
+                          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-emerald-600 text-white text-xs tracking-label uppercase rounded-full font-medium shadow-sm hover:bg-emerald-700 transition-colors"
                           title="Revert to original photo">
                           Cutout · revert
                         </button>
@@ -3487,7 +3487,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                               }
                             } finally { setCutoutBusy(false); }
                           }}
-                          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-white/90 backdrop-blur text-stone-700 text-[9px] tracking-widest uppercase rounded-full font-medium shadow-sm hover:text-stone-900 transition-colors opacity-0 sm:group-hover:opacity-100"
+                          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-white/90 backdrop-blur text-stone-700 text-xs tracking-label uppercase rounded-full font-medium shadow-sm hover:text-stone-900 transition-colors opacity-0 sm:group-hover:opacity-100"
                           title="Remove background">
                           Cut out
                         </button>
@@ -3509,7 +3509,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                           });
                         }}
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute bottom-1.5 right-1.5 text-[9px] tracking-widest uppercase bg-white/90 backdrop-blur text-stone-900 rounded-full px-2 py-0.5 border border-stone-200 outline-none cursor-pointer">
+                        className="absolute bottom-1.5 right-1.5 text-xs tracking-label uppercase bg-white/90 backdrop-blur text-stone-900 rounded-full px-2 py-0.5 border border-stone-200 outline-none cursor-pointer">
                         <option value="">—</option>
                         <option value="Front">Front</option>
                         <option value="Back">Back</option>
@@ -3520,10 +3520,10 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                         <X size={12} strokeWidth={2} />
                       </button>
                       {i === 0 ? (
-                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-stone-900 text-white text-[9px] tracking-widest uppercase rounded-full">Main</span>
+                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-stone-900 text-white text-xs tracking-label uppercase rounded-full">Main</span>
                       ) : (
                         <button type="button" onClick={() => promoteToMain(i)}
-                          className="absolute bottom-1.5 left-1.5 px-2 py-1 bg-white/90 backdrop-blur text-stone-900 text-[9px] tracking-widest uppercase rounded-full opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-stone-100 shadow-sm flex items-center gap-1"
+                          className="absolute bottom-1.5 left-1.5 px-2 py-1 bg-white/90 backdrop-blur text-stone-900 text-xs tracking-label uppercase rounded-full opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-stone-100 shadow-sm flex items-center gap-1"
                           title="Set as main photo">
                           <Star size={10} strokeWidth={2} /> Make main
                         </button>
@@ -3533,13 +3533,13 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   {cutoutBusy && (
                     <div className="aspect-square rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 flex flex-col items-center justify-center text-emerald-700">
                       <div className="w-5 h-5 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin mb-2" />
-                      <span className="text-[10px] tracking-wider uppercase">Removing bg…</span>
+                      <span className="text-xs tracking-meta uppercase">Removing bg…</span>
                     </div>
                   )}
                   {formData.images.length < 6 && (
                     <label className="aspect-square rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center cursor-pointer hover:border-stone-500 transition-all text-stone-400 hover:text-stone-900">
                       <Plus size={22} strokeWidth={1.5} />
-                      <span className="text-[10px] tracking-wider uppercase mt-1">Add</span>
+                      <span className="text-xs tracking-meta uppercase mt-1">Add</span>
                       <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                     </label>
                   )}
@@ -3567,7 +3567,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               <div className="grid grid-cols-2 gap-6">
                 <Input label="Price (£)" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} type="number" step="0.01" required />
                 <div>
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Category</label>
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Category</label>
                   <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value, subCategory: ''})} className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors">
                     {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -3576,7 +3576,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
               {['Tops', 'Bottoms', 'Outerwear', 'Dresses', 'Accessories', 'Jewellery', 'Sportswear', 'Swimwear', 'Bags', 'Shoes'].includes(formData.category) && (
                 <div>
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">
                     {formData.category === 'Tops' ? 'Top Type'
                       : formData.category === 'Bottoms' ? 'Bottom Type'
                       : formData.category === 'Outerwear' ? 'Outerwear Type'
@@ -3606,7 +3606,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               )}
 
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">
                   Seasons <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">(select any number)</span>
                 </label>
                 <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
@@ -3628,7 +3628,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               </div>
 
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">
                   Styles <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">(select any)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -3648,7 +3648,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               </div>
 
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-3">Collection Status</label>
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-3">Collection Status</label>
                 <div className="flex gap-4">
                   <button type="button" onClick={() => setFormData({ ...formData, status: 'owned' })}
                     className={`flex-1 py-4 px-3 rounded-xl text-sm font-medium transition-all border text-center ${
@@ -3668,7 +3668,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               </div>
 
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">
                   Size <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">(unlocks fit comparison when the brand has a size chart)</span>
                 </label>
                 <input list="size-suggestions" value={formData.size} onChange={(e) => setFormData({ ...formData, size: e.target.value })} type="text" placeholder="e.g. 10, M, EU 39"
@@ -3685,7 +3685,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
               {careAppliesToCategory(formData.category) && (
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">
                   Care <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">(optional)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -3706,7 +3706,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               )}
 
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">
                   Materials <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">(optional)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -3726,7 +3726,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               </div>
 
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">
                   Colours <span className="text-stone-400 font-normal normal-case tracking-normal ml-1">{(formData.colors || []).length > 0 ? '(auto-detected — adjust if wrong)' : '(auto-detects from photos)'}</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -3748,7 +3748,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               </div>
 
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Description</label>
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Description</label>
                 <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})}
                   rows={3}
                   placeholder="Notes, fabric, fit, styling thoughts…"
@@ -3767,14 +3767,14 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
               {formData.status === 'owned' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Purchased On</label>
+                    <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Purchased On</label>
                     <input type="date" value={formData.purchasedDate}
                       onChange={(e) => setFormData({ ...formData, purchasedDate: e.target.value })}
                       className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Purchased From</label>
+                    <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Purchased From</label>
                     <input list="purchased-from-suggestions" type="text" value={formData.purchasedFrom}
                       onChange={(e) => setFormData({ ...formData, purchasedFrom: e.target.value })}
                       placeholder="Shop name"
@@ -3789,7 +3789,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
               {formData.status === 'owned' && (
                 <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4">
-                  <p className="text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-3">Lent out <span className="font-normal normal-case tracking-normal text-stone-400 ml-1">(optional)</span></p>
+                  <p className="text-xs tracking-label uppercase text-stone-500 font-semibold mb-3">Lent out <span className="font-normal normal-case tracking-normal text-stone-400 ml-1">(optional)</span></p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <input type="text" value={formData.lentTo}
                       onChange={(e) => setFormData({ ...formData, lentTo: e.target.value })}
@@ -3806,7 +3806,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
 
               {formData.status === 'wishlist' && (
                 <div>
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Why? <span className="font-normal normal-case tracking-normal text-stone-400 ml-1">(optional — feeds AI gap analysis)</span></label>
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Why? <span className="font-normal normal-case tracking-normal text-stone-400 ml-1">(optional — feeds AI gap analysis)</span></label>
                   <input type="text" value={formData.wishlistReason || ''}
                     onChange={(e) => setFormData({ ...formData, wishlistReason: e.target.value })}
                     placeholder="e.g. for a wedding · to replace my black blazer · need a winter coat"
@@ -3818,10 +3818,10 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                 <div className="mt-4 rounded-xl border border-stone-200 p-4">
                   {fitCheck ? (
                     <>
-                      <div className="text-[10px] uppercase tracking-[0.18em] text-[#9a7b4f] mb-1">Should you buy this?</div>
+                      <div className="text-xs uppercase tracking-eyebrow text-[#9a7b4f] mb-1">Should you buy this?</div>
                       <p className="font-display italic text-sm text-stone-800">{fitCheck.verdict}</p>
                       <div className="text-xs text-stone-500 mt-1">{fitCheck.tier}</div>
-                      <button type="button" onClick={runFitCheck} disabled={fitBusy} className="text-[11px] uppercase tracking-wider text-stone-500 underline mt-2 disabled:opacity-40">
+                      <button type="button" onClick={runFitCheck} disabled={fitBusy} className="text-xs uppercase tracking-meta text-stone-500 underline mt-2 disabled:opacity-40">
                         {fitBusy ? 'Reading…' : 'Check again'}
                       </button>
                     </>
@@ -3901,7 +3901,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
 
   return (
     <div className="rounded-2xl bg-stone-900 text-white p-5">
-      <div className="text-[10px] tracking-[0.18em] uppercase text-[#c9a85f] mb-2">The Concierge's read</div>
+      <div className="text-xs tracking-eyebrow uppercase text-[#c9a85f] mb-2">The Concierge's read</div>
       {fit ? (
         <>
           <p className="font-display italic text-[15px] leading-relaxed text-cream">{fit.verdict}</p>
@@ -3919,7 +3919,7 @@ function FitVerdictSection({ item, measurements, inspirations, onSaveFit }) {
               ))}
             </div>
           )}
-          <button onClick={run} disabled={busy} className="text-[11px] uppercase tracking-wider text-stone-400 mt-4 disabled:opacity-40">{busy ? 'Reading…' : 'Re-read'}</button>
+          <button onClick={run} disabled={busy} className="text-xs uppercase tracking-meta text-stone-400 mt-4 disabled:opacity-40">{busy ? 'Reading…' : 'Re-read'}</button>
         </>
       ) : (
         <>
@@ -4081,7 +4081,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 className="p-2 rounded-full hover:bg-stone-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
                 <ChevronRight size={16} strokeWidth={1.5} className="rotate-180" />
               </button>
-              {positionLabel && <span className="text-[10px] tracking-widest uppercase">{positionLabel}</span>}
+              {positionLabel && <span className="text-xs tracking-label uppercase">{positionLabel}</span>}
               <button onClick={onNext} disabled={!onNext} aria-label="Next item"
                 className="p-2 rounded-full hover:bg-stone-200/70 disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
                 <ChevronRight size={16} strokeWidth={1.5} />
@@ -4219,7 +4219,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         await onUpdateItem({ ...item, imageMeta: nextMeta });
                         toast.show('Reverted to your original photo', { kind: 'default' });
                       }}
-                      className="absolute top-3 right-3 lg:top-4 lg:right-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium shadow-sm transition-colors">
+                      className="absolute top-3 right-3 lg:top-4 lg:right-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-xs tracking-label uppercase rounded-full font-medium shadow-sm transition-colors">
                       Cut-out · revert
                     </button>
                   )}
@@ -4233,22 +4233,22 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         await onUpdateItem({ ...item, imageMeta: nextMeta });
                         toast.show('Reverted to the un-cropped image', { kind: 'default' });
                       }}
-                      className="absolute top-3 right-3 lg:top-4 lg:right-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium shadow-sm transition-colors mt-9">
+                      className="absolute top-3 right-3 lg:top-4 lg:right-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-xs tracking-label uppercase rounded-full font-medium shadow-sm transition-colors mt-9">
                       Framed · revert
                     </button>
                   )}
                   {/* Edit image — opens the manual framer on the primary photo */}
                   <button type="button"
                     onClick={(e) => { e.stopPropagation(); e.preventDefault(); setFramerOpen(true); }}
-                    className="absolute bottom-3 left-3 lg:bottom-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium shadow-sm transition-colors">
+                    className="absolute bottom-3 left-3 lg:bottom-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-700 hover:text-stone-900 text-xs tracking-label uppercase rounded-full font-medium shadow-sm transition-colors">
                     Edit image
                   </button>
                   {item.imageMeta?.[Math.min(activePhoto, images.length - 1)]?.angle && (
-                    <span className="absolute top-3 left-3 lg:top-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-900 text-[10px] tracking-widest uppercase rounded-full font-medium">
+                    <span className="absolute top-3 left-3 lg:top-4 lg:left-4 px-3 py-1.5 bg-white/90 backdrop-blur-md text-stone-900 text-xs tracking-label uppercase rounded-full font-medium">
                       {item.imageMeta[Math.min(activePhoto, images.length - 1)].angle}
                     </span>
                   )}
-                  <span className="absolute bottom-3 right-3 lg:bottom-4 lg:right-4 px-3 py-1.5 bg-stone-900/70 backdrop-blur-md text-white text-[10px] tracking-widest uppercase rounded-full opacity-80 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
+                  <span className="absolute bottom-3 right-3 lg:bottom-4 lg:right-4 px-3 py-1.5 bg-stone-900/70 backdrop-blur-md text-white text-xs tracking-label uppercase rounded-full opacity-80 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
                     <Plus size={12} strokeWidth={2} /> Zoom
                   </span>
                   {images.length > 1 && (
@@ -4286,17 +4286,17 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
           <div className="lg:col-span-6 space-y-8 lg:space-y-6 lg:pt-11">
             <div>
-              <p className="text-[11px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-2">{item.brand}</p>
+              <p className="text-xs font-semibold text-stone-500 tracking-eyebrow uppercase mb-2">{item.brand}</p>
               <h1 className="text-3xl sm:text-4xl lg:text-4xl font-display text-stone-900 leading-tight">{item.name}</h1>
               <div className="flex items-center gap-4 mt-4 flex-wrap">
                 <p className="text-3xl font-display font-medium">£{Number(item.price || 0).toLocaleString()}</p>
                 {item.status === 'wishlist' && (
-                  <span className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 bg-stone-100 text-stone-900">
+                  <span className="text-xs uppercase tracking-meta px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 bg-stone-100 text-stone-900">
                     <Heart size={12} className="fill-stone-900" strokeWidth={0} /> Wishlist
                   </span>
                 )}
                 {item.status === 'owned' && (
-                  <span className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium bg-stone-900 text-white">In Collection</span>
+                  <span className="text-xs uppercase tracking-meta px-3 py-1.5 rounded-full font-medium bg-stone-900 text-white">In Collection</span>
                 )}
               </div>
               <div className="mt-4">
@@ -4325,22 +4325,22 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             {item.status === 'owned' && (
               <div className="bg-white border border-stone-200/60 rounded-2xl p-5 lg:p-6 smooth-shadow">
                 <div className="flex items-baseline justify-between gap-3 mb-4 flex-wrap">
-                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">Wear Log</h2>
-                  <button onClick={() => setShowHistory((v) => !v)} className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors">
+                  <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase">Wear Log</h2>
+                  <button onClick={() => setShowHistory((v) => !v)} className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 transition-colors">
                     {showHistory ? 'Hide' : 'History'}
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="bg-stone-50 rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-widest text-stone-500">Wears</p>
+                    <p className="text-xs uppercase tracking-label text-stone-500">Wears</p>
                     <p className="text-2xl font-display font-medium mt-1">{wears}</p>
                   </div>
                   <div className="bg-stone-50 rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-widest text-stone-500">Last worn</p>
+                    <p className="text-xs uppercase tracking-label text-stone-500">Last worn</p>
                     <p className="text-sm font-medium mt-1.5">{formatLastWorn(item)}</p>
                   </div>
                   <div className="bg-stone-900 text-white rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-widest text-stone-400">Cost / wear</p>
+                    <p className="text-xs uppercase tracking-label text-stone-400">Cost / wear</p>
                     <p className="text-2xl font-display font-medium mt-1">
                       {cpw !== null ? `£${cpw < 10 ? cpw.toFixed(2) : Math.round(cpw)}` : '—'}
                     </p>
@@ -4351,11 +4351,11 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                   {onLogWear && (
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] tracking-widest uppercase text-stone-400">Logging for</span>
+                        <span className="text-xs tracking-label uppercase text-stone-400">Logging for</span>
                         <button
                           type="button"
                           onClick={() => setItemLogDateOpen((v) => !v)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs tracking-meta uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors"
                         >
                           <Calendar size={10} strokeWidth={1.75} />
                           {itemLogDate === todayISO() ? 'Today' : new Date(itemLogDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -4368,7 +4368,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       <button
                         type="button"
                         onClick={() => { setItemLogDate(todayISO()); setItemLogDateOpen(false); }}
-                        className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                        className="px-2.5 py-1 rounded-full text-xs tracking-meta uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
                       >Today</button>
                       <button
                         type="button"
@@ -4378,14 +4378,14 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                           setItemLogDate(d.toISOString().slice(0, 10));
                           setItemLogDateOpen(false);
                         }}
-                        className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                        className="px-2.5 py-1 rounded-full text-xs tracking-meta uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
                       >Yesterday</button>
                       <input
                         type="date"
                         value={itemLogDate}
                         max={todayISO()}
                         onChange={(e) => { if (e.target.value) { setItemLogDate(e.target.value); setItemLogDateOpen(false); } }}
-                        className="px-2 py-1 rounded-full text-[10px] tracking-wide bg-white border border-stone-300 text-stone-700 outline-none focus:border-stone-900"
+                        className="px-2 py-1 rounded-full text-xs tracking-meta bg-white border border-stone-300 text-stone-700 outline-none focus:border-stone-900"
                         style={{ fontSize: '16px' }}
                       />
                     </div>
@@ -4421,7 +4421,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         <p className="text-[13px] text-brass-700/80 mt-0.5 leading-relaxed">Suggested: {reminder.action}.</p>
                       </div>
                       <button onClick={onMarkCared}
-                        className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors shrink-0">
+                        className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors shrink-0">
                         Done
                       </button>
                     </div>
@@ -4455,7 +4455,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               const overdue = item.lentReturnBy && item.lentReturnBy < todayISO();
               return (
                 <div className={`rounded-2xl p-5 border ${overdue ? 'bg-red-50 border-red-200' : 'bg-stone-50 border-stone-200'}`}>
-                  <h2 className={`text-[10px] font-bold tracking-[0.2em] uppercase mb-1 ${overdue ? 'text-red-800' : 'text-stone-500'}`}>
+                  <h2 className={`text-xs font-bold tracking-eyebrow uppercase mb-1 ${overdue ? 'text-red-800' : 'text-stone-500'}`}>
                     {overdue ? 'Overdue · please chase' : 'Lent out'}
                   </h2>
                   <p className="text-sm text-stone-900 mt-2">
@@ -4472,7 +4472,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
             {item.status === 'wishlist' && item.wishlistReason && (
               <div className="bg-stone-50 border border-stone-200 rounded-2xl p-5">
-                <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Why this is on your wishlist</h2>
+                <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-1">Why this is on your wishlist</h2>
                 <p className="text-sm text-stone-700 mt-2 italic">"{item.wishlistReason}"</p>
               </div>
             )}
@@ -4482,7 +4482,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               const stale = daysSinceLastWorn(item);
               return (
                 <div className="bg-stone-50 border border-stone-200 rounded-2xl p-5">
-                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-2">Resell or donate</h2>
+                  <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-2">Resell or donate</h2>
                   <p className="text-xs text-stone-500 leading-relaxed mb-3">
                     {stale === null || stale >= 180
                       ? "Haven't worn it in a while — list it for resale or pass it on."
@@ -4510,7 +4510,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               const dropFromPeak = peak > 0 ? Math.round((1 - latest / peak) * 100) : 0;
               return (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
-                  <h2 className="text-[10px] font-bold text-emerald-800 tracking-[0.2em] uppercase mb-2">Price watch</h2>
+                  <h2 className="text-xs font-bold text-emerald-800 tracking-eyebrow uppercase mb-2">Price watch</h2>
                   <div className="flex items-baseline gap-3 flex-wrap">
                     <p className="font-display text-2xl text-stone-900">£{latest}</p>
                     {dropFromPeak >= 5 && (
@@ -4530,7 +4530,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               <div className="bg-white border border-stone-200 rounded-2xl p-5 lg:p-6 smooth-shadow">
                 <div className="flex items-center gap-2 mb-3">
                   <Sparkles size={13} strokeWidth={1.5} className="text-brass-500" />
-                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">The Considered Purchase</h2>
+                  <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase">The Considered Purchase</h2>
                 </div>
                 {purchaseVerdict ? (
                   <div className="animate-in fade-in duration-300">
@@ -4547,15 +4547,15 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                         ['In your wardrobe', purchaseVerdict.gapNote || null],
                       ].filter(([, v]) => v).map(([label, value]) => (
                         <div key={label} className="flex items-baseline justify-between gap-4 py-2.5 border-t border-stone-100 first:border-t-0">
-                          <dt className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0">{label}</dt>
+                          <dt className="text-xs tracking-label uppercase text-stone-400 shrink-0">{label}</dt>
                           <dd className="text-sm text-stone-800 text-right min-w-0 break-words">{value}</dd>
                         </div>
                       ))}
                     </dl>
                     <div className="mt-5 flex items-center gap-3 flex-wrap">
-                      <span className="text-[11px] tracking-[0.18em] uppercase text-brass-700 font-medium">Hold 72 hours, then decide</span>
+                      <span className="text-xs tracking-eyebrow uppercase text-brass-700 font-medium">Hold 72 hours, then decide</span>
                       <button onClick={runPurchaseVerdict} disabled={purchaseVerdictBusy}
-                        className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline disabled:opacity-50">
+                        className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline disabled:opacity-50">
                         {purchaseVerdictBusy ? 'Re-scoring…' : 'Re-score'}
                       </button>
                     </div>
@@ -4591,20 +4591,20 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 <div className="bg-stone-50 border border-stone-200 rounded-2xl p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <Sparkles size={13} strokeWidth={1.5} className="text-brass-500" />
-                    <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">Will it fit?</h2>
+                    <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase">Will it fit?</h2>
                   </div>
                   {!hasMeasurements ? (
                     <p className="text-sm text-stone-700">Add your <span className="font-medium">chest, waist and hips</span> on the Account tab in Profile, then the Concierge can estimate the fit.</p>
                   ) : fitEstimate ? (
                     <div className="animate-in fade-in duration-300">
-                      <span className={`inline-block text-[10px] tracking-widest uppercase font-medium px-2.5 py-1 rounded-full border ${verdictTone}`}>{fitEstimate.verdict}</span>
+                      <span className={`inline-block text-xs tracking-label uppercase font-medium px-2.5 py-1 rounded-full border ${verdictTone}`}>{fitEstimate.verdict}</span>
                       <p className="text-sm text-stone-800 leading-relaxed mt-3">{fitEstimate.recommendation}</p>
                       <div className="flex items-center gap-3 mt-3">
                         {typeof fitEstimate.confidence === 'number' && (
-                          <span className="text-[10px] tracking-widest uppercase text-stone-400">{fitEstimate.confidence}% confidence</span>
+                          <span className="text-xs tracking-label uppercase text-stone-400">{fitEstimate.confidence}% confidence</span>
                         )}
                         <button onClick={runFitEstimate} disabled={fitEstimateBusy}
-                          className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline disabled:opacity-50">
+                          className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline disabled:opacity-50">
                           {fitEstimateBusy ? 'Re-estimating…' : 'Re-estimate'}
                         </button>
                       </div>
@@ -4632,18 +4632,18 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
             {fit && (
               <div className="bg-stone-900 text-white rounded-2xl p-5 lg:p-6">
                 <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-                  <h2 className="text-[10px] font-bold tracking-[0.2em] uppercase text-stone-400">Fit vs your measurements</h2>
+                  <h2 className="text-xs font-bold tracking-eyebrow uppercase text-stone-400">Fit vs your measurements</h2>
                   <span className="text-xs text-stone-300">{fit.brand} · size {fit.size}</span>
                 </div>
                 <p className="text-lg font-display font-medium mb-4">{fit.summary}</p>
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   {[['Bust', fit.deltas.bust], ['Waist', fit.deltas.waist], ['Hips', fit.deltas.hips]].map(([label, d]) => (
                     <div key={label} className="bg-stone-800 rounded-lg p-3">
-                      <p className="text-[10px] tracking-widest uppercase text-stone-400">{label}</p>
+                      <p className="text-xs tracking-label uppercase text-stone-400">{label}</p>
                       <p className="mt-1 font-medium">
                         {d ? `${d.delta > 0 ? '+' : ''}${d.delta.toFixed(1)}cm` : '—'}
                       </p>
-                      {d && <p className={`text-[10px] uppercase tracking-wider mt-0.5 ${d.verdict === 'good' ? 'text-emerald-300' : d.verdict === 'tight' ? 'text-orange-300' : 'text-sky-300'}`}>{d.verdict}</p>}
+                      {d && <p className={`text-xs uppercase tracking-meta mt-0.5 ${d.verdict === 'good' ? 'text-emerald-300' : d.verdict === 'tight' ? 'text-orange-300' : 'text-sky-300'}`}>{d.verdict}</p>}
                     </div>
                   ))}
                 </div>
@@ -4656,7 +4656,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               const current = itemCondition(item);
               return (
                 <div>
-                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-3">Right now</h2>
+                  <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-3">Right now</h2>
                   <div className="flex flex-wrap gap-2">
                     {conditionsForCategory(item.category).map((c) => {
                       const active = current === c.key;
@@ -4685,7 +4685,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
             {item.description && (
               <div>
-                <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-3">Description</h2>
+                <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-3">Description</h2>
                 <p className="text-stone-700 leading-relaxed whitespace-pre-wrap text-sm">{item.description}</p>
               </div>
             )}
@@ -4702,7 +4702,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               {itemMaterials(item).length > 0 && <DetailField label="Materials" value={itemMaterials(item).join(' · ')} />}
               {itemColors(item).length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-2">Colours</p>
+                  <p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-2">Colours</p>
                   <div className="flex gap-2 flex-wrap">
                     {itemColors(item).map((c) => {
                       const swatch = COLOR_SWATCHES[c];
@@ -4721,7 +4721,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
 
             {item.sourceUrl && (
               <div className="pt-6 border-t border-stone-200">
-                <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-3">Source</h2>
+                <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-3">Source</h2>
                 <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm text-stone-900 underline decoration-stone-300 underline-offset-4 hover:decoration-stone-900 transition-colors break-all"
                 >
@@ -4746,7 +4746,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
               ];
               return (
                 <div className="pt-6 border-t border-stone-200">
-                  <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-3">Shop around</h2>
+                  <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-3">Shop around</h2>
                   <div className="flex flex-wrap gap-2">
                     {shops.map((s) => (
                       <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer"
@@ -4780,7 +4780,7 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                       <Wand2 size={22} strokeWidth={1.5} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold mb-1">Before you buy</p>
+                      <p className="text-xs tracking-eyebrow uppercase text-brass-300 font-bold mb-1">Before you buy</p>
                       <h3 className="font-display text-xl sm:text-2xl text-white leading-tight">Style this with your wardrobe</h3>
                       <p className="text-xs sm:text-sm text-stone-400 mt-2 leading-relaxed">
                         Atelier will build an outfit around this piece using what you already own — so you can see if it actually fits your style.
@@ -4924,7 +4924,7 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
 
   return (
     <div className="pt-6 border-t border-stone-200">
-      <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-4">Wear with</h2>
+      <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-4">Wear with</h2>
       <div className="relative group/wearwith">
         {/* Desktop scroll arrows — mobile scrolls by swipe, but on desktop the
             hidden scrollbar leaves no affordance, so reveal chevrons on hover
@@ -4950,11 +4950,11 @@ function WearWithSection({ item, allItems, outfits = [], onOpenItem }) {
                 <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={28} strokeWidth={1} /></div>
               )}
               {s.status === 'wishlist' && (
-                <span className="absolute top-1.5 left-1.5 text-[8px] tracking-widest uppercase px-1.5 py-0.5 bg-white/90 backdrop-blur text-stone-900 rounded-full font-medium">Wish</span>
+                <span className="absolute top-1.5 left-1.5 text-xs tracking-label uppercase px-1.5 py-0.5 bg-white/90 backdrop-blur text-stone-900 rounded-full font-medium">Wish</span>
               )}
             </div>
             <p className="text-xs font-medium text-stone-900 truncate px-1">{s.name}</p>
-            <p className="text-[10px] text-stone-500 uppercase tracking-wider truncate px-1 mt-0.5">{s.brand}</p>
+            <p className="text-xs text-stone-500 uppercase tracking-meta truncate px-1 mt-0.5">{s.brand}</p>
             {reasons?.[0] && (
               <p className="text-[12px] text-brass-600 px-1 mt-0.5 truncate" title={reasons.join(' · ')}>
                 {reasons[0]}
@@ -4981,7 +4981,7 @@ function AppearsInSection({ item, outfits = [], allItems = [], onOpenOutfit }) {
 
   return (
     <div className="pt-6 border-t border-stone-200">
-      <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-4">
+      <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-4">
         Appears in {matching.length} {matching.length === 1 ? 'look' : 'looks'}
       </h2>
       <div className="flex gap-3 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 pb-3">
@@ -5000,7 +5000,7 @@ function AppearsInSection({ item, outfits = [], allItems = [], onOpenOutfit }) {
                 ))}
               </div>
               <p className="text-xs font-medium text-stone-900 truncate px-1 group-hover:text-stone-600">{o.name}</p>
-              <p className="text-[10px] text-stone-500 uppercase tracking-wider px-1 mt-0.5">{pieces.length} pieces</p>
+              <p className="text-xs text-stone-500 uppercase tracking-meta px-1 mt-0.5">{pieces.length} pieces</p>
             </button>
           );
         })}
@@ -5012,7 +5012,7 @@ function AppearsInSection({ item, outfits = [], allItems = [], onOpenOutfit }) {
 function DetailField({ label, value }) {
   return (
     <div>
-      <p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">{label}</p>
+      <p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-1">{label}</p>
       <p className="text-sm text-stone-900 font-medium">{value}</p>
     </div>
   );
@@ -5259,7 +5259,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
       <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <div>
-            <p className="text-[10px] tracking-widest uppercase text-stone-500">Closet sweep</p>
+            <p className="text-xs tracking-label uppercase text-stone-500">Closet sweep</p>
             <h3 className="text-xl sm:text-2xl font-display text-stone-900 mt-1">Snap many · save all</h3>
             <p className="text-stone-500 text-xs mt-1">Take a photo of each piece. AI identifies in the background.</p>
           </div>
@@ -5277,7 +5277,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
           </label>
 
           {drafts.length > 0 && (
-            <div className="flex items-center justify-between text-[10px] tracking-widest uppercase text-stone-500">
+            <div className="flex items-center justify-between text-xs tracking-label uppercase text-stone-500">
               <span>{drafts.length} captured · {includedCount} ready · {pendingCount} analysing</span>
             </div>
           )}
@@ -5320,7 +5320,7 @@ function ClosetSweepModal({ shops = [], onClose, onBulkSave }) {
                       <div className="flex items-center gap-2">
                         <input value={d.result.brand || ''} onChange={(e) => updateField(d.id, 'brand', e.target.value)}
                           type="text" placeholder="Brand"
-                          className="flex-1 min-w-0 px-2 py-1 bg-stone-50 border border-stone-200 rounded text-[11px] tracking-wider uppercase focus:border-stone-900 outline-none" />
+                          className="flex-1 min-w-0 px-2 py-1 bg-stone-50 border border-stone-200 rounded text-xs tracking-meta uppercase focus:border-stone-900 outline-none" />
                         <select value={d.result.category || 'Tops'} onChange={(e) => updateField(d.id, 'category', e.target.value)}
                           className="px-2 py-1 bg-stone-50 border border-stone-200 rounded text-xs focus:border-stone-900 outline-none">
                           {['Tops','Bottoms','Dresses','Outerwear','Sportswear','Swimwear','Shoes','Bags','Accessories','Jewellery'].map((c) => <option key={c}>{c}</option>)}
@@ -5450,7 +5450,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
       <div className="bg-cream w-full sm:max-w-2xl sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[92vh]" onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-between items-start px-5 sm:px-6 py-4 sm:py-5 border-b border-stone-200/60 bg-white shrink-0 pt-safe">
           <div>
-            <p className="text-[10px] tracking-widest uppercase text-stone-500">Bulk import</p>
+            <p className="text-xs tracking-label uppercase text-stone-500">Bulk import</p>
             <h3 className="text-xl sm:text-2xl font-display text-stone-900 mt-1">Find & import many at once</h3>
           </div>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors">
@@ -5462,7 +5462,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
           {stage === 'input' && (
             <>
               <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5">
-                <p className="text-[10px] tracking-widest uppercase text-stone-500 font-bold mb-2">1 · Find it</p>
+                <p className="text-xs tracking-label uppercase text-stone-500 font-bold mb-2">1 · Find it</p>
                 <p className="text-stone-600 text-sm leading-relaxed mb-3">
                   Type what you're looking for, then tap a brand below to open their search. Copy the product URL when you find it, then paste below.
                 </p>
@@ -5498,7 +5498,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
               </div>
 
               <div className="bg-white border border-stone-200 rounded-2xl p-4 sm:p-5">
-                <p className="text-[10px] tracking-widest uppercase text-stone-500 font-bold mb-2">2 · Paste URLs</p>
+                <p className="text-xs tracking-label uppercase text-stone-500 font-bold mb-2">2 · Paste URLs</p>
                 <p className="text-stone-600 text-sm leading-relaxed mb-3">
                   One per line. Up to 25 at a time. Each one gets parsed for brand, name, price, image, and description automatically.
                 </p>
@@ -5511,7 +5511,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                 />
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-1">Default status</label>
+                    <label className="block text-xs tracking-label uppercase text-stone-500 font-semibold mb-1">Default status</label>
                     <select value={status} onChange={(e) => setStatus(e.target.value)}
                       className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:bg-white focus:border-stone-900 outline-none">
                       <option value="owned">Owned</option>
@@ -5519,7 +5519,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-semibold mb-1">Default size <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span></label>
+                    <label className="block text-xs tracking-label uppercase text-stone-500 font-semibold mb-1">Default size <span className="font-normal normal-case tracking-normal text-stone-400">(optional)</span></label>
                     <input value={size} onChange={(e) => setSize(e.target.value)} type="text"
                       placeholder="e.g. 10, M, 38"
                       className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:bg-white focus:border-stone-900 outline-none" />
@@ -5547,9 +5547,9 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
           {stage === 'review' && (
             <div>
               <div className="flex items-baseline justify-between mb-3">
-                <h4 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">Review · {includedCount} of {fetched.length} selected</h4>
+                <h4 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase">Review · {includedCount} of {fetched.length} selected</h4>
                 <button type="button" onClick={() => { setStage('input'); setFetched([]); }}
-                  className="text-[10px] tracking-wider uppercase text-stone-500 hover:text-stone-900">← Back</button>
+                  className="text-xs tracking-meta uppercase text-stone-500 hover:text-stone-900">← Back</button>
               </div>
               <div className="space-y-2">
                 {fetched.map((r, i) => (
@@ -5576,7 +5576,7 @@ function BulkImportModal({ shops = [], onClose, onBulkSave }) {
                             <div className="flex items-center gap-2">
                               <input value={r.data.brand || ''} onChange={(e) => updateField(i, 'brand', e.target.value)} type="text"
                                 placeholder="Brand"
-                                className="flex-1 min-w-0 px-2 py-1 bg-stone-50 border border-stone-200 rounded text-[11px] tracking-wider uppercase focus:border-stone-900 outline-none" />
+                                className="flex-1 min-w-0 px-2 py-1 bg-stone-50 border border-stone-200 rounded text-xs tracking-meta uppercase focus:border-stone-900 outline-none" />
                               <span className="text-stone-400 text-xs">£</span>
                               <input value={r.data.price || ''} onChange={(e) => updateField(i, 'price', e.target.value)} type="text"
                                 className="w-16 px-2 py-1 bg-stone-50 border border-stone-200 rounded text-xs focus:border-stone-900 outline-none" />
@@ -5790,13 +5790,13 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-stone-900">{busy ? 'Reading receipt…' : 'Upload or paste a screenshot'}</p>
-                    <p className="text-[10px] text-stone-400 mt-1 tracking-wider uppercase">Order confirmation pages, app screenshots, photos of paper receipts</p>
+                    <p className="text-xs text-stone-400 mt-1 tracking-meta uppercase">Order confirmation pages, app screenshots, photos of paper receipts</p>
                   </div>
                 </div>
                 <input type="file" accept="image/*" onChange={handleImageInput} className="hidden" disabled={busy} />
               </label>
 
-              <div className="flex items-center gap-3 text-[10px] tracking-widest uppercase text-stone-400">
+              <div className="flex items-center gap-3 text-xs tracking-label uppercase text-stone-400">
                 <span className="flex-1 h-px bg-stone-200" /> Or paste text <span className="flex-1 h-px bg-stone-200" />
               </div>
 
@@ -5820,22 +5820,22 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Brand</label>
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Brand</label>
                   <input value={brand} onChange={(e) => setBrand(e.target.value)} type="text"
                     className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Purchased on</label>
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Purchased on</label>
                   <input value={purchasedDate} onChange={(e) => setPurchasedDate(e.target.value)} type="date"
                     className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Purchased from</label>
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Purchased from</label>
                   <input value={purchasedFrom} onChange={(e) => setPurchasedFrom(e.target.value)} type="text"
                     className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none" />
                 </div>
                 <div>
-                  <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Status</label>
+                  <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Status</label>
                   <div className="flex gap-2">
                     {['owned', 'wishlist'].map((s) => (
                       <button key={s} onClick={() => setStatus(s)}
@@ -5849,14 +5849,14 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
 
               <div>
                 <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
-                  <h4 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">Detected items</h4>
+                  <h4 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase">Detected items</h4>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-stone-500">{includedCount} of {parsed.items.length} selected</span>
                     <button
                       type="button"
                       onClick={enrichAll}
                       disabled={enrichBusyIdx !== null || parsed.items.every((it, i) => !include[i] || !it.sourceUrl || it.imageUrl)}
-                      className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                      className="text-xs tracking-label uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed">
                       {enrichBusyIdx !== null ? `Fetching ${enrichBusyIdx + 1}/${parsed.items.length}…` : 'Fetch all images'}
                     </button>
                   </div>
@@ -5896,7 +5896,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                               type="button"
                               onClick={() => enrichOne(i)}
                               disabled={enrichBusyIdx !== null}
-                              className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 shrink-0">
+                              className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 disabled:opacity-40 shrink-0">
                               {enrichBusyIdx === i ? '…' : 'Fetch'}
                             </button>
                           ) : (
@@ -5904,7 +5904,7 @@ function ReceiptImportModal({ onClose, onBulkSave }) {
                               href={searchUrlFor(it)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors shrink-0">
+                              className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors shrink-0">
                               Find on web ↗
                             </a>
                           )}
@@ -6054,7 +6054,7 @@ function AddInspirationModal({ onClose, onSave }) {
                 Save looks you love from anywhere — Pinterest, Instagram, magazine sites, or your camera roll. Later you can have the Concierge analyse the look and find matches in your wardrobe.
               </p>
               <form onSubmit={handleFromUrl} className="space-y-3">
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase">Import via URL</label>
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase">Import via URL</label>
                 <div className="relative flex items-center">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <LinkIcon size={18} className="text-stone-400" strokeWidth={1.5} />
@@ -6077,11 +6077,11 @@ function AddInspirationModal({ onClose, onSave }) {
               <label className="block w-full p-8 bg-white border border-stone-200 rounded-2xl cursor-pointer hover:border-stone-500 transition-all text-center">
                 <Camera size={28} strokeWidth={1} className="mx-auto mb-3 text-stone-900" />
                 <p className="font-medium text-sm text-stone-900">Upload an image</p>
-                <p className="text-[10px] text-stone-400 mt-1 tracking-wide uppercase">From camera roll or screenshot</p>
+                <p className="text-xs text-stone-400 mt-1 tracking-meta uppercase">From camera roll or screenshot</p>
                 <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
               </label>
 
-              <p className="text-[10px] text-stone-400 tracking-wide text-center">
+              <p className="text-xs text-stone-400 tracking-meta text-center">
                 Tip: copy an image and press <span className="font-medium text-stone-600">Ctrl+V</span> anywhere in this dialog to paste it in.
               </p>
 
@@ -6096,7 +6096,7 @@ function AddInspirationModal({ onClose, onSave }) {
               </div>
               <Input label="Caption / Title (optional)" value={data.caption} onChange={(e) => setData({ ...data, caption: e.target.value })} type="text" placeholder="e.g. Neutral autumn layers" />
               <div>
-                <label className="block text-[10px] tracking-widest font-semibold text-stone-500 uppercase mb-2">Notes (optional)</label>
+                <label className="block text-xs tracking-label font-semibold text-stone-500 uppercase mb-2">Notes (optional)</label>
                 <textarea value={data.notes} onChange={(e) => setData({ ...data, notes: e.target.value })} rows={3}
                   placeholder="What you love about this look, where you saw it, etc."
                   className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:border-stone-900 outline-none transition-colors resize-y" />
@@ -6273,7 +6273,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <span className="brass-rule" aria-hidden="true" />
-                <p className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Inspiration</p>
+                <p className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Inspiration</p>
               </div>
               {/* Caption: if it's a plain URL (e.g. the product name wasn't
                   found so the URL ended up as caption), render a source chip
@@ -6289,7 +6289,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                         href={captionUrl.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 mt-3 text-[11px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                        className="inline-flex items-center gap-2 mt-3 text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
                       >
                         <span className="inline-block w-3 h-px bg-current" aria-hidden="true" />
                         Source · {captionUrl.hostname}
@@ -6311,7 +6311,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                       href={notesUrl.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 mt-3 text-[11px] tracking-widest uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                      className="inline-flex items-center gap-2 mt-3 text-xs tracking-label uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
                     >
                       <span className="inline-block w-3 h-px bg-current" aria-hidden="true" />
                       Source · {notesUrl.hostname}
@@ -6327,7 +6327,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
             {/* Palette strip */}
             {paletteColors.length > 0 && (
               <div>
-                <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-medium mb-2">Palette</p>
+                <p className="text-xs tracking-eyebrow uppercase text-stone-400 font-medium mb-2">Palette</p>
                 <div className="flex gap-2 flex-wrap">
                   {paletteColors.map((colour) => (
                     <div key={colour} className="flex items-center gap-1.5">
@@ -6335,7 +6335,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                         className="w-5 h-5 rounded-full border border-stone-200/60 shrink-0"
                         style={{ background: COLOR_SWATCHES[colour] || hexFromColorName(colour) }}
                       />
-                      <span className="text-[10px] text-stone-500 tracking-wider">{colour}</span>
+                      <span className="text-xs text-stone-500 tracking-meta">{colour}</span>
                     </div>
                   ))}
                 </div>
@@ -6370,7 +6370,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                       "{inspiration.analysis.summary}"
                     </p>
                     <button onClick={handleAnalyze} disabled={analyzing}
-                      className="mt-3 text-[10px] tracking-widest uppercase text-stone-400 hover:text-stone-700 transition-colors inline-flex items-center gap-1.5">
+                      className="mt-3 text-xs tracking-label uppercase text-stone-400 hover:text-stone-700 transition-colors inline-flex items-center gap-1.5">
                       <Sparkles size={11} strokeWidth={1.5} />
                       {analyzing ? 'Re-analysing…' : 'Re-analyse'}
                     </button>
@@ -6394,7 +6394,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                   <div className="bg-white border border-stone-200 rounded-2xl p-5 lg:p-6 smooth-shadow">
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles size={13} strokeWidth={1.5} className="text-brass-500" />
-                      <h2 className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase">The Style Verdict</h2>
+                      <h2 className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase">The Style Verdict</h2>
                     </div>
                     <p className="font-display text-2xl lg:text-3xl text-stone-900 leading-tight">{inspiration.analysis.completionVerdict}</p>
                     <dl className="mt-5">
@@ -6403,7 +6403,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                         ['Pieces missing', String(inspiration.analysis.piecesMissing ?? 0)],
                       ].map(([label, value]) => (
                         <div key={label} className="flex items-baseline justify-between gap-4 py-2.5 border-t border-stone-100 first:border-t-0">
-                          <dt className="text-[10px] tracking-widest uppercase text-stone-400 shrink-0">{label}</dt>
+                          <dt className="text-xs tracking-label uppercase text-stone-400 shrink-0">{label}</dt>
                           <dd className="text-sm text-stone-800 text-right min-w-0 break-words">{value}</dd>
                         </div>
                       ))}
@@ -6414,7 +6414,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                 {/* Garments as visual cards */}
                 {garments.length > 0 && (
                   <div>
-                    <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 font-medium mb-3">
+                    <p className="text-xs tracking-eyebrow uppercase text-stone-400 font-medium mb-3">
                       Garments identified · {garments.length}
                     </p>
                     <div className="space-y-3">
@@ -6446,7 +6446,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
 
                             {/* Details */}
                             <div className="flex-1 min-w-0">
-                              <p className="text-[10px] tracking-widest uppercase text-stone-400 mb-0.5">{g.category}</p>
+                              <p className="text-xs tracking-label uppercase text-stone-400 mb-0.5">{g.category}</p>
                               <p className="text-stone-900 text-sm font-medium leading-snug">
                                 {g.description}
                                 {g.brand_guess && (
@@ -6457,11 +6457,11 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                               {/* Match status chip */}
                               {isMatched ? (
                                 <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                                  <span className="text-[9px] tracking-widest uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                                  <span className="text-xs tracking-label uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
                                     ✓ In your wardrobe
                                   </span>
                                   {g.matchConfidence && (
-                                    <span className={`text-[9px] tracking-widest uppercase ${
+                                    <span className={`text-xs tracking-label uppercase ${
                                       g.matchConfidence === 'high' ? 'text-emerald-600' : 'text-stone-400'
                                     }`}>
                                       {g.matchConfidence} match
@@ -6475,22 +6475,22 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                       more faithfully, and make it actionable. */}
                                   {g.betterMatch && (
                                     <div className="w-full mt-2 pt-2.5 border-t border-stone-100">
-                                      <p className="text-[9px] tracking-widest uppercase text-stone-400">A closer match would be</p>
+                                      <p className="text-xs tracking-label uppercase text-stone-400">A closer match would be</p>
                                       <p className="text-[12px] text-stone-700 leading-snug mt-1">{g.betterMatch}</p>
                                       <div className="flex flex-wrap gap-1.5 mt-2.5">
                                         {onAddMissingToWishlist && (
                                           <button onClick={() => onAddMissingToWishlist(g.betterMatch, { category: g.category, upgradeFor: matchedItem.name })}
-                                            className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-300 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
+                                            className="inline-flex items-center gap-1 text-xs tracking-meta uppercase px-2.5 py-1.5 bg-white border border-stone-300 hover:border-stone-500 text-stone-800 rounded-full transition-colors">
                                             <Heart size={10} strokeWidth={1.5} /> Wishlist
                                           </button>
                                         )}
                                         <a href={googleShopUrl(g.betterMatch)} target="_blank" rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                          className="inline-flex items-center gap-1 text-xs tracking-meta uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
                                           <Store size={10} strokeWidth={1.5} /> Shop
                                         </a>
                                         {yourShopsUrl(g.betterMatch) && (
                                           <a href={yourShopsUrl(g.betterMatch)} target="_blank" rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                            className="inline-flex items-center gap-1 text-xs tracking-meta uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
                                             <Bookmark size={10} strokeWidth={1.5} /> Your shops
                                           </a>
                                         )}
@@ -6500,7 +6500,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                 </div>
                               ) : (
                                 <div className="mt-1.5">
-                                  <span className="text-[9px] tracking-widest uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                                  <span className="text-xs tracking-label uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
                                     ◯ Missing from wardrobe
                                   </span>
                                   {/* Buying actions inline */}
@@ -6508,19 +6508,19 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                                     <div className="flex flex-wrap gap-1.5 mt-2.5">
                                       {onAddMissingToWishlist && (
                                         <button onClick={() => onAddMissingToWishlist(missingText, { category: g.category })}
-                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-stone-900 hover:bg-stone-700 text-white rounded-full transition-colors">
+                                          className="inline-flex items-center gap-1 text-xs tracking-meta uppercase px-2.5 py-1.5 bg-stone-900 hover:bg-stone-700 text-white rounded-full transition-colors">
                                           <Heart size={10} strokeWidth={1.5} /> Wishlist
                                         </button>
                                       )}
                                       {shopUrl && (
                                         <a href={shopUrl} target="_blank" rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                          className="inline-flex items-center gap-1 text-xs tracking-meta uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
                                           <Store size={10} strokeWidth={1.5} /> Shop
                                         </a>
                                       )}
                                       {yourShops && (
                                         <a href={yourShops} target="_blank" rel="noopener noreferrer"
-                                          className="inline-flex items-center gap-1 text-[10px] tracking-wider uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
+                                          className="inline-flex items-center gap-1 text-xs tracking-meta uppercase px-2.5 py-1.5 bg-white border border-stone-200 hover:border-stone-400 text-stone-700 rounded-full transition-colors">
                                           <Bookmark size={10} strokeWidth={1.5} /> Your shops
                                         </a>
                                       )}
@@ -6539,7 +6539,7 @@ function InspirationDetailView({ inspiration, items = [], shops = [], onClose, o
                 {/* Re-analyse link (bottom) */}
                 {!analyzing && (
                   <button onClick={handleAnalyze} disabled={analyzing}
-                    className="text-[10px] tracking-widest uppercase text-stone-400 hover:text-stone-700 transition-colors inline-flex items-center gap-1.5">
+                    className="text-xs tracking-label uppercase text-stone-400 hover:text-stone-700 transition-colors inline-flex items-center gap-1.5">
                     <Sparkles size={11} strokeWidth={1.5} /> Re-analyse
                   </button>
                 )}
@@ -6602,7 +6602,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
         <div className="relative p-6 sm:p-8">
           <div className="flex items-start justify-between gap-3 mb-5">
             <div className="min-w-0">
-              <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
+              <p className="text-xs tracking-eyebrow uppercase text-brass-300 font-bold">
                 {busy ? 'Composing' : error ? 'Couldn’t style this' : 'Styled with'}
               </p>
               <h2 className="font-display text-2xl sm:text-3xl mt-1 truncate">
@@ -6655,7 +6655,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
                       <p className={`text-[13px] truncate ${isFocal ? 'text-brass-300 font-medium' : 'text-stone-300'}`}>
                         {isFocal ? '★ ' : ''}{p.name}
                       </p>
-                      <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
+                      <p className="text-xs text-stone-500 truncate uppercase tracking-meta">{p.brand}</p>
                     </div>
                   );
                 })}
@@ -6668,7 +6668,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
               )}
 
               <div className="mt-6 mb-2">
-                <label className="block text-[10px] tracking-[0.22em] uppercase text-stone-400 mb-1.5">Name this look</label>
+                <label className="block text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5">Name this look</label>
                 <input
                   type="text"
                   value={name}
@@ -6688,7 +6688,7 @@ function StyleAroundItemModal({ sourceItem, suggestion, busy, error, saving, all
                 </button>
               </div>
               <button onClick={onClose} disabled={saving}
-                className="block mx-auto mt-5 text-[11px] tracking-widest uppercase text-stone-400 hover:text-white transition-colors">
+                className="block mx-auto mt-5 text-xs tracking-label uppercase text-stone-400 hover:text-white transition-colors">
                 Discard
               </button>
             </>
@@ -6729,7 +6729,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
         <div className="relative p-6 sm:p-8">
           <div className="flex items-start justify-between gap-3 mb-5">
             <div className="min-w-0">
-              <p className="text-[10px] tracking-[0.25em] uppercase text-brass-300 font-bold">
+              <p className="text-xs tracking-eyebrow uppercase text-brass-300 font-bold">
                 {busy ? 'Composing' : error ? 'Couldn’t spin a variation' : 'Variation of'}
               </p>
               <h2 className="font-display text-2xl sm:text-3xl mt-1 truncate">
@@ -6778,7 +6778,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
                       <ItemTileImage item={p} alt={p.name || ""} />
                     </div>
                     <p className="text-[13px] text-stone-300 truncate">{p.name}</p>
-                    <p className="text-[10px] text-stone-500 truncate uppercase tracking-wider">{p.brand}</p>
+                    <p className="text-xs text-stone-500 truncate uppercase tracking-meta">{p.brand}</p>
                   </div>
                 ))}
               </div>
@@ -6792,10 +6792,10 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
               {/* Intent chips — re-roll the variation with a different angle
                   without closing the modal. */}
               <div className="mt-5 flex flex-wrap gap-2">
-                <span className="text-[10px] tracking-widest uppercase text-stone-500 self-center mr-1">Try:</span>
+                <span className="text-xs tracking-label uppercase text-stone-500 self-center mr-1">Try:</span>
                 {intentChips.map((c) => (
                   <button key={c.key} onClick={() => onRegenerate(c.key)} disabled={saving}
-                    className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-40">
+                    className="text-xs tracking-label uppercase px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-40">
                     {c.label}
                   </button>
                 ))}
@@ -6812,7 +6812,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
                 </button>
               </div>
               <button onClick={onClose} disabled={saving}
-                className="block mx-auto mt-5 text-[11px] tracking-widest uppercase text-stone-400 hover:text-white transition-colors">
+                className="block mx-auto mt-5 text-xs tracking-label uppercase text-stone-400 hover:text-white transition-colors">
                 Discard
               </button>
             </>
@@ -7180,7 +7180,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <span className="brass-rule" aria-hidden="true" />
-                  <span className="text-[10px] tracking-[0.3em] uppercase text-stone-500 font-medium">The Concierge</span>
+                  <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">The Concierge</span>
                 </div>
                 <h2 className="font-display text-2xl sm:text-3xl text-stone-900 tracking-tight leading-tight">
                   Your private stylist
@@ -7200,7 +7200,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
                   setMessages([{ role: 'assistant', text: greeting }]);
                   await clearCurrentThread();
                 }}
-                className="inline-flex items-center gap-1.5 text-[10px] tracking-widest uppercase text-stone-700 hover:text-stone-900 border border-stone-300 hover:border-stone-500 bg-white hover:bg-stone-50 rounded-full px-3 py-1.5 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs tracking-label uppercase text-stone-700 hover:text-stone-900 border border-stone-300 hover:border-stone-500 bg-white hover:bg-stone-50 rounded-full px-3 py-1.5 transition-colors"
                 title="Clear this conversation and start over"
               >
                 <Plus size={11} strokeWidth={2} className="rotate-45" /> New thread
@@ -7225,7 +7225,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
           return (
             <div className="border-b border-stone-200 bg-stone-50 px-4 py-2">
               <details>
-                <summary className="cursor-pointer text-[10px] uppercase tracking-widest text-stone-500 hover:underline">
+                <summary className="cursor-pointer text-xs uppercase tracking-label text-stone-500 hover:underline">
                   What the Concierge knows
                 </summary>
                 <ul className="mt-2 space-y-0.5 text-xs text-stone-600">
@@ -7239,7 +7239,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
                   <button
                     type="button"
                     onClick={() => { onClose?.(); onEditPreferences(); }}
-                    className="mt-2 text-[10px] tracking-widest uppercase text-stone-600 hover:text-stone-900 inline-flex items-center gap-1 underline-offset-4 hover:underline"
+                    className="mt-2 text-xs tracking-label uppercase text-stone-600 hover:text-stone-900 inline-flex items-center gap-1 underline-offset-4 hover:underline"
                   >
                     Update preferences →
                   </button>
@@ -7291,7 +7291,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
             <div className="bg-red-50 border border-red-200/70 rounded-2xl p-4">
               <p className="text-sm text-red-900">{error}</p>
               <button onClick={retry}
-                className="mt-2 text-[11px] tracking-widest uppercase text-red-700 hover:text-red-900">
+                className="mt-2 text-xs tracking-label uppercase text-red-700 hover:text-red-900">
                 Try again
               </button>
             </div>
@@ -7300,7 +7300,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
             // Starter prompts on first open only. Lets the user start
             // without typing — feels like a stylist offering options.
             <div className="space-y-2 pt-2">
-              <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400 mb-3">Or pick a starting point</p>
+              <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-3">Or pick a starting point</p>
               {STARTER_PROMPTS.map((p) => (
                 <button key={p} onClick={() => send(p)}
                   className="block w-full text-left px-4 py-3 rounded-2xl bg-white border border-stone-200/70 hover:border-brass-300 text-sm text-stone-700 hover:text-brass-700 transition-colors font-display italic">
@@ -7329,7 +7329,7 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
             />
             <button type="submit"
               disabled={busy || !input.trim()}
-              className="shrink-0 px-5 h-11 rounded-full bg-stone-900 text-white text-[11px] tracking-widest uppercase font-medium hover:bg-stone-700 disabled:opacity-30 disabled:hover:bg-stone-900 transition-colors">
+              className="shrink-0 px-5 h-11 rounded-full bg-stone-900 text-white text-xs tracking-label uppercase font-medium hover:bg-stone-700 disabled:opacity-30 disabled:hover:bg-stone-900 transition-colors">
               Ask
             </button>
           </div>
@@ -7390,7 +7390,7 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
         <button
           type="button"
           onClick={() => onSaveLook(itemIds)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-900 text-white text-[11px] tracking-wide hover:bg-stone-700 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-900 text-white text-xs tracking-meta hover:bg-stone-700 transition-colors"
         >
           <Bookmark size={12} strokeWidth={1.75} />
           Save as a look
@@ -7400,7 +7400,7 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
         <button
           type="button"
           onClick={() => setScheduleOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-xs tracking-meta hover:border-stone-900 hover:text-stone-900 transition-colors"
         >
           <Calendar size={12} strokeWidth={1.75} />
           Schedule for…
@@ -7443,7 +7443,7 @@ function ConciergeActionRow({ itemIds, items, onSaveLook, onSchedule, onAddToPac
         <button
           type="button"
           onClick={() => onAddToPacking(itemIds)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide hover:border-stone-900 hover:text-stone-900 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-xs tracking-meta hover:border-stone-900 hover:text-stone-900 transition-colors"
         >
           <Download size={12} strokeWidth={1.75} />
           Add to packing
@@ -7514,7 +7514,7 @@ function ConciergeComposingIndicator({ onCancel = null }) {
         <button
           type="button"
           onClick={onCancel}
-          className="ml-2 text-[11px] tracking-wide text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+          className="ml-2 text-xs tracking-meta text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
         >
           Cancel
         </button>
@@ -7533,7 +7533,7 @@ function ConciergeMessage({ role, text, streaming = false, items = [], onOpenIte
       <div className="flex flex-col items-start max-w-[90%]">
         <div className="flex items-center gap-2 mb-1.5 px-1">
           <span className="inline-block w-3 h-px bg-brass-400" aria-hidden="true" />
-          <span className="text-[9px] tracking-[0.28em] uppercase text-stone-500">Stylist</span>
+          <span className="text-xs tracking-eyebrow uppercase text-stone-500">Stylist</span>
         </div>
         <div className="bg-white rounded-2xl rounded-tl-md ring-1 ring-stone-200/70 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_4px_12px_-6px_rgba(28,25,23,0.12)] px-5 py-4">
           {streaming && !text ? (
@@ -7627,7 +7627,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
       <div className="bg-cream w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-5 border-b border-stone-200/60 bg-white flex justify-between items-start">
           <div className="min-w-0">
-            <p className="text-[10px] tracking-widest uppercase text-stone-500">Share {label}</p>
+            <p className="text-xs tracking-label uppercase text-stone-500">Share {label}</p>
             <h3 className="text-xl font-display text-stone-900 truncate mt-1">{title}</h3>
           </div>
           <button onClick={onClose} className="p-2 text-stone-400 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 rounded-full transition-colors shrink-0 ml-3" aria-label="Close">
@@ -7657,7 +7657,7 @@ function ShareLinkModal({ url, title, kind, sharedByName = '', status = '', onCl
           </div>
 
           <div>
-            <label className="block text-[10px] tracking-widest uppercase text-stone-500 mb-2">Or copy the link</label>
+            <label className="block text-xs tracking-label uppercase text-stone-500 mb-2">Or copy the link</label>
             <div className="flex gap-2">
               <input
                 ref={inputRef}
@@ -7963,7 +7963,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
           <div className="lg:col-span-7">
             {/* View toggle — small pill, top-right of the look region */}
             <div className="flex justify-end mb-3">
-              <div className="flex bg-stone-200/50 p-1 rounded-full text-[10px] tracking-wider uppercase">
+              <div className="flex bg-stone-200/50 p-1 rounded-full text-xs tracking-meta uppercase">
                 <button onClick={() => setView('flatlay')}
                   className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'flatlay' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
                   Flat-lay
@@ -7996,7 +7996,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         )}
                       </div>
                       <div className="px-1">
-                        <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{piece.brand}</p>
+                        <p className="text-xs font-semibold text-stone-500 tracking-eyebrow uppercase truncate">{piece.brand}</p>
                         <p className={`font-display text-base text-stone-800 leading-snug truncate ${openable ? 'group-hover:text-stone-700 transition-colors' : ''}`}>{piece.name}</p>
                         <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
                       </div>
@@ -8013,7 +8013,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="brass-rule" aria-hidden="true"></span>
-                <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Saved Look</span>
+                <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Saved Look</span>
               </div>
               {editingName ? (
                 <input
@@ -8054,7 +8054,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   ].filter(Boolean).join(' · ')}
                 </p>
               )}
-              <p className="text-[10px] text-stone-500 mt-2 tracking-[0.18em] uppercase">
+              <p className="text-xs text-stone-500 mt-2 tracking-eyebrow uppercase">
                 {`${pieces.length} pieces · £${total.toLocaleString()}`}
               </p>
             </div>
@@ -8064,17 +8064,17 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               <div className="bg-white border border-stone-200/60 rounded-2xl p-5 sm:p-6">
                 <div className="flex items-center gap-2.5 mb-4">
                   <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
-                  <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Stylist's Note</span>
+                  <span className="text-xs tracking-eyebrow uppercase font-medium text-stone-700">Stylist's Note</span>
                 </div>
                 {outfit.reasoning && (
                   <div className="mb-4">
-                    <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">On the composition</p>
+                    <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5">On the composition</p>
                     <p className="text-sm italic text-stone-700 leading-relaxed">"{renderTextWithChips(outfit.reasoning, { items, onOpenItem })}"</p>
                   </div>
                 )}
                 {onSaveOutfit && (
                   <div className={outfit.reasoning ? 'pt-4 border-t border-stone-100' : ''}>
-                    <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">On your style</p>
+                    <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5">On your style</p>
                     {outfit.styleFit ? (
                       <p className="text-sm italic text-stone-700 leading-relaxed">{renderTextWithChips(outfit.styleFit, { items, onOpenItem })}</p>
                     ) : (
@@ -8098,7 +8098,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                           }
                         }}
                         disabled={styleFitBusy}
-                        className="inline-flex items-center gap-1.5 text-[11px] tracking-wide uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 text-xs tracking-meta uppercase text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors disabled:opacity-60"
                       >
                         <Sparkles size={11} strokeWidth={1.75} className="text-amber-500" />
                         {styleFitBusy ? 'Composing…' : '+ Add personal note'}
@@ -8115,12 +8115,12 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               <div>
                 <div className="flex items-center gap-2.5 mb-3">
                   <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
-                  <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Palette</span>
+                  <span className="text-xs tracking-eyebrow uppercase font-medium text-stone-700">Palette</span>
                   {paletteFilter && (
                     <button
                       type="button"
                       onClick={() => setPaletteFilter(null)}
-                      className="text-[10px] tracking-wide text-stone-400 hover:text-stone-700 underline-offset-4 hover:underline transition-colors ml-1"
+                      className="text-xs tracking-meta text-stone-400 hover:text-stone-700 underline-offset-4 hover:underline transition-colors ml-1"
                     >
                       Clear filter
                     </button>
@@ -8143,7 +8143,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         style={{ backgroundColor: hex }}
                         aria-hidden="true"
                       />
-                      <span className="text-[11px] tracking-wide uppercase">
+                      <span className="text-xs tracking-meta uppercase">
                         {name}
                         {count > 1 && <span className={paletteFilter === name ? 'text-white/60 ml-1.5' : 'text-stone-400 ml-1.5'}>× {count}</span>}
                       </span>
@@ -8159,13 +8159,13 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2.5">
                     <span className="inline-block w-4 h-px bg-brass-400" aria-hidden="true" />
-                    <span className="text-[11px] tracking-[0.28em] uppercase font-medium text-stone-700">Tags</span>
+                    <span className="text-xs tracking-eyebrow uppercase font-medium text-stone-700">Tags</span>
                   </div>
                   {typeof onSaveOutfit === 'function' && (
                     <button
                       type="button"
                       onClick={() => { setEditingTags((v) => !v); setNewTag(''); }}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] tracking-wide uppercase transition-colors ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs tracking-meta uppercase transition-colors ${
                         editingTags
                           ? 'bg-stone-900 text-white hover:bg-stone-700'
                           : 'bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900'
@@ -8191,7 +8191,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     {(outfit.tags || []).map((tag) => (
                       <span
                         key={tag}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[11px] tracking-wide uppercase"
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-xs tracking-meta uppercase"
                       >
                         {tag}
                         {editingTags && (
@@ -8241,7 +8241,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         <button
                           type="submit"
                           disabled={!newTag.trim()}
-                          className="px-4 py-2 rounded-full bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:hover:bg-stone-900"
+                          className="px-4 py-2 rounded-full bg-stone-900 text-white text-xs tracking-meta uppercase hover:bg-stone-700 transition-colors disabled:opacity-50 disabled:hover:bg-stone-900"
                         >
                           Add
                         </button>
@@ -8249,13 +8249,13 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     )}
 
                     <div className="space-y-3">
-                      <p className="text-[10px] tracking-widest uppercase text-stone-400">Suggested</p>
+                      <p className="text-xs tracking-label uppercase text-stone-400">Suggested</p>
                       {PRESET_TAG_CATEGORIES.map(({ label, tags }) => {
                         const available = tags.filter((t) => !(outfit.tags || []).includes(t));
                         if (available.length === 0) return null;
                         return (
                           <div key={label}>
-                            <p className="text-[9px] tracking-[0.24em] uppercase text-stone-400 mb-1.5">{label}</p>
+                            <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5">{label}</p>
                             <div className="flex flex-wrap gap-1.5">
                               {available.map((tag) => (
                                 <button
@@ -8267,7 +8267,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                                     if (existing.includes(tag) || existing.length >= 8) return;
                                     onSaveOutfit?.({ ...outfit, tags: [...existing, tag] });
                                   }}
-                                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-stone-300 text-stone-600 text-[11px] tracking-wide uppercase hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-stone-300 text-stone-600 text-xs tracking-meta uppercase hover:border-stone-900 hover:text-stone-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                   <span aria-hidden="true" className="text-stone-400">+</span>
                                   {tag}
@@ -8280,7 +8280,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     </div>
 
                     {(outfit.tags || []).length >= 8 && (
-                      <p className="text-[10px] tracking-wide uppercase text-stone-400">Maximum of 8 tags reached.</p>
+                      <p className="text-xs tracking-meta uppercase text-stone-400">Maximum of 8 tags reached.</p>
                     )}
                   </div>
                 )}
@@ -8295,12 +8295,12 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                 <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <div className="flex items-center gap-3">
                     <span className="brass-rule" aria-hidden="true"></span>
-                    <span className="text-[10px] tracking-[0.28em] uppercase font-medium text-stone-700">Collections</span>
+                    <span className="text-xs tracking-eyebrow uppercase font-medium text-stone-700">Collections</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => { setAddToCollectionOpen((v) => !v); setNewCollectionNameDetail(''); }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-[11px] tracking-wide uppercase hover:border-stone-900 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-stone-300 text-stone-700 text-xs tracking-meta uppercase hover:border-stone-900 transition-colors"
                   >
                     <Plus size={12} strokeWidth={2} /> {addToCollectionOpen ? 'Done' : 'Add to'}
                   </button>
@@ -8313,7 +8313,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   return (
                     <div className="flex flex-wrap gap-1.5">
                       {memberCollections.map((c) => (
-                        <span key={c.id} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-[11px] tracking-wide uppercase">
+                        <span key={c.id} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-stone-700 text-xs tracking-meta uppercase">
                           {c.name}
                           {addToCollectionOpen && (
                             <button
@@ -8338,7 +8338,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         className="w-full text-left px-3 py-2 rounded-lg bg-white border border-stone-200 hover:border-stone-900 text-sm text-stone-700 transition-colors flex items-center justify-between"
                       >
                         <span>{c.name}</span>
-                        <span className="text-[10px] tracking-widest uppercase text-stone-400">{c.outfitIds.length} look{c.outfitIds.length === 1 ? '' : 's'}</span>
+                        <span className="text-xs tracking-label uppercase text-stone-400">{c.outfitIds.length} look{c.outfitIds.length === 1 ? '' : 's'}</span>
                       </button>
                     ))}
                     {typeof onCreateCollection === 'function' && (
@@ -8364,7 +8364,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         <button
                           type="submit"
                           disabled={!newCollectionNameDetail.trim()}
-                          className="px-4 py-2 rounded-lg bg-stone-900 text-white text-[11px] tracking-wide uppercase hover:bg-stone-700 disabled:opacity-50"
+                          className="px-4 py-2 rounded-lg bg-stone-900 text-white text-xs tracking-meta uppercase hover:bg-stone-700 disabled:opacity-50"
                         >
                           Create
                         </button>
@@ -8383,10 +8383,10 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 mb-1.5">
                       <span className="brass-rule" aria-hidden="true"></span>
-                      <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">Wear this look</span>
+                      <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">Wear this look</span>
                     </div>
                     {wearCount > 0 && (
-                      <p className="text-[10px] tracking-wide uppercase text-stone-400">
+                      <p className="text-xs tracking-meta uppercase text-stone-400">
                         Worn {wearCount}× · last {lastWornLabel}
                       </p>
                     )}
@@ -8394,11 +8394,11 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <div className="flex flex-col items-end gap-1.5">
                     {/* Date chip + picker */}
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] tracking-widest uppercase text-stone-400">For</span>
+                      <span className="text-xs tracking-label uppercase text-stone-400">For</span>
                       <button
                         type="button"
                         onClick={() => setLogDateOpen((v) => !v)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs tracking-meta uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 hover:text-stone-900 transition-colors"
                       >
                         <Calendar size={10} strokeWidth={1.75} />
                         {logDate === todayISO() ? 'Today' : new Date(logDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -8409,7 +8409,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                         <button
                           type="button"
                           onClick={() => { setLogDate(todayISO()); setLogDateOpen(false); }}
-                          className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                          className="px-2.5 py-1 rounded-full text-xs tracking-meta uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
                         >Today</button>
                         <button
                           type="button"
@@ -8419,14 +8419,14 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                             setLogDate(d.toISOString().slice(0, 10));
                             setLogDateOpen(false);
                           }}
-                          className="px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
+                          className="px-2.5 py-1 rounded-full text-xs tracking-meta uppercase bg-white border border-stone-300 text-stone-700 hover:border-stone-900 transition-colors"
                         >Yesterday</button>
                         <input
                           type="date"
                           value={logDate}
                           max={todayISO()}
                           onChange={(e) => { if (e.target.value) { setLogDate(e.target.value); setLogDateOpen(false); } }}
-                          className="px-2 py-1 rounded-full text-[10px] tracking-wide bg-white border border-stone-300 text-stone-700 outline-none focus:border-stone-900"
+                          className="px-2 py-1 rounded-full text-xs tracking-meta bg-white border border-stone-300 text-stone-700 outline-none focus:border-stone-900"
                           style={{ fontSize: '16px' }}
                         />
                       </div>
@@ -8450,7 +8450,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                           toast.show(err?.message || 'Could not log wear', { kind: 'error' });
                         } finally { setLogBusy(false); }
                       }}
-                      className="text-[10px] tracking-widest uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 disabled:opacity-40 flex items-center gap-2 font-medium"
+                      className="text-xs tracking-label uppercase px-5 py-2.5 rounded-full bg-stone-900 text-white hover:bg-stone-700 transition-colors duration-200 disabled:opacity-40 flex items-center gap-2 font-medium"
                     >
                       <Calendar size={13} strokeWidth={1.5} />
                       {logBusy ? 'Logging…' : (logDate === todayISO() ? 'I wore this today' : 'Log this wear')}
@@ -8463,7 +8463,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <button
                     type="button"
                     onClick={() => setWearLogExpanded(true)}
-                    className="text-[11px] tracking-wide text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
+                    className="text-xs tracking-meta text-stone-500 hover:text-stone-900 underline-offset-4 hover:underline transition-colors"
                   >
                     + Add a note or occasion
                   </button>
@@ -8474,7 +8474,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <div className="space-y-3 animate-in fade-in duration-200">
                     {/* Occasion */}
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+                      <label className="block text-xs tracking-label uppercase text-stone-500 font-medium">
                         Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
                       </label>
                       <input
@@ -8491,7 +8491,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                       {QUICK_VERDICT_CHIPS.map((c) => (
                         <button key={c} type="button"
                           onClick={() => setLogVerdict((cur) => cur.trim() ? `${cur.trim()}, ${c.toLowerCase()}` : c)}
-                          className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
+                          className="text-xs tracking-meta uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors duration-200">
                           {c}
                         </button>
                       ))}
@@ -8508,7 +8508,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     <button
                       type="button"
                       onClick={() => setWearLogExpanded(false)}
-                      className="text-[11px] tracking-wide text-stone-400 hover:text-stone-700 underline-offset-4 hover:underline transition-colors"
+                      className="text-xs tracking-meta text-stone-400 hover:text-stone-700 underline-offset-4 hover:underline transition-colors"
                     >
                       − Hide options
                     </button>
@@ -8524,11 +8524,11 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                       Logged{justLoggedDate === todayISO() ? ' for today' : ` for ${new Date(justLoggedDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`}. Add a photo of this wear?
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
-                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-stone-900 px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-white transition-colors hover:bg-stone-700">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-stone-900 px-3 py-1.5 text-xs font-medium uppercase tracking-label text-white transition-colors hover:bg-stone-700">
                         <Camera size={13} strokeWidth={1.5} /> {photoBusy ? 'Adding…' : 'Add photo'}
                         <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={(e) => handleAddWornPhoto(e, justLoggedDate)} />
                       </label>
-                      <button type="button" onClick={() => setJustLoggedDate(null)} className="text-[10px] uppercase tracking-widest text-stone-400 transition-colors hover:text-stone-700">Not now</button>
+                      <button type="button" onClick={() => setJustLoggedDate(null)} className="text-xs uppercase tracking-label text-stone-400 transition-colors hover:text-stone-700">Not now</button>
                     </span>
                   </div>
                 )}
@@ -8540,7 +8540,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
               <div className="flex items-baseline justify-between mb-4 gap-3">
                 <div className="flex items-center gap-3">
                   <span className="brass-rule" aria-hidden="true"></span>
-                  <span className="text-[10px] tracking-[0.28em] uppercase text-stone-500 font-medium">
+                  <span className="text-xs tracking-eyebrow uppercase text-stone-500 font-medium">
                     {totalWears === 0 ? 'Wore this · not yet' : `Wore this · ${totalWears}`}
                     {photosCount > 0 && (
                       <span className="text-stone-400 normal-case tracking-wide ml-2">({photosCount} with photo)</span>
@@ -8559,7 +8559,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     .map((w) => (
                       <label
                         key={w.date}
-                        className="inline-flex cursor-pointer items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 text-[10px] tracking-wide uppercase hover:border-stone-500 hover:text-stone-900 transition-colors"
+                        className="inline-flex cursor-pointer items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 text-xs tracking-meta uppercase hover:border-stone-500 hover:text-stone-900 transition-colors"
                         title={`Add a photo for ${w.occasion ? `${w.date} · ${w.occasion}` : w.date}`}
                       >
                         <Calendar size={10} strokeWidth={1.75} />
@@ -8581,7 +8581,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                   <label className="group flex-none w-24 sm:w-28 cursor-pointer">
                     <div className="aspect-[3/4] rounded-xl border-2 border-dashed border-stone-300 bg-stone-50 flex flex-col items-center justify-center gap-1.5 text-stone-400 group-hover:border-stone-500 group-hover:text-stone-700 transition-colors">
                       <Camera size={22} strokeWidth={1.5} />
-                      <span className="text-[10px] tracking-widest uppercase">{photoBusy ? 'Adding…' : 'Add photo'}</span>
+                      <span className="text-xs tracking-label uppercase">{photoBusy ? 'Adding…' : 'Add photo'}</span>
                     </div>
                     <input type="file" accept="image/*" className="hidden" disabled={photoBusy} onChange={(e) => handleAddWornPhoto(e, logDate)} />
                   </label>
@@ -8591,7 +8591,7 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
                     <div className="aspect-[3/4] rounded-xl overflow-hidden bg-stone-100 smooth-shadow">
                       <img src={p.image} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     </div>
-                    <p className="text-[10px] text-stone-500 mt-1.5 tracking-wider">
+                    <p className="text-xs text-stone-500 mt-1.5 tracking-meta">
                       {new Date(p.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     </p>
                     <button onClick={() => removeWornPhoto(i)} className="absolute top-1.5 right-1.5 p-1.5 bg-white/90 backdrop-blur text-stone-400 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
@@ -8660,7 +8660,7 @@ function WearVerdictInput({ initial, onSave, initialOccasion, onSaveOccasion }) 
     <div className="mt-4 pt-4 border-t border-stone-100 space-y-3">
       {onSaveOccasion && (
         <div className="space-y-1.5">
-          <label className="block text-[10px] tracking-widest uppercase text-stone-500 font-medium">
+          <label className="block text-xs tracking-label uppercase text-stone-500 font-medium">
             Occasion <span className="text-stone-400 normal-case tracking-normal">(optional — what was the day?)</span>
           </label>
           <input
@@ -8676,13 +8676,13 @@ function WearVerdictInput({ initial, onSave, initialOccasion, onSaveOccasion }) 
       )}
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">
-          <p className="text-[10px] tracking-widest uppercase text-stone-500">Today's verdict <span className="text-stone-400 normal-case tracking-normal">(optional)</span></p>
-          {saved && text && <span className="text-[10px] text-emerald-700 tracking-wider uppercase">Saved</span>}
+          <p className="text-xs tracking-label uppercase text-stone-500">Today's verdict <span className="text-stone-400 normal-case tracking-normal">(optional)</span></p>
+          {saved && text && <span className="text-xs text-emerald-700 tracking-meta uppercase">Saved</span>}
         </div>
         <div className="flex flex-wrap gap-1.5 mb-2">
           {QUICK_VERDICT_CHIPS.map((c) => (
             <button key={c} type="button" onClick={() => addChip(c)}
-              className="text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-all">
+              className="text-xs tracking-meta uppercase px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-all">
               {c}
             </button>
           ))}
@@ -8714,7 +8714,7 @@ function WearVerdictInput({ initial, onSave, initialOccasion, onSaveOccasion }) 
 function PublicShareCTA() {
   return (
     <div className="mt-16 sm:mt-20 rounded-[2rem] bg-stone-900 text-white px-6 py-10 sm:px-12 sm:py-14 text-center">
-      <p className="text-[10px] tracking-[0.28em] uppercase text-[#D4B378] mb-3">Styled by Atelier</p>
+      <p className="text-xs tracking-eyebrow uppercase text-[#D4B378] mb-3">Styled by Atelier</p>
       <h2 className="font-display text-2xl sm:text-3xl leading-tight">Build looks like this from your own wardrobe</h2>
       <p className="text-stone-300 text-sm sm:text-base max-w-md mx-auto leading-relaxed mt-3 mb-7">
         Atelier styles your real pieces into outfits, reads your colour story, and writes your private Style Manifesto — see your Style DNA in minutes.
@@ -8723,7 +8723,7 @@ function PublicShareCTA() {
         className="inline-flex items-center justify-center px-8 py-3.5 rounded-full bg-[#D4B378] text-stone-900 text-xs tracking-[0.18em] uppercase font-medium hover:bg-[#c9a85f] transition-colors">
         Start your free trial
       </a>
-      <p className="text-[10px] tracking-widest uppercase text-stone-500 mt-4">14-day free trial</p>
+      <p className="text-xs tracking-label uppercase text-stone-500 mt-4">14-day free trial</p>
     </div>
   );
 }
@@ -8815,11 +8815,11 @@ function PublicShareView({ shareId }) {
               <AtelierMark size={36} />
               <span className="font-display text-2xl">Atelier<span className="text-[#D4B378]">.</span></span>
             </div>
-            <a href="/" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900">Visit</a>
+            <a href="/" className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900">Visit</a>
           </div>
         </header>
         <main className="max-w-4xl mx-auto px-6 py-10 sm:py-16">
-          <p className="text-[10px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-3">
+          <p className="text-xs font-semibold text-stone-500 tracking-eyebrow uppercase mb-3">
             {data.status === 'wishlist' ? 'Wishlist · ' : ''}Shared by {sharedByName || 'a friend'}{sharedDate ? ` · ${sharedDate}` : ''}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 mt-6">
@@ -8847,7 +8847,7 @@ function PublicShareView({ shareId }) {
               <div className="flex items-center gap-3 mt-5 flex-wrap">
                 {data.price > 0 && <p className="text-2xl font-display font-medium">£{Number(data.price).toLocaleString()}</p>}
                 {data.status === 'wishlist' && (
-                  <span className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full font-medium bg-stone-100 text-stone-900 inline-flex items-center gap-1.5">
+                  <span className="text-xs uppercase tracking-meta px-3 py-1.5 rounded-full font-medium bg-stone-100 text-stone-900 inline-flex items-center gap-1.5">
                     <Heart size={12} className="fill-stone-900" strokeWidth={0} /> Wishlist
                   </span>
                 )}
@@ -8858,15 +8858,15 @@ function PublicShareView({ shareId }) {
               )}
 
               <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
-                {data.category && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Category</p><p>{data.category}{data.subCategory ? ` · ${data.subCategory}` : ''}</p></div>}
-                {Array.isArray(data.colors) && data.colors.length > 0 && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Colours</p><p>{data.colors.join(' · ')}</p></div>}
-                {Array.isArray(data.materials) && data.materials.length > 0 && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Materials</p><p>{data.materials.join(' · ')}</p></div>}
-                {Array.isArray(data.seasons) && data.seasons.length > 0 && <div><p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-1">Seasons</p><p>{data.seasons.join(' · ')}</p></div>}
+                {data.category && <div><p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-1">Category</p><p>{data.category}{data.subCategory ? ` · ${data.subCategory}` : ''}</p></div>}
+                {Array.isArray(data.colors) && data.colors.length > 0 && <div><p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-1">Colours</p><p>{data.colors.join(' · ')}</p></div>}
+                {Array.isArray(data.materials) && data.materials.length > 0 && <div><p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-1">Materials</p><p>{data.materials.join(' · ')}</p></div>}
+                {Array.isArray(data.seasons) && data.seasons.length > 0 && <div><p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-1">Seasons</p><p>{data.seasons.join(' · ')}</p></div>}
               </div>
 
               {data.description && (
                 <div className="mt-8">
-                  <p className="text-[10px] font-bold text-stone-500 tracking-[0.2em] uppercase mb-2">About</p>
+                  <p className="text-xs font-bold text-stone-500 tracking-eyebrow uppercase mb-2">About</p>
                   <p className="text-stone-700 leading-relaxed text-sm whitespace-pre-wrap">{data.description}</p>
                 </div>
               )}
@@ -8902,12 +8902,12 @@ function PublicShareView({ shareId }) {
             <AtelierMark size={36} />
             <span className="font-display text-2xl">Atelier<span className="text-[#D4B378]">.</span></span>
           </div>
-          <a href="/" className="text-[10px] tracking-widest uppercase text-stone-500 hover:text-stone-900">Visit</a>
+          <a href="/" className="text-xs tracking-label uppercase text-stone-500 hover:text-stone-900">Visit</a>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12 sm:py-16">
-        <p className="text-[10px] font-semibold text-stone-500 tracking-[0.25em] uppercase mb-3">
+        <p className="text-xs font-semibold text-stone-500 tracking-eyebrow uppercase mb-3">
           {isLookbook ? 'Lookbook · ' : ''}Shared by {sharedByName || 'a friend'}{sharedDate ? ` · ${sharedDate}` : ''}
         </p>
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-display text-stone-900">{name || (isLookbook ? 'A lookbook' : 'A look')}</h1>
@@ -8920,7 +8920,7 @@ function PublicShareView({ shareId }) {
             <nav className="flex flex-wrap gap-2 mb-12 sticky top-2 z-10 bg-cream/80 backdrop-blur-md py-2 -mx-2 px-2 rounded-xl">
               {looks.map((l, i) => (
                 <a key={l.id || i} href={`#look-${i}`}
-                  className="text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors">
+                  className="text-xs tracking-label uppercase px-3 py-1.5 rounded-full bg-white border border-stone-200 text-stone-600 hover:border-stone-500 hover:text-stone-900 transition-colors">
                   {i + 1}. {l.name}
                 </a>
               ))}
@@ -8930,7 +8930,7 @@ function PublicShareView({ shareId }) {
                 <section key={l.id || i} id={`look-${i}`} className="scroll-mt-24">
                   <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
                     <h2 className="font-display text-2xl sm:text-3xl text-stone-900">{l.name}</h2>
-                    <span className="text-[10px] tracking-widest uppercase text-stone-400">{(l.pieces || []).length} pieces</span>
+                    <span className="text-xs tracking-label uppercase text-stone-400">{(l.pieces || []).length} pieces</span>
                   </div>
                   {l.reasoning && <p className="text-stone-600 italic max-w-2xl mb-6 leading-relaxed">"{renderTextWithChips(l.reasoning, { items: l.pieces || [] })}"</p>}
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -8944,7 +8944,7 @@ function PublicShareView({ shareId }) {
                           )}
                         </div>
                         <div className="px-1">
-                          <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{p.brand}</p>
+                          <p className="text-xs font-semibold text-stone-500 tracking-eyebrow uppercase truncate">{p.brand}</p>
                           <p className="font-display text-base text-stone-800 leading-snug mt-1">{p.name}</p>
                           <p className="text-xs text-stone-500 mt-1">{p.category}{p.subCategory ? ` · ${p.subCategory}` : ''}</p>
                         </div>
@@ -8967,7 +8967,7 @@ function PublicShareView({ shareId }) {
                   )}
                 </div>
                 <div className="px-1">
-                  <p className="text-[10px] font-semibold text-stone-500 tracking-[0.2em] uppercase truncate">{p.brand}</p>
+                  <p className="text-xs font-semibold text-stone-500 tracking-eyebrow uppercase truncate">{p.brand}</p>
                   <p className="font-display text-base text-stone-800 leading-snug mt-1">{p.name}</p>
                   <p className="text-xs text-stone-500 mt-1">{p.category}{p.subCategory ? ` · ${p.subCategory}` : ''}</p>
                 </div>
@@ -9029,10 +9029,10 @@ function NotificationManager({ items, outfits, schedules }) {
             Get a heads-up about tomorrow's planned outfit and care reminders the next time you open Atelier.
           </p>
           <div className="flex gap-2 mt-2">
-            <button onClick={requestPermission} className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white">
+            <button onClick={requestPermission} className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white">
               Enable
             </button>
-            <button onClick={dismiss} className="text-[10px] tracking-wider uppercase px-3 py-1.5 rounded-full text-stone-500 hover:text-stone-900">
+            <button onClick={dismiss} className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full text-stone-500 hover:text-stone-900">
               Not now
             </button>
           </div>
@@ -9144,8 +9144,8 @@ function OnboardingTour({ onJumpTo }) {
       <div className="bg-cream w-full sm:max-w-md sm:rounded-[2rem] rounded-t-[2rem] overflow-hidden shadow-2xl flex flex-col min-h-[320px]">
         <div className="bg-stone-900 text-white px-6 py-5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[10px] tracking-[0.25em] uppercase text-stone-400">Welcome to Atelier</p>
-            <span className="text-[10px] tracking-wider uppercase text-stone-400">{step + 1} / {ONBOARD_STEPS.length}</span>
+            <p className="text-xs tracking-eyebrow uppercase text-stone-400">Welcome to Atelier</p>
+            <span className="text-xs tracking-meta uppercase text-stone-400">{step + 1} / {ONBOARD_STEPS.length}</span>
           </div>
           <h3 className="font-display text-2xl">{s.title}</h3>
         </div>
@@ -9248,11 +9248,11 @@ function PwaInstallNudge({ hasContent }) {
           )}
           <div className="flex gap-2 mt-3">
             {deferredPrompt && (
-              <button onClick={installNow} className="text-[11px] tracking-wider uppercase px-4 py-2 rounded-full bg-white text-stone-900 font-medium">
+              <button onClick={installNow} className="text-xs tracking-meta uppercase px-4 py-2 rounded-full bg-white text-stone-900 font-medium">
                 Install
               </button>
             )}
-            <button onClick={dismiss} className="text-[11px] tracking-wider uppercase px-4 py-2 rounded-full text-stone-300 hover:text-white">
+            <button onClick={dismiss} className="text-xs tracking-meta uppercase px-4 py-2 rounded-full text-stone-300 hover:text-white">
               {deferredPrompt ? 'Not now' : 'Got it'}
             </button>
           </div>

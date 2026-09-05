@@ -9125,6 +9125,7 @@ const ONBOARD_STEPS = [
   { title: 'Style with the Concierge', body: 'In the Styling Studio, drag pieces into slots or let the Concierge compose a look for an intent ("dinner date", "office day"). A/B compare two suggestions, refine in plain English, save the winner.', cta: 'Open Styling Studio', target: 'outfits' },
   { title: 'Plan, pack, and wear', body: 'Use the Calendar to schedule outfits per day, switch to range mode to plan a trip, and generate a deduped packing list. Log wears in one tap; the data feeds Insights.', cta: 'See the calendar', target: 'outfits' },
   { title: 'Insights & gaps', body: 'Best/worst cost-per-wear, your most-worn pieces, what your wardrobe is missing. Tap "Analyse my wardrobe" for a Concierge-written audit of strengths and gaps.', cta: 'Open Insights', target: 'insights' },
+  { title: 'Tell it what you want', body: 'In Profile → Style, say what you are working toward and roughly what you spend. It is two taps, and it changes what the wardrobe audit tells you: gaps get ranked against your goal instead of just listed.', cta: 'Open Profile', target: 'profile' },
   // The mobile FAB is a double-action button — this step is the primary
   // discovery vehicle for the long-press gesture. Re-tour-shows once after
   // the localStorage key bump below; thereafter the in-gesture tooltip
@@ -9135,7 +9136,11 @@ function OnboardingTour({ onJumpTo }) {
   // Versioned key — bumped from atelier-onboard-done → -v2 so existing
   // users see the refreshed tour (step 5 introduces the mobile FAB long-
   // press gesture which they have no other way to discover).
-  const STORAGE_KEY = 'atelier-onboard-done-v2';
+  // Bumped to v3 for the goals step. This re-shows the whole tour once to
+  // everyone who has already seen it — accepted deliberately: the fields are
+  // the only thing that makes the wardrobe audit personal, and the tour is
+  // their only discovery mechanism.
+  const STORAGE_KEY = 'atelier-onboard-done-v3';
   const [step, setStep] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) === '1' ? -1 : 0; }
     catch { return -1; }

@@ -1813,13 +1813,16 @@ function DigitalWardrobe() {
               corner and keeps the sidebar a clean nav column.
               48px, not the 40 it shared with the mobile button: this is the only
               control in a wide band of empty header, and at 40 it read as an
-              afterthought. The mobile one keeps 40, where space is tight and 40
-              is a perfectly good touch target. */}
+              afterthought. 48 was still an afterthought: the page headline
+              beside it is 48px of Playfair, so an avatar the same size as one
+              letter reads as chrome rather than as you. 64 holds the corner.
+              The mobile one keeps 40, where space is tight and 40 is a
+              perfectly good touch target. */}
           <div className="hidden lg:block">
             <button
               type="button"
               onClick={() => setDesktopAccountOpen((o) => !o)}
-              className={`fixed right-12 z-40 w-12 h-12 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+              className={`fixed right-12 z-40 w-16 h-16 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
               style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
               aria-label="Account"
               aria-haspopup="menu"
@@ -1830,7 +1833,7 @@ function DigitalWardrobe() {
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
-                <span className="font-display text-sm">{(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}</span>
+                <span className="font-display text-xl">{(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}</span>
               )}
             </button>
             {desktopAccountOpen && (

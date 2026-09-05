@@ -8,6 +8,7 @@ import { weatherLabel, fetchTravelForecast } from "../lib/weather.js";
 import { generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini } from "../lib/ai.js";
 import { fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { useToast } from "../ui/toast.jsx";
+import { useConfirm } from "../ui/confirm.jsx";
 import { useEscapeKey, useCountUp } from "../ui/hooks.js";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
 
@@ -831,6 +832,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
   const [addingToDay, setAddingToDay] = useState(null);
   const [pickerCategory, setPickerCategory] = useState('All');
   const toast = useToast();
+  const confirm = useConfirm();
   const days = Math.floor((new Date(endISO) - new Date(startISO)) / 86_400_000) + 1;
 
   const run = async (e) => {
@@ -1113,10 +1115,18 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
   //   - done with a plan: the user spent ~10s waiting for a travel capsule;
   //     a stray tap outside the modal shouldn't erase it. Require confirm.
   // Closing via the explicit X / Discard / Save buttons always works.
-  const handleBackdropClick = () => {
+  const handleBackdropClick = async () => {
     if (stage === 'forecasting' || stage === 'generating') return; // in-flight — ignore
     if (stage === 'done' && plan) {
-      if (!window.confirm('Discard this travel capsule?')) return;
+      const ok = await confirm({
+        tone: 'destructive',
+        eyebrow: 'Travel capsule',
+        title: 'Discard this capsule?',
+        body: 'The pieces the Concierge chose for this trip will be lost.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep',
+      });
+      if (!ok) return;
     }
     onClose?.();
   };
@@ -1687,6 +1697,7 @@ function TravelPlannerModal({ startISO, endISO, items, onSaveOutfit, onScheduleO
 
 function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanWithConcierge, onClose }) {
   useEscapeKey(onClose);
+  const toast = useToast();
   const startLabel = new Date(startISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   const endLabel = new Date(endISO + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   const dayCount = Math.floor((new Date(endISO) - new Date(startISO)) / 86_400_000) + 1;
@@ -1773,7 +1784,11 @@ function PackingListModal({ startISO, endISO, schedules, outfits, items, onPlanW
     // we could never write the HTML and the tab stayed at about:blank.
     const w = window.open('', '_blank', 'width=900,height=1000');
     if (!w) {
-      alert('Pop-up blocked — please allow pop-ups for this site and try again.');
+      // A toast, not alert(): this is the app reporting a condition, not
+      // asking a question, and the toast system already speaks in the app's
+      // voice. alert() also blocks the main thread, which for a message the
+      // user can do nothing about immediately is pure friction.
+      toast.show('Pop-up blocked — allow pop-ups for this site, then try again.', { kind: 'error' });
       return;
     }
     w.document.write(html);

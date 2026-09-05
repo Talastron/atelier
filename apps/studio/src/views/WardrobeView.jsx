@@ -6,6 +6,7 @@ import { useImageBg } from "../lib/imageBg.js";
 import { itemImageDisplay } from "../lib/polish.js";
 import { fetchTodaysWeather, weatherToSeasons } from "../lib/weather.js";
 import { CATEGORIES, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES, DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES, SPORTSWEAR_SUBCATEGORIES, BAG_SUBCATEGORIES, SHOE_SUBCATEGORIES, SWIMWEAR_SUBCATEGORIES, STYLES, SEASONS, COLOR_SWATCHES, ITEM_CONDITIONS } from "../lib/taxonomy.js";
+import { useConfirm } from "../ui/confirm.jsx";
 
 function WardrobeCardImage({ item }) {
   const [failed, setFailed] = useState(false);
@@ -321,6 +322,8 @@ function sortWardrobeItems(items, sortBy) {
 }
 
 export default function WardrobeView({ items, deleteItem, openAddModal, measurements, onItemClick, user, onToggleFavorite, schedules = {}, outfits = [], onOpenOutfit, onBulkUpdate, onBulkDelete, onScheduleOutfit, onSaveOutfit, onLogOutfitWear, inspirations = [], onOpenInspiration, onOpenInspirationTab, aiTemperature = 0.7, onScrollTop, jumpFilter = null, jumpCategory = null, jumpNonce = 0, onOpenConcierge, onOpenBrief, onEditPreferences }) {
+  const confirm = useConfirm();
+
   // Header counts — owned only for the primary count; wishlist as secondary.
   // items here is liveItems (all non-deleted) so WardrobeView can show its own
   // All/Owned/Wishlist filter. Counts are derived separately so the headline
@@ -1061,7 +1064,14 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
               disabled={selectedIds.size === 0}
               onClick={async () => {
                 const ids = [...selectedIds];
-                if (!window.confirm(`Move ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash?`)) return;
+                const ok = await confirm({
+                  tone: 'destructive',
+                  eyebrow: 'Move to trash',
+                  title: `Move ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash?`,
+                  body: 'They leave your wardrobe but stay recoverable from Trash in your profile.',
+                  confirmLabel: 'Move to trash',
+                });
+                if (!ok) return;
                 await onBulkDelete?.(ids);
                 exitSelectMode();
               }}

@@ -58,6 +58,7 @@ import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WA
 import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
+import { useConfirm, ConfirmProvider } from './ui/confirm.jsx';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
 import Input from './ui/Input.jsx';
 import { SHOP_SEEDS } from './lib/seeds.js';
@@ -330,12 +331,14 @@ export default function DigitalWardrobeRoot() {
     catch { return null; }
   })();
   if (shareId) {
-    return <ToastProvider><PublicShareView shareId={shareId} /></ToastProvider>;
+    return <ToastProvider><ConfirmProvider><PublicShareView shareId={shareId} /></ConfirmProvider></ToastProvider>;
   }
   return (
     <ToastProvider>
-      <AppCheckDevBanner />
-      <DigitalWardrobe />
+      <ConfirmProvider>
+        <AppCheckDevBanner />
+        <DigitalWardrobe />
+      </ConfirmProvider>
     </ToastProvider>
   );
 }
@@ -6841,6 +6844,7 @@ function OutfitVariationModal({ sourceOutfit, suggestion, busy, error, saving, a
 //   • auto-scrolls to bottom on new messages
 function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements = null, ownerFirstName, user, onEditPreferences, onOpenItem = null, onSaveLook = null, onSchedule = null, onAddToPacking = null, initialQuestion = null }) {
   useEscapeKey(onClose);
+  const confirm = useConfirm();
 
   // Time-of-day greeting — sets the tone before the user even types.
   // Hour ranges deliberately broad so the greeting feels right at edges.
@@ -7196,7 +7200,14 @@ function AtelierConcierge({ onClose, items, outfits, styleProfile, measurements 
               <button
                 type="button"
                 onClick={async () => {
-                  if (!window.confirm('Clear the conversation? This cannot be undone.')) return;
+                  const ok = await confirm({
+                    tone: 'destructive',
+                    eyebrow: 'Clear conversation',
+                    title: 'Clear the conversation?',
+                    body: 'Your stylist will start fresh. This cannot be undone.',
+                    confirmLabel: 'Clear',
+                  });
+                  if (!ok) return;
                   setMessages([{ role: 'assistant', text: greeting }]);
                   await clearCurrentThread();
                 }}

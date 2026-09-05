@@ -28,6 +28,7 @@ export default function ViewToggle({ value, onChange, label = 'View style', clas
           type="button"
           onClick={() => onChange(view)}
           aria-pressed={value === view}
+          aria-label={text}
           title={`Show as ${text.toLowerCase()}`}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs tracking-meta uppercase transition-colors duration-200 ${
             value === view
@@ -36,7 +37,12 @@ export default function ViewToggle({ value, onChange, label = 'View style', clas
           }`}
         >
           <Icon size={12} strokeWidth={1.5} />
-          {text}
+          {/* Icons alone on a phone. With labels this pill wanted about
+              190px, which on a 390px screen left too little for the headline
+              beside it: "Styled for today." broke across two lines and
+              "FLAT-LAY" wrapped inside its own pill. The label is kept for
+              screen readers and hover, so only the pixels are dropped. */}
+          <span className="hidden sm:inline">{text}</span>
         </button>
       ))}
     </div>

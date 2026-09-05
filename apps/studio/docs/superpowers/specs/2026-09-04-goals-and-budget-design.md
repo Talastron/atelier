@@ -1,7 +1,7 @@
 # Goals and budget — telling the Concierge what you are trying to do
 
 **Date:** 2026-09-04
-**Status:** design agreed, not yet planned
+**Status:** design agreed, wording confirmed 5 Sep 2026
 **Origin:** open decision 4 from the 2026-08-17 Studio UX review — *"Goals & budget capture at onboarding, to feed the Concierge. Agreed it's worth doing; needs wording that should be hers."*
 
 The app knows what you own, what you wear, what suits you and what the weather is. It does not know what you are **trying to do**. So its wardrobe audit can tell you that you own fourteen tops and two pairs of trousers, and cannot tell you whether that is a problem.
@@ -38,7 +38,7 @@ Rejected: **free text** — far more expressive and catches the goal no list ant
 
 **The list is the feature, not decoration.** These become the fixed vocabulary the gap analysis reasons against, so "Buy less, wear more" and "Build a capsule I actually wear" must produce genuinely different advice from the same wardrobe — one argues against filling a gap, the other argues for filling it precisely. A list written to sound pleasant would give the model nothing to act on.
 
-Working draft, **to be replaced with Sibylle's wording**:
+Confirmed with Sibylle, 5 Sep 2026:
 
 ```js
 export const STYLE_GOALS = [
@@ -46,10 +46,27 @@ export const STYLE_GOALS = [
   'Dress better for work',
   'Buy less, wear more',
   'Find my own style rather than trends',
-  'Rebuild after a change — size, job, life',
+  'Rebuild my wardrobe for who I am now',
   'Dress for something specific coming up',
 ];
 ```
+
+**The fifth was reworded in review, and the reason is worth keeping.** The
+draft read *"Rebuild after a change — size, job, life"*. Naming "size" makes the
+app comment on the reader's body, in a picker they see every time they open
+Profile, and it lands worst on exactly the people the option is for — after
+illness, pregnancy, treatment, menopause.
+
+The enumeration was also doing no work. The gap analysis does not need to know
+*why* a wardrobe stopped suiting someone, only *that* it has, because that is
+what changes the advice: expect structural gaps rather than incremental ones.
+The list was volunteering a diagnosis to buy information nothing would use.
+
+"Rebuild my wardrobe for who I am now" carries the full signal, points forward,
+and leaves the reason private. It stays distinct from "Find my own style rather
+than trends", which is the other rebuild-shaped goal: that one means the
+wardrobe is broadly right but incoherent, this one means it is broadly wrong for
+the current person.
 
 ### Budget is inferred from the wardrobe, shown back, and correctable
 

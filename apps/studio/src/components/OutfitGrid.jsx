@@ -31,7 +31,7 @@ export default function OutfitGrid({ pieces = [], onOpenItem }) {
               )}
             </div>
             <div className="px-1">
-              <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">{piece.brand}</p>
+              <p className="text-xs font-semibold text-stone-500 uppercase truncate">{piece.brand}</p>
               <p className={`font-display text-base text-stone-800 leading-snug truncate ${openable ? 'group-hover:text-stone-700 transition-colors' : ''}`}>{piece.name}</p>
               <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
             </div>

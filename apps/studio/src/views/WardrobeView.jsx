@@ -906,7 +906,12 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
             </div>
 
             <div className="px-1">
-              <div className="flex justify-between items-start mb-1.5 gap-4">
+              {/* gap-2, not gap-4. The caption row is 184px on the narrowest
+                  column: 132 for the brand, 36 for the price, and 16 of gap.
+                  That gap was wider than the worst overflow it was causing —
+                  six brands clipped by 10-13px while 16px sat between them
+                  and the price doing nothing. */}
+              <div className="flex justify-between items-start mb-1.5 gap-2">
                 {/* Brand alone. This used to append the seasons, and the
                     result never fitted: the caption box is ~140px and
                     "HOLLAND COOPER • SPRING · SUMMER · AUTUMN" wants 409px, so
@@ -914,7 +919,7 @@ export default function WardrobeView({ items, deleteItem, openAddModal, measurem
                     old 10px too. The seasons were costing the brand its own
                     name to show information nobody could read. They remain on
                     the item's detail view, where there is room for them. */}
-                <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">
+                <p className="text-xs font-semibold text-stone-500 uppercase truncate">
                   {item.brand}
                 </p>
                 <p className="text-sm font-medium text-stone-900 shrink-0">£{item.price}</p>

@@ -50,6 +50,8 @@ import {
   deriveShortName,
 } from './lib/items.js';
 import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExportImage, shareOrDownloadImage, autoEnhanceCanvas, removeImageBackground, compressImageToDataUrl, rehostExternalImage, parseSourceUrl, resizeImageToDataUrl } from './lib/canvas.js';
+import { enqueueCutout } from './lib/cutoutQueue.js';
+import { applyCutoutResult, imageStatus } from './lib/photoStatus.js';
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
@@ -2657,8 +2659,18 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   const [step, setStep] = useState(isEdit ? 2 : 1);
   const [linkInput, setLinkInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [cutoutBusy, setCutoutBusy] = useState(false);
   const [editingPhoto, setEditingPhoto] = useState(null); // { index, src }
+  // Job ids for cut-outs still running, with the image index each belongs to.
+  // Task 4 hands these over on save so they patch the saved item.
+  const pendingJobsRef = useRef([]);
+
+  // Warm the model so photo one does not pay for the download. The import is
+  // dynamic and inside removeImageBackground, so without this the first photo
+  // waits for the module and the WASM init before any pixels are touched.
+  useEffect(() => {
+    if (!removeBackground) return;
+    import('@imgly/background-removal').catch(() => { /* the first photo will retry */ });
+  }, [removeBackground]);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState(existingItem ? {
     name: existingItem.name || '',
@@ -2939,14 +2951,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         let cutoutOk = null;
         let cutoutAlpha = null;
         if (removeBackground) {
-          setCutoutBusy(true);
           let out = await removeImageBackground(originalDataUrl, { alpha: true });
           // A browser that cannot write WebP cannot keep the alpha, and JPEG has
           // no alpha channel to fall back on. Rather than lose the cut-out
           // entirely there, take the flattened one — it simply will not overlap.
           if (!out.ok) out = await removeImageBackground(originalDataUrl);
           dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
-          setCutoutBusy(false);
           toast.show(out.ok ? 'Background removed ✓ · tap to revert' : 'Cutout failed — kept original photo', { kind: out.ok ? 'success' : 'default', duration: 3500 });
         }
         setFormData((prev) => {
@@ -2967,7 +2977,6 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         setError(err?.message || 'Could not paste image.');
       } finally {
         setIsLoading(false);
-        setCutoutBusy(false);
       }
     };
     window.addEventListener('paste', onPaste);
@@ -2979,42 +2988,56 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     if (!list.length) return;
     setIsLoading(true); setError(null);
     let firstNewDataUrl = null;
+    // The index each file in this batch will land at. Computed up front from
+    // the images length captured at call time, not read back out of a
+    // setFormData updater: React does not guarantee that updater runs
+    // synchronously, so a variable closed over and reassigned inside it
+    // cannot be trusted the moment control returns from setFormData.
+    const startIndex = formData.images?.length || 0;
+    let addedCount = 0;
     try {
-      let okCount = 0; let failCount = 0;
       for (const file of list) {
         const originalDataUrl = await compressImageToDataUrl(file);
-        let dataUrl = originalDataUrl;
-        let cutoutOk = null;
-        let cutoutAlpha = null;
-        if (removeBackground) {
-          setCutoutBusy(true);
-          let out = await removeImageBackground(originalDataUrl, { alpha: true });
-          // A browser that cannot write WebP cannot keep the alpha, and JPEG has
-          // no alpha channel to fall back on. Rather than lose the cut-out
-          // entirely there, take the flattened one — it simply will not overlap.
-          if (!out.ok) out = await removeImageBackground(originalDataUrl);
-          dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
-          if (out.ok) okCount++; else failCount++;
-        }
-        if (!firstNewDataUrl) firstNewDataUrl = dataUrl;
+        if (!firstNewDataUrl) firstNewDataUrl = originalDataUrl;
+
+        const at = startIndex + addedCount;
+        addedCount += 1;
+
+        // The photo appears NOW, at its original. Removal runs behind it and
+        // swaps the cut-out in when it lands.
         setFormData((prev) => {
-          const meta = Array.isArray(prev.imageMeta) ? prev.imageMeta : [];
-          return {
-            ...prev,
-            images: [...(prev.images || []), dataUrl].slice(0, 6),
-            imageMeta: [...meta, {
-              cutout: cutoutOk === true,
-              original: cutoutOk === true ? originalDataUrl : undefined,
-              ...(cutoutAlpha === true ? { alpha: true } : {}),
-            }].slice(0, 6),
-          };
+          const images = [...(prev.images || []), originalDataUrl].slice(0, 6);
+          const meta = [...(Array.isArray(prev.imageMeta) ? prev.imageMeta : []), { processing: !!removeBackground }].slice(0, 6);
+          return { ...prev, images, imageMeta: meta };
         });
-      }
-      setCutoutBusy(false);
-      if (removeBackground && (okCount || failCount)) {
-        if (okCount && !failCount) toast.show(`Background removed ✓ on ${okCount} photo${okCount === 1 ? '' : 's'}`, { kind: 'success', duration: 3500 });
-        else if (failCount && !okCount) toast.show(`Cutout failed on ${failCount} — kept originals`, { kind: 'default', duration: 4000 });
-        else toast.show(`${okCount} cut out · ${failCount} kept original`, { kind: 'default', duration: 4000 });
+
+        if (removeBackground) {
+          const index = at;
+          const jobId = enqueueCutout({
+            run: async () => {
+              let out = await removeImageBackground(originalDataUrl, { alpha: true });
+              // A browser that cannot write WebP cannot keep the alpha, and
+              // JPEG has none to fall back on. Take the flattened cut-out
+              // rather than lose it — it simply will not overlap.
+              if (!out.ok) out = await removeImageBackground(originalDataUrl);
+              return { ok: !!out.ok, url: out.url, alpha: out.alpha === true, original: originalDataUrl };
+            },
+            onDone: (result) => {
+              setFormData((prev) => {
+                const meta = applyCutoutResult(prev.imageMeta, index, result);
+                if (meta === prev.imageMeta) return prev;
+                const images = [...(prev.images || [])];
+                if (result.ok && images[index] !== undefined) images[index] = result.url;
+                return { ...prev, images, imageMeta: meta };
+              });
+            },
+            onError: (err) => {
+              console.warn('[cutout] failed, keeping the original:', err?.message);
+              setFormData((prev) => ({ ...prev, imageMeta: applyCutoutResult(prev.imageMeta, index, { ok: false }) }));
+            },
+          });
+          pendingJobsRef.current.push({ jobId, index });
+        }
       }
       setStep((s) => (s === 1 ? 2 : s));
       // Auto-extract colours from the first added photo IF no colour set yet.
@@ -3450,6 +3473,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   {formData.images.map((img, i) => (
                     <div key={i} className="aspect-square rounded-xl overflow-hidden bg-stone-100 border border-stone-200 relative group">
                       <img src={img} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      {imageStatus(formData.imageMeta?.[i]) === 'processing' && (
+                        <div className="absolute inset-0 rounded-xl bg-white/70 backdrop-blur-[1px] flex flex-col items-center justify-center pointer-events-none">
+                          <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin" />
+                          <span className="mt-1.5 text-xs tracking-meta uppercase text-stone-600">Removing bg…</span>
+                        </div>
+                      )}
                       {formData.imageMeta?.[i]?.cutout && (
                         <button type="button"
                           onClick={() => {
@@ -3484,14 +3513,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                           on an add-path item images[0] is the only copy the account has. */}
                       {!formData.imageMeta?.[i]?.cutout && !formData.imageMeta?.[i]?.cutoutUrl && (
                         <button type="button"
-                          disabled={cutoutBusy}
                           onClick={async () => {
                             // Apply cutout to this thumb. Keeps a copy of the
                             // currently-displayed photo as the new "original"
                             // for future reverts.
                             const src = formData.images[i];
-                            setCutoutBusy(true);
-                            try {
+                            {
                               // Same alpha-with-fallback shape as the add-item path: try to
                               // keep transparency, and only fall back to a flattened cut-out
                               // if that fails (e.g. no WebP support).
@@ -3530,7 +3557,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                               } else {
                                 toast.show('Cutout failed — kept original', { kind: 'default', duration: 3000 });
                               }
-                            } finally { setCutoutBusy(false); }
+                            }
                           }}
                           className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-white/90 backdrop-blur text-stone-700 text-xs tracking-label uppercase rounded-full font-medium shadow-sm hover:text-stone-900 transition-colors opacity-0 sm:group-hover:opacity-100"
                           title="Remove background">
@@ -3575,12 +3602,6 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       )}
                     </div>
                   ))}
-                  {cutoutBusy && (
-                    <div className="aspect-square rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 flex flex-col items-center justify-center text-emerald-700">
-                      <div className="w-5 h-5 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin mb-2" />
-                      <span className="text-xs tracking-meta uppercase">Removing bg…</span>
-                    </div>
-                  )}
                   {formData.images.length < 6 && (
                     <label className="aspect-square rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center cursor-pointer hover:border-stone-500 transition-all text-stone-400 hover:text-stone-900">
                       <Plus size={22} strokeWidth={1.5} />

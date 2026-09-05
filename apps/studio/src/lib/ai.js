@@ -587,32 +587,37 @@ export async function generateOutfitNameWithGemini(picked, intent) {
 
 Give it a SHORT name: 2 to 5 words, title case, no quotes, no full stops, no emoji.
 
-Voice: name the ONE piece that defines this look, and give it a turn — what it is worn over, how it is dressed, what it is doing. This is how a person refers to an outfit: "the jacquard one", "the blazer over the knit".
+Voice: a stylist captioning a look for a private client. Evocative is right — reach for a colour, a mood, a quality of the thing. The name should have some character; it is a title, not a label.
 
-THE RULE THAT MATTERS: never join two garments with "and" or "&". That produces an inventory — "Jacquard Blazer Chinos", "Blazer And Trousers" — which names no piece in particular and says nothing about the look. Either name a single hero piece plus what is done with it, or name two pieces in a real relationship (over, under, beneath, with).
+Two failures to avoid, both worse than a plain name.
 
-A name that would still make sense over completely different clothes is wrong.
+NOT AN INVENTORY. Never join two garments with "and" or "&", and never simply list what is in the look: "Jacquard Blazer Chinos", "Blazer And Trousers". That names no piece in particular and says nothing.
 
-Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Avoid literary or essayistic titles ("An Argument for Linen", "The Weight of Good Wool", "Dressed for the Long Way Round") — at this length they read as parody. Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
+NOT AN ESSAY. Avoid manifesto and think-piece constructions — "An Argument for Linen", "The Weight of Good Wool", "Dressed for the Long Way Round". At three to six words those read as parody rather than as a name.
+
+Between those two is the register: something with atmosphere that still belongs to THIS look and no other.
+
+Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
 
 ${briefLine}
 
 Items in this look:
 - ${itemList}
 
-Examples of the register — one hero piece with a turn, never a list:
-- "The Jacquard, Dressed Up"
-- "Blazer Over Knitwear"
-- "The Camel Coat, Off Duty"
-- "Loafers With Everything"
-- "The Silk Scarf Does the Work"
-- "Tailoring, Loosened"
+Examples of the register — atmospheric, but each one clearly about a
+particular look rather than about clothes in general:
+- "Blue at the Golden Edge"
+- "Something Steady in Navy"
+- "Ink and Brass"
+- "The Quiet Blazer"
+- "Gold Where It Counts"
+- "Softer Than It Looks"
 
 Reply with the name ONLY — no preamble, no explanation, no quotes.`;
   // 0.8, not 1.0. At the top of the range this returned self-consciously
   // poetic titles — the examples above matter more than any adjective, but
   // maximum randomness was compounding them.
-  const result = await geminiText(prompt, { temperature: 0.8 }, 'name-look');
+  const result = await geminiText(prompt, { temperature: 0.9 }, 'name-look');
   return (result || '')
     .trim()
     .split('\n')[0]

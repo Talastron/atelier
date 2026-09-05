@@ -240,7 +240,16 @@ function GapAnalysisPanel({ items, inspirations = [], measurements }) {
       )}
 
       {state.status === 'done' && state.data && (
-        <div className="mt-8 grid md:grid-cols-3 gap-6">
+        <div className="mt-8 grid md:grid-cols-2 gap-6">
+          {/* Two columns, not three. At the shell's 1056px ceiling, three
+              columns gave each about 41 characters a line — well under the
+              60-75 prose reads at — so every card wrapped heavily, card
+              heights ranged from 89 to 216px, and nothing lined up across the
+              columns. Two columns give roughly 500px and 70 characters.
+
+              Buy next spans both and splits internally, so the
+              recommendations (the longest text of the three) keep the same
+              measure rather than being squeezed into a leftover half-row. */}
           <div>
             <h4 className="text-xs tracking-label uppercase text-emerald-800 font-bold mb-3">Strengths</h4>
             <ul className="space-y-3">
@@ -263,9 +272,9 @@ function GapAnalysisPanel({ items, inspirations = [], measurements }) {
               ))}
             </ul>
           </div>
-          <div>
+          <div className="md:col-span-2">
             <h4 className="text-xs tracking-label uppercase text-stone-700 font-bold mb-3">Buy next</h4>
-            <ul className="space-y-3">
+            <ul className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-6">
               {(state.data.recommendations || []).map((r, i) => (
                 <li key={i} className="border-l-2 border-stone-400 pl-3">
                   <p className="text-sm font-medium text-stone-900">{r.piece}</p>

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Share2, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
-import { generateOutfitWithGemini } from "../lib/ai.js";
+import { generateOutfitWithGemini, generateOutfitNameWithGemini } from "../lib/ai.js";
+import { deriveLookName } from "../lib/lookName.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief, readRecentBases, appendRecentBase, readRemoteRecentBases, writeRemoteRecentBases, mergeRecent } from "../dailyBrief";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
@@ -461,15 +462,35 @@ function DailyBriefCard({
     ? new Date(leadEvent.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     : leadEvent ? 'All day' : null;
 
+  // A name for the look, rather than the date it was saved.
+  //
+  // The Brief used to save as `Daily Brief · Thu, 4 Sep`, which records when
+  // the button was pressed and nothing about what was saved — a Lookbook of
+  // those is a list of dates. The Concierge already titles looks for the
+  // Styling Studio, so the Brief asks for one of those, and falls back to a
+  // name derived from the pieces when the Concierge is off or the call fails.
+  // No brief is passed: with none, the namer writes a self-contained
+  // editorial title rather than restating an occasion.
+  const nameThisLook = async () => {
+    try {
+      if (isAIEnabled() && briefItems.length > 0) {
+        const name = await generateOutfitNameWithGemini(briefItems, '');
+        if (name && name.trim()) return name.trim();
+      }
+    } catch (err) {
+      console.warn('[brief] auto-name failed:', err?.message);
+    }
+    return deriveLookName(briefItems);
+  };
+
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
     if (wearState !== 'idle') return; // already in flight or done — block double-tap
     haptic('tap');
     setWearState('wearing');
-    const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
       id: `db-${uid}-${Date.now()}`,
-      name: `Daily Brief · ${today}`,
+      name: await nameThisLook(),
       itemIds: brief.itemIds,
       createdAt: new Date().toISOString(),
       reasoning: brief.reasoning || '',
@@ -498,10 +519,9 @@ function DailyBriefCard({
     if (saveState !== 'idle') return; // already saved (or saving) — prevent dupes
     haptic('tap');
     setSaveState('saving');
-    const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
       id: `db-${uid}-${Date.now()}`,
-      name: `Daily Brief · ${today}`,
+      name: await nameThisLook(),
       itemIds: brief.itemIds,
       createdAt: new Date().toISOString(),
       reasoning: brief.reasoning || '',

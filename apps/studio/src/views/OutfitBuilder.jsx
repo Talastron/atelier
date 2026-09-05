@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { DndContext, useDraggable, useDroppable, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, DragOverlay, closestCenter } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS as DndCSS } from "@dnd-kit/utilities";
-import { Bookmark, Camera, Check, CheckCircle2, ChevronDown, ChevronRight, GripVertical, LayoutGrid, Save, Shapes, Shirt, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
+import { Bookmark, Camera, Check, CheckCircle2, ChevronDown, ChevronRight, GripVertical, Save, Shirt, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
 import { OUTFIT_SLOTS, emptyOutfit, isMultiSlot, itemFitsSlot, slotForItem, slotItems } from "../lib/outfit.js";
 import { MOOD_PRESETS, STYLES } from "../lib/taxonomy.js";
 import { colorsHarmonize, hexFromColorName } from "../lib/color.js";
@@ -16,6 +16,8 @@ import { haptic } from "../lib/haptic.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { useConfirm } from "../ui/confirm.jsx";
+import ViewToggle from "../ui/ViewToggle.jsx";
+import { normaliseLookView, LOOKBOOK_COVER_KEY } from "../lib/viewPreference.js";
 import { useEscapeKey } from "../ui/hooks.js";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
@@ -328,14 +330,14 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
   // that way every time, and having to re-pick on every visit would be a tax.
   const [coverView, setCoverView] = useState(() => {
     try {
-      return localStorage.getItem('atelier-lookbook-cover') === 'grid' ? 'grid' : 'flatlay';
+      return normaliseLookView(localStorage.getItem(LOOKBOOK_COVER_KEY));
     } catch {
       return 'flatlay'; // private browsing, or storage disabled
     }
   });
   const chooseCoverView = (next) => {
-    setCoverView(next);
-    try { localStorage.setItem('atelier-lookbook-cover', next); } catch { /* not worth surfacing */ }
+    setCoverView(normaliseLookView(next));
+    try { localStorage.setItem(LOOKBOOK_COVER_KEY, next); } catch { /* not worth surfacing */ }
   };
   const [activeDragItem, setActiveDragItem] = useState(null);
   const [styleIntent, setStyleIntent] = useState('Any');
@@ -1595,27 +1597,13 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               </div>
               {!selectMode ? (
                 <div className="flex items-center gap-4">
-                  {/* Cover treatment. Mirrors the pill on the look detail so the
-                      same choice looks like the same choice in both places. */}
-                  <div className="flex bg-stone-200/50 p-1 rounded-full" role="group" aria-label="Cover style">
-                    {[['flatlay', 'Flat-lay', Shapes], ['grid', 'Grid', LayoutGrid]].map(([value, label, Icon]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => chooseCoverView(value)}
-                        aria-pressed={coverView === value}
-                        title={`Show looks as ${label.toLowerCase()}`}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs tracking-meta uppercase transition-colors duration-200 ${
-                          coverView === value
-                            ? 'bg-white text-stone-900 font-medium'
-                            : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'
-                        }`}
-                      >
-                        <Icon size={12} strokeWidth={1.5} />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Cover treatment. This used to carry a comment saying it
+                      "mirrors the pill on the look detail so the same choice
+                      looks like the same choice in both places" — which was
+                      untrue: that one had no icons, no aria-pressed and no
+                      memory. It is now literally the same component, so the
+                      claim holds by construction rather than by intention. */}
+                  <ViewToggle value={coverView} onChange={chooseCoverView} label="Cover style" />
                   <button onClick={() => setSelectMode(true)} className="text-xs tracking-widest uppercase text-stone-500 hover:text-stone-900 transition-colors">
                     Select
                   </button>

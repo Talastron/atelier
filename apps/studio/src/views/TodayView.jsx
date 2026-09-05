@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { AlertCircle, Bookmark, Calendar, ChevronRight, Share2, Sparkles, Star, TrendingDown } from "lucide-react";
 import { fetchTodaysWeather, weatherLabel, firstName, getGreeting } from "../lib/weather.js";
 import { summariseStyleProfile, todayISO, itemCareReminder, daysSinceLastWorn, itemImages } from "../lib/items.js";
-import { generateOutfitWithGemini } from "../lib/ai.js";
+import { generateOutfitWithGemini, generateOutfitNameWithGemini } from "../lib/ai.js";
+import { deriveLookName } from "../lib/lookName.js";
 import { isCalendarConnected, fetchCalendarEvents, isAIEnabled } from "../firebase.js";
 import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, registerInflightCompose, getInflightCompose, isComposingRecent, readRemoteDailyBrief, writeRemoteDailyBrief, readRecentBases, appendRecentBase, readRemoteRecentBases, writeRemoteRecentBases, mergeRecent } from "../dailyBrief";
 import { bumpRegen, softNudgeActive } from "../lib/aiSession.js";
@@ -10,7 +11,8 @@ import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
-import OutfitFlatLay from "../components/OutfitFlatLay.jsx";
+import OutfitView, { useLookView } from "../components/OutfitView.jsx";
+import ViewToggle from "../ui/ViewToggle.jsx";
 import { groupDigestCards } from "../lib/digest.js";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
@@ -439,6 +441,10 @@ function DailyBriefCard({
   // eye, not the jewellery stack: dress/top/bottom/outerwear → shoes → bags →
   // accessories → jewellery. Stable sort keeps Gemini's order within a tier.
   const BRIEF_CATEGORY_ORDER = { Dresses: 0, Tops: 0, Bottoms: 0, Outerwear: 0, Sportswear: 0, Swimwear: 0, Shoes: 1, Bags: 2, Accessories: 3, Jewellery: 4 };
+  // Held here rather than inside OutfitView because the toggle is rendered up
+  // in the headline row, and the two have to agree.
+  const [lookView, chooseLookView] = useLookView();
+
   const briefItems = (brief.itemIds || [])
     .map(id => items.find(it => it.id === id))
     .filter(Boolean)
@@ -456,15 +462,35 @@ function DailyBriefCard({
     ? new Date(leadEvent.startISO).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     : leadEvent ? 'All day' : null;
 
+  // A name for the look, rather than the date it was saved.
+  //
+  // The Brief used to save as `Daily Brief · Thu, 4 Sep`, which records when
+  // the button was pressed and nothing about what was saved — a Lookbook of
+  // those is a list of dates. The Concierge already titles looks for the
+  // Styling Studio, so the Brief asks for one of those, and falls back to a
+  // name derived from the pieces when the Concierge is off or the call fails.
+  // No brief is passed: with none, the namer writes a self-contained
+  // editorial title rather than restating an occasion.
+  const nameThisLook = async () => {
+    try {
+      if (isAIEnabled() && briefItems.length > 0) {
+        const name = await generateOutfitNameWithGemini(briefItems, '');
+        if (name && name.trim()) return name.trim();
+      }
+    } catch (err) {
+      console.warn('[brief] auto-name failed:', err?.message);
+    }
+    return deriveLookName(briefItems);
+  };
+
   const handleWearThis = async () => {
     if (!brief.itemIds?.length) return;
     if (wearState !== 'idle') return; // already in flight or done — block double-tap
     haptic('tap');
     setWearState('wearing');
-    const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
       id: `db-${uid}-${Date.now()}`,
-      name: `Daily Brief · ${today}`,
+      name: await nameThisLook(),
       itemIds: brief.itemIds,
       createdAt: new Date().toISOString(),
       reasoning: brief.reasoning || '',
@@ -493,10 +519,9 @@ function DailyBriefCard({
     if (saveState !== 'idle') return; // already saved (or saving) — prevent dupes
     haptic('tap');
     setSaveState('saving');
-    const today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
     const outfit = {
       id: `db-${uid}-${Date.now()}`,
-      name: `Daily Brief · ${today}`,
+      name: await nameThisLook(),
       itemIds: brief.itemIds,
       createdAt: new Date().toISOString(),
       reasoning: brief.reasoning || '',
@@ -520,7 +545,13 @@ function DailyBriefCard({
       {/* Section headline only — the page header above already carries the
           greeting + weather, so the card doesn't repeat an eyebrow or the
           weather line (that read as duplication). */}
-      <h3 className="font-display text-2xl sm:text-3xl text-stone-900">Styled for today.</h3>
+      {/* Headline and view toggle share one line. The toggle used to sit on
+          its own row beneath, which spent a whole band of height on two words
+          while the space beside the headline sat empty. */}
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="font-display text-2xl sm:text-3xl text-stone-900">Styled for today.</h3>
+        <ViewToggle value={lookView} onChange={chooseLookView} label="Today's look view" />
+      </div>
 
       {/* The look, composed the way every other surface composes one.
 
@@ -537,7 +568,7 @@ function DailyBriefCard({
           item is your Chelsea Saddle Bag rather than a brown shape is
           information, so the composition alone would not have been enough. */}
       <div className="mt-5">
-        <OutfitFlatLay pieces={briefItems} onOpenItem={onOpenItem} />
+        <OutfitView pieces={briefItems} onOpenItem={onOpenItem} view={lookView} showToggle={false} />
       </div>
 
       {/* Stylist's note — a warm, gently recessed panel (deeper than the ivory

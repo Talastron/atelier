@@ -429,7 +429,7 @@ Wardrobe composition:
 ${wishlistReasons.length ? `\nWishlist intent (purposes the client has set):\n${wishlistReasons.join('\n')}` : ''}
 ${(inspirations || []).filter((i) => i.analysis?.summary).slice(0, 8).length
   ? `\nSaved inspirations (looks the client is drawn to — recommendations should align with these):\n${(inspirations || []).filter((i) => i.analysis?.summary).slice(0, 8).map((i) => `- ${i.caption || 'Untitled'}: ${i.analysis.summary}`).join('\n')}`
-  : ''}${styleProfile ? `\n${styleProfile}\n\nRank the gaps against what they are working toward: a gap that serves a stated goal outranks one that does not. Do NOT hide gaps outside the stated goals — an unstated goal should still surface a genuine hole — but say which gap to close first, and why, in the words of their goal. If a typical spend is given, keep suggestions near it and flag anything that is a big buy for this person.\n` : ''}
+  : ''}${styleProfile ? `\n${styleProfile}\n\nRank the gaps against what they are working toward: a gap that serves a stated goal outranks one that does not. Do NOT hide gaps outside the stated goals — an unstated goal should still surface a genuine hole — but say which gap to close first, and why, in the words of their goal.\n\nA large share of never-worn items is ALWAYS worth naming as a gap. When the goal is about wearing more of what they already own, it is the MOST important gap: lead with it, and prefer recommendations that unlock pieces they already have over ones that add a new category.\n\nIf a typical spend is given, keep suggestions near it and flag anything that is a big buy for this person. Use the figures given and do not compute your own average from the totals above — a mean is dragged upward by one extraordinary purchase and describes a spend they would not recognise.\n` : ''}
 
 Audit rules:
 - Be specific and quantitative ("11 tops vs 2 bottoms suggests…") — never generic.
@@ -587,9 +587,11 @@ export async function generateOutfitNameWithGemini(picked, intent) {
 
 Give it a SHORT name: 2 to 5 words, title case, no quotes, no full stops, no emoji.
 
-Voice: a well-made label, not a poem. ANCHOR the name to something actually in this look — its dominant colour, a fabric, or the piece that defines it — so the owner recognises the outfit from the name alone in a list of fifty. Restrained and specific beats atmospheric and clever.
+Voice: name the ONE piece that defines this look, and give it a turn — what it is worn over, how it is dressed, what it is doing. This is how a person refers to an outfit: "the jacquard one", "the blazer over the knit".
 
-A name that would still make sense over completely different clothes is wrong. Do not, however, simply list the garments: "Blazer And Trousers" is a description, not a name.
+THE RULE THAT MATTERS: never join two garments with "and" or "&". That produces an inventory — "Jacquard Blazer Chinos", "Blazer And Trousers" — which names no piece in particular and says nothing about the look. Either name a single hero piece plus what is done with it, or name two pieces in a real relationship (over, under, beneath, with).
+
+A name that would still make sense over completely different clothes is wrong.
 
 Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Avoid literary or essayistic titles ("An Argument for Linen", "The Weight of Good Wool", "Dressed for the Long Way Round") — at this length they read as parody. Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
 
@@ -598,13 +600,13 @@ ${briefLine}
 Items in this look:
 - ${itemList}
 
-Examples of the register — each anchored to a real detail, none of them florid:
-- "Navy and Brass"
-- "The Good Blazer"
-- "Chinos, Softened"
-- "Charcoal With Gold"
-- "Everyday Linen"
-- "The Camel Coat Look"
+Examples of the register — one hero piece with a turn, never a list:
+- "The Jacquard, Dressed Up"
+- "Blazer Over Knitwear"
+- "The Camel Coat, Off Duty"
+- "Loafers With Everything"
+- "The Silk Scarf Does the Work"
+- "Tailoring, Loosened"
 
 Reply with the name ONLY — no preamble, no explanation, no quotes.`;
   // 0.8, not 1.0. At the top of the range this returned self-consciously

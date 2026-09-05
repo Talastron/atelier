@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronRight, Heart, Shirt, TrendingDown, Wand2, Sparkles, Share2, Download, X } from "lucide-react";
-import { daysSinceLastWorn, itemColors, itemCostPerWear, itemImages, itemSeasons, itemWearCount, itemWearHistory, itemWearNotes, todayISO } from "../lib/items.js";
+import { daysSinceLastWorn, itemColors, itemCostPerWear, itemImages, itemSeasons, itemWearCount, itemWearHistory, itemWearNotes, summariseStyleProfile, todayISO } from "../lib/items.js";
 import { itemImageDisplay } from "../lib/polish.js";
 import ItemTileImage from "../components/ItemTileImage.jsx";
 import { analyzeWardrobeGapsWithGemini, generateStyleManifestoWithGemini } from "../lib/ai.js";
@@ -178,7 +178,7 @@ function computeWardrobeGaps(ownedItems) {
 // Gemini-driven gap audit panel. Idle until the user taps Analyse — keeps the
 // Insights tab fast on load and avoids a Gemini call every time it mounts.
 // Caches the result in component state; the user can re-analyse anytime.
-function GapAnalysisPanel({ items, inspirations = [] }) {
+function GapAnalysisPanel({ items, inspirations = [], measurements }) {
   const [state, setState] = useState({ status: 'idle', data: null, error: null });
   const toast = useToast();
 
@@ -186,7 +186,11 @@ function GapAnalysisPanel({ items, inspirations = [] }) {
     if (!isAIEnabled()) { setState({ status: 'error', data: null, error: 'Concierge is not yet set up — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic.' }); return; }
     setState({ status: 'running', data: null, error: null });
     try {
-      const data = await analyzeWardrobeGapsWithGemini({ items, inspirations });
+      const data = await analyzeWardrobeGapsWithGemini({
+        items,
+        inspirations,
+        styleProfile: summariseStyleProfile(measurements),
+      });
       setState({ status: 'done', data, error: null });
     } catch (e) {
       setState({ status: 'error', data: null, error: e?.message || 'Analysis failed' });
@@ -1740,7 +1744,7 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
         </div>
       )}
 
-      <GapAnalysisPanel items={ownedItems} inspirations={inspirations} />
+      <GapAnalysisPanel items={ownedItems} inspirations={inspirations} measurements={measurements} />
 
       {gaps.length > 0 && (
         <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-10">

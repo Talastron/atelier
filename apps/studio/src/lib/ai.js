@@ -387,7 +387,7 @@ Respond ONLY with valid JSON in this exact shape:
 // counts and asks Gemini for a balance critique: what's over-represented,
 // what's missing, and the 3 highest-leverage additions to buy next.
 // Returns { strengths, gaps, recommendations, missingPieces }.
-export async function analyzeWardrobeGapsWithGemini({ items, inspirations = [] }) {
+export async function analyzeWardrobeGapsWithGemini({ items, inspirations = [], styleProfile = '' }) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   const owned = items.filter((i) => i.status === 'owned');
   if (owned.length === 0) throw new Error('Add some owned items first.');
@@ -429,7 +429,7 @@ Wardrobe composition:
 ${wishlistReasons.length ? `\nWishlist intent (purposes the client has set):\n${wishlistReasons.join('\n')}` : ''}
 ${(inspirations || []).filter((i) => i.analysis?.summary).slice(0, 8).length
   ? `\nSaved inspirations (looks the client is drawn to — recommendations should align with these):\n${(inspirations || []).filter((i) => i.analysis?.summary).slice(0, 8).map((i) => `- ${i.caption || 'Untitled'}: ${i.analysis.summary}`).join('\n')}`
-  : ''}
+  : ''}${styleProfile ? `\n${styleProfile}\n\nRank the gaps against what they are working toward: a gap that serves a stated goal outranks one that does not. Do NOT hide gaps outside the stated goals — an unstated goal should still surface a genuine hole — but say which gap to close first, and why, in the words of their goal. If a typical spend is given, keep suggestions near it and flag anything that is a big buy for this person.\n` : ''}
 
 Audit rules:
 - Be specific and quantitative ("11 tops vs 2 bottoms suggests…") — never generic.
@@ -854,6 +854,9 @@ export async function scorePurchaseWithGemini({ item, items = [], measurements =
     m.height && `height ${m.height}cm`, m.chest && `chest/bust ${m.chest}cm`,
     m.waist && `waist ${m.waist}cm`, m.hips && `hips ${m.hips}cm`,
   ].filter(Boolean).join(', ') || 'no body measurements recorded';
+  const budgetLine = (Number(m.budgetTypical) > 0 && Number(m.budgetHigh) > 0)
+    ? `They typically spend around £${Number(m.budgetTypical)} a piece, and £${Number(m.budgetHigh)} is a big buy for them. Say plainly if this piece is well above that.`
+    : '';
 
   const prompt = `You are a warm, numerate wardrobe advisor for a "considered wardrobe" app. You are NOT anti-shopping — a considered wardrobe still grows, and part of your job is to give people confidence in a good buy. You are honest about genuine duplication or poor value, but your default posture is encouraging.
 
@@ -863,7 +866,7 @@ THE PIECE BEING CONSIDERED:
 - price: ${price}
 - colours: ${itemColors(item).join(', ') || '—'}${item.materials?.length ? `\n- materials: ${item.materials.join(', ')}` : ''}
 
-THEIR BODY: ${body}
+THEIR BODY: ${body}${budgetLine ? ` ${budgetLine}` : ''}
 
 THEY ALREADY OWN (name|brand|category|colors|styles):
 ${wardrobe || '(their wardrobe is empty)'}

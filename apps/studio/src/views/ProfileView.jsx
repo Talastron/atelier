@@ -10,6 +10,7 @@ import ItemTileImage from "../components/ItemTileImage.jsx";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
+import { useConfirm } from "../ui/confirm.jsx";
 import { BUILD_LABEL } from "../buildInfo.js";
 import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, BODY_SHAPE_GUIDES, MATERIALS, materialsForCategory, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
 
@@ -112,6 +113,7 @@ function RehostCard({ items = [], onUpdateItem }) {
   const [stage, setStage] = useState('idle'); // idle | running | done
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
   const toast = useToast();
+  const confirm = useConfirm();
 
   const isExternal = (u) => u && typeof u === 'string' && !u.startsWith('data:');
   const candidates = items.filter((i) => !i.deletedAt && (
@@ -121,10 +123,12 @@ function RehostCard({ items = [], onUpdateItem }) {
 
   const run = async () => {
     if (candidates.length === 0 || stage === 'running') return;
-    const ok = window.confirm(
-      `Rehost ${candidates.length} item${candidates.length === 1 ? '' : 's'} with external images? ` +
-      `This downloads each image and stores it in your wardrobe data. Runs in the background — you can keep using the app.`
-    );
+    const ok = await confirm({
+      eyebrow: 'Rehost images',
+      title: `Rehost ${candidates.length} item${candidates.length === 1 ? '' : 's'}?`,
+      body: 'Each external image is downloaded and stored in your wardrobe data, so it keeps working if the shop takes it down. Runs in the background — you can carry on using the app.',
+      confirmLabel: 'Rehost',
+    });
     if (!ok) return;
     setStage('running');
     setProgress({ done: 0, total: candidates.length, failed: 0 });
@@ -1173,7 +1177,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
                     which meant there was no way to discover or use it on
                     touch devices (no hover state), and on desktop it read
                     as if removal wasn't possible at all. */}
-                <button onClick={() => removeInvite(entry.email).catch((e) => alert(e.message))}
+                <button onClick={() => removeInvite(entry.email).catch((e) => profileToast.show(e.message || 'Could not remove that invite.', { kind: 'error' }))}
                   className="text-stone-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
                   aria-label={`Revoke access for ${entry.email}`}
                 >

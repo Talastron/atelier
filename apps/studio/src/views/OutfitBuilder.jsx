@@ -15,6 +15,7 @@ import { isAIEnabled } from "../firebase.js";
 import { haptic } from "../lib/haptic.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
 import { useToast } from "../ui/toast.jsx";
+import { useConfirm } from "../ui/confirm.jsx";
 import { useEscapeKey } from "../ui/hooks.js";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
 import { renderTextWithChips } from "../components/ItemChip.jsx";
@@ -417,6 +418,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
   }, [filteredOutfits, activeCollection, collections]);
 
   const toast = useToast();
+  const confirm = useConfirm();
 
   // Desktop: PointerSensor for click-and-drag. We omit TouchSensor by design —
   // on mobile, drag-from-stacked-layout is genuinely awkward (slots scroll above
@@ -1797,10 +1799,12 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                     type="button"
                     onClick={async () => {
                       if (backfillBusy) return;
-                      const confirmed = window.confirm(
-                        `Auto-tag ${untagged.length} look${untagged.length === 1 ? '' : 's'} using AI? This uses a tiny amount of your AI allowance (roughly £0.0001 per look).`
-                      );
-                      if (!confirmed) return;
+                      // Runs straight away, deliberately. This used to raise a
+                      // browser confirm quoting the cost - about £0.0001 a look,
+                      // so a penny for a hundred - which is not a sum worth
+                      // stopping someone to approve. The progress counter below
+                      // is the feedback that matters, and the button is already
+                      // explicit about what it does.
                       setBackfillBusy(true);
                       setBackfillProgress({ done: 0, total: untagged.length });
                       try {
@@ -1993,7 +1997,14 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               )}
               <button onClick={async () => {
                 const ids = Array.from(selectedOutfits);
-                if (!window.confirm(`Delete ${ids.length} look${ids.length === 1 ? '' : 's'}?`)) return;
+                const ok = await confirm({
+                  tone: 'destructive',
+                  eyebrow: 'Delete looks',
+                  title: `Delete ${ids.length} look${ids.length === 1 ? '' : 's'}?`,
+                  body: 'The looks are removed from your Lookbook. The pieces themselves stay in your wardrobe.',
+                  confirmLabel: 'Delete',
+                });
+                if (!ok) return;
                 for (const id of ids) await deleteOutfit(id);
                 toast.show(`${ids.length} look${ids.length === 1 ? '' : 's'} deleted`, { kind: 'success' });
                 setSelectMode(false); setSelectedOutfits(new Set());

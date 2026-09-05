@@ -626,6 +626,22 @@ function DailyBriefCard({
         >
           {loading ? 'Composing…' : 'Compose another'}
         </button>
+        {/* Edit — the route this uses already existed and lost its button when
+            the tile grid became a flat-lay: every tile used to call
+            onOpenOutfit, which seeds the Styling Studio with today's look.
+            Compose another discards the whole look for a fresh AI call; this
+            keeps the pieces you like and lets you change the rest.
+
+            Secondary styling, matching Compose another exactly: they are the
+            two ways to change your mind about the same look, and one should
+            not shout louder than the other. */}
+        <button
+          type="button"
+          onClick={() => onOpenOutfit?.(brief)}
+          className="rounded-full border border-stone-300 px-5 py-2.5 text-sm transition-colors hover:bg-stone-50"
+        >
+          Edit
+        </button>
         {saveState === 'saved' && onOpenSavedLook && savedOutfitId ? (
           // Saved: the button turns into a one-tap jump to the look's detail
           // page, so the user never has to hunt for it in the Lookbook.

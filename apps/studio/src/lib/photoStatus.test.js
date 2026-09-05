@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { imageStatus, applyCutoutResult } from './photoStatus.js';
+import { imageStatus, applyCutoutResult, prefersBackgroundRemoval } from './photoStatus.js';
+
+describe('prefersBackgroundRemoval', () => {
+  it('defaults to on for a setting nobody has touched', () => {
+    // The bug this exists for: Profile showed "On" for undefined while
+    // App.jsx read it as false, so the feature was silently inert for
+    // everyone who never opened the toggle.
+    expect(prefersBackgroundRemoval({})).toBe(true);
+    expect(prefersBackgroundRemoval(undefined)).toBe(true);
+    expect(prefersBackgroundRemoval(null)).toBe(true);
+  });
+
+  it('respects an explicit choice either way', () => {
+    expect(prefersBackgroundRemoval({ removeBackground: false })).toBe(false);
+    expect(prefersBackgroundRemoval({ removeBackground: true })).toBe(true);
+  });
+});
 
 describe('imageStatus', () => {
   it('reports a queued or running photo as processing', () => {

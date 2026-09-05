@@ -51,7 +51,7 @@ import {
 } from './lib/items.js';
 import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExportImage, shareOrDownloadImage, autoEnhanceCanvas, removeImageBackground, compressImageToDataUrl, rehostExternalImage, parseSourceUrl, resizeImageToDataUrl } from './lib/canvas.js';
 import { enqueueCutout, retarget } from './lib/cutoutQueue.js';
-import { applyCutoutResult, imageStatus } from './lib/photoStatus.js';
+import { applyCutoutResult, imageStatus, prefersBackgroundRemoval } from './lib/photoStatus.js';
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
@@ -2150,7 +2150,7 @@ function DigitalWardrobe() {
               user={user}
               shops={shops}
               existingItem={editingItem}
-              removeBackground={!!measurements?.removeBackground}
+              removeBackground={prefersBackgroundRemoval(measurements)}
               onClose={() => { setIsAddItemModalOpen(false); setEditingItem(null); }}
               onSave={async (item, pendingCutouts) => { await handleAddItem(item, pendingCutouts); setIsAddItemModalOpen(false); setEditingItem(null); }}
               onOpenReceiptModal={() => { setIsAddItemModalOpen(false); setIsReceiptModalOpen(true); }}

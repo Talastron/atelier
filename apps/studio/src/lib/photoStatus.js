@@ -1,3 +1,18 @@
+// Does this wardrobe want backgrounds removed from new photos?
+//
+// One exported answer because there were two, and they disagreed. Profile
+// rendered the toggle as `measurements?.removeBackground !== false` — so an
+// untouched setting showed "On" — while App.jsx passed
+// `!!measurements?.removeBackground`, which is false for undefined. Anyone who
+// had never opened that toggle saw "On" and got background removal off, and
+// the feature was inert for them.
+//
+// The default is ON, which is what the toggle has always claimed. Someone who
+// wants it off has stored `false`, and that still reads as off.
+export function prefersBackgroundRemoval(measurements) {
+  return measurements?.removeBackground !== false;
+}
+
 // The state of one photo in the Add Item modal.
 //
 // This exists because a single `cutoutBusy` boolean was standing in for a

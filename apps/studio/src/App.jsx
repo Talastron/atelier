@@ -58,6 +58,7 @@ import { parseReceiptText } from './lib/receipts.js';
 import { generateOutfitWithGemini, generateBriefNoteWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
 import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WARN_BYTES, pendingSyncNote } from './lib/persist.js';
+import { beginWrite, endWrite } from './lib/writeTiming.js';
 import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
@@ -586,12 +587,19 @@ function DigitalWardrobe() {
   // spinner is waiting on the action. Returns true when the server confirmed,
   // false when the write is committed locally and still queued. See
   // lib/persist.js.
-  const runWrite = async (writePromise, label) => {
+  //
+  // `bytes` is optional and only the callers that know the payload pass it —
+  // the size theory for the unexplained six-second write can only be ruled out
+  // with a number. Every write is timed regardless, because the write that
+  // needs explaining may not be the one that looked suspicious.
+  const runWrite = async (writePromise, label, bytes = null) => {
+    const ticket = beginWrite(label, bytes);
     const { synced } = await settleWhenLocallyWritten(writePromise, {
       onLateError: (err) => {
         console.error(`[wardrobe] ${label} rejected after the UI moved on`, err);
         toast.show(`${label} didn't save — ${err?.message || 'please try again'}`, { kind: 'error', duration: 7000 });
       },
+      onTiming: ({ outcome }) => endWrite(ticket, { outcome }),
     });
     return synced;
   };
@@ -634,6 +642,12 @@ function DigitalWardrobe() {
     // promise only resolves once the server acks — and offline it never
     // resolves at all, which used to leave the Add Item modal pinned on
     // "Saving…" with the item already safely queued. See lib/persist.js.
+    //
+    // This is THE write under investigation: it is the one that reported
+    // "still syncing" for an item carrying no photos, which the size theory
+    // cannot explain. It does not go through runWrite, so it is timed here,
+    // with its measured size, so the theory can be settled with a number.
+    const ticket = beginWrite(`Item · ${newItem.name || 'Untitled'}`, docSizeBytes(newItem));
     const { synced } = await settleWhenLocallyWritten(
       setDoc(doc(userItemsRef(user.uid), newItem.id), newItem),
       {
@@ -644,6 +658,7 @@ function DigitalWardrobe() {
             { kind: 'error', duration: 7000 }
           );
         },
+        onTiming: ({ outcome }) => endWrite(ticket, { outcome }),
       }
     );
     if (!synced) {

@@ -4232,7 +4232,15 @@ function ItemDetailView({ item, shops, measurements, items: allItems = [], outfi
                 aria-label="Style an outfit with this item"
               >
                 <Wand2 size={16} strokeWidth={1.5} />
-                <span className="text-xs sm:text-sm font-medium">Style with this</span>
+                {/* "Style" on a phone, "Style with this" once there is room.
+                    This row is flex-wrap, so the widest label decides whether
+                    six controls fit one line or spill the bin onto a second
+                    row of its own — which is what they did at 390px. The full
+                    phrase stays in the aria-label and title above, so nothing
+                    is lost to a screen reader or a hover. */}
+                <span className="text-xs sm:text-sm font-medium">
+                  Style<span className="hidden sm:inline"> with this</span>
+                </span>
               </button>
             )}
             <button

@@ -10,7 +10,7 @@ import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
-import OutfitFlatLay from "../components/OutfitFlatLay.jsx";
+import OutfitView from "../components/OutfitView.jsx";
 import { groupDigestCards } from "../lib/digest.js";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
@@ -537,7 +537,7 @@ function DailyBriefCard({
           item is your Chelsea Saddle Bag rather than a brown shape is
           information, so the composition alone would not have been enough. */}
       <div className="mt-5">
-        <OutfitFlatLay pieces={briefItems} onOpenItem={onOpenItem} />
+        <OutfitView pieces={briefItems} onOpenItem={onOpenItem} toggleLabel="Today's look view" />
       </div>
 
       {/* Stylist's note — a warm, gently recessed panel (deeper than the ivory

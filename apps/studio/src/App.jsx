@@ -27,7 +27,7 @@ import WeekStrip from './components/WeekStrip.jsx';
 import ConciergePrompt from './components/ConciergePrompt.jsx';
 import ImageFramer from './components/ImageFramer.jsx';
 import ItemTileImage from './components/ItemTileImage.jsx';
-import OutfitFlatLay from './components/OutfitFlatLay.jsx';
+import OutfitView from './components/OutfitView.jsx';
 import {
   SEASONS, TOP_SUBCATEGORIES, BOTTOM_SUBCATEGORIES, OUTERWEAR_SUBCATEGORIES,
   DRESS_SUBCATEGORIES, ACCESSORY_SUBCATEGORIES, JEWELLERY_SUBCATEGORIES,
@@ -7716,7 +7716,6 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
   const [logDateOpen, setLogDateOpen] = useState(false);
   const [styleFitBusy, setStyleFitBusy] = useState(false);
   const [styleFitError, setStyleFitError] = useState(null);
-  const [view, setView] = useState('flatlay'); // 'flatlay' | 'grid'
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
@@ -7973,50 +7972,10 @@ function OutfitDetailView({ outfit, items = [], onClose, onDelete, onDuplicate, 
 
           {/* ── LEFT COLUMN: Look hero (60%) ── */}
           <div className="lg:col-span-7">
-            {/* View toggle — small pill, top-right of the look region */}
-            <div className="flex justify-end mb-3">
-              <div className="flex bg-stone-200/50 p-1 rounded-full text-xs tracking-meta uppercase">
-                <button onClick={() => setView('flatlay')}
-                  className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'flatlay' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
-                  Flat-lay
-                </button>
-                <button onClick={() => setView('grid')}
-                  className={`px-3 py-1.5 rounded-full transition-colors duration-200 ${view === 'grid' ? 'bg-white text-stone-900 font-medium' : 'text-stone-500 hover:bg-stone-100 hover:text-stone-900'}`}>
-                  Grid
-                </button>
-              </div>
-            </div>
-
-            {view === 'flatlay' ? (
-              <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} paletteFilter={paletteFilter} />
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 md:gap-6">
-                {pieces.map((piece, i) => {
-                  const openable = !!(onOpenItem && piece.id);
-                  const Tag = openable ? 'button' : 'div';
-                  return (
-                    <Tag
-                      key={piece.id || i}
-                      {...(openable ? { type: 'button', onClick: () => onOpenItem(piece.id), 'aria-label': `Open ${piece.name}` } : {})}
-                      className={`flex flex-col gap-3 text-left ${openable ? 'group cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900 rounded-2xl' : ''}`}
-                    >
-                      <div className={`aspect-[3/4] rounded-2xl overflow-hidden bg-white border border-stone-200/60 transition-colors duration-300 ${openable ? 'lg:group-hover:border-brass-300/70' : ''}`}>
-                        {itemImages(piece)[0] ? (
-                          <ItemTileImage item={piece} alt={piece.name} />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-300"><Shirt size={40} strokeWidth={1} /></div>
-                        )}
-                      </div>
-                      <div className="px-1">
-                        <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">{piece.brand}</p>
-                        <p className={`font-display text-base text-stone-800 leading-snug truncate ${openable ? 'group-hover:text-stone-700 transition-colors' : ''}`}>{piece.name}</p>
-                        <p className="text-xs text-stone-500 mt-1">£{Number(piece.price || 0).toLocaleString()}</p>
-                      </div>
-                    </Tag>
-                  );
-                })}
-              </div>
-            )}
+            {/* Toggle and both readings now live in OutfitView, so the Daily
+                Brief offers exactly this control rather than a third
+                hand-written copy of it. */}
+            <OutfitView pieces={pieces} onOpenItem={onOpenItem} paletteFilter={paletteFilter} toggleLabel="Look view" />
           </div>
 
           {/* ── RIGHT COLUMN: Editorial intelligence (40%) ── */}

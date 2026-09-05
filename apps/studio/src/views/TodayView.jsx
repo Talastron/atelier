@@ -10,7 +10,8 @@ import { haptic } from "../lib/haptic.js";
 import { useToast } from "../ui/toast.jsx";
 import WeekStrip from "../components/WeekStrip.jsx";
 import ItemTileImage from "../components/ItemTileImage.jsx";
-import OutfitView from "../components/OutfitView.jsx";
+import OutfitView, { useLookView } from "../components/OutfitView.jsx";
+import ViewToggle from "../ui/ViewToggle.jsx";
 import { groupDigestCards } from "../lib/digest.js";
 import ConciergePrompt from "../components/ConciergePrompt.jsx";
 import WhyThisPanel from "../components/WhyThisPanel.jsx";
@@ -439,6 +440,10 @@ function DailyBriefCard({
   // eye, not the jewellery stack: dress/top/bottom/outerwear → shoes → bags →
   // accessories → jewellery. Stable sort keeps Gemini's order within a tier.
   const BRIEF_CATEGORY_ORDER = { Dresses: 0, Tops: 0, Bottoms: 0, Outerwear: 0, Sportswear: 0, Swimwear: 0, Shoes: 1, Bags: 2, Accessories: 3, Jewellery: 4 };
+  // Held here rather than inside OutfitView because the toggle is rendered up
+  // in the headline row, and the two have to agree.
+  const [lookView, chooseLookView] = useLookView();
+
   const briefItems = (brief.itemIds || [])
     .map(id => items.find(it => it.id === id))
     .filter(Boolean)
@@ -520,7 +525,13 @@ function DailyBriefCard({
       {/* Section headline only — the page header above already carries the
           greeting + weather, so the card doesn't repeat an eyebrow or the
           weather line (that read as duplication). */}
-      <h3 className="font-display text-2xl sm:text-3xl text-stone-900">Styled for today.</h3>
+      {/* Headline and view toggle share one line. The toggle used to sit on
+          its own row beneath, which spent a whole band of height on two words
+          while the space beside the headline sat empty. */}
+      <div className="flex items-center justify-between gap-4">
+        <h3 className="font-display text-2xl sm:text-3xl text-stone-900">Styled for today.</h3>
+        <ViewToggle value={lookView} onChange={chooseLookView} label="Today's look view" />
+      </div>
 
       {/* The look, composed the way every other surface composes one.
 
@@ -537,7 +548,7 @@ function DailyBriefCard({
           item is your Chelsea Saddle Bag rather than a brown shape is
           information, so the composition alone would not have been enough. */}
       <div className="mt-5">
-        <OutfitView pieces={briefItems} onOpenItem={onOpenItem} toggleLabel="Today's look view" />
+        <OutfitView pieces={briefItems} onOpenItem={onOpenItem} view={lookView} showToggle={false} />
       </div>
 
       {/* Stylist's note — a warm, gently recessed panel (deeper than the ivory

@@ -29,14 +29,29 @@ export function useLookView() {
   return [view, choose];
 }
 
-export default function OutfitView({ pieces = [], onOpenItem, paletteFilter = null, toggleLabel = 'Look view' }) {
-  const [view, choose] = useLookView();
+// `view` and `showToggle` exist for surfaces that have somewhere better to put
+// the control. The Daily Brief puts it on the same line as "Styled for today.",
+// where there was already empty space — on its own row it cost a whole band of
+// height to say two words. Those callers drive the state with useLookView
+// themselves and pass the result down.
+export default function OutfitView({
+  pieces = [],
+  onOpenItem,
+  paletteFilter = null,
+  toggleLabel = 'Look view',
+  view: viewProp,
+  showToggle = true,
+}) {
+  const [ownView, choose] = useLookView();
+  const view = viewProp ?? ownView;
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <ViewToggle value={view} onChange={choose} label={toggleLabel} />
-      </div>
+      {showToggle && (
+        <div className="flex justify-end mb-3">
+          <ViewToggle value={view} onChange={choose} label={toggleLabel} />
+        </div>
+      )}
       {view === 'flatlay' ? (
         <OutfitFlatLay pieces={pieces} onOpenItem={onOpenItem} paletteFilter={paletteFilter} />
       ) : (

@@ -33,6 +33,29 @@ export const STYLE_PRINCIPLES = [
   'Effortless coastal · linen / cotton',
 ];
 
+// What the wearer is trying to DO. The app knows what you own, what you wear,
+// what suits you and the weather; without this it can tell you that you own
+// fourteen tops and two pairs of trousers, and not whether that is a problem.
+//
+// A fixed list rather than free text, because this is the vocabulary the gap
+// analysis ranks against: "Buy less, wear more" and "Build a capsule I actually
+// wear" have to produce genuinely different advice from the same wardrobe, and
+// a model cannot rank a gap against a sentence it has never seen.
+//
+// The fifth deliberately names no cause. An earlier draft read "Rebuild after
+// a change — size, job, life", which makes the app comment on the reader's
+// body in a picker they see every time they open Profile. The analysis only
+// needs to know THAT a wardrobe stopped suiting someone — that is what changes
+// the advice, to structural gaps rather than incremental ones.
+export const STYLE_GOALS = [
+  'Build a capsule I actually wear',
+  'Dress better for work',
+  'Buy less, wear more',
+  'Find my own style rather than trends',
+  'Rebuild my wardrobe for who I am now',
+  'Dress for something specific coming up',
+];
+
 export const CATEGORIES = ['All', 'Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Sportswear', 'Swimwear', 'Shoes', 'Bags', 'Accessories', 'Jewellery'];
 
 // Condition / cleaning state for an owned item. Default is `available` —

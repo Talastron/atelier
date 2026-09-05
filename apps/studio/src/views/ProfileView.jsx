@@ -12,6 +12,7 @@ import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { useConfirm } from "../ui/confirm.jsx";
 import { BUILD_LABEL } from "../buildInfo.js";
+import SlowWriteNotes from "../components/SlowWriteNotes.jsx";
 import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, STYLE_GOALS, BODY_SHAPE_GUIDES, MATERIALS, materialsForCategory, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
 import { inferBudget } from "../lib/budget.js";
 import { prefersBackgroundRemoval } from "../lib/photoStatus.js";
@@ -1266,6 +1267,9 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
       <p className="text-center text-xs text-stone-400 select-text pt-4 pb-2">
         Atelier · {BUILD_LABEL}
       </p>
+
+      {/* Renders nothing until a save has actually been slow. */}
+      <SlowWriteNotes />
 
     </div>
   );

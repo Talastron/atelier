@@ -1,6 +1,6 @@
 import React from 'react';
 import { daysSinceLastWorn, itemImages, itemSeasons } from '../lib/items.js';
-import { pickTodaysRecommendation, pickVeto } from '../lib/weather.js';
+import { pickTodaysRecommendation, pickVeto, WET_DAY_PROBABILITY } from '../lib/weather.js';
 
 // One piece from your own wardrobe, worth wearing today.
 //
@@ -20,8 +20,13 @@ import { pickTodaysRecommendation, pickVeto } from '../lib/weather.js';
 // limit, so on a day the Brief fails this still says something true.
 export default function TodaysPick({ items = [], weather, onItemClick, className = '' }) {
   const tempC = weather?.temp ?? null;
+  // Already on the weather object this card is handed — the forecast has
+  // carried precipProb since the "Mostly dry" label needed it. Footwear is
+  // pickable now, and it is the reason this line exists: the veto needs to
+  // know whether the pavement will be wet.
+  const precipProb = weather?.precipProb ?? null;
   const owned = items.filter((i) => i.status === 'owned');
-  const recommendation = pickTodaysRecommendation(owned, tempC);
+  const recommendation = pickTodaysRecommendation(owned, tempC, precipProb);
 
   if (recommendation) {
     // Neglect first. The ranking already favours the least-worn eligible piece,
@@ -33,6 +38,13 @@ export default function TodaysPick({ items = [], weather, onItemClick, className
     else if (days >= 30) reasons.push(`not worn in ${Math.floor(days / 30)} month${days < 60 ? '' : 's'}`);
     else if (days >= 14) reasons.push(`not worn in ${days} days`);
     if (tempC != null) reasons.push(`fits today's ${Math.round(tempC)}°C`);
+    // On a wet day the footwear veto has done real work — it removed the suede
+    // and the sandals — so say so. Only for shoes, and only when it rained:
+    // otherwise this is a line about weather that is true of every candidate,
+    // which is precisely what the comment above says not to lead with.
+    if (recommendation.category === 'Shoes' && precipProb != null && precipProb >= WET_DAY_PROBABILITY) {
+      reasons.push('copes with the rain');
+    }
 
     const seasons = itemSeasons(recommendation);
     return (
@@ -78,7 +90,7 @@ export default function TodaysPick({ items = [], weather, onItemClick, className
   // a boolean precisely so this sentence can be true: a collection of jewellery
   // and bags has nothing to suggest for a different reason than one full of
   // winter coats in July.
-  const ownsAGarment = owned.some((i) => pickVeto(i, tempC) !== 'not-a-garment');
+  const ownsAGarment = owned.some((i) => pickVeto(i, tempC, precipProb) !== 'not-a-garment');
   return (
     <div className={`text-left w-full bg-stone-100 text-stone-600 rounded-2xl lg:rounded-3xl p-4 sm:p-5 ${className}`}>
       <p className="text-xs tracking-eyebrow uppercase text-stone-400 mb-1.5 flex items-center gap-2">
@@ -92,7 +104,7 @@ export default function TodaysPick({ items = [], weather, onItemClick, className
       <p className="text-sm text-stone-500 mt-1">
         {ownsAGarment
           ? 'Your pieces are tagged for other seasons — add a warm-weather piece, or check the season tags on what you own.'
-          : "Today's pick suggests something to wear, so it needs a top, a dress, trousers or a coat."}
+          : "Today's pick suggests something to wear, so it needs a top, a dress, trousers, a coat or a pair of shoes."}
       </p>
     </div>
   );

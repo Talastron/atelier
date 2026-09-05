@@ -1,6 +1,22 @@
 // Weather fetch + labelling, garment weather-appropriateness scoring, and the
 // "today's pick" selector. Plus small greeting/name helpers used alongside.
-import { itemStyles, itemSeasons, daysSinceLastWorn, live } from "./items.js";
+import { itemStyles, itemSeasons, itemMaterials, daysSinceLastWorn, live } from "./items.js";
+
+// Precipitation probability (%) at or above which the day counts as wet.
+//
+// ONE number, shared by the label and the footwear veto. weatherLabel already
+// drew this line — below it a rain-ish weather code is reported as "Mostly
+// dry" — so a separate threshold for shoes would be a second opinion about the
+// same sky, and the app would be able to say "Mostly dry" while refusing to
+// suggest suede. Two definitions of one default is how the view toggle and
+// removeBackground both went wrong.
+export const WET_DAY_PROBABILITY = 30;
+
+// The season tag that is not a season. taxonomy.js offers it as the first of
+// five choices; it is spelled out here rather than imported by index, and a
+// test asserts the two agree, because SEASONS[0] would break silently the day
+// someone re-orders that list.
+export const ALL_SEASONS = 'All Seasons';
 
 // Weather: fetched via browser geolocation + Open-Meteo (no API key needed).
 // Cached for 1 hour in localStorage so subsequent visits don't re-prompt.
@@ -151,7 +167,7 @@ export function weatherLabel(code, precipProb = null) {
   // morning drizzle still maps to code 51, even if it's clear the rest of
   // the day. precipProb < 30% means most of the day will be dry; switch
   // the label to reflect that honestly.
-  const lowChance = precipProb !== null && precipProb < 30;
+  const lowChance = precipProb !== null && precipProb < WET_DAY_PROBABILITY;
   if (code <= 67) {
     if (lowChance) return 'Mostly dry';
     if (code <= 55) return 'Drizzle';      // codes 51-55: drizzle, not rain
@@ -227,11 +243,70 @@ export function firstName(user) {
 //
 // Sportswear and Swimwear are garments and are deliberately absent: both are
 // driven by an activity rather than the weather, so suggesting a swimsuit
-// because it is 24C is wrong even when the temperature agrees. Shoes are absent
-// pending the rain question — sandals and boots are genuinely useful picks, but
-// including footwear without considering precipitation would suggest suede on a
-// wet day. None of these omissions is an oversight.
-const PICKABLE_CATEGORIES = new Set(['Tops', 'Bottoms', 'Dresses', 'Outerwear']);
+// because it is 24C is wrong even when the temperature agrees. Bags, jewellery
+// and accessories are absent because the card answers "what should I wear".
+//
+// Shoes were absent "pending the rain question". That question is answered
+// below, but it was never the whole of it, and admitting footwear on the rain
+// rule alone would have been a mistake. The rest of it:
+//
+//   Untagged plus unlogged is what the ranking rewards most. The season veto
+//   culls a 71-garment wardrobe to about 11 on a 24C day; shoes rarely declare
+//   seasons, so almost none of them would be culled. Shoes are also rarely
+//   logged as worn, so daysSinceLastWorn returns null, recency scores a flat
+//   1.0, and recency is the heaviest term in the ranking at 0.45. Footwear
+//   would therefore have arrived pre-loaded with the top score and dominated a
+//   card that exists to surface forgotten CLOTHES.
+//
+// So shoes get a veto that does not depend on tag quality — impliedSeasons,
+// below — alongside the wet-day rule. Both are derived from the subcategory
+// and material the scan already records.
+const PICKABLE_CATEGORIES = new Set(['Tops', 'Bottoms', 'Dresses', 'Outerwear', 'Shoes']);
+
+// Shoes rain ruins, or that let the rain in.
+//
+// Deliberately narrow. Leather takes a shower and dries; canvas gets damp and
+// survives; patent and rubber are better in rain than out of it. These four
+// are the ones a wet pavement genuinely damages, plus any open shoe, which is
+// about the foot rather than the material — a rubber sandal is waterproof and
+// still wrong in a downpour.
+const RAIN_RUINED_MATERIALS = new Set(['suede', 'nubuck', 'satin', 'espadrille']);
+const OPEN_SHOES = new Set(['sandals']);
+
+// The season a shoe implies when it declares none.
+//
+// This does NOT contradict "silence is not a declaration" below. Absent
+// seasons are a data gap; a subcategory is something the scan positively
+// recorded, and "Sandals" says summer as plainly as a seasons array would.
+//
+// Only the two unambiguous ones are here. Loafers, sneakers, heels, flats and
+// ankle boots are worn all year in this climate, and guessing at them would
+// veto real candidates to no purpose. Wedges are left out on purpose too: an
+// espadrille wedge is summer, a closed suede one is not, and the material rule
+// already catches both in the rain.
+const IMPLIED_SEASONS = {
+  sandals: ['Spring', 'Summer'],
+  boots: ['Autumn', 'Winter'],
+};
+
+export function impliedSeasons(item) {
+  if (item?.category !== 'Shoes') return [];
+  return IMPLIED_SEASONS[(item.subCategory || '').toLowerCase()] || [];
+}
+
+// Whether rain rules this shoe out. Garments are exempt: rain ruins suede
+// shoes, but a suede skirt spends the day at knee height, not in the puddle.
+function wetDayVeto(item, precipProb) {
+  if (item?.category !== 'Shoes') return false;
+  if (precipProb == null || precipProb < WET_DAY_PROBABILITY) return false;
+  if (OPEN_SHOES.has((item.subCategory || '').toLowerCase())) return true;
+  // The NAME is in here for the same reason weatherAppropriatenessScore reads
+  // it: the seed wardrobe's "Black Canvas Espadrille Wedges" records its
+  // materials as ["Other"], and every decisive word is in the name. A material
+  // list is what someone remembered to tag; a name is what the thing is.
+  const text = `${item.name || ''} ${itemMaterials(item).join(' ')}`.toLowerCase();
+  return [...RAIN_RUINED_MATERIALS].some((m) => text.includes(m));
+}
 
 /**
  * Why this item may not be Today's Pick, or null if it may.
@@ -243,23 +318,36 @@ const PICKABLE_CATEGORIES = new Set(['Tops', 'Bottoms', 'Dresses', 'Outerwear'])
  * Returns a reason rather than a boolean so the card's empty state can say
  * something true instead of guessing.
  *
- * @returns {'not-a-garment'|'wrong-season'|null}
+ * @returns {'not-a-garment'|'wrong-season'|'wet-day'|null}
  */
-export function pickVeto(item, tempC) {
+export function pickVeto(item, tempC, precipProb = null) {
   if (!PICKABLE_CATEGORIES.has(item?.category)) return 'not-a-garment';
+  // Before season, because it holds at any temperature: suede is wrong in the
+  // rain in April and in October alike.
+  if (wetDayVeto(item, precipProb)) return 'wet-day';
   const felt = seasonsForTemp(tempC);
   if (!felt) return null;                   // no temperature known — veto nothing
+  // Declared first, implied second. Boots you have explicitly tagged Spring
+  // are Spring boots, and the subcategory does not get to overrule you.
   const declared = itemSeasons(item);
+  const seasons = declared.length > 0 ? declared : impliedSeasons(item);
   // Silence is not a declaration. Vetoing on absent data would punish an item
   // that was never scanned, which is a data gap and not a wrong garment.
-  if (declared.length === 0) return null;
-  return declared.some((s) => felt.includes(s)) ? null : 'wrong-season';
+  if (seasons.length === 0) return null;
+  // "All Seasons" is one of the five values taxonomy.js offers and the only one
+  // that is not a season, so it never appeared in what seasonsForTemp returns
+  // and the membership test below could not match it. The tag that means "right
+  // all year" was therefore reading as "right in no weather", and every item
+  // carrying it was vetoed at every temperature — a garment bug that footwear
+  // only made visible. Found against the seed wardrobe's White Leather Sneakers.
+  if (seasons.includes(ALL_SEASONS)) return null;
+  return seasons.some((s) => felt.includes(s)) ? null : 'wrong-season';
 }
 
 // Defined in terms of pickVeto, deliberately, so the two can never disagree
 // about the same item.
-export function isPickableToday(item, tempC) {
-  return pickVeto(item, tempC) === null;
+export function isPickableToday(item, tempC, precipProb = null) {
+  return pickVeto(item, tempC, precipProb) === null;
 }
 
 // Score an item's weather appropriateness against today's temperature.
@@ -334,12 +422,12 @@ export function weatherAppropriatenessScore(item, tempC) {
 // VETO applied before scoring, not a preference — see pickVeto. Returns null
 // when nothing is eligible, which the caller must render as an honest empty
 // state rather than falling back to a poor pick.
-export function pickTodaysRecommendation(items, tempC = null) {
+export function pickTodaysRecommendation(items, tempC = null, precipProb = null) {
   // The veto runs first, and season is part of it rather than part of the
   // score. That is the fix: a score term can be outvoted, and this one was.
   const eligible = live(items)
     .filter((i) => i.status === 'owned')
-    .filter((i) => isPickableToday(i, tempC));
+    .filter((i) => isPickableToday(i, tempC, precipProb));
   if (eligible.length === 0) return null;
 
   const scored = eligible.map((item) => {

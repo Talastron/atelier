@@ -61,7 +61,15 @@ export function pendingSyncNote() {
  * instead of becoming an unhandled rejection.
  */
 export function settleWhenLocallyWritten(writePromise, options = {}) {
-  const { graceMs = LOCAL_WRITE_GRACE_MS, onLateError = null } = options;
+  const { graceMs = LOCAL_WRITE_GRACE_MS, onLateError = null, onTiming = null } = options;
+  // Fired when the write TRULY lands, which is the number nobody had. Once the
+  // grace period resolves the caller, this promise carries on unwatched — so
+  // "took more than six seconds" was the most anyone could say about a slow
+  // write, and the question is how much more. Reported here rather than by the
+  // caller because only this function still holds the promise afterwards.
+  const report = (outcome) => {
+    try { onTiming?.({ outcome }); } catch { /* measuring must not break the write */ }
+  };
   return new Promise((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
@@ -73,12 +81,14 @@ export function settleWhenLocallyWritten(writePromise, options = {}) {
     Promise.resolve(writePromise).then(
       () => {
         clearTimeout(timer);
+        report('ok');
         if (settled) return; // already reported as unsynced — the sync landing is not news
         settled = true;
         resolve({ synced: true });
       },
       (err) => {
         clearTimeout(timer);
+        report('rejected');
         if (settled) {
           // We told the caller this was queued; it turned out to be rejected.
           try { onLateError?.(err); } catch { /* a reporter must never mask the error */ }

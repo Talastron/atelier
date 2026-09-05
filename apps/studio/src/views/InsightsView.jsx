@@ -1382,7 +1382,17 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
   ];
 
   return (
-    <div className="space-y-10 md:space-y-12 max-w-5xl">
+    // max-w-6xl rather than 5xl, which is all the shell allows: it is
+    // max-w-6xl (1152) minus its own lg:p-12, so 1056 is the ceiling for any
+    // view. Worth taking, but small — the audit's three columns go 298px to
+    // 309px, about 41 to 43 characters a line.
+    //
+    // That is still far below the 60-75 that prose reads comfortably at, and
+    // it is the real cause of the ragged look: heavy wrapping makes card
+    // heights vary from 89 to 216px, so nothing lines up across the columns.
+    // Fixing it properly means either widening the shell for every view, or
+    // giving the audit fewer than three columns at this width.
+    <div className="space-y-10 md:space-y-12 max-w-6xl">
       <EditorialHeader eyebrow="The Dossier" title="Insights" subtitle="Your aesthetic, how you wear it, and what it's worth." />
       {dnaShareOpen && <StyleDNAShareModal items={items} measurements={measurements} onClose={() => setDnaShareOpen(false)} />}
 

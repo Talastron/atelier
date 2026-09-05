@@ -581,33 +581,36 @@ export async function generateOutfitNameWithGemini(picked, intent) {
     .join('\n- ');
   const briefLine = (intent && intent.trim() && intent !== 'Any')
     ? `The user's brief: "${intent.trim()}"\n\nTransform the brief into the name — catch its place, moment, or mood, but do NOT restate it word-for-word (a brief of "casual date night" must never become "Casual Date Night Outfit"). The name is the editor's title for this brief, not a label of it.`
-    : `No specific brief — name the look as a self-contained editorial piece.`;
+    : `No specific brief — name it from the clothes themselves.`;
 
   const prompt = `You are an editorial fashion stylist titling a saved look for Atelier, a private digital wardrobe.
 
-Give it a SHORT but evocative name: 3 to 6 words, title case, no quotes, no full stops, no emoji.
+Give it a SHORT name: 2 to 5 words, title case, no quotes, no full stops, no emoji.
 
-Voice: like a couturier captioning a piece for a private client — refined, considered, a little romantic. Reach for atmosphere over function.
+Voice: a well-made label, not a poem. ANCHOR the name to something actually in this look — its dominant colour, a fabric, or the piece that defines it — so the owner recognises the outfit from the name alone in a list of fifty. Restrained and specific beats atmospheric and clever.
 
-VARY the structure and the imagery every single time. Do NOT default to a "Place, Time-of-day" formula, and do NOT reach for weather or seaside motifs. Draw from a wide, changing range instead: a colour, a fabric, a texture, an hour, a single object, a destination, a line of feeling, a wry aside. At most one name in four should use a comma; build the rest without one.
+A name that would still make sense over completely different clothes is wrong. Do not, however, simply list the garments: "Blazer And Trousers" is a description, not a name.
 
-Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move") and never restate the items. Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
+Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Avoid literary or essayistic titles ("An Argument for Linen", "The Weight of Good Wool", "Dressed for the Long Way Round") — at this length they read as parody. Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
 
 ${briefLine}
 
 Items in this look:
 - ${itemList}
 
-Examples — note how DIFFERENTLY each one is built; do not copy them:
-- "The Weight of Good Wool"
-- "Ledger Grey"
-- "An Argument for Linen"
-- "Nine Parts Navy"
-- "Sunday, and No Plans"
-- "Dressed for the Long Way Round"
+Examples of the register — each anchored to a real detail, none of them florid:
+- "Navy and Brass"
+- "The Good Blazer"
+- "Chinos, Softened"
+- "Charcoal With Gold"
+- "Everyday Linen"
+- "The Camel Coat Look"
 
 Reply with the name ONLY — no preamble, no explanation, no quotes.`;
-  const result = await geminiText(prompt, { temperature: 1.0 }, 'name-look');
+  // 0.8, not 1.0. At the top of the range this returned self-consciously
+  // poetic titles — the examples above matter more than any adjective, but
+  // maximum randomness was compounding them.
+  const result = await geminiText(prompt, { temperature: 0.8 }, 'name-look');
   return (result || '')
     .trim()
     .split('\n')[0]

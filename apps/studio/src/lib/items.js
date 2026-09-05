@@ -102,6 +102,18 @@ export function summariseStyleProfile(measurements) {
   if (Array.isArray(measurements.stylePrinciples) && measurements.stylePrinciples.length) {
     bits.push(`stated principles: ${measurements.stylePrinciples.join('; ')}`);
   }
+  if (Array.isArray(measurements.styleGoals) && measurements.styleGoals.length) {
+    // Goals steer WHAT the app surfaces, not how it sounds: the gap analysis
+    // ranks a work-appropriate hole above an evening one when work is stated.
+    bits.push(`working toward: ${measurements.styleGoals.join('; ').toLowerCase()}`);
+  }
+  const typical = Number(measurements.budgetTypical);
+  const high = Number(measurements.budgetHigh);
+  if (Number.isFinite(typical) && typical > 0 && Number.isFinite(high) && high > 0) {
+    // Both or neither — one number alone cannot say "this is typical, and
+    // this is a lot", which is the comparison the purchase scorer needs.
+    bits.push(`typically spends around £${typical} a piece, £${high} is a big buy`);
+  }
   if (bits.length === 0) return '';
   return `Style profile: ${bits.join('; ')}.`;
 }

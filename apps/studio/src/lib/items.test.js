@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveShortName, itemDisplayName } from './items.js';
 import { currentSeasonLabel } from './items.js';
+import { summariseStyleProfile } from './items.js';
 
 describe('currentSeasonLabel', () => {
   it('maps March, April, May to Spring', () => {
@@ -87,5 +88,50 @@ describe('itemDisplayName', () => {
   it('survives a missing item', () => {
     expect(itemDisplayName(null)).toBe('');
     expect(itemDisplayName({})).toBe('');
+  });
+});
+
+describe('summariseStyleProfile — goals and budget', () => {
+  it('says nothing at all for an untouched profile', () => {
+    expect(summariseStyleProfile({})).toBe('');
+    expect(summariseStyleProfile(null)).toBe('');
+  });
+
+  it('states the goals when only goals are set', () => {
+    const s = summariseStyleProfile({ styleGoals: ['Buy less, wear more'] });
+    expect(s).toContain('working toward: buy less, wear more');
+  });
+
+  it('joins two goals', () => {
+    const s = summariseStyleProfile({
+      styleGoals: ['Dress better for work', 'Buy less, wear more'],
+    });
+    expect(s).toContain('dress better for work; buy less, wear more');
+  });
+
+  it('states the budget when only budget is set', () => {
+    const s = summariseStyleProfile({ budgetTypical: 80, budgetHigh: 400 });
+    expect(s).toContain('typically spends around £80 a piece, £400 is a big buy');
+  });
+
+  it('carries both alongside the existing profile', () => {
+    const s = summariseStyleProfile({
+      styleUndertone: 'Cool',
+      styleGoals: ['Build a capsule I actually wear'],
+      budgetTypical: 80,
+      budgetHigh: 400,
+    });
+    expect(s).toContain('undertone is cool');
+    expect(s).toContain('working toward');
+    expect(s).toContain('£80');
+    expect(s.startsWith('Style profile:')).toBe(true);
+    expect(s.endsWith('.')).toBe(true);
+  });
+
+  it('ignores an empty goals array and a half-set budget', () => {
+    expect(summariseStyleProfile({ styleGoals: [] })).toBe('');
+    // One number alone cannot say "typical, and this is a lot".
+    expect(summariseStyleProfile({ budgetTypical: 80 })).toBe('');
+    expect(summariseStyleProfile({ budgetHigh: 400 })).toBe('');
   });
 });

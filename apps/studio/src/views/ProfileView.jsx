@@ -12,7 +12,8 @@ import Input from "../ui/Input.jsx";
 import { useToast } from "../ui/toast.jsx";
 import { useConfirm } from "../ui/confirm.jsx";
 import { BUILD_LABEL } from "../buildInfo.js";
-import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, BODY_SHAPE_GUIDES, MATERIALS, materialsForCategory, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
+import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, STYLE_GOALS, BODY_SHAPE_GUIDES, MATERIALS, materialsForCategory, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
+import { inferBudget } from "../lib/budget.js";
 
 // Complete-my-data backfill: scan the wardrobe for items missing key fields
 // (category set to generic "Tops" with no other tags, or no colour, or no
@@ -205,14 +206,24 @@ function RehostCard({ items = [], onUpdateItem }) {
 // Style profile editor card. Compact chip-based UI, no separate quiz modal —
 // the choices ARE the quiz. Saving each chip writes immediately so there's no
 // "save" friction. Feeds summariseStyleProfile() which goes into Gemini prompts.
-function StyleProfileCard({ measurements, saveMeasurements }) {
+function StyleProfileCard({ measurements, saveMeasurements, items = [] }) {
   const m = measurements || {};
   const set = (key, value) => saveMeasurements({ ...m, [key]: value });
   const togglePrinciple = (p) => {
     const cur = Array.isArray(m.stylePrinciples) ? m.stylePrinciples : [];
     set('stylePrinciples', cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p].slice(0, 3));
   };
-  const populated = !!(m.styleUndertone || m.styleSilhouette || m.styleFormality || m.stylePalette);
+  const toggleGoal = (g) => {
+    const cur = Array.isArray(m.styleGoals) ? m.styleGoals : [];
+    // Capped at two. A list of six goals all selected ranks nothing.
+    set('styleGoals', cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g].slice(0, 2));
+  };
+  const inferred = inferBudget(items);
+  const populated = !!(
+    m.styleUndertone || m.styleSilhouette || m.styleFormality || m.stylePalette
+    || (Array.isArray(m.styleGoals) && m.styleGoals.length)
+    || (m.budgetTypical && m.budgetHigh)
+  );
 
   const Row = ({ label, options, value, onPick }) => (
     <div>
@@ -270,6 +281,62 @@ function StyleProfileCard({ measurements, saveMeasurements }) {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <p className="text-xs tracking-label uppercase text-stone-500 font-bold mb-2">
+          What you're working toward <span className="font-normal normal-case tracking-normal text-stone-400 ml-1">(pick up to 2)</span>
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {STYLE_GOALS.map((g) => {
+            const active = Array.isArray(m.styleGoals) && m.styleGoals.includes(g);
+            return (
+              <button key={g} type="button" onClick={() => toggleGoal(g)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  active ? 'bg-stone-900 border-stone-900 text-white' : 'bg-white border-stone-200 text-stone-700 hover:border-stone-500'
+                }`}>
+                {g}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <p className="text-xs tracking-label uppercase text-stone-500 font-bold mb-2">
+          What you spend <span className="font-normal normal-case tracking-normal text-stone-400 ml-1">(optional)</span>
+        </p>
+        {/* Inferred from prices already on the wardrobe and shown as the
+            placeholder, so this is a correction rather than a blank to fill.
+            Below eight priced items inferBudget returns null and we say so
+            rather than printing a number derived from four prices. */}
+        <p className="text-sm text-stone-500 leading-relaxed mb-3">
+          {inferred
+            ? `From your wardrobe, you usually spend around £${inferred.typical}, and £${inferred.high} is a big buy. Correct it here if that's not right.`
+            : 'Once a few more pieces have prices, Atelier will work this out from your wardrobe. You can also set it yourself.'}
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-stone-500">Typical piece</span>
+            <input
+              type="number" inputMode="numeric" min="0"
+              value={m.budgetTypical ?? ''}
+              placeholder={inferred ? String(inferred.typical) : '—'}
+              onChange={(e) => set('budgetTypical', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-32 px-3 py-2 rounded-xl bg-white border border-stone-200 focus:border-stone-900 outline-none text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-stone-500">A big buy</span>
+            <input
+              type="number" inputMode="numeric" min="0"
+              value={m.budgetHigh ?? ''}
+              placeholder={inferred ? String(inferred.high) : '—'}
+              onChange={(e) => set('budgetHigh', e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-32 px-3 py-2 rounded-xl bg-white border border-stone-200 focus:border-stone-900 outline-none text-sm"
+            />
+          </label>
         </div>
       </div>
     </div>
@@ -782,7 +849,7 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
         </div>
       </section>
       <div id="profile-style" className="scroll-mt-24">
-        <StyleProfileCard measurements={measurements} saveMeasurements={saveMeasurements} />
+        <StyleProfileCard measurements={measurements} saveMeasurements={saveMeasurements} items={items} />
       </div>
       </section>
 

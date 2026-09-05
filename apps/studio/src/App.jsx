@@ -16,7 +16,8 @@ import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc, query, orderBy } from 'firebase/firestore';
 import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, isAIEnabled, getFounderCount, findProductListingFromPhoto, connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, fetchCalendarEvents } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
-import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
+import { readDailyBrief, writeDailyBrief, writeRemoteDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
+import { amendBrief } from './lib/brief.js';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
 import { useSubscriptionStatus } from './subscriptionStatus';
 import AppCheckDevBanner from './AppCheckDevBanner.jsx';
@@ -1269,6 +1270,25 @@ function DigitalWardrobe() {
     setActiveTab('outfits');
   };
 
+  // Called by the Studio when a session that began as "Edit today's look" is
+  // saved. Updates the brief in place rather than filing a Lookbook copy —
+  // saving a look stays the separate, deliberate act it already is.
+  const handleUpdateBrief = async ({ itemIds, note }) => {
+    const uid = user?.uid;
+    if (!uid) return;
+    const current = readDailyBrief(uid);
+    if (!current) return;
+    const next = amendBrief(current, itemIds, note);
+    const saved = writeDailyBrief(uid, next);
+    // Best-effort, like the compose path above: writeRemoteDailyBrief swallows
+    // its own errors, so the local write (what Today reads on mount) is what
+    // must not be lost, and we don't block on cross-device sync to get there.
+    writeRemoteDailyBrief(uid, saved);
+    setStudioSeed(null);
+    setActiveTab('today');
+    toast.show("Today's look updated", { kind: 'success' });
+  };
+
   const handleSaveProfile = async (newMeasurements) => {
     if (!user) return;
     await runWrite(setDoc(userProfileDoc(user.uid), newMeasurements), 'Profile save');
@@ -1636,7 +1656,10 @@ function DigitalWardrobe() {
                       aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
                       onSaveOutfit={handleSaveOutfit}
                       onLogOutfitWear={handleLogOutfitWear}
-                      onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }}
+                      // fromBrief is the whole mechanism: without it the Studio cannot tell this
+                      // session from opening any saved look, and Save would file a Lookbook copy
+                      // instead of updating today.
+                      onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now(), fromBrief: true }); setActiveTab('outfits'); }}
                       onOpenSavedLook={setOpenOutfitId}
                       onItemClick={setSelectedItemId}
                       onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
@@ -1676,6 +1699,7 @@ function DigitalWardrobe() {
                       seedOutfit={studioSeed}
                       onSeedConsumed={() => setStudioSeed(null)}
                       onAfterSave={() => setActiveTab('lookbook')}
+                      onUpdateBrief={handleUpdateBrief}
                       onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
                     />
                   )}

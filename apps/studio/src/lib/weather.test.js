@@ -1,8 +1,18 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   weatherAppropriatenessScore, pickTodaysRecommendation, weatherToSeasons,
-  seasonsForTemp, pickVeto, isPickableToday,
+  seasonsForTemp, pickVeto, isPickableToday, weatherLabel, WET_DAY_PROBABILITY,
+  ALL_SEASONS,
 } from './weather.js';
+import { SEASONS } from './taxonomy.js';
+
+// The veto spells "All Seasons" out rather than importing SEASONS[0]. This is
+// what stops the two drifting apart.
+describe('ALL_SEASONS', () => {
+  it('is a value the taxonomy actually offers', () => {
+    expect(SEASONS).toContain(ALL_SEASONS);
+  });
+});
 
 // pickTodaysRecommendation does NOT return the top-scoring item. It takes the
 // top max(3, 20%) and then picks among them by hashing today's date, so the
@@ -12,11 +22,11 @@ import {
 // clock across a range of dates instead.
 afterEach(() => { vi.useRealTimers(); });
 
-const offeredAcrossSeptember = (wardrobe, tempC) => {
+const offeredAcrossSeptember = (wardrobe, tempC, precipProb = null) => {
   const offered = new Set();
   for (let day = 1; day <= 28; day += 1) {
     vi.setSystemTime(new Date(2026, 8, day));
-    offered.add(pickTodaysRecommendation(wardrobe, tempC)?.id);
+    offered.add(pickTodaysRecommendation(wardrobe, tempC, precipProb)?.id);
   }
   vi.useRealTimers();
   return offered;
@@ -112,8 +122,12 @@ describe('pickVeto', () => {
   // Also load-bearing for the veto: these categories rarely declare seasons, so
   // once cold-weather garments are vetoed they would be most of what remains
   // and would win on neglect alone.
+  // Shoes USED TO BE on this list, and the reason above is why: untagged
+  // footwear escapes the season veto and then wins on neglect. It is admitted
+  // now because impliedSeasons gives it a veto that does not depend on tag
+  // quality — see the footwear block below. The other six stay out.
   it('vetoes anything that is not a garment, at every temperature', () => {
-    for (const category of ['Shoes', 'Bags', 'Accessories', 'Jewellery', 'Sportswear', 'Swimwear']) {
+    for (const category of ['Bags', 'Accessories', 'Jewellery', 'Sportswear', 'Swimwear']) {
       const item = { id: category, name: category, category, status: 'owned', seasons: ['Summer'] };
       expect(pickVeto(item, 24), category).toBe('not-a-garment');
     }
@@ -124,6 +138,26 @@ describe('pickVeto', () => {
       const item = { id: category, name: category, category, status: 'owned', seasons: ['Summer'] };
       expect(pickVeto(item, 24), category).toBeNull();
     }
+  });
+
+  // A pre-existing bug, found while admitting footwear and NOT specific to it.
+  // "All Seasons" is one of the five values taxonomy.js offers, but
+  // seasonsForTemp only ever returns Spring/Summer/Autumn/Winter — so the
+  // membership test could never match, and every item tagged All Seasons was
+  // silently vetoed at every temperature. It is the one tag that means "this
+  // is always right", and it was reading as "this is never right".
+  it('treats All Seasons as fitting any temperature', () => {
+    const sneakers = { id: 'sn', name: 'White Leather Sneakers', category: 'Shoes', subCategory: 'Sneakers', status: 'owned', seasons: ['All Seasons'] };
+    const tee = { id: 't', name: 'Plain Tee', category: 'Tops', status: 'owned', seasons: ['All Seasons'] };
+    for (const t of [-5, 4, 12, 18, 24, 30]) {
+      expect(pickVeto(sneakers, t), `sneakers at ${t}C`).toBeNull();
+      expect(pickVeto(tee, t), `tee at ${t}C`).toBeNull();
+    }
+  });
+
+  it('still applies the other seasons alongside All Seasons', () => {
+    const both = { id: 'b', name: 'Coat', category: 'Outerwear', status: 'owned', seasons: ['All Seasons', 'Winter'] };
+    expect(pickVeto(both, 24)).toBeNull();
   });
 
   it('vetoes nothing on season when the temperature is unknown', () => {
@@ -146,6 +180,115 @@ describe('pickVeto', () => {
         expect(isPickableToday(item, t)).toBe(pickVeto(item, t) === null);
       }
     }
+  });
+});
+
+// Footwear, admitted to Today's Pick with two vetoes of its own.
+//
+// The comment on the not-a-garment test states the danger precisely: shoes
+// rarely declare seasons, so the season veto — which culls a 71-garment
+// wardrobe to about 11 on a 24C day — would pass nearly every shoe straight
+// through. Shoes are also rarely logged as worn, so `daysSinceLastWorn`
+// returns null, recency scores a full 1.0, and recency is the heaviest term at
+// 0.45. Untagged plus unlogged is the exact combination the ranking rewards
+// most, which is why simply adding 'Shoes' to PICKABLE_CATEGORIES would have
+// turned a card about forgotten clothes into a shoe rack.
+describe('pickVeto — footwear', () => {
+  const shoe = (props) => ({ id: 'shoe', name: 'Shoe', category: 'Shoes', status: 'owned', ...props });
+
+  it('admits a shoe that suits the day', () => {
+    expect(pickVeto(shoe({ subCategory: 'Loafers' }), 18)).toBeNull();
+  });
+
+  // The veto that does not depend on tag quality. A subcategory IS a
+  // declaration — unlike absent seasons, which stay "not a declaration".
+  it('reads the season a shoe implies when it declares none', () => {
+    expect(pickVeto(shoe({ subCategory: 'Sandals' }), 8)).toBe('wrong-season');
+    expect(pickVeto(shoe({ subCategory: 'Sandals' }), 24)).toBeNull();
+    expect(pickVeto(shoe({ subCategory: 'Boots' }), 24)).toBe('wrong-season');
+    expect(pickVeto(shoe({ subCategory: 'Boots' }), 8)).toBeNull();
+  });
+
+  // Only the two unambiguous ones imply anything. A loafer is a year-round
+  // shoe and guessing at it would veto real candidates for no reason.
+  it('implies nothing for a shoe that is worn all year', () => {
+    for (const sub of ['Sneakers', 'Loafers', 'Heels', 'Flats', 'Wedges', 'Ankle Boots', 'Other']) {
+      for (const t of [4, 12, 18, 26]) {
+        expect(pickVeto(shoe({ subCategory: sub }), t), `${sub} at ${t}C`).toBeNull();
+      }
+    }
+  });
+
+  it('lets a declared season override the implication', () => {
+    // Fur-lined boots you actually wear in spring, said so explicitly.
+    expect(pickVeto(shoe({ subCategory: 'Boots', seasons: ['Spring'] }), 18)).toBeNull();
+    expect(pickVeto(shoe({ subCategory: 'Sandals', seasons: ['Winter'] }), 24)).toBe('wrong-season');
+  });
+
+  // The rain question the original comment deferred.
+  it('vetoes what rain ruins once the day is wet', () => {
+    expect(pickVeto(shoe({ subCategory: 'Ankle Boots', materials: ['Suede'] }), 12, 80)).toBe('wet-day');
+    expect(pickVeto(shoe({ subCategory: 'Flats', materials: ['Satin'] }), 12, 80)).toBe('wet-day');
+    expect(pickVeto(shoe({ subCategory: 'Wedges', materials: ['Espadrille'] }), 24, 80)).toBe('wet-day');
+  });
+
+  it('vetoes an open shoe once the day is wet, whatever it is made of', () => {
+    expect(pickVeto(shoe({ subCategory: 'Sandals', materials: ['Rubber'] }), 24, 80)).toBe('wet-day');
+  });
+
+  it('keeps the shoes that cope with rain', () => {
+    expect(pickVeto(shoe({ subCategory: 'Ankle Boots', materials: ['Leather'] }), 12, 80)).toBeNull();
+    expect(pickVeto(shoe({ subCategory: 'Sneakers', materials: ['Rubber'] }), 12, 80)).toBeNull();
+    expect(pickVeto(shoe({ subCategory: 'Boots', materials: ['Patent'] }), 8, 95)).toBeNull();
+  });
+
+  // One threshold for the whole app. weatherLabel already drew the line at 30%
+  // ("Mostly dry" below it); a second opinion about the same sky is how the
+  // view toggle and removeBackground both ended up with two defaults.
+  it('uses the same wet threshold the label does', () => {
+    const suede = shoe({ subCategory: 'Ankle Boots', materials: ['Suede'] });
+    expect(pickVeto(suede, 12, WET_DAY_PROBABILITY - 1)).toBeNull();
+    expect(pickVeto(suede, 12, WET_DAY_PROBABILITY)).toBe('wet-day');
+    expect(weatherLabel(61, WET_DAY_PROBABILITY - 1)).toBe('Mostly dry');
+    expect(weatherLabel(61, WET_DAY_PROBABILITY)).toBe('Rain');
+  });
+
+  // Found by running the veto over the seed wardrobe: "Black Canvas Espadrille
+  // Wedges" records its materials as ["Other"], and the decisive word is in the
+  // NAME. weatherAppropriatenessScore already learned this from a fleece whose
+  // category and subcategory said nothing useful.
+  it('reads the name, not just the materials list', () => {
+    const wedges = shoe({ name: 'Black Canvas Espadrille Wedges', subCategory: 'Wedges', materials: ['Other'] });
+    expect(pickVeto(wedges, 24, 90)).toBe('wet-day');
+    expect(pickVeto(wedges, 24, 0)).toBeNull();
+    expect(pickVeto(shoe({ name: 'Suede Loafers', subCategory: 'Loafers' }), 18, 90)).toBe('wet-day');
+  });
+
+  it('vetoes nothing on rain when the forecast carries no probability', () => {
+    expect(pickVeto(shoe({ subCategory: 'Sandals', materials: ['Suede'] }), 24)).toBeNull();
+    expect(pickVeto(shoe({ subCategory: 'Sandals', materials: ['Suede'] }), 24, null)).toBeNull();
+  });
+
+  // Rain ruins suede shoes. It does not stop you wearing a suede skirt, which
+  // spends the day at knee height and not in the puddle.
+  it('leaves garments alone on a wet day', () => {
+    const skirt = { id: 's', name: 'Suede Skirt', category: 'Bottoms', status: 'owned', materials: ['Suede'] };
+    expect(pickVeto(skirt, 12, 95)).toBeNull();
+  });
+
+  it('isPickableToday forwards the rain probability', () => {
+    const suede = shoe({ subCategory: 'Ankle Boots', materials: ['Suede'] });
+    expect(isPickableToday(suede, 12, 95)).toBe(false);
+    expect(isPickableToday(suede, 12, 0)).toBe(true);
+  });
+
+  it('keeps a wet day out of the recommendation entirely', () => {
+    const suede = shoe({ id: 'suede', subCategory: 'Ankle Boots', materials: ['Suede'] });
+    // FLEECE, not LINEN_SHIRT: at 12C the linen shirt is itself vetoed on
+    // season, so the assertion would hold for the wrong reason.
+    const offered = offeredAcrossSeptember([suede, FLEECE], 12, 95);
+    expect(offered.has('suede')).toBe(false);
+    expect(offered.has('fleece')).toBe(true);
   });
 });
 

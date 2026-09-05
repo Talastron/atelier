@@ -59,6 +59,7 @@ import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
 import { useConfirm, ConfirmProvider } from './ui/confirm.jsx';
+import { shouldRetireReminderPrompt, shouldOfferReminders } from './lib/notifications.js';
 import { useEscapeKey, useCountUp } from './ui/hooks.js';
 import Input from './ui/Input.jsx';
 import { SHOP_SEEDS } from './lib/seeds.js';
@@ -9004,25 +9005,57 @@ function PublicShareView({ shareId }) {
 // per day via localStorage to avoid spamming. The user can permission once.
 function NotificationManager({ items, outfits, schedules }) {
   const [showAsk, setShowAsk] = useState(false);
+  // `asking` covers the window between the click and the browser answering.
+  // It may never close: see the comment on requestPermission below.
+  const [asking, setAsking] = useState(false);
+  const [slow, setSlow] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (typeof Notification === 'undefined') return;
-    if (Notification.permission === 'default') {
-      // Offer the permission prompt once the user has some content
-      const dismissed = localStorage.getItem('atelier-notif-asked') === '1';
-      if (items.length > 2 && !dismissed) setShowAsk(true);
-    } else if (Notification.permission === 'granted') {
+    if (Notification.permission === 'granted') {
       maybeFireOpenNotifications({ items, outfits, schedules });
+      return;
     }
+    setShowAsk(shouldOfferReminders({
+      permission: Notification.permission,
+      retired: localStorage.getItem('atelier-notif-asked') === '1',
+      itemCount: items.length,
+    }));
   }, [items.length, outfits.length, Object.keys(schedules || {}).length]);
 
+  // Every line here used to sit behind the await, which is why the button
+  // looked dead: Notification.requestPermission() can stay pending
+  // indefinitely. Chrome's "quiet" permission UI shows the request as a small
+  // icon in the address bar rather than a dialog, so nothing appears over the
+  // page and the promise does not settle until the user finds that icon.
+  // Measured in the browser: called true, resolved PENDING, card unchanged.
+  //
+  // So the click now changes the button immediately, and after a beat says
+  // where to look. If the promise never settles, `asking` and `slow` stay on
+  // deliberately — that is the honest state.
   const requestPermission = async () => {
+    if (asking) return;
+    setAsking(true);
+    const slowTimer = setTimeout(() => setSlow(true), 1200);
     try {
       const result = await Notification.requestPermission();
-      localStorage.setItem('atelier-notif-asked', '1');
-      setShowAsk(false);
+      // Only a real decision retires the offer. 'default' means the user
+      // dismissed the browser's prompt without choosing, and treating that as
+      // an answer is what previously made reminders unreachable for good.
+      if (shouldRetireReminderPrompt(result)) {
+        localStorage.setItem('atelier-notif-asked', '1');
+        setShowAsk(false);
+      }
       if (result === 'granted') maybeFireOpenNotifications({ items, outfits, schedules });
-    } catch { setShowAsk(false); }
+      if (result === 'denied') toast.show('Reminders are blocked for this site in your browser settings.', { kind: 'error' });
+    } catch {
+      // A thrown request is not a decision either — leave the offer standing.
+    } finally {
+      clearTimeout(slowTimer);
+      setAsking(false);
+      setSlow(false);
+    }
   };
   const dismiss = () => { localStorage.setItem('atelier-notif-asked', '1'); setShowAsk(false); };
 
@@ -9040,13 +9073,20 @@ function NotificationManager({ items, outfits, schedules }) {
             Get a heads-up about tomorrow's planned outfit and care reminders the next time you open Atelier.
           </p>
           <div className="flex gap-2 mt-2">
-            <button onClick={requestPermission} className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white">
-              Enable
+            <button onClick={requestPermission} disabled={asking}
+              className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full bg-stone-900 text-white disabled:opacity-60">
+              {asking ? 'Waiting…' : 'Enable'}
             </button>
             <button onClick={dismiss} className="text-xs tracking-meta uppercase px-3 py-1.5 rounded-full text-stone-500 hover:text-stone-900">
               Not now
             </button>
           </div>
+          {/* Only after a beat, so a normal instant grant never flashes it. */}
+          {slow && (
+            <p className="text-xs text-stone-500 mt-2 leading-relaxed">
+              Your browser is asking — look for the notification icon in the address bar.
+            </p>
+          )}
         </div>
         <button onClick={dismiss} className="text-stone-400 hover:text-stone-900 shrink-0" aria-label="Dismiss">
           <X size={14} strokeWidth={1.5} />

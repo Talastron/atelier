@@ -14,6 +14,7 @@ import { useConfirm } from "../ui/confirm.jsx";
 import { BUILD_LABEL } from "../buildInfo.js";
 import { INITIAL_MEASUREMENTS, STYLE_UNDERTONES, STYLE_SILHOUETTES, STYLE_FORMALITY, STYLE_SEASONS, STYLE_PRINCIPLES, STYLE_GOALS, BODY_SHAPE_GUIDES, MATERIALS, materialsForCategory, STYLES, CURRENCY_SYMBOLS } from "../lib/taxonomy.js";
 import { inferBudget } from "../lib/budget.js";
+import { prefersBackgroundRemoval } from "../lib/photoStatus.js";
 
 // Complete-my-data backfill: scan the wardrobe for items missing key fields
 // (category set to generic "Tops" with no other tags, or no colour, or no
@@ -941,9 +942,9 @@ export default function ProfileView({ user, measurements, saveMeasurements, isOw
             </p>
           </div>
           <label className="inline-flex items-center gap-3 cursor-pointer shrink-0">
-            <span className="text-xs tracking-widest uppercase text-stone-500">{measurements?.removeBackground !== false ? 'On' : 'Off'}</span>
+            <span className="text-xs tracking-widest uppercase text-stone-500">{prefersBackgroundRemoval(measurements) ? 'On' : 'Off'}</span>
             <input type="checkbox" className="sr-only peer"
-              checked={measurements?.removeBackground !== false}
+              checked={prefersBackgroundRemoval(measurements)}
               onChange={(e) => saveMeasurements({ ...measurements, removeBackground: e.target.checked })} />
             <span className="w-11 h-6 bg-stone-200 rounded-full peer-checked:bg-stone-900 relative transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-transform peer-checked:after:translate-x-5"></span>
           </label>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { inferBudget, MIN_PRICED_ITEMS } from './budget.js';
+import { inferBudget, resolveBudget, MIN_PRICED_ITEMS } from './budget.js';
 
 const owned = (price) => ({ status: 'owned', price });
 
@@ -53,5 +53,34 @@ describe('inferBudget', () => {
     expect(inferBudget(null)).toBeNull();
     expect(inferBudget(undefined)).toBeNull();
     expect(inferBudget([])).toBeNull();
+  });
+});
+
+describe('resolveBudget', () => {
+  const wardrobe = [10, 20, 30, 40, 50, 60, 70, 80].map((price) => ({ status: 'owned', price }));
+
+  it('prefers what the wearer stated', () => {
+    const b = resolveBudget({ budgetTypical: 120, budgetHigh: 600 }, wardrobe);
+    expect(b).toEqual({ typical: 120, high: 600, source: 'stated' });
+  });
+
+  it('falls back to the wardrobe when nothing is stored', () => {
+    // The bug this exists for: the UI shows the inference as a PLACEHOLDER,
+    // which looks set but is not, so almost nobody stores anything and the
+    // prompts were receiving no budget at all. The audit then invented its
+    // own mean — £143.51 against a true median of £98.
+    const b = resolveBudget({}, wardrobe);
+    expect(b.source).toBe('inferred');
+    expect(b.typical).toBe(50);
+  });
+
+  it('treats a half-stated budget as unstated', () => {
+    expect(resolveBudget({ budgetTypical: 120 }, wardrobe).source).toBe('inferred');
+    expect(resolveBudget({ budgetHigh: 600 }, wardrobe).source).toBe('inferred');
+  });
+
+  it('returns null when there is neither a stated pair nor enough prices', () => {
+    expect(resolveBudget({}, [{ status: 'owned', price: 10 }])).toBeNull();
+    expect(resolveBudget(null, null)).toBeNull();
   });
 });

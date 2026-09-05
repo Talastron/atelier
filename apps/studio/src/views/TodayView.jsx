@@ -127,6 +127,12 @@ function DailyBriefCard({
 }) {
   const uid = user?.uid || 'anon';
   const toast = useToast();
+  // Up here with the other hooks, NOT beside the markup that uses it. This
+  // component returns early in two places when there is no brief — while one
+  // is composing, among others — and a hook below those returns runs on some
+  // renders and not others. React counts them and throws "Rendered fewer
+  // hooks than expected", which is what composing another outfit did.
+  const [lookView, chooseLookView] = useLookView();
   const [brief, setBrief] = useState(() => readDailyBrief(uid));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -441,10 +447,6 @@ function DailyBriefCard({
   // eye, not the jewellery stack: dress/top/bottom/outerwear → shoes → bags →
   // accessories → jewellery. Stable sort keeps Gemini's order within a tier.
   const BRIEF_CATEGORY_ORDER = { Dresses: 0, Tops: 0, Bottoms: 0, Outerwear: 0, Sportswear: 0, Swimwear: 0, Shoes: 1, Bags: 2, Accessories: 3, Jewellery: 4 };
-  // Held here rather than inside OutfitView because the toggle is rendered up
-  // in the headline row, and the two have to agree.
-  const [lookView, chooseLookView] = useLookView();
-
   const briefItems = (brief.itemIds || [])
     .map(id => items.find(it => it.id === id))
     .filter(Boolean)
@@ -623,6 +625,22 @@ function DailyBriefCard({
           className="rounded-full border border-stone-300 px-5 py-2.5 text-sm transition-colors hover:bg-stone-50 disabled:opacity-50"
         >
           {loading ? 'Composing…' : 'Compose another'}
+        </button>
+        {/* Edit — the route this uses already existed and lost its button when
+            the tile grid became a flat-lay: every tile used to call
+            onOpenOutfit, which seeds the Styling Studio with today's look.
+            Compose another discards the whole look for a fresh AI call; this
+            keeps the pieces you like and lets you change the rest.
+
+            Secondary styling, matching Compose another exactly: they are the
+            two ways to change your mind about the same look, and one should
+            not shout louder than the other. */}
+        <button
+          type="button"
+          onClick={() => onOpenOutfit?.(brief)}
+          className="rounded-full border border-stone-300 px-5 py-2.5 text-sm transition-colors hover:bg-stone-50"
+        >
+          Edit
         </button>
         {saveState === 'saved' && onOpenSavedLook && savedOutfitId ? (
           // Saved: the button turns into a one-tap jump to the look's detail

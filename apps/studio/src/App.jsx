@@ -16,7 +16,8 @@ import { CSS as DndCSS } from '@dnd-kit/utilities';
 import { doc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, getDocs, getDoc, query, orderBy } from 'firebase/firestore';
 import { auth, db, onAuthStateChanged, signInWithGoogle, sendMagicLink, signOutUser, isAIEnabled, getFounderCount, findProductListingFromPhoto, connectGoogleCalendar, disconnectGoogleCalendar, isCalendarConnected, fetchCalendarEvents } from './firebase.js';
 import { SEED_WARDROBE } from './seedWardrobe.js';
-import { readDailyBrief, writeDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
+import { readDailyBrief, writeDailyBrief, writeRemoteDailyBrief, clearDailyBrief, nextSlotIndex, getInflightCompose, registerInflightCompose } from './dailyBrief';
+import { amendBrief } from './lib/brief.js';
 import { loadCurrentThread, saveCurrentThread, clearCurrentThread } from './conciergeStore';
 import { useSubscriptionStatus } from './subscriptionStatus';
 import AppCheckDevBanner from './AppCheckDevBanner.jsx';
@@ -49,12 +50,14 @@ import {
   deriveShortName,
 } from './lib/items.js';
 import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExportImage, shareOrDownloadImage, autoEnhanceCanvas, removeImageBackground, compressImageToDataUrl, rehostExternalImage, parseSourceUrl, resizeImageToDataUrl } from './lib/canvas.js';
+import { enqueueCutout, retarget } from './lib/cutoutQueue.js';
+import { applyCutoutResult, imageStatus, prefersBackgroundRemoval } from './lib/photoStatus.js';
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
-import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
+import { generateOutfitWithGemini, generateBriefNoteWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
-import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WARN_BYTES } from './lib/persist.js';
+import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WARN_BYTES, pendingSyncNote } from './lib/persist.js';
 import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
@@ -592,7 +595,12 @@ function DigitalWardrobe() {
     });
     return synced;
   };
-  const OFFLINE_SUFFIX = ' · syncing when you\'re back online';
+  // A function, not a constant, so the network is consulted when the toast is
+  // shown rather than when the component rendered. The old constant asserted
+  // "back online" for every unacknowledged write, including ones that were
+  // merely slow — which is how someone sitting on a working connection was
+  // told their item would sync when they reconnected.
+  const syncSuffix = () => ` · ${pendingSyncNote()}`;
 
   // Shares are the one write where "queued locally" is NOT success: the link
   // points at a /public doc the recipient reads from the SERVER, so until the
@@ -611,7 +619,7 @@ function DigitalWardrobe() {
     }
   };
 
-  const handleAddItem = async (newItem) => {
+  const handleAddItem = async (newItem, pendingCutouts = []) => {
     if (demoMode) {
       // Local-state only; visitor's changes evaporate on refresh / reset.
       setItems((prev) => {
@@ -639,7 +647,7 @@ function DigitalWardrobe() {
       }
     );
     if (!synced) {
-      toast.show('Saved on this device · syncing when you\'re back online', { kind: 'default', duration: 5000 });
+      toast.show(`Saved on this device · ${pendingSyncNote()}`, { kind: 'default', duration: 5000 });
     }
 
     // Fire-and-forget rehost: if any image is still an external URL (not a
@@ -700,6 +708,36 @@ function DigitalWardrobe() {
         }
       })();
     }
+
+    // Cut-outs still running when the user saved. They keep going and patch
+    // the item as each lands - the same fire-and-forget shape the rehost
+    // above uses, and for the same reason: the user should not wait, and
+    // half-finished work should not be discarded.
+    for (const { jobId, index } of pendingCutouts || []) {
+      retarget(jobId, {
+        onDone: async (result) => {
+          if (!result?.ok) return;
+          try {
+            const fresh = (await getDoc(doc(userItemsRef(user.uid), newItem.id))).data();
+            if (!fresh) return; // deleted while the cut-out ran
+            const images = [...(fresh.images || [])];
+            if (images[index] === undefined) return;
+            images[index] = result.url;
+            const patch = { ...fresh, images, imageMeta: applyCutoutResult(fresh.imageMeta, index, result) };
+            // Same guard as the rehost: a background patch can push an item
+            // that saved fine over the document ceiling.
+            const tooLarge = docTooLargeMessage(patch, 'item');
+            if (tooLarge) { console.warn('[cutout] skipped patch for item', newItem.id, '-', tooLarge); return; }
+            await settleWhenLocallyWritten(setDoc(doc(userItemsRef(user.uid), newItem.id), patch), {
+              onLateError: (err) => console.warn('[cutout] patch rejected after settling:', err?.message),
+            });
+          } catch (err) {
+            console.warn('[cutout] patch failed for item', newItem.id, '-', err?.message);
+          }
+        },
+        onError: () => { /* the original photo stands; the polish flow can cut it out later */ },
+      });
+    }
   };
   const handleBulkUpdateItems = async (ids, partial) => {
     if (!ids.length) return;
@@ -717,7 +755,7 @@ function DigitalWardrobe() {
     }
     const synced = await runWrite(batch.commit(), `Update of ${ids.length} item${ids.length === 1 ? '' : 's'}`);
     const label = `Updated ${ids.length} item${ids.length === 1 ? '' : 's'}`;
-    toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? label : label + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleBulkDeleteItems = async (ids) => {
     if (!user || !ids.length) return;
@@ -730,7 +768,7 @@ function DigitalWardrobe() {
     }
     const synced = await runWrite(batch.commit(), `Move of ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash`);
     const label = `Moved ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash`;
-    toast.show(synced ? label : label + OFFLINE_SUFFIX, { kind: 'default', duration: synced ? undefined : 5000 });
+    toast.show(synced ? label : label + syncSuffix(), { kind: 'default', duration: synced ? undefined : 5000 });
   };
 
   const handleBulkAddItems = async (newItems) => {
@@ -739,7 +777,7 @@ function DigitalWardrobe() {
     for (const item of newItems) batch.set(doc(userItemsRef(user.uid), item.id), item);
     const synced = await runWrite(batch.commit(), `Import of ${newItems.length} item${newItems.length === 1 ? '' : 's'}`);
     const label = `${newItems.length} item${newItems.length === 1 ? '' : 's'} added from receipt`;
-    toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? label : label + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleDeleteItem = async (id) => {
     const item = items.find((i) => i.id === id);
@@ -752,7 +790,7 @@ function DigitalWardrobe() {
     if (!user) return;
     // Soft delete: 30-day grace period (restorable from Profile → Trash).
     const trashSynced = await runWrite(setDoc(doc(userItemsRef(user.uid), id), { ...item, deletedAt: new Date().toISOString() }), 'Move to Trash');
-    toast.show(trashSynced ? 'Moved to Trash · restore from Profile' : 'Moved to Trash' + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(trashSynced ? 'Moved to Trash · restore from Profile' : 'Moved to Trash' + syncSuffix(), { kind: 'default' });
   };
   const handleRestoreItem = async (id) => {
     if (!user) return;
@@ -760,12 +798,12 @@ function DigitalWardrobe() {
     if (!item) return;
     const { deletedAt, ...rest } = item;
     const synced = await runWrite(setDoc(doc(userItemsRef(user.uid), id), rest), 'Restore');
-    toast.show(synced ? 'Restored to your wardrobe' : 'Restored to your wardrobe' + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? 'Restored to your wardrobe' : 'Restored to your wardrobe' + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleHardDeleteItem = async (id) => {
     if (!user) return;
     const synced = await runWrite(deleteDoc(doc(userItemsRef(user.uid), id)), 'Permanent delete');
-    toast.show(synced ? 'Permanently removed' : 'Permanently removed' + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(synced ? 'Permanently removed' : 'Permanently removed' + syncSuffix(), { kind: 'default' });
   };
 
   // Auto-purge items soft-deleted more than 30 days ago. Runs once when
@@ -865,7 +903,7 @@ function DigitalWardrobe() {
     // Capsule generator handles its own summary toast — don't spam per-look here.
     if (!outfit.capsule) {
       if (synced) toast.show(outfit.name, { kind: 'success', eyebrow: 'SAVED' });
-      else toast.show(`${outfit.name} · syncing when you're back online`, { kind: 'default', eyebrow: 'SAVED HERE', duration: 5000 });
+      else toast.show(`${outfit.name} · ${pendingSyncNote()}`, { kind: 'default', eyebrow: 'SAVED HERE', duration: 5000 });
     }
   };
   const handleDeleteOutfit = async (id) => {
@@ -1264,6 +1302,34 @@ function DigitalWardrobe() {
     setActiveTab('outfits');
   };
 
+  // Called by the Studio when a session that began as "Edit today's look" is
+  // saved. Updates the brief in place rather than filing a Lookbook copy —
+  // saving a look stays the separate, deliberate act it already is.
+  const handleUpdateBrief = async ({ itemIds, note }) => {
+    const uid = user?.uid;
+    if (!uid) return;
+    const current = readDailyBrief(uid);
+    if (!current) return;
+    // Rewrite the note rather than lose it. amendBrief drops any note naming a
+    // piece the look no longer holds, which is right — the Brief renders those
+    // names as tappable chips — but all-or-nothing, so swapping the trousers
+    // threw away the sentences about everything else. A rewrite is a small
+    // call: it is handed the pieces and writes two sentences, it does not
+    // compose. On failure it returns '' and amendBrief drops the old note, so
+    // this degrades to exactly the previous behaviour rather than to an error.
+    const picked = (itemIds || []).map((id) => liveItems.find((it) => it.id === id)).filter(Boolean);
+    const rewritten = await generateBriefNoteWithGemini(picked, { weather: null, season: '' });
+    const next = amendBrief(current, itemIds, rewritten || note);
+    const saved = writeDailyBrief(uid, next);
+    // Best-effort, like the compose path above: writeRemoteDailyBrief swallows
+    // its own errors, so the local write (what Today reads on mount) is what
+    // must not be lost, and we don't block on cross-device sync to get there.
+    writeRemoteDailyBrief(uid, saved);
+    setStudioSeed(null);
+    setActiveTab('today');
+    toast.show("Today's look updated", { kind: 'success' });
+  };
+
   const handleSaveProfile = async (newMeasurements) => {
     if (!user) return;
     await runWrite(setDoc(userProfileDoc(user.uid), newMeasurements), 'Profile save');
@@ -1329,7 +1395,7 @@ function DigitalWardrobe() {
     if (!user) return;
     if (!outfitId) {
       const synced = await runWrite(deleteDoc(userScheduleDoc(user.uid, dateISO)), 'Schedule removal');
-      toast.show(synced ? 'Removed from schedule' : 'Removed from schedule' + OFFLINE_SUFFIX, { kind: 'default' });
+      toast.show(synced ? 'Removed from schedule' : 'Removed from schedule' + syncSuffix(), { kind: 'default' });
     } else {
       const trimmed = (eventName || '').trim();
       const doc = { outfitId, scheduledAt: new Date().toISOString() };
@@ -1337,7 +1403,7 @@ function DigitalWardrobe() {
       if (meta && typeof meta === 'object') Object.assign(doc, meta);
       const synced = await runWrite(setDoc(userScheduleDoc(user.uid, dateISO), doc), 'Schedule');
       const label = trimmed ? `Scheduled · ${trimmed}` : 'Scheduled';
-      toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+      toast.show(synced ? label : label + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
     }
   };
 
@@ -1348,7 +1414,7 @@ function DigitalWardrobe() {
   const handleDeleteTrip = async (trip) => {
     if (!user || !trip?.days?.length) return;
     const synced = await runWrite(Promise.all(trip.days.map((d) => deleteDoc(userScheduleDoc(user.uid, d.dateISO)))), `Trip removal · ${trip.name}`);
-    toast.show(synced ? `Trip removed · ${trip.name}` : `Trip removed · ${trip.name}` + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(synced ? `Trip removed · ${trip.name}` : `Trip removed · ${trip.name}` + syncSuffix(), { kind: 'default' });
   };
 
   const handleSaveInspiration = async (insp) => {
@@ -1358,7 +1424,7 @@ function DigitalWardrobe() {
   const handleDeleteInspiration = async (id) => {
     if (!user) return;
     const synced = await runWrite(deleteDoc(doc(userInspirationRef(user.uid), id)), 'Inspiration removal');
-    toast.show(synced ? 'Inspiration removed' : 'Inspiration removed' + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(synced ? 'Inspiration removed' : 'Inspiration removed' + syncSuffix(), { kind: 'default' });
   };
   const handleAnalyzeInspiration = async (insp) => {
     if (!user) return;
@@ -1367,7 +1433,7 @@ function DigitalWardrobe() {
     // succeed moments before the write stalls — without the wrapper that
     // pins the "Analysing…" spinner after the analysis already finished.
     const synced = await runWrite(setDoc(doc(userInspirationRef(user.uid), insp.id), { ...insp, analysis }), 'Analysis save');
-    toast.show(synced ? 'Analysis complete' : 'Analysis complete' + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? 'Analysis complete' : 'Analysis complete' + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
 
   const handleDuplicateItem = async (item) => {
@@ -1460,7 +1526,7 @@ function DigitalWardrobe() {
     const synced = await runWrite(batch.commit(), `Wear log for ${outfit.name}`);
     haptic('success');
     const wearLabel = `${outfit.name} · ${touched} ${touched === 1 ? 'piece' : 'pieces'}`;
-    toast.show(synced ? wearLabel : wearLabel + OFFLINE_SUFFIX,
+    toast.show(synced ? wearLabel : wearLabel + syncSuffix(),
       synced ? { kind: 'success', eyebrow: 'WORN' } : { kind: 'default', eyebrow: 'WORN', duration: 5000 });
     // Also record the wear at the OUTFIT level (separate from per-item
     // wearHistory). The outfit's wearLog is what powers the "Worn N times"
@@ -1631,7 +1697,10 @@ function DigitalWardrobe() {
                       aiTemperature={AI_TEMPERATURE_PRESETS[measurements?.aiTemperaturePreset] ?? 0.7}
                       onSaveOutfit={handleSaveOutfit}
                       onLogOutfitWear={handleLogOutfitWear}
-                      onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now() }); setActiveTab('outfits'); }}
+                      // fromBrief is the whole mechanism: without it the Studio cannot tell this
+                      // session from opening any saved look, and Save would file a Lookbook copy
+                      // instead of updating today.
+                      onOpenBrief={(brief) => { setStudioSeed({ ...brief, id: brief.savedAt ?? Date.now(), fromBrief: true }); setActiveTab('outfits'); }}
                       onOpenSavedLook={setOpenOutfitId}
                       onItemClick={setSelectedItemId}
                       onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
@@ -1671,6 +1740,7 @@ function DigitalWardrobe() {
                       seedOutfit={studioSeed}
                       onSeedConsumed={() => setStudioSeed(null)}
                       onAfterSave={() => setActiveTab('lookbook')}
+                      onUpdateBrief={handleUpdateBrief}
                       onEditPreferences={() => { setActiveTab('profile'); requestAnimationFrame(() => { requestAnimationFrame(() => { document.getElementById('profile-style')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); }}
                     />
                   )}
@@ -1813,13 +1883,16 @@ function DigitalWardrobe() {
               corner and keeps the sidebar a clean nav column.
               48px, not the 40 it shared with the mobile button: this is the only
               control in a wide band of empty header, and at 40 it read as an
-              afterthought. The mobile one keeps 40, where space is tight and 40
-              is a perfectly good touch target. */}
+              afterthought. 48 was still an afterthought: the page headline
+              beside it is 48px of Playfair, so an avatar the same size as one
+              letter reads as chrome rather than as you. 64 holds the corner.
+              The mobile one keeps 40, where space is tight and 40 is a
+              perfectly good touch target. */}
           <div className="hidden lg:block">
             <button
               type="button"
               onClick={() => setDesktopAccountOpen((o) => !o)}
-              className={`fixed right-12 z-40 w-12 h-12 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
+              className={`fixed right-12 z-40 w-16 h-16 rounded-full overflow-hidden bg-stone-900 text-white flex items-center justify-center shadow-lg ring-1 transition-all duration-200 active:scale-90 ${['profile','insights','inspiration','shops'].includes(activeTab) ? 'ring-brass-300' : 'ring-white/40 hover:ring-brass-300'} ${atTop ? 'opacity-100' : 'opacity-0 pointer-events-none -translate-y-1'}`}
               style={{ top: 'calc(env(safe-area-inset-top, 0px) + 2rem)' }}
               aria-label="Account"
               aria-haspopup="menu"
@@ -1830,7 +1903,7 @@ function DigitalWardrobe() {
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
-                <span className="font-display text-sm">{(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}</span>
+                <span className="font-display text-xl">{(user?.displayName || user?.email || (demoMode ? 'D' : '?')).charAt(0).toUpperCase()}</span>
               )}
             </button>
             {desktopAccountOpen && (
@@ -2077,9 +2150,9 @@ function DigitalWardrobe() {
               user={user}
               shops={shops}
               existingItem={editingItem}
-              removeBackground={!!measurements?.removeBackground}
+              removeBackground={prefersBackgroundRemoval(measurements)}
               onClose={() => { setIsAddItemModalOpen(false); setEditingItem(null); }}
-              onSave={async (item) => { await handleAddItem(item); setIsAddItemModalOpen(false); setEditingItem(null); }}
+              onSave={async (item, pendingCutouts) => { await handleAddItem(item, pendingCutouts); setIsAddItemModalOpen(false); setEditingItem(null); }}
               onOpenReceiptModal={() => { setIsAddItemModalOpen(false); setIsReceiptModalOpen(true); }}
               onOpenBulkImport={() => { setIsAddItemModalOpen(false); setIsBulkImportModalOpen(true); }}
               onOpenSweep={() => { setIsAddItemModalOpen(false); setIsSweepModalOpen(true); }}
@@ -2616,8 +2689,18 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
   const [step, setStep] = useState(isEdit ? 2 : 1);
   const [linkInput, setLinkInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [cutoutBusy, setCutoutBusy] = useState(false);
   const [editingPhoto, setEditingPhoto] = useState(null); // { index, src }
+  // Job ids for cut-outs still running, with the image index each belongs to.
+  // Task 4 hands these over on save so they patch the saved item.
+  const pendingJobsRef = useRef([]);
+
+  // Warm the model so photo one does not pay for the download. The import is
+  // dynamic and inside removeImageBackground, so without this the first photo
+  // waits for the module and the WASM init before any pixels are touched.
+  useEffect(() => {
+    if (!removeBackground) return;
+    import('@imgly/background-removal').catch(() => { /* the first photo will retry */ });
+  }, [removeBackground]);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState(existingItem ? {
     name: existingItem.name || '',
@@ -2898,14 +2981,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         let cutoutOk = null;
         let cutoutAlpha = null;
         if (removeBackground) {
-          setCutoutBusy(true);
           let out = await removeImageBackground(originalDataUrl, { alpha: true });
           // A browser that cannot write WebP cannot keep the alpha, and JPEG has
           // no alpha channel to fall back on. Rather than lose the cut-out
           // entirely there, take the flattened one — it simply will not overlap.
           if (!out.ok) out = await removeImageBackground(originalDataUrl);
           dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
-          setCutoutBusy(false);
           toast.show(out.ok ? 'Background removed ✓ · tap to revert' : 'Cutout failed — kept original photo', { kind: out.ok ? 'success' : 'default', duration: 3500 });
         }
         setFormData((prev) => {
@@ -2926,7 +3007,6 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
         setError(err?.message || 'Could not paste image.');
       } finally {
         setIsLoading(false);
-        setCutoutBusy(false);
       }
     };
     window.addEventListener('paste', onPaste);
@@ -2938,42 +3018,56 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
     if (!list.length) return;
     setIsLoading(true); setError(null);
     let firstNewDataUrl = null;
+    // The index each file in this batch will land at. Computed up front from
+    // the images length captured at call time, not read back out of a
+    // setFormData updater: React does not guarantee that updater runs
+    // synchronously, so a variable closed over and reassigned inside it
+    // cannot be trusted the moment control returns from setFormData.
+    const startIndex = formData.images?.length || 0;
+    let addedCount = 0;
     try {
-      let okCount = 0; let failCount = 0;
       for (const file of list) {
         const originalDataUrl = await compressImageToDataUrl(file);
-        let dataUrl = originalDataUrl;
-        let cutoutOk = null;
-        let cutoutAlpha = null;
-        if (removeBackground) {
-          setCutoutBusy(true);
-          let out = await removeImageBackground(originalDataUrl, { alpha: true });
-          // A browser that cannot write WebP cannot keep the alpha, and JPEG has
-          // no alpha channel to fall back on. Rather than lose the cut-out
-          // entirely there, take the flattened one — it simply will not overlap.
-          if (!out.ok) out = await removeImageBackground(originalDataUrl);
-          dataUrl = out.url; cutoutOk = out.ok; cutoutAlpha = out.alpha;
-          if (out.ok) okCount++; else failCount++;
-        }
-        if (!firstNewDataUrl) firstNewDataUrl = dataUrl;
+        if (!firstNewDataUrl) firstNewDataUrl = originalDataUrl;
+
+        const at = startIndex + addedCount;
+        addedCount += 1;
+
+        // The photo appears NOW, at its original. Removal runs behind it and
+        // swaps the cut-out in when it lands.
         setFormData((prev) => {
-          const meta = Array.isArray(prev.imageMeta) ? prev.imageMeta : [];
-          return {
-            ...prev,
-            images: [...(prev.images || []), dataUrl].slice(0, 6),
-            imageMeta: [...meta, {
-              cutout: cutoutOk === true,
-              original: cutoutOk === true ? originalDataUrl : undefined,
-              ...(cutoutAlpha === true ? { alpha: true } : {}),
-            }].slice(0, 6),
-          };
+          const images = [...(prev.images || []), originalDataUrl].slice(0, 6);
+          const meta = [...(Array.isArray(prev.imageMeta) ? prev.imageMeta : []), { processing: !!removeBackground }].slice(0, 6);
+          return { ...prev, images, imageMeta: meta };
         });
-      }
-      setCutoutBusy(false);
-      if (removeBackground && (okCount || failCount)) {
-        if (okCount && !failCount) toast.show(`Background removed ✓ on ${okCount} photo${okCount === 1 ? '' : 's'}`, { kind: 'success', duration: 3500 });
-        else if (failCount && !okCount) toast.show(`Cutout failed on ${failCount} — kept originals`, { kind: 'default', duration: 4000 });
-        else toast.show(`${okCount} cut out · ${failCount} kept original`, { kind: 'default', duration: 4000 });
+
+        if (removeBackground) {
+          const index = at;
+          const jobId = enqueueCutout({
+            run: async () => {
+              let out = await removeImageBackground(originalDataUrl, { alpha: true });
+              // A browser that cannot write WebP cannot keep the alpha, and
+              // JPEG has none to fall back on. Take the flattened cut-out
+              // rather than lose it — it simply will not overlap.
+              if (!out.ok) out = await removeImageBackground(originalDataUrl);
+              return { ok: !!out.ok, url: out.url, alpha: out.alpha === true, original: originalDataUrl };
+            },
+            onDone: (result) => {
+              setFormData((prev) => {
+                const meta = applyCutoutResult(prev.imageMeta, index, result);
+                if (meta === prev.imageMeta) return prev;
+                const images = [...(prev.images || [])];
+                if (result.ok && images[index] !== undefined) images[index] = result.url;
+                return { ...prev, images, imageMeta: meta };
+              });
+            },
+            onError: (err) => {
+              console.warn('[cutout] failed, keeping the original:', err?.message);
+              setFormData((prev) => ({ ...prev, imageMeta: applyCutoutResult(prev.imageMeta, index, { ok: false }) }));
+            },
+          });
+          pendingJobsRef.current.push({ jobId, index });
+        }
       }
       setStep((s) => (s === 1 ? 2 : s));
       // Auto-extract colours from the first added photo IF no colour set yet.
@@ -3132,7 +3226,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       // the user has long since been told the item was saved.
       const tooLarge = docTooLargeMessage(payload, 'item');
       if (tooLarge) { setError(tooLarge); return; }
-      await onSave(payload);
+      await onSave(payload, pendingJobsRef.current);
     } catch (err) {
       console.error('[wardrobe] item save failed:', err);
       setError(err?.message || 'Save failed.');
@@ -3409,6 +3503,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                   {formData.images.map((img, i) => (
                     <div key={i} className="aspect-square rounded-xl overflow-hidden bg-stone-100 border border-stone-200 relative group">
                       <img src={img} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                      {imageStatus(formData.imageMeta?.[i]) === 'processing' && (
+                        <div className="absolute inset-0 rounded-xl bg-white/70 backdrop-blur-[1px] flex flex-col items-center justify-center pointer-events-none">
+                          <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin" />
+                          <span className="mt-1.5 text-xs tracking-meta uppercase text-stone-600">Removing bg…</span>
+                        </div>
+                      )}
                       {formData.imageMeta?.[i]?.cutout && (
                         <button type="button"
                           onClick={() => {
@@ -3443,14 +3543,12 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                           on an add-path item images[0] is the only copy the account has. */}
                       {!formData.imageMeta?.[i]?.cutout && !formData.imageMeta?.[i]?.cutoutUrl && (
                         <button type="button"
-                          disabled={cutoutBusy}
                           onClick={async () => {
                             // Apply cutout to this thumb. Keeps a copy of the
                             // currently-displayed photo as the new "original"
                             // for future reverts.
                             const src = formData.images[i];
-                            setCutoutBusy(true);
-                            try {
+                            {
                               // Same alpha-with-fallback shape as the add-item path: try to
                               // keep transparency, and only fall back to a flattened cut-out
                               // if that fails (e.g. no WebP support).
@@ -3489,7 +3587,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                               } else {
                                 toast.show('Cutout failed — kept original', { kind: 'default', duration: 3000 });
                               }
-                            } finally { setCutoutBusy(false); }
+                            }
                           }}
                           className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-white/90 backdrop-blur text-stone-700 text-xs tracking-label uppercase rounded-full font-medium shadow-sm hover:text-stone-900 transition-colors opacity-0 sm:group-hover:opacity-100"
                           title="Remove background">
@@ -3534,12 +3632,6 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
                       )}
                     </div>
                   ))}
-                  {cutoutBusy && (
-                    <div className="aspect-square rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/40 flex flex-col items-center justify-center text-emerald-700">
-                      <div className="w-5 h-5 border-2 border-emerald-300 border-t-emerald-700 rounded-full animate-spin mb-2" />
-                      <span className="text-xs tracking-meta uppercase">Removing bg…</span>
-                    </div>
-                  )}
                   {formData.images.length < 6 && (
                     <label className="aspect-square rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center cursor-pointer hover:border-stone-500 transition-all text-stone-400 hover:text-stone-900">
                       <Plus size={22} strokeWidth={1.5} />
@@ -8915,7 +9007,7 @@ function PublicShareView({ shareId }) {
                           )}
                         </div>
                         <div className="px-1">
-                          <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">{p.brand}</p>
+                          <p className="text-xs font-semibold text-stone-500 uppercase truncate">{p.brand}</p>
                           <p className="font-display text-base text-stone-800 leading-snug mt-1">{p.name}</p>
                           <p className="text-xs text-stone-500 mt-1">{p.category}{p.subCategory ? ` · ${p.subCategory}` : ''}</p>
                         </div>
@@ -8938,7 +9030,7 @@ function PublicShareView({ shareId }) {
                   )}
                 </div>
                 <div className="px-1">
-                  <p className="text-xs font-semibold text-stone-500 tracking-meta uppercase truncate">{p.brand}</p>
+                  <p className="text-xs font-semibold text-stone-500 uppercase truncate">{p.brand}</p>
                   <p className="font-display text-base text-stone-800 leading-snug mt-1">{p.name}</p>
                   <p className="text-xs text-stone-500 mt-1">{p.category}{p.subCategory ? ` · ${p.subCategory}` : ''}</p>
                 </div>

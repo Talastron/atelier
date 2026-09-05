@@ -429,7 +429,7 @@ Wardrobe composition:
 ${wishlistReasons.length ? `\nWishlist intent (purposes the client has set):\n${wishlistReasons.join('\n')}` : ''}
 ${(inspirations || []).filter((i) => i.analysis?.summary).slice(0, 8).length
   ? `\nSaved inspirations (looks the client is drawn to — recommendations should align with these):\n${(inspirations || []).filter((i) => i.analysis?.summary).slice(0, 8).map((i) => `- ${i.caption || 'Untitled'}: ${i.analysis.summary}`).join('\n')}`
-  : ''}${styleProfile ? `\n${styleProfile}\n\nRank the gaps against what they are working toward: a gap that serves a stated goal outranks one that does not. Do NOT hide gaps outside the stated goals — an unstated goal should still surface a genuine hole — but say which gap to close first, and why, in the words of their goal. If a typical spend is given, keep suggestions near it and flag anything that is a big buy for this person.\n` : ''}
+  : ''}${styleProfile ? `\n${styleProfile}\n\nRank the gaps against what they are working toward: a gap that serves a stated goal outranks one that does not. Do NOT hide gaps outside the stated goals — an unstated goal should still surface a genuine hole — but say which gap to close first, and why, in the words of their goal.\n\nA large share of never-worn items is ALWAYS worth naming as a gap. When the goal is about wearing more of what they already own, it is the MOST important gap: lead with it, and prefer recommendations that unlock pieces they already have over ones that add a new category.\n\nIf a typical spend is given, keep suggestions near it and flag anything that is a big buy for this person. Use the figures given and do not compute your own average from the totals above — a mean is dragged upward by one extraordinary purchase and describes a spend they would not recognise.\n` : ''}
 
 Audit rules:
 - Be specific and quantitative ("11 tops vs 2 bottoms suggests…") — never generic.
@@ -571,6 +571,57 @@ Rules for the response:
   };
 }
 
+/**
+ * Rewrite the Daily Brief's stylist note for a look that has been edited.
+ *
+ * Swapping one piece used to cost the whole note. amendBrief drops any note
+ * naming a garment the look no longer holds — correct, because the Brief
+ * renders those names as tappable chips, so a stale one offers a chip for a
+ * piece that is not there — but all-or-nothing, so changing the trousers threw
+ * away the sentences about everything else.
+ *
+ * This is a small call, not a compose: it is handed the pieces and writes two
+ * sentences about them. It does not choose an outfit.
+ *
+ * Returns '' rather than throwing when the Concierge is unavailable, because
+ * the caller's fallback is simply the note being absent — which is where this
+ * started, so a failure degrades to the old behaviour rather than to an error.
+ */
+export async function generateBriefNoteWithGemini(picked, { weather = null, season = '' } = {}) {
+  if (!isAIEnabled() || !picked || picked.length === 0) return '';
+  const itemList = picked
+    .map((p) => `${p.id} | ${[p.brand, p.name].filter(Boolean).join(' ')}`)
+    .join('\n- ');
+  const context = [
+    weather?.temp != null ? `${weather.temp}°` : '',
+    season || '',
+  ].filter(Boolean).join(', ');
+
+  const prompt = `You are a personal stylist writing the short note that sits under today's outfit in Atelier, a private digital wardrobe.
+
+Write TWO sentences at most, warm and concrete, about why these pieces work together${context ? ` for ${context}` : ''}.
+
+Marker rule — STRICT, and the reason this exists:
+- EVERY garment or accessory you name MUST be one of the items below, wrapped as <<item:ID|display name>> using that exact id.
+- NEVER name a piece that is not in the list. NEVER leave a named piece as plain text.
+- Lead with the clothing, then shoes, bag, jewellery.
+- Do not invent ids.
+- Example: "The <<item:i_xyz|ivory silk shirt>> pairs cleanly with the <<item:i_abc|charcoal trouser>>."
+
+The pieces (id | name):
+- ${itemList}
+
+Reply with the note ONLY — no preamble, no heading, no quotes.`;
+
+  try {
+    const result = await geminiText(prompt, { temperature: 0.7 }, 'brief-note');
+    return (result || '').trim();
+  } catch (e) {
+    console.warn('[brief] note rewrite failed, the note will be left out:', e?.message);
+    return '';
+  }
+}
+
 export async function generateOutfitNameWithGemini(picked, intent) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!picked || picked.length === 0) throw new Error('Pick at least one piece first.');
@@ -587,30 +638,37 @@ export async function generateOutfitNameWithGemini(picked, intent) {
 
 Give it a SHORT name: 2 to 5 words, title case, no quotes, no full stops, no emoji.
 
-Voice: a well-made label, not a poem. ANCHOR the name to something actually in this look — its dominant colour, a fabric, or the piece that defines it — so the owner recognises the outfit from the name alone in a list of fifty. Restrained and specific beats atmospheric and clever.
+Voice: a stylist captioning a look for a private client. Evocative is right — reach for a colour, a mood, a quality of the thing. The name should have some character; it is a title, not a label.
 
-A name that would still make sense over completely different clothes is wrong. Do not, however, simply list the garments: "Blazer And Trousers" is a description, not a name.
+Two failures to avoid, both worse than a plain name.
 
-Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Avoid literary or essayistic titles ("An Argument for Linen", "The Weight of Good Wool", "Dressed for the Long Way Round") — at this length they read as parody. Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
+NOT AN INVENTORY. Never join two garments with "and" or "&", and never simply list what is in the look: "Jacquard Blazer Chinos", "Blazer And Trousers". That names no piece in particular and says nothing.
+
+NOT AN ESSAY. Avoid manifesto and think-piece constructions — "An Argument for Linen", "The Weight of Good Wool", "Dressed for the Long Way Round". At three to six words those read as parody rather than as a name.
+
+Between those two is the register: something with atmosphere that still belongs to THIS look and no other.
+
+Avoid stylist clichés ("Effortless Chic", "Smart Casual", "Power Move"). Do not use any of these overused words: breeze, coastal, morning, hour, effortless, chic, timeless, whisper.
 
 ${briefLine}
 
 Items in this look:
 - ${itemList}
 
-Examples of the register — each anchored to a real detail, none of them florid:
-- "Navy and Brass"
-- "The Good Blazer"
-- "Chinos, Softened"
-- "Charcoal With Gold"
-- "Everyday Linen"
-- "The Camel Coat Look"
+Examples of the register — atmospheric, but each one clearly about a
+particular look rather than about clothes in general:
+- "Blue at the Golden Edge"
+- "Something Steady in Navy"
+- "Ink and Brass"
+- "The Quiet Blazer"
+- "Gold Where It Counts"
+- "Softer Than It Looks"
 
 Reply with the name ONLY — no preamble, no explanation, no quotes.`;
   // 0.8, not 1.0. At the top of the range this returned self-consciously
   // poetic titles — the examples above matter more than any adjective, but
   // maximum randomness was compounding them.
-  const result = await geminiText(prompt, { temperature: 0.8 }, 'name-look');
+  const result = await geminiText(prompt, { temperature: 0.9 }, 'name-look');
   return (result || '')
     .trim()
     .split('\n')[0]

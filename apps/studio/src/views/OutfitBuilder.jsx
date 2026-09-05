@@ -235,7 +235,7 @@ function LookbookSortableCard({ outfit, items, isSelected, selectMode, isHero, i
   );
 }
 
-export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences, collections = [], onCreateCollection = null, onAddOutfitToCollection = null, onRemoveOutfitFromCollection = null, onDeleteCollection = null }) {
+export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit, onOpenOutfit, onOpenItem, aiHistory = [], saveAIHistory, deleteAIHistory, toggleAIHistoryFavorite, schedules = {}, scheduleOutfit, aiTemperature = 0.7, styleProfile = '', measurements = null, onCreateLookbook, editOutfit = null, onEditDone, mode = 'studio', seedOutfit = null, onSeedConsumed, onAfterSave, onApplyHistory, onReorderOutfits, initialTab = null, onInitialTabConsumed, onEditPreferences, collections = [], onCreateCollection = null, onAddOutfitToCollection = null, onRemoveOutfitFromCollection = null, onDeleteCollection = null, onUpdateBrief = null }) {
   // mode === 'studio'   → Create flow only (intent panel + composition)
   // mode === 'lookbook' → Saved / Calendar / AI History tabs only (no Create)
   // This split lets one component power two sidebar destinations: Studio is
@@ -274,6 +274,16 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
   // When editing an existing outfit, hold its id so handleSave updates the
   // same doc instead of creating a new one. Reset to null after save/exit.
   const [editingId, setEditingId] = useState(null);
+  // Whether this session was seeded from the Daily Brief's Edit button. Set by
+  // the seed effect below from seedOutfit.fromBrief before onSeedConsumed()
+  // clears the seed. Declared here with the other top-level state (not next to
+  // the effect) — a hook added below an early return crashed this app earlier
+  // today with "Rendered fewer hooks than expected".
+  const [editingBrief, setEditingBrief] = useState(false);
+  // Updating the brief rewrites its stylist note, which is a short AI call.
+  // Without this the button sits silent for a couple of seconds and reads as
+  // frozen — the same complaint the photo intake work exists to fix.
+  const [updatingBrief, setUpdatingBrief] = useState(false);
   useEffect(() => {
     if (!editOutfit) return;
     // Resolve itemIds → items and place each into its proper slot, mirroring
@@ -320,6 +330,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
     setCurrentOutfit(next);
     if (seedOutfit.reasoning) setAiNote(seedOutfit.reasoning);
     setEditingId(null); // not editing; this is a seed for a NEW save
+    setEditingBrief(!!seedOutfit.fromBrief);
     setTab('create');
     if (onSeedConsumed) onSeedConsumed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -532,7 +543,27 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
 
   const handleSave = async () => {
     const picked = OUTFIT_SLOTS.flatMap((s) => slotItems(currentOutfit[s.toLowerCase()]));
-    if (!outfitName.trim() || picked.length === 0) return;
+    // A brief has no name and never has. Requiring one here would make the
+    // user title something they are not filing in the Lookbook.
+    if (picked.length === 0) return;
+    if (!editingBrief && !outfitName.trim()) return;
+    if (editingBrief && onUpdateBrief) {
+      // The note the Studio is holding. amendBrief drops it if the edit has
+      // made it name a piece that is no longer in the look — the Brief renders
+      // that note as tappable item chips, so a stale one would offer a chip
+      // for a garment that is not there.
+      setUpdatingBrief(true);
+      try {
+        await onUpdateBrief({ itemIds: picked.map((p) => p.id), note: aiNote || null });
+      } finally {
+        // In the finally, not after the await. A rejection here would otherwise
+        // strand the button busy for good — the exact shape of bug that leaves
+        // the Add Item modal spinning after a failed cut-out.
+        setUpdatingBrief(false);
+      }
+      setEditingBrief(false);
+      return;
+    }
     // When editing, preserve the original id, createdAt, and any existing
     // wornPhotos/favorite/reasoning that we shouldn't blow away.
     const orig = editingId ? outfits.find((o) => o.id === editingId) : null;
@@ -1304,10 +1335,10 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                     ))}
                   </div>
                   <span className="text-xs tracking-label uppercase text-stone-400 shrink-0">{picked.length}/{OUTFIT_SLOTS.length}</span>
-                  {outfitName.trim() ? (
+                  {(editingBrief || outfitName.trim()) ? (
                     <button onClick={handleSave}
                       className="text-xs tracking-label uppercase px-3 py-2 rounded-full bg-amber-300 text-stone-900 font-medium shrink-0">
-                      Save
+                      {editingBrief ? (updatingBrief ? 'Updating…' : "Update today's look") : 'Save'}
                     </button>
                   ) : (
                     <button onClick={() => document.querySelector('input[placeholder="Name this look…"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
@@ -1340,7 +1371,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
               const hasFoundation = !!currentOutfit.dresses || (!!currentOutfit.tops && !!currentOutfit.bottoms);
               const hasShoes = !!currentOutfit.shoes;
               const isComplete = hasFoundation && hasShoes;
-              const canSave = outfitName.trim() && pieceCount > 0;
+              const canSave = pieceCount > 0 && (editingBrief || outfitName.trim());
               // Flat list of all picked pieces in slot order — fuel for the
               // live composition strip below the header.
               const allPicked = OUTFIT_SLOTS.flatMap((s) =>
@@ -1465,12 +1496,13 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                     <button onClick={handleSave} disabled={!canSave}
                       className={`w-full bg-stone-900 text-white py-4 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-stone-700 transition-all disabled:opacity-50 shadow-lg active:scale-[0.98] ${isComplete && canSave ? 'ring-2 ring-brass-300 ring-offset-2' : ''}`}
                     >
-                      <Save size={18} strokeWidth={1.5} /> Save Look
+                      <Save size={18} strokeWidth={1.5} /> {editingBrief ? (updatingBrief ? 'Updating…' : "Update today's look") : 'Save Look'}
                     </button>
                     {/* Helpful hint when items are picked but name is missing
                         — the most common reason the Save button stays disabled.
-                        Better than a silent grey button. */}
-                    {pieceCount > 0 && !outfitName.trim() && (
+                        Better than a silent grey button. Doesn't apply when
+                        editing a brief: no name is required on that path. */}
+                    {!editingBrief && pieceCount > 0 && !outfitName.trim() && (
                       <p className="text-xs tracking-label uppercase text-stone-400 text-center mt-2">
                         Name your look to save it
                       </p>

@@ -5,6 +5,7 @@ import { daysSinceLastWorn, itemColors, itemCostPerWear, itemImages, itemSeasons
 import { itemImageDisplay } from "../lib/polish.js";
 import ItemTileImage from "../components/ItemTileImage.jsx";
 import { analyzeWardrobeGapsWithGemini, generateStyleManifestoWithGemini } from "../lib/ai.js";
+import { resolveBudget } from "../lib/budget.js";
 import { composeStyleDNAExportImage, composeManifestoExportImage, shareOrDownloadImage } from "../lib/canvas.js";
 import { isAIEnabled } from "../firebase.js";
 import EditorialHeader from "../ui/EditorialHeader.jsx";
@@ -185,11 +186,20 @@ function GapAnalysisPanel({ items, inspirations = [], measurements }) {
   const run = async () => {
     if (!isAIEnabled()) { setState({ status: 'error', data: null, error: 'Concierge is not yet set up — add VITE_RECAPTCHA_SITE_KEY + Firebase AI Logic.' }); return; }
     setState({ status: 'running', data: null, error: null });
+    // The budget fields show the inference as a PLACEHOLDER, which looks set
+    // but is not, so almost nobody stores anything. Sending only stored
+    // figures meant the audit received no budget at all and invented its own
+    // mean — "your typical spend is £143.51" against a true median of £98,
+    // which is exactly the error the median was chosen to avoid.
+    const budget = resolveBudget(measurements, items);
+    const withResolvedBudget = budget
+      ? { ...measurements, budgetTypical: budget.typical, budgetHigh: budget.high }
+      : measurements;
     try {
       const data = await analyzeWardrobeGapsWithGemini({
         items,
         inspirations,
-        styleProfile: summariseStyleProfile(measurements),
+        styleProfile: summariseStyleProfile(withResolvedBudget),
       });
       setState({ status: 'done', data, error: null });
     } catch (e) {
@@ -230,7 +240,16 @@ function GapAnalysisPanel({ items, inspirations = [], measurements }) {
       )}
 
       {state.status === 'done' && state.data && (
-        <div className="mt-8 grid md:grid-cols-3 gap-6">
+        <div className="mt-8 grid md:grid-cols-2 gap-6">
+          {/* Two columns, not three. At the shell's 1056px ceiling, three
+              columns gave each about 41 characters a line — well under the
+              60-75 prose reads at — so every card wrapped heavily, card
+              heights ranged from 89 to 216px, and nothing lined up across the
+              columns. Two columns give roughly 500px and 70 characters.
+
+              Buy next spans both and splits internally, so the
+              recommendations (the longest text of the three) keep the same
+              measure rather than being squeezed into a leftover half-row. */}
           <div>
             <h4 className="text-xs tracking-label uppercase text-emerald-800 font-bold mb-3">Strengths</h4>
             <ul className="space-y-3">
@@ -253,9 +272,9 @@ function GapAnalysisPanel({ items, inspirations = [], measurements }) {
               ))}
             </ul>
           </div>
-          <div>
+          <div className="md:col-span-2">
             <h4 className="text-xs tracking-label uppercase text-stone-700 font-bold mb-3">Buy next</h4>
-            <ul className="space-y-3">
+            <ul className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-6">
               {(state.data.recommendations || []).map((r, i) => (
                 <li key={i} className="border-l-2 border-stone-400 pl-3">
                   <p className="text-sm font-medium text-stone-900">{r.piece}</p>
@@ -1372,7 +1391,17 @@ export default function InsightsView({ items, inspirations = [], onJumpToWardrob
   ];
 
   return (
-    <div className="space-y-10 md:space-y-12 max-w-5xl">
+    // max-w-6xl rather than 5xl, which is all the shell allows: it is
+    // max-w-6xl (1152) minus its own lg:p-12, so 1056 is the ceiling for any
+    // view. Worth taking, but small — the audit's three columns go 298px to
+    // 309px, about 41 to 43 characters a line.
+    //
+    // That is still far below the 60-75 that prose reads comfortably at, and
+    // it is the real cause of the ragged look: heavy wrapping makes card
+    // heights vary from 89 to 216px, so nothing lines up across the columns.
+    // Fixing it properly means either widening the shell for every view, or
+    // giving the audit fewer than three columns at this width.
+    <div className="space-y-10 md:space-y-12 max-w-6xl">
       <EditorialHeader eyebrow="The Dossier" title="Insights" subtitle="Your aesthetic, how you wear it, and what it's worth." />
       {dnaShareOpen && <StyleDNAShareModal items={items} measurements={measurements} onClose={() => setDnaShareOpen(false)} />}
 

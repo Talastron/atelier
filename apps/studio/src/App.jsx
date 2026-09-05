@@ -50,7 +50,7 @@ import {
   deriveShortName,
 } from './lib/items.js';
 import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExportImage, shareOrDownloadImage, autoEnhanceCanvas, removeImageBackground, compressImageToDataUrl, rehostExternalImage, parseSourceUrl, resizeImageToDataUrl } from './lib/canvas.js';
-import { enqueueCutout } from './lib/cutoutQueue.js';
+import { enqueueCutout, retarget } from './lib/cutoutQueue.js';
 import { applyCutoutResult, imageStatus } from './lib/photoStatus.js';
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
@@ -619,7 +619,7 @@ function DigitalWardrobe() {
     }
   };
 
-  const handleAddItem = async (newItem) => {
+  const handleAddItem = async (newItem, pendingCutouts = []) => {
     if (demoMode) {
       // Local-state only; visitor's changes evaporate on refresh / reset.
       setItems((prev) => {
@@ -707,6 +707,36 @@ function DigitalWardrobe() {
           console.warn('[rehost-bg] failed for item', newItem.id, '—', err?.message);
         }
       })();
+    }
+
+    // Cut-outs still running when the user saved. They keep going and patch
+    // the item as each lands - the same fire-and-forget shape the rehost
+    // above uses, and for the same reason: the user should not wait, and
+    // half-finished work should not be discarded.
+    for (const { jobId, index } of pendingCutouts || []) {
+      retarget(jobId, {
+        onDone: async (result) => {
+          if (!result?.ok) return;
+          try {
+            const fresh = (await getDoc(doc(userItemsRef(user.uid), newItem.id))).data();
+            if (!fresh) return; // deleted while the cut-out ran
+            const images = [...(fresh.images || [])];
+            if (images[index] === undefined) return;
+            images[index] = result.url;
+            const patch = { ...fresh, images, imageMeta: applyCutoutResult(fresh.imageMeta, index, result) };
+            // Same guard as the rehost: a background patch can push an item
+            // that saved fine over the document ceiling.
+            const tooLarge = docTooLargeMessage(patch, 'item');
+            if (tooLarge) { console.warn('[cutout] skipped patch for item', newItem.id, '-', tooLarge); return; }
+            await settleWhenLocallyWritten(setDoc(doc(userItemsRef(user.uid), newItem.id), patch), {
+              onLateError: (err) => console.warn('[cutout] patch rejected after settling:', err?.message),
+            });
+          } catch (err) {
+            console.warn('[cutout] patch failed for item', newItem.id, '-', err?.message);
+          }
+        },
+        onError: () => { /* the original photo stands; the polish flow can cut it out later */ },
+      });
     }
   };
   const handleBulkUpdateItems = async (ids, partial) => {
@@ -2122,7 +2152,7 @@ function DigitalWardrobe() {
               existingItem={editingItem}
               removeBackground={!!measurements?.removeBackground}
               onClose={() => { setIsAddItemModalOpen(false); setEditingItem(null); }}
-              onSave={async (item) => { await handleAddItem(item); setIsAddItemModalOpen(false); setEditingItem(null); }}
+              onSave={async (item, pendingCutouts) => { await handleAddItem(item, pendingCutouts); setIsAddItemModalOpen(false); setEditingItem(null); }}
               onOpenReceiptModal={() => { setIsAddItemModalOpen(false); setIsReceiptModalOpen(true); }}
               onOpenBulkImport={() => { setIsAddItemModalOpen(false); setIsBulkImportModalOpen(true); }}
               onOpenSweep={() => { setIsAddItemModalOpen(false); setIsSweepModalOpen(true); }}
@@ -3196,7 +3226,7 @@ function AddItemModal({ user, shops = [], existingItem = null, removeBackground 
       // the user has long since been told the item was saved.
       const tooLarge = docTooLargeMessage(payload, 'item');
       if (tooLarge) { setError(tooLarge); return; }
-      await onSave(payload);
+      await onSave(payload, pendingJobsRef.current);
     } catch (err) {
       console.error('[wardrobe] item save failed:', err);
       setError(err?.message || 'Save failed.');

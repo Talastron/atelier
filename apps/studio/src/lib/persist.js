@@ -23,6 +23,29 @@
 // never outlasts the user's patience.
 export const LOCAL_WRITE_GRACE_MS = 6000;
 
+// settleWhenLocallyWritten does not detect being offline. It detects the
+// server not acknowledging within the grace period, which is a different
+// thing: an item carrying base64 photos approaches Firestore's 1MB document
+// limit, and uploading that takes more than six seconds on a perfectly good
+// connection. Telling that user they are offline is simply false, and it was
+// reported as such.
+//
+// navigator.onLine is famously unreliable as a claim that you ARE online — a
+// machine on a LAN with no route to the internet reports true. It is reliable
+// in the negative: false means genuinely disconnected. So it is used here only
+// to AVOID asserting offline, never to assert connectivity, which is the one
+// direction it can be trusted in.
+export function looksOffline() {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+// What to tell someone whose write is committed locally but not yet
+// acknowledged. Both are true statements; only one of them claims to know
+// why.
+export function pendingSyncNote() {
+  return looksOffline() ? "syncing when you're back online" : 'still syncing';
+}
+
 /**
  * Wrap a Firestore write so it always settles.
  *

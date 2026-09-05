@@ -54,7 +54,7 @@ import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from
 import { parseReceiptText } from './lib/receipts.js';
 import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
-import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WARN_BYTES } from './lib/persist.js';
+import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WARN_BYTES, pendingSyncNote } from './lib/persist.js';
 import { wishlistCategoryFor } from './lib/inspiration.js';
 import EditorialHeader from './ui/EditorialHeader.jsx';
 import { useToast, ToastProvider } from './ui/toast.jsx';
@@ -592,7 +592,12 @@ function DigitalWardrobe() {
     });
     return synced;
   };
-  const OFFLINE_SUFFIX = ' · syncing when you\'re back online';
+  // A function, not a constant, so the network is consulted when the toast is
+  // shown rather than when the component rendered. The old constant asserted
+  // "back online" for every unacknowledged write, including ones that were
+  // merely slow — which is how someone sitting on a working connection was
+  // told their item would sync when they reconnected.
+  const syncSuffix = () => ` · ${pendingSyncNote()}`;
 
   // Shares are the one write where "queued locally" is NOT success: the link
   // points at a /public doc the recipient reads from the SERVER, so until the
@@ -639,7 +644,7 @@ function DigitalWardrobe() {
       }
     );
     if (!synced) {
-      toast.show('Saved on this device · syncing when you\'re back online', { kind: 'default', duration: 5000 });
+      toast.show(`Saved on this device · ${pendingSyncNote()}`, { kind: 'default', duration: 5000 });
     }
 
     // Fire-and-forget rehost: if any image is still an external URL (not a
@@ -717,7 +722,7 @@ function DigitalWardrobe() {
     }
     const synced = await runWrite(batch.commit(), `Update of ${ids.length} item${ids.length === 1 ? '' : 's'}`);
     const label = `Updated ${ids.length} item${ids.length === 1 ? '' : 's'}`;
-    toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? label : label + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleBulkDeleteItems = async (ids) => {
     if (!user || !ids.length) return;
@@ -730,7 +735,7 @@ function DigitalWardrobe() {
     }
     const synced = await runWrite(batch.commit(), `Move of ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash`);
     const label = `Moved ${ids.length} item${ids.length === 1 ? '' : 's'} to Trash`;
-    toast.show(synced ? label : label + OFFLINE_SUFFIX, { kind: 'default', duration: synced ? undefined : 5000 });
+    toast.show(synced ? label : label + syncSuffix(), { kind: 'default', duration: synced ? undefined : 5000 });
   };
 
   const handleBulkAddItems = async (newItems) => {
@@ -739,7 +744,7 @@ function DigitalWardrobe() {
     for (const item of newItems) batch.set(doc(userItemsRef(user.uid), item.id), item);
     const synced = await runWrite(batch.commit(), `Import of ${newItems.length} item${newItems.length === 1 ? '' : 's'}`);
     const label = `${newItems.length} item${newItems.length === 1 ? '' : 's'} added from receipt`;
-    toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? label : label + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleDeleteItem = async (id) => {
     const item = items.find((i) => i.id === id);
@@ -752,7 +757,7 @@ function DigitalWardrobe() {
     if (!user) return;
     // Soft delete: 30-day grace period (restorable from Profile → Trash).
     const trashSynced = await runWrite(setDoc(doc(userItemsRef(user.uid), id), { ...item, deletedAt: new Date().toISOString() }), 'Move to Trash');
-    toast.show(trashSynced ? 'Moved to Trash · restore from Profile' : 'Moved to Trash' + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(trashSynced ? 'Moved to Trash · restore from Profile' : 'Moved to Trash' + syncSuffix(), { kind: 'default' });
   };
   const handleRestoreItem = async (id) => {
     if (!user) return;
@@ -760,12 +765,12 @@ function DigitalWardrobe() {
     if (!item) return;
     const { deletedAt, ...rest } = item;
     const synced = await runWrite(setDoc(doc(userItemsRef(user.uid), id), rest), 'Restore');
-    toast.show(synced ? 'Restored to your wardrobe' : 'Restored to your wardrobe' + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? 'Restored to your wardrobe' : 'Restored to your wardrobe' + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
   const handleHardDeleteItem = async (id) => {
     if (!user) return;
     const synced = await runWrite(deleteDoc(doc(userItemsRef(user.uid), id)), 'Permanent delete');
-    toast.show(synced ? 'Permanently removed' : 'Permanently removed' + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(synced ? 'Permanently removed' : 'Permanently removed' + syncSuffix(), { kind: 'default' });
   };
 
   // Auto-purge items soft-deleted more than 30 days ago. Runs once when
@@ -865,7 +870,7 @@ function DigitalWardrobe() {
     // Capsule generator handles its own summary toast — don't spam per-look here.
     if (!outfit.capsule) {
       if (synced) toast.show(outfit.name, { kind: 'success', eyebrow: 'SAVED' });
-      else toast.show(`${outfit.name} · syncing when you're back online`, { kind: 'default', eyebrow: 'SAVED HERE', duration: 5000 });
+      else toast.show(`${outfit.name} · ${pendingSyncNote()}`, { kind: 'default', eyebrow: 'SAVED HERE', duration: 5000 });
     }
   };
   const handleDeleteOutfit = async (id) => {
@@ -1329,7 +1334,7 @@ function DigitalWardrobe() {
     if (!user) return;
     if (!outfitId) {
       const synced = await runWrite(deleteDoc(userScheduleDoc(user.uid, dateISO)), 'Schedule removal');
-      toast.show(synced ? 'Removed from schedule' : 'Removed from schedule' + OFFLINE_SUFFIX, { kind: 'default' });
+      toast.show(synced ? 'Removed from schedule' : 'Removed from schedule' + syncSuffix(), { kind: 'default' });
     } else {
       const trimmed = (eventName || '').trim();
       const doc = { outfitId, scheduledAt: new Date().toISOString() };
@@ -1337,7 +1342,7 @@ function DigitalWardrobe() {
       if (meta && typeof meta === 'object') Object.assign(doc, meta);
       const synced = await runWrite(setDoc(userScheduleDoc(user.uid, dateISO), doc), 'Schedule');
       const label = trimmed ? `Scheduled · ${trimmed}` : 'Scheduled';
-      toast.show(synced ? label : label + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+      toast.show(synced ? label : label + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
     }
   };
 
@@ -1348,7 +1353,7 @@ function DigitalWardrobe() {
   const handleDeleteTrip = async (trip) => {
     if (!user || !trip?.days?.length) return;
     const synced = await runWrite(Promise.all(trip.days.map((d) => deleteDoc(userScheduleDoc(user.uid, d.dateISO)))), `Trip removal · ${trip.name}`);
-    toast.show(synced ? `Trip removed · ${trip.name}` : `Trip removed · ${trip.name}` + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(synced ? `Trip removed · ${trip.name}` : `Trip removed · ${trip.name}` + syncSuffix(), { kind: 'default' });
   };
 
   const handleSaveInspiration = async (insp) => {
@@ -1358,7 +1363,7 @@ function DigitalWardrobe() {
   const handleDeleteInspiration = async (id) => {
     if (!user) return;
     const synced = await runWrite(deleteDoc(doc(userInspirationRef(user.uid), id)), 'Inspiration removal');
-    toast.show(synced ? 'Inspiration removed' : 'Inspiration removed' + OFFLINE_SUFFIX, { kind: 'default' });
+    toast.show(synced ? 'Inspiration removed' : 'Inspiration removed' + syncSuffix(), { kind: 'default' });
   };
   const handleAnalyzeInspiration = async (insp) => {
     if (!user) return;
@@ -1367,7 +1372,7 @@ function DigitalWardrobe() {
     // succeed moments before the write stalls — without the wrapper that
     // pins the "Analysing…" spinner after the analysis already finished.
     const synced = await runWrite(setDoc(doc(userInspirationRef(user.uid), insp.id), { ...insp, analysis }), 'Analysis save');
-    toast.show(synced ? 'Analysis complete' : 'Analysis complete' + OFFLINE_SUFFIX, synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
+    toast.show(synced ? 'Analysis complete' : 'Analysis complete' + syncSuffix(), synced ? { kind: 'success' } : { kind: 'default', duration: 5000 });
   };
 
   const handleDuplicateItem = async (item) => {
@@ -1460,7 +1465,7 @@ function DigitalWardrobe() {
     const synced = await runWrite(batch.commit(), `Wear log for ${outfit.name}`);
     haptic('success');
     const wearLabel = `${outfit.name} · ${touched} ${touched === 1 ? 'piece' : 'pieces'}`;
-    toast.show(synced ? wearLabel : wearLabel + OFFLINE_SUFFIX,
+    toast.show(synced ? wearLabel : wearLabel + syncSuffix(),
       synced ? { kind: 'success', eyebrow: 'WORN' } : { kind: 'default', eyebrow: 'WORN', duration: 5000 });
     // Also record the wear at the OUTFIT level (separate from per-item
     // wearHistory). The outfit's wearLog is what powers the "Worn N times"

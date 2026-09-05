@@ -5,6 +5,8 @@ import {
   docTooLargeMessage,
   LOCAL_WRITE_GRACE_MS,
   DOC_SIZE_WARN_BYTES,
+  looksOffline,
+  pendingSyncNote,
 } from './persist.js';
 
 describe('settleWhenLocallyWritten', () => {
@@ -135,5 +137,36 @@ describe('docTooLargeMessage', () => {
     const circular = {};
     circular.self = circular;
     expect(docTooLargeMessage(circular)).toBeNull();
+  });
+});
+
+describe('pendingSyncNote', () => {
+  // globalThis.navigator is getter-only in this environment, so it has to be
+  // stubbed rather than assigned.
+  const setOnLine = (value) => vi.stubGlobal('navigator', { onLine: value });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('claims offline only when the browser says so outright', () => {
+    setOnLine(false);
+    expect(looksOffline()).toBe(true);
+    expect(pendingSyncNote()).toBe("syncing when you're back online");
+  });
+
+  it('does not claim offline for a write that is merely slow', () => {
+    // The reported bug: an item carrying base64 photos takes longer than the
+    // six-second grace to be acknowledged, and the user — who is online — was
+    // told their work would sync "when you're back online".
+    setOnLine(true);
+    expect(looksOffline()).toBe(false);
+    expect(pendingSyncNote()).toBe('still syncing');
+  });
+
+  it('does not claim offline when it cannot tell', () => {
+    // navigator.onLine true does not prove connectivity, and a navigator with
+    // no onLine at all proves nothing. Neither is grounds for asserting a
+    // network state to the user.
+    vi.stubGlobal('navigator', {});
+    expect(looksOffline()).toBe(false);
+    expect(pendingSyncNote()).toBe('still syncing');
   });
 });

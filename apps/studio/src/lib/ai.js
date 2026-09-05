@@ -571,6 +571,57 @@ Rules for the response:
   };
 }
 
+/**
+ * Rewrite the Daily Brief's stylist note for a look that has been edited.
+ *
+ * Swapping one piece used to cost the whole note. amendBrief drops any note
+ * naming a garment the look no longer holds — correct, because the Brief
+ * renders those names as tappable chips, so a stale one offers a chip for a
+ * piece that is not there — but all-or-nothing, so changing the trousers threw
+ * away the sentences about everything else.
+ *
+ * This is a small call, not a compose: it is handed the pieces and writes two
+ * sentences about them. It does not choose an outfit.
+ *
+ * Returns '' rather than throwing when the Concierge is unavailable, because
+ * the caller's fallback is simply the note being absent — which is where this
+ * started, so a failure degrades to the old behaviour rather than to an error.
+ */
+export async function generateBriefNoteWithGemini(picked, { weather = null, season = '' } = {}) {
+  if (!isAIEnabled() || !picked || picked.length === 0) return '';
+  const itemList = picked
+    .map((p) => `${p.id} | ${[p.brand, p.name].filter(Boolean).join(' ')}`)
+    .join('\n- ');
+  const context = [
+    weather?.temp != null ? `${weather.temp}°` : '',
+    season || '',
+  ].filter(Boolean).join(', ');
+
+  const prompt = `You are a personal stylist writing the short note that sits under today's outfit in Atelier, a private digital wardrobe.
+
+Write TWO sentences at most, warm and concrete, about why these pieces work together${context ? ` for ${context}` : ''}.
+
+Marker rule — STRICT, and the reason this exists:
+- EVERY garment or accessory you name MUST be one of the items below, wrapped as <<item:ID|display name>> using that exact id.
+- NEVER name a piece that is not in the list. NEVER leave a named piece as plain text.
+- Lead with the clothing, then shoes, bag, jewellery.
+- Do not invent ids.
+- Example: "The <<item:i_xyz|ivory silk shirt>> pairs cleanly with the <<item:i_abc|charcoal trouser>>."
+
+The pieces (id | name):
+- ${itemList}
+
+Reply with the note ONLY — no preamble, no heading, no quotes.`;
+
+  try {
+    const result = await geminiText(prompt, { temperature: 0.7 }, 'brief-note');
+    return (result || '').trim();
+  } catch (e) {
+    console.warn('[brief] note rewrite failed, the note will be left out:', e?.message);
+    return '';
+  }
+}
+
 export async function generateOutfitNameWithGemini(picked, intent) {
   if (!isAIEnabled()) throw new Error('Concierge is not yet set up.');
   if (!picked || picked.length === 0) throw new Error('Pick at least one piece first.');

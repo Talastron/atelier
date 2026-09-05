@@ -280,6 +280,10 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
   // the effect) — a hook added below an early return crashed this app earlier
   // today with "Rendered fewer hooks than expected".
   const [editingBrief, setEditingBrief] = useState(false);
+  // Updating the brief rewrites its stylist note, which is a short AI call.
+  // Without this the button sits silent for a couple of seconds and reads as
+  // frozen — the same complaint the photo intake work exists to fix.
+  const [updatingBrief, setUpdatingBrief] = useState(false);
   useEffect(() => {
     if (!editOutfit) return;
     // Resolve itemIds → items and place each into its proper slot, mirroring
@@ -548,7 +552,15 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
       // made it name a piece that is no longer in the look — the Brief renders
       // that note as tappable item chips, so a stale one would offer a chip
       // for a garment that is not there.
-      await onUpdateBrief({ itemIds: picked.map((p) => p.id), note: aiNote || null });
+      setUpdatingBrief(true);
+      try {
+        await onUpdateBrief({ itemIds: picked.map((p) => p.id), note: aiNote || null });
+      } finally {
+        // In the finally, not after the await. A rejection here would otherwise
+        // strand the button busy for good — the exact shape of bug that leaves
+        // the Add Item modal spinning after a failed cut-out.
+        setUpdatingBrief(false);
+      }
       setEditingBrief(false);
       return;
     }
@@ -1326,7 +1338,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                   {(editingBrief || outfitName.trim()) ? (
                     <button onClick={handleSave}
                       className="text-xs tracking-label uppercase px-3 py-2 rounded-full bg-amber-300 text-stone-900 font-medium shrink-0">
-                      {editingBrief ? "Update today's look" : 'Save'}
+                      {editingBrief ? (updatingBrief ? 'Updating…' : "Update today's look") : 'Save'}
                     </button>
                   ) : (
                     <button onClick={() => document.querySelector('input[placeholder="Name this look…"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
@@ -1484,7 +1496,7 @@ export default function OutfitBuilder({ items, outfits, saveOutfit, deleteOutfit
                     <button onClick={handleSave} disabled={!canSave}
                       className={`w-full bg-stone-900 text-white py-4 rounded-xl font-medium flex justify-center items-center gap-2 hover:bg-stone-700 transition-all disabled:opacity-50 shadow-lg active:scale-[0.98] ${isComplete && canSave ? 'ring-2 ring-brass-300 ring-offset-2' : ''}`}
                     >
-                      <Save size={18} strokeWidth={1.5} /> {editingBrief ? "Update today's look" : 'Save Look'}
+                      <Save size={18} strokeWidth={1.5} /> {editingBrief ? (updatingBrief ? 'Updating…' : "Update today's look") : 'Save Look'}
                     </button>
                     {/* Helpful hint when items are picked but name is missing
                         — the most common reason the Save button stays disabled.

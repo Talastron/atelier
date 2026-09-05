@@ -53,7 +53,7 @@ import { drawRoundedRect, loadImageForCanvas, wrapCanvasText, composeOutfitExpor
 import { fetchTodaysWeather, fetchTravelForecast, weatherLabel, weatherToSeasons, weatherAppropriatenessScore, pickTodaysRecommendation, getGreeting, firstName } from './lib/weather.js';
 import { brandSearchUrl, fetchProductFromUrl, imageUrlToCompressedDataUrl } from './lib/net.js';
 import { parseReceiptText } from './lib/receipts.js';
-import { generateOutfitWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
+import { generateOutfitWithGemini, generateBriefNoteWithGemini, identifyItemWithGemini, analyzeLabelWithGemini, analyzeReceiptImageWithGemini, analyzeWardrobeGapsWithGemini, analyzeInspirationWithGemini, generateOutfitNameWithGemini, generateOutfitTagsWithGemini, generateWearNarration, generateStyleFitWithGemini, generateConciergeReply, generateStyleManifestoWithGemini, narrateWearWithGemini, generateTravelCapsuleWithGemini, regenerateTravelDayWithGemini, generateFitEstimateWithGemini, generateItemFitWithGemini, scorePurchaseWithGemini } from './lib/ai.js';
 import { isFitStale } from './lib/itemFit.js';
 import { settleWhenLocallyWritten, docTooLargeMessage, docSizeBytes, DOC_SIZE_WARN_BYTES, pendingSyncNote } from './lib/persist.js';
 import { wishlistCategoryFor } from './lib/inspiration.js';
@@ -1278,7 +1278,16 @@ function DigitalWardrobe() {
     if (!uid) return;
     const current = readDailyBrief(uid);
     if (!current) return;
-    const next = amendBrief(current, itemIds, note);
+    // Rewrite the note rather than lose it. amendBrief drops any note naming a
+    // piece the look no longer holds, which is right — the Brief renders those
+    // names as tappable chips — but all-or-nothing, so swapping the trousers
+    // threw away the sentences about everything else. A rewrite is a small
+    // call: it is handed the pieces and writes two sentences, it does not
+    // compose. On failure it returns '' and amendBrief drops the old note, so
+    // this degrades to exactly the previous behaviour rather than to an error.
+    const picked = (itemIds || []).map((id) => liveItems.find((it) => it.id === id)).filter(Boolean);
+    const rewritten = await generateBriefNoteWithGemini(picked, { weather: null, season: '' });
+    const next = amendBrief(current, itemIds, rewritten || note);
     const saved = writeDailyBrief(uid, next);
     // Best-effort, like the compose path above: writeRemoteDailyBrief swallows
     // its own errors, so the local write (what Today reads on mount) is what
